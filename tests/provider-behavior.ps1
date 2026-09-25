@@ -23,7 +23,7 @@ function Test-ProjectIssueIdentity {
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-        (Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'), [ref]$tokens, [ref]$parseErrors)
+        (Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'), [ref]$tokens, [ref]$parseErrors)
     if ($parseErrors.Count) { throw ($parseErrors -join "`n") }
     foreach ($name in @('Test-GitHubProjectIssueIdentity', 'Get-GitHubProjectIssueItem', 'Get-GitHubProjectIssueStatusMap')) {
         $definition = $ast.Find({ param($node)
@@ -92,7 +92,7 @@ function Test-LearningPromotion {
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-        (Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'), [ref]$tokens, [ref]$parseErrors)
+        (Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'), [ref]$tokens, [ref]$parseErrors)
     $definition = $ast.Find({ param($node)
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-LessonsPromote'
     }, $true)
@@ -186,13 +186,12 @@ if ($PromotionOnly) {
 function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-provider-test-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.frontier\runtime') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root '.frontier') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\local-issue-manager.ps1') (Join-Path $root '.agentx\local-issue-manager.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') (Join-Path $root '.frontier\runtime\frontier.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') (Join-Path $root '.frontier\runtime\frontier-cli.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\local-issue-manager.ps1') (Join-Path $root '.frontier\runtime\local-issue-manager.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot 'scripts\score-code-quality.ps1') (Join-Path $root 'scripts\score-code-quality.ps1') -Force
     return $root
 }
@@ -211,7 +210,7 @@ function Invoke-Frontier([string]$root, [string[]]$arguments, [hashtable]$enviro
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
     $startInfo.ArgumentList.Add('-File')
-    $startInfo.ArgumentList.Add((Join-Path $root '.agentx\agentx.ps1'))
+    $startInfo.ArgumentList.Add((Join-Path $root '.frontier\runtime\frontier.ps1'))
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
@@ -249,7 +248,7 @@ function Invoke-FrontierWindowsPowerShell([string]$root, [string[]]$arguments, [
     $startInfo.ArgumentList.Add('-ExecutionPolicy')
     $startInfo.ArgumentList.Add('Bypass')
     $startInfo.ArgumentList.Add('-File')
-    $startInfo.ArgumentList.Add((Join-Path $root '.agentx\agentx.ps1'))
+    $startInfo.ArgumentList.Add((Join-Path $root '.frontier\runtime\frontier.ps1'))
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
@@ -288,7 +287,7 @@ function Invoke-LocalIssueManagerWindowsPowerShell([string]$root, [string[]]$arg
     $startInfo.ArgumentList.Add('-ExecutionPolicy')
     $startInfo.ArgumentList.Add('Bypass')
     $startInfo.ArgumentList.Add('-File')
-    $startInfo.ArgumentList.Add((Join-Path $root '.agentx\local-issue-manager.ps1'))
+    $startInfo.ArgumentList.Add((Join-Path $root '.frontier\runtime\local-issue-manager.ps1'))
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
@@ -775,14 +774,14 @@ try {
         nextIssueNumber = 9
     } | ConvertTo-Json -Depth 5)
 
-    $localIssueManagerCreate = Invoke-LocalIssueManagerWindowsPowerShell $localRoot @('-Action', 'create', '-Title', '[Story] Local Wrapper', '-Body', 'Wrapper body', '-Labels', 'type:story') @{ AGENTX_WORKSPACE_ROOT = $localIssueManagerOverrideRoot }
+    $localIssueManagerCreate = Invoke-LocalIssueManagerWindowsPowerShell $localRoot @('-Action', 'create', '-Title', '[Story] Local Wrapper', '-Body', 'Wrapper body', '-Labels', 'type:story') @{ FRONTIER_WORKSPACE_ROOT = $localIssueManagerOverrideRoot }
     if ($localIssueManagerCreate.Skipped) {
         Assert-True $true 'Windows PowerShell local-issue-manager handoff test skipped because powershell.exe is unavailable'
     } else {
         $localWrapperIssue = Get-Content (Join-Path $localRoot '.frontier\issues\2.json') -Raw | ConvertFrom-Json -Depth 10
         $overrideIssueFiles = @(Get-ChildItem (Join-Path $localIssueManagerOverrideRoot '.frontier\issues') -Filter '*.json' -ErrorAction SilentlyContinue)
         Assert-True ($localIssueManagerCreate.ExitCode -eq 0) 'Local issue manager exits successfully when invoked from Windows PowerShell'
-        Assert-True ($localWrapperIssue.title -eq '[Story] Local Wrapper') 'Local issue manager writes issues to its own workspace root even when AGENTX_WORKSPACE_ROOT is overridden'
+        Assert-True ($localWrapperIssue.title -eq '[Story] Local Wrapper') 'Local issue manager writes issues to its own workspace root even when FRONTIER_WORKSPACE_ROOT is overridden'
         Assert-True (@($overrideIssueFiles).Count -eq 0) 'Local issue manager does not mutate foreign issue storage from leaked environment overrides'
         Assert-True ($localIssueManagerCreate.Output -notmatch 'requires PowerShell 7') 'Local issue manager does not surface the CLI PowerShell 7 requires error under Windows PowerShell'
     }
@@ -883,10 +882,10 @@ task_prefix: 'task'
         )
     } | ConvertTo-Json -Depth 10)
 
-    $loopStart = Invoke-Frontier $workflowRoot @('loop', 'start', '--prompt', 'Local launcher loop', '--max', '5') @{ AGENTX_WORKSPACE_ROOT = $workspaceOverrideRoot }
+    $loopStart = Invoke-Frontier $workflowRoot @('loop', 'start', '--prompt', 'Local launcher loop', '--max', '5') @{ FRONTIER_WORKSPACE_ROOT = $workspaceOverrideRoot }
     $workflowLoopState = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
     $overrideLoopState = Get-Content (Join-Path $workspaceOverrideRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    Assert-True ($loopStart.ExitCode -eq 0) 'Workspace launcher loop start exits successfully even when AGENTX_WORKSPACE_ROOT points elsewhere'
+    Assert-True ($loopStart.ExitCode -eq 0) 'Workspace launcher loop start exits successfully even when FRONTIER_WORKSPACE_ROOT points elsewhere'
     Assert-True ($workflowLoopState.active -and $workflowLoopState.prompt -eq 'Local launcher loop') 'Workspace launcher writes loop state to its own workspace root'
     Assert-True ($overrideLoopState.active -and $overrideLoopState.prompt -eq 'Foreign active loop') 'Workspace launcher does not mutate foreign loop state from leaked environment overrides'
 

@@ -129,7 +129,7 @@ This is slower and loses shared object storage, but it is the safe fallback.
 
 This skill is referenced from:
 
-- **`.agentx/plugins/deploy-prototype/deploy-prototype.ps1`** -- promotes its inline worktree handling to this documented primitive
+- **`.frontier/runtime/plugins/deploy-prototype/deploy-prototype.ps1`** -- promotes its inline worktree handling to this documented primitive
 - **Experimentation Loop skill** -- each attempt runs in its own worktree so wins and reverts do not contaminate the primary
 - **Engineer agent** -- when a long-running implementation needs to coexist with reviewer or tester activity on the same repo
 - **DevOps agent** -- when building deploy artifacts that must not pollute the primary working tree

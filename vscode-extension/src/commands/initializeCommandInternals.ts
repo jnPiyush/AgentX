@@ -15,7 +15,6 @@ import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './adaptersCom
 import { checkAllDependencies } from '../utils/dependencyChecker';
 import {
   hasFrontierState,
-  migrateLegacyState,
   resolveFrontierStatePath,
 } from '../utils/frontierPaths';
 
@@ -61,7 +60,6 @@ export async function runInitializeLocalRuntimeCommand(
   async (progress) => {
    try {
     progress.report({ message: 'Creating workspace state...', increment: 40 });
-    migrateLegacyState(root);
     for (const dir of RUNTIME_DIRS) {
      fs.mkdirSync(path.join(root, dir), { recursive: true });
     }
@@ -71,10 +69,10 @@ export async function runInitializeLocalRuntimeCommand(
     // agents/skills/instructions/prompts/templates/schemas. VS Code chat,
     // commands, and the Frontier runtime resolve these from the extension bundle
     // via runtimeAssets.resolveAssetPath, so the seed is opt-in.
-    // Setting: agentx.seedRepoLocalAssets (default false). Always skip-existing
+    // Setting: frontier.seedRepoLocalAssets (default false). Always skip-existing
     // to preserve any workspace overrides the user has committed to .github/.
     const seedRepoLocalAssets = vscode.workspace
-      .getConfiguration('agentx')
+      .getConfiguration('frontier')
       .get<boolean>('seedRepoLocalAssets', false);
     if (seedRepoLocalAssets) {
       copyCopilotCliAssets(context.extensionUri.fsPath, root, false);

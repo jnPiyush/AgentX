@@ -31,7 +31,7 @@ import {
  promptWorkspaceRoot,
 } from './initializeInternals';
 
-export const PLUGIN_REGISTRY_URL = `https://raw.githubusercontent.com/jnPiyush/AgentX/${BRANCH}/.agentx/plugins/registry.json`;
+export const PLUGIN_REGISTRY_URL = `https://raw.githubusercontent.com/jnPiyush/AgentX/${BRANCH}/.frontier/runtime/plugins/registry.json`;
 
 interface BasePluginPick extends vscode.QuickPickItem {
  readonly sourceKind: 'local' | 'registry';
@@ -268,7 +268,7 @@ export function resolvePluginDirectoryFromArtifact(
 }
 
 async function loadRegistryPluginPicks(root: string, hostVersion: string): Promise<RegistryPluginPick[]> {
-  const registryFile = path.join(root, '.agentx-plugin-registry.json');
+  const registryFile = path.join(root, '.frontier-plugin-registry.json');
   cleanUpFile(registryFile);
   await downloadFile(PLUGIN_REGISTRY_URL, registryFile);
   const picks = getRegistryPluginPicks(readJsonFile(registryFile), hostVersion);
@@ -277,8 +277,8 @@ async function loadRegistryPluginPicks(root: string, hostVersion: string): Promi
 }
 
 async function loadArchivePluginPicks(root: string): Promise<LocalPluginPick[]> {
-  const rawDir = path.join(root, '.agentx-plugin-install-raw');
-  const zipFile = path.join(root, '.agentx-plugin-install.zip');
+  const rawDir = path.join(root, '.frontier-plugin-install-raw');
+  const zipFile = path.join(root, '.frontier-plugin-install.zip');
 
   cleanUpDir(rawDir);
   cleanUpFile(zipFile);
@@ -286,7 +286,7 @@ async function loadArchivePluginPicks(root: string): Promise<LocalPluginPick[]> 
   await downloadFile(ARCHIVE_URL, zipFile);
   await extractZip(zipFile, rawDir);
 
-  const pluginsRoot = path.join(resolveArchiveRoot(rawDir), '.agentx', 'plugins');
+  const pluginsRoot = path.join(resolveArchiveRoot(rawDir), '.frontier', 'runtime', 'plugins');
   if (!fs.existsSync(pluginsRoot)) {
     throw new Error('No Frontier plugins were found in the source archive.');
   }
@@ -475,8 +475,8 @@ async function installRegistryPlugin(
     throw new Error('Published plugin artifact URL must use HTTPS.');
   }
 
-  const rawDir = path.join(root, '.agentx-plugin-install-raw');
-  const zipFile = path.join(root, '.agentx-plugin-install.zip');
+  const rawDir = path.join(root, '.frontier-plugin-install-raw');
+  const zipFile = path.join(root, '.frontier-plugin-install.zip');
 
   cleanUpDir(rawDir);
   cleanUpFile(zipFile);

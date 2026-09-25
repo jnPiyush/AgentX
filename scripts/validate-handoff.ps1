@@ -119,12 +119,8 @@ function New-HandoffMessage {
 
     # Check loop state
     $loopCompleted = $false
-    # .frontier is canonical; legacy state directories are read only before migration.
-    $loopFile = @('.frontier', '.hve', '.agentx') |
-        ForEach-Object { Join-Path $ROOT "$_/state/loop-state.json" } |
-        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
-        Select-Object -First 1
-    if ($loopFile) {
+    $loopFile = Join-Path $ROOT '.frontier/state/loop-state.json'
+    if (Test-Path -LiteralPath $loopFile -PathType Leaf) {
         $loopState = Get-Content $loopFile -Raw | ConvertFrom-Json
         $stateIssue = if ($loopState.PSObject.Properties.Name -contains 'issueNumber') { [int]$loopState.issueNumber } else { 0 }
         $loopCompleted = ($loopState.status -eq 'complete') -and ($stateIssue -eq $IssueNumber)

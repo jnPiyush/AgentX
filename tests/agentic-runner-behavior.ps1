@@ -21,7 +21,7 @@ function Assert-Equal($actual, $expected, $message) {
     Assert-True ($actual -eq $expected) "$message (expected: $expected, actual: $actual)"
 }
 
-. (Join-Path $script:repoRoot '.agentx\agentic-runner.ps1')
+. (Join-Path $script:repoRoot '.frontier\runtime\agentic-runner.ps1')
 
 if ($AstraOnly) {
     $Script:ApiMode = 'copilot'
@@ -1035,7 +1035,7 @@ New-Item -ItemType Directory -Path (Join-Path $sandboxRoot 'src') -Force | Out-N
 # The 8.3 alias checks need the real directories to exist, because an alias only
 # resolves when its target does.
 New-Item -ItemType Directory -Path (Join-Path $sandboxRoot '.git\hooks') -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $sandboxRoot '.agentx\state') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $sandboxRoot '.frontier\state') -Force | Out-Null
 try {
     Assert-True (Test-SandboxPath -Path 'src/app.ts' -WorkspaceRoot $sandboxRoot).allowed 'workspace-relative path is allowed'
     Assert-True (Test-SandboxPath -Path 'src/secretRedactor.ts' -WorkspaceRoot $sandboxRoot).allowed 'source file naming a secret is not blocked'
@@ -1090,17 +1090,17 @@ try {
     # The enforcement surfaces themselves must be out of reach.
     Assert-True (-not (Test-SandboxPath -Path '.git/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'git hooks directory is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.git/config' -WorkspaceRoot $sandboxRoot).allowed) 'git config is blocked'
-    Assert-True (-not (Test-SandboxPath -Path '.agentx/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'gate-bearing loop state is blocked'
-    foreach ($protectedPath in @('.frontier/state/loop-state.json', '.hve/state/loop-state.json', '.agentx/frontier.ps1', '.agentx/frontier.sh', '.agentx/agentx.sh')) {
-        Assert-True (-not (Test-SandboxPath -Path $protectedPath -WorkspaceRoot $sandboxRoot).allowed) "$protectedPath is protected across brand aliases"
+    Assert-True (-not (Test-SandboxPath -Path '.frontier/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'gate-bearing loop state is blocked'
+    foreach ($protectedPath in @('.frontier/state/tests-baseline.json', '.frontier/runtime/frontier.ps1', '.frontier/runtime/frontier.sh', '.frontier/runtime/agentic-runner.ps1')) {
+        Assert-True (-not (Test-SandboxPath -Path $protectedPath -WorkspaceRoot $sandboxRoot).allowed) "$protectedPath is protected"
         $protectedWrite = Invoke-Tool 'file_write' @{ filePath = $protectedPath; content = 'tampered' } $sandboxRoot
         Assert-True $protectedWrite.error "file_write rejects $protectedPath"
     }
     # The gate implementations are protected by the same rationale as the state.
-    Assert-True (-not (Test-SandboxPath -Path '.agentx/agentx-cli.ps1' -WorkspaceRoot $sandboxRoot).allowed) 'the CLI that implements the gate is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.frontier/runtime/frontier-cli.ps1' -WorkspaceRoot $sandboxRoot).allowed) 'the CLI that implements the gate is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.github/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'the installed hook source is blocked'
     Assert-True (Test-SandboxPath -Path '.github/workflows/ci.yml' -WorkspaceRoot $sandboxRoot).allowed 'the .github directory is not confused with .git'
-    Assert-True (Test-SandboxPath -Path '.agentx/plugins/readme.md' -WorkspaceRoot $sandboxRoot).allowed 'only gate-bearing paths under .agentx are blocked'
+    Assert-True (Test-SandboxPath -Path '.frontier/runtime/plugins/readme.md' -WorkspaceRoot $sandboxRoot).allowed 'only gate-bearing paths under .frontier/runtime are blocked'
 
     # 8.3 aliases reach a blocked location under a different spelling. They only
     # exist on volumes with short-name generation enabled, so the check is skipped
@@ -1113,10 +1113,10 @@ try {
         Assert-True $true 'short-name alias tests skipped (8.3 generation disabled on this volume)'
         Assert-True $true 'short-name alias write test skipped (8.3 generation disabled on this volume)'
     }
-    if (Test-Path -LiteralPath (Join-Path $sandboxRoot 'AGENTX~1')) {
-        Assert-True (-not (Test-SandboxPath -Path 'AGENTX~1/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'short-name alias for .agentx is blocked'
+    if (Test-Path -LiteralPath (Join-Path $sandboxRoot 'FRONTI~1')) {
+        Assert-True (-not (Test-SandboxPath -Path 'FRONTI~1/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'short-name alias for .frontier is blocked'
     } else {
-        Assert-True $true 'agentx short-name alias test skipped (8.3 generation disabled on this volume)'
+        Assert-True $true 'frontier short-name alias test skipped (8.3 generation disabled on this volume)'
     }
 
     # The alias rule keys on whether the component really exists under that name,
@@ -1129,8 +1129,8 @@ try {
     $hardlinkAlias = Join-Path $sandboxRoot 'loop-state-alias.json'
     $hardlinkCreated = $false
     try {
-        Set-Content -LiteralPath (Join-Path $sandboxRoot '.agentx\state\loop-state.json') -Value '{"protected":true}' -Encoding utf8
-        New-Item -ItemType HardLink -Path $hardlinkAlias -Target (Join-Path $sandboxRoot '.agentx\state\loop-state.json') -ErrorAction Stop | Out-Null
+        Set-Content -LiteralPath (Join-Path $sandboxRoot '.frontier\state\loop-state.json') -Value '{"protected":true}' -Encoding utf8
+        New-Item -ItemType HardLink -Path $hardlinkAlias -Target (Join-Path $sandboxRoot '.frontier\state\loop-state.json') -ErrorAction Stop | Out-Null
         $hardlinkCreated = $true
     } catch { $hardlinkCreated = $false }
     if ($hardlinkCreated) {
@@ -1140,7 +1140,7 @@ try {
         Assert-True $hardlinkRead.error 'file_read rejects a hardlink alias to protected state'
         Assert-True $hardlinkWrite.error 'file_write rejects a hardlink alias to protected state'
         Assert-True ($hardlinkGrep.text -notmatch 'loop-state-alias\.json') 'grep_search excludes hardlink aliases'
-        Assert-True ((Get-Content -LiteralPath (Join-Path $sandboxRoot '.agentx\state\loop-state.json') -Raw) -match 'true') 'blocked hardlink write preserves protected content'
+        Assert-True ((Get-Content -LiteralPath (Join-Path $sandboxRoot '.frontier\state\loop-state.json') -Raw) -match 'true') 'blocked hardlink write preserves protected content'
     } else {
         Assert-True $true 'hardlink alias tests skipped (hardlink creation not permitted)'
         Assert-True $true 'hardlink write test skipped (hardlink creation not permitted)'
@@ -1155,11 +1155,11 @@ try {
     Assert-True (-not (Test-SandboxPath -Path 'keys/putty.ppk' -WorkspaceRoot $sandboxRoot).allowed) 'ppk private key is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.gitconfig' -WorkspaceRoot $sandboxRoot).allowed) 'gitconfig is blocked'
 
-    $stateWrite = Invoke-Tool 'file_write' @{ filePath = '.agentx/state/loop-state.json'; content = '{"reviewGate":null}' } $sandboxRoot
+    $stateWrite = Invoke-Tool 'file_write' @{ filePath = '.frontier/state/loop-state.json'; content = '{"reviewGate":null}' } $sandboxRoot
     Assert-True $stateWrite.error 'file_write cannot rewrite the gate-bearing loop state'
     $hookWrite = Invoke-Tool 'file_write' @{ filePath = '.git/hooks/pre-commit'; content = 'exit 0' } $sandboxRoot
     Assert-True $hookWrite.error 'file_write cannot replace the pre-commit hook'
-    $terminalWrite = Invoke-Tool 'terminal_exec' @{ command = "Set-Content -LiteralPath '.agentx/state/loop-state.json' -Value '{}'" } $sandboxRoot 'engineer'
+    $terminalWrite = Invoke-Tool 'terminal_exec' @{ command = "Set-Content -LiteralPath '.frontier/state/loop-state.json' -Value '{}'" } $sandboxRoot 'engineer'
     Assert-True $terminalWrite.error 'terminal_exec is fail-closed for autonomous agents'
     Assert-True ($terminalWrite.text -match 'Autonomous terminal execution is disabled') 'terminal_exec explains the external-sandbox requirement'
 
@@ -1255,7 +1255,7 @@ try {
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
     $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $selfReviewRoot
-    foreach ($argument in @('-NoProfile', '-File', (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1'), 'loop', 'iterate', '-s', 'Independent review approved', '-e', $evidencePath, '--verdict', 'approved', '--reviewer', 'runner-test-reviewer', '--high', '0', '--medium', '0', '--low', '0')) {
+    foreach ($argument in @('-NoProfile', '-File', (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1'), 'loop', 'iterate', '-s', 'Independent review approved', '-e', $evidencePath, '--verdict', 'approved', '--reviewer', 'runner-test-reviewer', '--high', '0', '--medium', '0', '--low', '0')) {
         $startInfo.ArgumentList.Add($argument)
     }
     $process = [System.Diagnostics.Process]::Start($startInfo)
@@ -1313,7 +1313,7 @@ try {
 
 Write-Host ''
 Write-Host ' Responses API transport'
-. (Join-Path $script:repoRoot '.agentx/agentic-runner.ps1')
+. (Join-Path $script:repoRoot '.frontier/runtime/agentic-runner.ps1')
 $Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
 $responseFixture = [PSCustomObject]@{
     status='completed'; model='gpt-5.6-sol'; error=$null
@@ -1524,7 +1524,7 @@ try {
 
 Write-Host ''
 Write-Host ' Usage ledger and token budget'
-. (Join-Path $script:repoRoot '.agentx/agentic-runner.ps1')
+. (Join-Path $script:repoRoot '.frontier/runtime/agentic-runner.ps1')
 $anthropicUsage = ConvertFrom-AnthropicUsage ([PSCustomObject]@{ input_tokens = 100; cache_read_input_tokens = 40; cache_creation_input_tokens = 10; output_tokens = 20 })
 Assert-Equal $anthropicUsage.prompt_tokens 150 'Anthropic prompt tokens include cache reads and writes'
 Assert-Equal $anthropicUsage.prompt_tokens_details.cached_tokens 40 'Anthropic cache reads map to cached prompt tokens'

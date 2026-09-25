@@ -123,7 +123,7 @@ export async function loopIterate(agentx: FrontierContext): Promise<void> {
 
   const evidence = await vscode.window.showInputBox({
     prompt: 'Iteration evidence file (required by quality gate)',
-    placeHolder: 'e.g., .agentx/state/test-report.log',
+    placeHolder: 'e.g., .frontier/state/test-report.log',
     ignoreFocusOut: true,
   });
   if (!evidence?.trim()) { return; }

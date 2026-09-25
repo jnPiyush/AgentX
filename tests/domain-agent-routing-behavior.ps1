@@ -103,7 +103,7 @@ Assert-True ($fabricAgent -match 'explicitly approves') 'Fabric live mutation re
 Assert-True ($compatAgent -match 'only canonical role contract') 'Pack compatibility agent points to canonical contract'
 Assert-True ($compatAgent -notmatch '### 1\. Read Context') 'Pack compatibility agent does not duplicate the workflow'
 
-. (Join-Path $repoRoot '.agentx/agentic-runner.ps1')
+. (Join-Path $repoRoot '.frontier/runtime/agentic-runner.ps1')
 foreach ($blockedCommand in @(
     'pac auth create --environment https://example.invalid',
     'pac solution import --path build/solution.zip',
@@ -228,11 +228,11 @@ try {
     New-Item -ItemType Directory -Path (Join-Path $handoffFixture 'scripts') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $handoffFixture 'fabric/notebooks') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $handoffFixture 'solutions/agx_example/src/Other') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $handoffFixture '.agentx/state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $handoffFixture '.frontier/state') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/validate-handoff.ps1') -Destination (Join-Path $handoffFixture 'scripts/validate-handoff.ps1')
     'notebook' | Set-Content -LiteralPath (Join-Path $handoffFixture 'fabric/notebooks/load.py') -Encoding ascii
     '<solution />' | Set-Content -LiteralPath (Join-Path $handoffFixture 'solutions/agx_example/src/Other/Solution.xml') -Encoding ascii
-    @{ status = 'complete'; issueNumber = 401 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $handoffFixture '.agentx/state/loop-state.json') -Encoding utf8
+    @{ status = 'complete'; issueNumber = 401 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $handoffFixture '.frontier/state/loop-state.json') -Encoding utf8
 
     Push-Location $handoffFixture
     try {
@@ -250,7 +250,7 @@ try {
         Assert-True $powerPlatformHandoff.handoff.validation.deliverablesCommitted 'Power Platform handoff marks deliverable committed'
         Assert-True $powerPlatformHandoff.handoff.validation.loopCompleted 'Power Platform handoff reads shared completed loop state'
 
-        @{ status = 'complete'; issueNumber = 0 } | ConvertTo-Json | Set-Content -LiteralPath '.agentx/state/loop-state.json' -Encoding utf8
+        @{ status = 'complete'; issueNumber = 0 } | ConvertTo-Json | Set-Content -LiteralPath '.frontier/state/loop-state.json' -Encoding utf8
         & pwsh -NoProfile -File 'scripts/validate-handoff.ps1' -IssueNumber 401 -FromAgent fabric-engineer -ToAgent powerbi -Summary 'Issue mismatch loop evidence.' | Out-Null
         $mismatchedLoopHandoff = Get-Content -LiteralPath '.frontier/handoffs/handoff-401-fabric-engineer-to-powerbi.json' -Raw | ConvertFrom-Json
         Assert-True (-not $mismatchedLoopHandoff.handoff.validation.loopCompleted) 'Handoff rejects loop evidence without exact issue match'

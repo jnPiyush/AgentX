@@ -100,7 +100,7 @@ foreach ($file in $agentFiles) {
         $canonicalText = (Get-Content -LiteralPath $file.FullName -Raw -Encoding utf8) -replace "`r`n", "`n"
         $bundledText = (Get-Content -LiteralPath $bundled -Raw -Encoding utf8) -replace "`r`n", "`n"
         $normalizedCanonical = $canonicalText.
-            Replace('(../../.agentx/', '(../.agentx/').
+            Replace('(../../.frontier/runtime/', '(../.frontier/runtime/').
             Replace('(../../packs/', '(../packs/').
             Replace('(../../evaluation/', '(../evaluation/')
         $matchesBundle = $normalizedCanonical -ceq $bundledText
@@ -172,9 +172,9 @@ foreach ($file in $visibleFiles) {
     }
 }
 
-$policyCli = Get-Content -LiteralPath (Join-Path $repoRoot '.agentx/agentx-cli.ps1') -Raw -Encoding utf8
+$policyCli = Get-Content -LiteralPath (Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1') -Raw -Encoding utf8
 Assert-True ($policyCli -match "'policy-hook'") 'Zero-copy CLI exposes policy hook'
-$bundledCli = Get-Content -LiteralPath (Join-Path $repoRoot 'vscode-extension/.github/frontier/.agentx/agentx-cli.ps1') -Raw -Encoding utf8
+$bundledCli = Get-Content -LiteralPath (Join-Path $repoRoot 'vscode-extension/.github/frontier/.frontier/runtime/frontier-cli.ps1') -Raw -Encoding utf8
 Assert-True ($bundledCli -match "'policy-hook'") 'Extension bundles the zero-copy policy command'
 
 foreach ($skillName in @('code-review','core-principles','iterative-loop','karpathy-guidelines','prd','prompt-engineering','scrub','ux-ui-design','verification-before-completion')) {

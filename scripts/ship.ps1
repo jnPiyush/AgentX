@@ -54,8 +54,8 @@ $fromIdx = [array]::IndexOf($Order, $From)
 $toIdx   = [array]::IndexOf($Order, $To)
 if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $toIdx -lt $fromIdx) { throw "Invalid step range: $From -> $To" }
 
-$FrontierCli = Join-Path (Resolve-Path .).Path '.agentx/agentx.ps1'
-if (-not (Test-Path $FrontierCli)) { throw "agentx CLI not found at $FrontierCli" }
+$FrontierCli = Join-Path (Resolve-Path .).Path '.frontier/runtime/frontier.ps1'
+if (-not (Test-Path $FrontierCli)) { throw "Frontier CLI not found at $FrontierCli" }
 
 function Invoke-Frontier {
     param([string[]]$Args)

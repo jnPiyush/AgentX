@@ -1,7 +1,7 @@
 /**
  * Clarification and brainstorm ledger persistence.
  *
- * Writes per-issue JSON ledger files to `.agentx/state/clarifications/issue-{n}.json`
+ * Writes per-issue JSON ledger files to `.frontier/state/clarifications/issue-{n}.json`
  * conforming to `.github/schemas/clarification-ledger.schema.json`.
  */
 import * as fs from 'fs';

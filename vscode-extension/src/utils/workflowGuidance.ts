@@ -89,9 +89,9 @@ export function evaluateWorkflowGuidance(
   workspaceRoot: string | undefined,
   pendingClarification = false,
   // Optional provider-aware issue list. Async callers (chat router, learnings
-  // command) can pass `agentx issue list --json` results so guidance reflects
+  // command) can pass `frontier issue list --json` results so guidance reflects
   // GitHub/ADO state, not just local files. When omitted, falls back to local
-  // .agentx/issues/ JSON, which keeps existing sync callers and tests working.
+  // .frontier/issues/ JSON, which keeps existing sync callers and tests working.
   issuesOverride?: readonly LocalIssue[],
 ): WorkflowGuidanceSnapshot | undefined {
   if (!workspaceRoot) {
@@ -588,10 +588,10 @@ function getLocalIssues(root: string): LocalIssue[] {
 }
 
 /**
- * Fetch provider-aware issues via the CLI ('agentx issue list --json'), with
+ * Fetch provider-aware issues via the CLI ('frontier issue list --json'), with
  * a local-file fallback. Use this from async callers (chat router, command
  * handlers) so workflow guidance reflects GitHub/ADO state rather than only
- * .agentx/issues/ JSON. Mirrors WorkTreeProvider.getOpenIssues.
+ * .frontier/issues/ JSON. Mirrors WorkTreeProvider.getOpenIssues.
  */
 export async function fetchProviderAwareIssues(
   runCli: (subcommand: string, args: string[]) => Promise<string>,

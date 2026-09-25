@@ -25,7 +25,7 @@ Skip when:
 ## Prerequisites
 
 - Branch contains a coherent change set with a clear claim of completion
-- Quality loop status known (`.agentx/frontier.ps1 loop status`)
+- Quality loop status known (`.frontier/runtime/frontier.ps1 loop status`)
 - Test results for the current HEAD are known and recorded
 - Knowledge of whether the work has an issue and what its current status is
 
@@ -47,7 +47,7 @@ Run these checks on the branch HEAD. Any FAIL blocks disposition.
 
 ```pwsh
 # 1. Quality loop must be complete (NOT active, NOT cancelled)
-.\.agentx\frontier.ps1 loop status
+.\.frontier\runtime\frontier.ps1 loop status
 
 # 2. Tests must pass on the current commit, not a cached run
 npm test   # or dotnet test / pytest / etc
@@ -59,7 +59,7 @@ git status --porcelain
 git log --oneline origin/master..HEAD
 
 # 5. If an issue exists, its status must match the intended disposition
-.\.agentx\frontier.ps1 issue read -n <issue>
+.\.frontier\runtime\frontier.ps1 issue read -n <issue>
 ```
 
 Compound Capture check: if a review artifact is staged or committed on this branch, confirm either a `docs/artifacts/learnings/LEARNING-<issue>.md` is staged too, or the commit message carries `[skip-capture]` with rationale. The pre-commit hook will reject the push otherwise.
@@ -100,7 +100,7 @@ If `--ff-only` fails, rebase first (`git rebase master feature/<name>`) or escal
 
 ```pwsh
 git push -u origin feature/<name>
-gh pr create --title "feat: <summary> (fixes #<issue>)" --body-file .agentx/pr-body.md
+gh pr create --title "feat: <summary> (fixes #<issue>)" --body-file .frontier/pr-body.md
 gh pr view --web
 ```
 
@@ -121,8 +121,8 @@ Use when acceptance criteria are not yet met and a clean stopping point has been
 
 ```pwsh
 git push -u origin feature/<name>      # back up the work
-.\.agentx\frontier.ps1 issue update -n <issue> -s "In Progress"
-.\.agentx\frontier.ps1 loop status       # confirm loop is still active OR start a fresh loop next session
+.\.frontier\runtime\frontier.ps1 issue update -n <issue> -s "In Progress"
+.\.frontier\runtime\frontier.ps1 loop status       # confirm loop is still active OR start a fresh loop next session
 ```
 
 Update the execution plan Progress section with what was completed and what is next. Do NOT mark the loop complete -- it is not.
@@ -134,7 +134,7 @@ Use when the spike answered its question, the approach was abandoned, or a diffe
 ```pwsh
 # Save anything worth keeping first
 git log --oneline                                  # confirm nothing important is unique to this branch
-git diff master...HEAD > .agentx/discard-<name>.patch  # optional snapshot
+git diff master...HEAD > .frontier/discard-<name>.patch  # optional snapshot
 
 git checkout master
 git branch -D feature/<name>                       # capital D: force-delete unmerged branch
@@ -143,7 +143,7 @@ git worktree remove ../worktrees/<name>            # if a worktree existed
 git worktree prune
 ```
 
-Record the discard rationale in the issue (`/agentx note ...`) or close the issue with `--reason not_planned`.
+Record the discard rationale in the issue (`frontier comment ...`) or close the issue with `--reason not_planned`.
 
 ## Worktree Cleanup (always required when applicable)
 

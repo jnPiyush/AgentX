@@ -18,8 +18,8 @@ file (in extension-only workspaces, inside the installed Frontier extension).
 - Read the relevant spec, skill or instruction before writing code; repository
   conventions override general knowledge.
 - Quality loop: before the first file mutation, run
-  `.agentx/frontier.ps1 loop start -p "<task>"`. Record each fix/verify cycle with
-  `loop iterate -s "<summary>" -e <evidence>`. The final iteration carries an
+  `.frontier/runtime/frontier.ps1 loop start -p "<task>"`. Record each fix/verify
+  cycle with `loop iterate -s "<summary>" -e <evidence>`. The final iteration carries an
   independent reviewer verdict (`--verdict approved --reviewer <id> --high 0
   --medium 0`); edits after it need a fresh review. Finish with
   `loop complete -s "<summary>" -e <fresh-evidence>`. Minimum iterations:
@@ -97,4 +97,4 @@ follows verification. Stage deliverables pass `frontier validate <issue> <role>`
 | Agents, templates, prompts | `.github/agents/`, `.github/templates/`, `.github/prompts/` |
 
 Deliverables live in `docs/artifacts/{prd,adr,specs,reviews,learnings}/`,
-`docs/ux/` and `docs/execution/plans/`. CLI: `.agentx/frontier.ps1 help`.
+`docs/ux/` and `docs/execution/plans/`. CLI: `.frontier/runtime/frontier.ps1 help`.

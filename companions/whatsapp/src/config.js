@@ -115,7 +115,7 @@ function loadConfig({ env = process.env, configPath } = {}) {
     throw new Error(`repoPath does not exist or is not a directory: ${repoPath}`);
   }
 
-  const cliRelativePath = fileConfig.cliRelativePath || '.agentx/agentx.ps1';
+  const cliRelativePath = fileConfig.cliRelativePath || '.frontier/runtime/frontier.ps1';
   if (path.isAbsolute(cliRelativePath) || cliRelativePath.split(/[\\/]/).includes('..')) {
     throw new Error('cliRelativePath must be repository-relative without parent traversal.');
   }

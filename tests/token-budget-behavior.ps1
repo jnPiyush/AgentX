@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $workspace = Join-Path ([IO.Path]::GetTempPath()) ("agentx-token-budget-" + [guid]::NewGuid().ToString('N'))
-$previousRoot = $env:AGENTX_WORKSPACE_ROOT
+$previousRoot = $env:FRONTIER_WORKSPACE_ROOT
 $passed = 0
 function Assert-True([bool]$Value, [string]$Label) {
     if (-not $Value) { throw "[FAIL] $Label" }
@@ -27,7 +27,7 @@ try {
         overrides = @{}
     }
     $limits | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $workspace '.token-limits.json')
-    $env:AGENTX_WORKSPACE_ROOT = $workspace
+    $env:FRONTIER_WORKSPACE_ROOT = $workspace
     $captured = & (Join-Path $repoRoot 'scripts/token-counter.ps1') -Action report -Json
     Assert-True (-not [string]::IsNullOrWhiteSpace(($captured | Out-String))) 'In-process CI capture receives JSON on the PowerShell success stream'
     Assert-True (($captured | Out-String | ConvertFrom-Json).scannedFiles -eq 3) 'In-process token report is parseable JSON'
@@ -70,10 +70,10 @@ try {
     $unconfigured = Invoke-Counter @('-Action', 'report')
     Assert-True ($unconfigured.data.status -eq 'unconfigured') 'Missing policy is explicitly unconfigured, never pass'
     Assert-True ((Invoke-Counter @('-Action', 'check', '-Path', 'missing.md')).code -eq 2) 'Missing scan input fails explicitly'
-    $cliOutput = & pwsh -NoProfile -File (Join-Path $repoRoot '.agentx/agentx-cli.ps1') tokens count -Path README.md -Json
+    $cliOutput = & pwsh -NoProfile -File (Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1') tokens count -Path README.md -Json
     $cliResult = $cliOutput | Out-String | ConvertFrom-Json
     Assert-True ($LASTEXITCODE -eq 0 -and $cliResult.scannedFiles -eq 1) 'Frontier CLI forwards token Path and Json options'
-    $cliSingleOutput = & pwsh -NoProfile -File (Join-Path $repoRoot '.agentx/agentx-cli.ps1') tokens report -Json
+    $cliSingleOutput = & pwsh -NoProfile -File (Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1') tokens report -Json
     $cliSingleCode = $LASTEXITCODE
     Assert-True ($cliSingleCode -eq 0 -and ($cliSingleOutput | Out-String | ConvertFrom-Json).status -eq 'unconfigured') 'Frontier CLI forwards a lone Json flag as one argument'
     $emptyDir = Join-Path $workspace 'empty'
@@ -133,6 +133,6 @@ try {
     Assert-True ((Invoke-Counter @('-Action', 'context', '-Path', 'ctx')).code -eq 2) 'Non-positive always-on budget is a configuration error'
     Write-Host "Results: $passed passed"
 } finally {
-    $env:AGENTX_WORKSPACE_ROOT = $previousRoot
+    $env:FRONTIER_WORKSPACE_ROOT = $previousRoot
     Remove-Item -LiteralPath $workspace -Recurse -Force
 }

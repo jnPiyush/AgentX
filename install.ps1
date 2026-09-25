@@ -11,7 +11,7 @@
 .PARAMETER Path
  Install into a subdirectory (e.g. -Path myproject/backend). The VS Code
  extension auto-detects Frontier up to 2 levels deep, or you can set
- 'agentx.rootPath' in workspace settings.
+ 'frontier.rootPath' in workspace settings.
 
 .PARAMETER Force
  Overwrite existing files (default: merge, keeping existing)
@@ -164,11 +164,9 @@ if ($Mode -and $Mode -notin @("github", "local")) {
 }
 
 $installedVersion = $null
-foreach ($stateDirectory in @('.frontier', '.hve', '.agentx')) {
- $metadataPath = Join-Path $stateDirectory 'version.json'
- if (-not (Test-Path -LiteralPath $metadataPath)) { continue }
+$metadataPath = '.frontier/version.json'
+if (Test-Path -LiteralPath $metadataPath) {
  $installedVersion = (Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json).version
- if ($installedVersion) { break }
 }
 if ($installedVersion -and $installedVersion -ne '9.4.0' -and -not $Force) {
  throw "Frontier v$installedVersion is already installed. Re-run with -Force to replace managed files with v9.4.0; no files were changed."
@@ -213,9 +211,9 @@ $isPiped = -not $MyInvocation.MyCommand.Path
 
 $ErrorActionPreference = "Stop"
 $BRANCH = "v9.4.0"
-$TMP = ".agentx-install-tmp"
-$TMPRAW = ".agentx-install-raw"
-$ZIPFILE = ".agentx-install.zip"
+$TMP = ".frontier-install-tmp"
+$TMPRAW = ".frontier-install-raw"
+$ZIPFILE = ".frontier-install.zip"
 $ARCHIVE = "https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.zip"
 $ARCHIVE_SOURCE = if ($env:AGENTX_INSTALL_ARCHIVE) { $env:AGENTX_INSTALL_ARCHIVE } else { $ARCHIVE }
 
@@ -279,7 +277,7 @@ function Test-AzureWorkspace {
   Write-Verbose "Azure workspace scan skipped because infrastructure file discovery failed: $($_.Exception.Message)"
  }
 
- foreach ($hintFile in @('README.md', 'package.json', 'pyproject.toml', '.agentx/config.json')) {
+ foreach ($hintFile in @('README.md', 'package.json', 'pyproject.toml', '.frontier/config.json')) {
   try {
    if (-not (Test-Path $hintFile)) { continue }
    $content = Get-Content $hintFile -Raw
@@ -372,7 +370,7 @@ $root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 
 # Copy only essential paths (skip vscode-extension, tests, and large docs content)
 New-Item -ItemType Directory -Path $TMP -Force | Out-Null
-$neededDirs = @(".agentx", ".github", ".claude", ".cursor", ".vscode", "scripts", "packs", "docs/guides", "evaluation/rubrics")
+$neededDirs = @(".frontier/runtime", ".github", ".claude", ".cursor", ".vscode", "scripts", "packs", "docs/guides", "evaluation/rubrics")
 $neededFiles = @(
  ".gitignore",
  "AGENTS.md",
@@ -412,7 +410,7 @@ if (Test-Path $TMPRAW) {
  Remove-Item $TMPRAW -Recurse -Force -ErrorAction SilentlyContinue
 }
 Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue
-if (-not (Test-Path "$TMP/.agentx")) { Write-Error "Download failed. Check network connection." }
+if (-not (Test-Path "$TMP/.frontier/runtime")) { Write-Error "Download failed. Check network connection." }
 Write-OK "Frontier downloaded (essential files only)"
 
 # -- Step 2: Copy files ----------------------------------
@@ -421,13 +419,7 @@ Write-Host "[2] Installing files..." -ForegroundColor Cyan
 $tmpFull = (Resolve-Path $TMP).Path.TrimEnd('\', '/')
 $copied = 0; $skipped = 0
 $runtimeStatePatterns = @(
- '^\.agentx/config\.json$',
- '^\.agentx/version\.json$',
- '^\.agentx/issues/',
- '^\.agentx/digests/',
- '^\.agentx/sessions/',
- '^\.agentx/memory/',
- '^\.agentx/state/',
+ '^\.frontier/(?!runtime/)',
  '^\.vscode/mcp\.json$',
  '^\.vscode/settings\.json$'
 )
@@ -439,7 +431,7 @@ Get-ChildItem $TMP -Recurse -File -Force | ForEach-Object {
   return
  }
  $dest = if ($normalizedRel -in @('LICENSE', 'NOTICE')) {
-  Join-Path '.agentx/legal' $normalizedRel
+  Join-Path '.frontier/runtime/legal' $normalizedRel
  } else {
   Join-Path "." $rel
  }
@@ -499,8 +491,8 @@ if (Test-Path -LiteralPath '.vscode/mcp.json') {
 
 # -- Step 3: Generate runtime files ----------------------
 Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
-& pwsh -NoProfile -File '.agentx/agentx-cli.ps1' version
-if ($LASTEXITCODE -ne 0) { throw 'Frontier state migration failed; installation metadata was not updated.' }
+& pwsh -NoProfile -File '.frontier/runtime/frontier-cli.ps1' version
+if ($LASTEXITCODE -ne 0) { throw 'Frontier CLI failed to start; installation metadata was not updated.' }
 
 @(
  ".frontier/state",
@@ -519,7 +511,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Frontier state migration failed; installation 
  if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 }
 
-$memoryTemplateSource = Join-Path ".agentx" "templates/memories"
+$memoryTemplateSource = Join-Path ".frontier/runtime" "templates/memories"
 if (Test-Path $memoryTemplateSource) {
  Get-ChildItem $memoryTemplateSource -File -Recurse | ForEach-Object {
   $relativePath = $_.FullName.Substring($memoryTemplateSource.Length + 1)
@@ -552,10 +544,6 @@ $agentxBlock = @(
  $MARKER_START
  "# Frontier framework"
  ".frontier/"
- ".frontier-migration.lock/"
- ".frontier.migrating-*/"
- ".hve/"
- ".agentx/"
  ".github/agents/"
  ".github/instructions/"
  ".github/prompts/"
@@ -567,14 +555,14 @@ $agentxBlock = @(
  ".github/ISSUE_TEMPLATE/"
  ".github/PULL_REQUEST_TEMPLATE.md"
  ".github/agent-delegation.md"
- ".github/agentx-security.yml"
+ ".github/frontier-security.yml"
  ".github/CODEOWNERS"
  ".github/copilot-instructions.md"
  ".claude/"
  ".cursor/mcp.json"
  ".cursor/commands/ado-ops.md"
  ".cursor/commands/ado-prd-to-wit.md"
- ".cursor/commands/agent-x.md"
+ ".cursor/commands/frontier.md"
  ".cursor/commands/agile-coach.md"
  ".cursor/commands/architect.md"
  ".cursor/commands/consulting-research.md"
@@ -590,7 +578,7 @@ $agentxBlock = @(
  ".cursor/commands/reviewer.md"
  ".cursor/commands/tester.md"
  ".cursor/commands/ux-designer.md"
- ".cursor/rules/000-agentx-core.mdc"
+ ".cursor/rules/000-frontier-core.mdc"
  ".cursor/rules/ai.mdc"
  ".cursor/rules/csharp.mdc"
  ".cursor/rules/python.mdc"
@@ -693,7 +681,7 @@ if (-not $NoSetup) {
  $username = Read-Host " GitHub username (for CODEOWNERS)"
  }
  if ($username) {
- foreach ($f in @(".github/CODEOWNERS",".github/agentx-security.yml")) {
+ foreach ($f in @(".github/CODEOWNERS",".github/frontier-security.yml")) {
  if (Test-Path $f) {
  (Get-Content $f -Raw) -replace '<YOUR_GITHUB_USERNAME>', $username | Set-Content $f -NoNewline
  }
@@ -817,15 +805,15 @@ Write-Host "===================================================" -ForegroundColo
 Write-Host " Frontier v9.4.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White
+Write-Host " CLI: .\.frontier\runtime\frontier.ps1 help" -ForegroundColor White
 Write-Host " Docs: .github/copilot-instructions.md" -ForegroundColor White
 if ($Local) {
- Write-Host " Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'" -ForegroundColor DarkGray
+ Write-Host " Issue: .\.frontier\runtime\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'" -ForegroundColor DarkGray
 }
 if ($Path) {
  Write-Host "" -ForegroundColor White
  Write-Host " [TIP] VS Code nested folder:" -ForegroundColor Yellow
- Write-Host "  Set 'agentx.rootPath' in .vscode/settings.json to '$((Resolve-Path .).Path)'" -ForegroundColor DarkGray
+ Write-Host "  Set 'frontier.rootPath' in .vscode/settings.json to '$((Resolve-Path .).Path)'" -ForegroundColor DarkGray
  Write-Host "  or the extension will auto-detect up to 2 levels deep." -ForegroundColor DarkGray
 }
 

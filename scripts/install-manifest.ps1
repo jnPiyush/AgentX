@@ -9,7 +9,7 @@
   detect missing files and user-modified files. Uninstall uses it to
   preserve user-modified files by default.
 
-  The manifest lives at .agentx/install-manifest.json and has the shape:
+  The manifest lives at .frontier/runtime/install-manifest.json and has the shape:
   {
     "version": "<agentx version>",
     "createdAt": "<ISO 8601 UTC>",
@@ -22,7 +22,7 @@
   generate | verify | list
 
 .PARAMETER ManifestPath
-  Override path to the manifest. Defaults to .agentx/install-manifest.json.
+  Override path to the manifest. Defaults to .frontier/runtime/install-manifest.json.
 
 .EXAMPLE
   pwsh scripts/install-manifest.ps1 -Action generate
@@ -34,7 +34,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [ValidateSet('generate','verify','list')] [string]$Action,
-    [string]$ManifestPath = '.agentx/install-manifest.json',
+    [string]$ManifestPath = '.frontier/runtime/install-manifest.json',
     # Release gate: also fail when the manifest version is stale or tracked files
     # have drifted. Plain `verify` stays advisory because drift in an installed
     # workspace is expected -- it is how user-modified files are detected.
@@ -112,10 +112,10 @@ function Get-ManifestEntries {
     Add-Group -Pattern '.github/security/*.json' -Category 'config'
 
     $singletons = @(
-        @{ path = '.agentx/agentx.ps1';        category = 'cli' },
-        @{ path = '.agentx/agentx-cli.ps1';    category = 'cli' },
-        @{ path = '.agentx/agentx.sh';         category = 'cli' },
-        @{ path = '.agentx/agentic-runner.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/frontier.ps1';       category = 'cli' },
+        @{ path = '.frontier/runtime/frontier.sh';        category = 'cli' },
+        @{ path = '.frontier/runtime/frontier-cli.ps1';   category = 'cli' },
+        @{ path = '.frontier/runtime/agentic-runner.ps1'; category = 'cli' },
         @{ path = 'AGENTS.md';                 category = 'doc' },
         @{ path = 'CLAUDE.md';                 category = 'doc' },
         @{ path = 'Skills.md';                 category = 'doc' }

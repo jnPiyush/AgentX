@@ -7,17 +7,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -128,7 +128,7 @@ The canonical deliverable is slide-ready Markdown -- storyboard guidance, diagra
 
 ### Optional: Render Slide Markdown to PPTX
 
-When the user explicitly asks for a deck file ("give me the .pptx", "export to PowerPoint", "send slides I can open in PowerPoint"), use the `convert-slides` plugin at [.agentx/plugins/convert-slides/](../../.agentx/plugins/convert-slides/) to render the Markdown storyboard into a `.pptx`. Do NOT hand-author binary decks; always go Markdown -> plugin -> PPTX so the source remains diff-reviewable.
+When the user explicitly asks for a deck file ("give me the .pptx", "export to PowerPoint", "send slides I can open in PowerPoint"), use the `convert-slides` plugin at [.frontier/runtime/plugins/convert-slides/](../../.frontier/runtime/plugins/convert-slides/) to render the Markdown storyboard into a `.pptx`. Do NOT hand-author binary decks; always go Markdown -> plugin -> PPTX so the source remains diff-reviewable.
 
 Workflow:
 
@@ -136,7 +136,7 @@ Workflow:
 2. Verify Pandoc is on `PATH` (`pandoc --version`). If missing, surface the install link and stop -- do not attempt a fallback.
 3. Run the plugin:
    ```powershell
-   .\.agentx\plugins\convert-slides\convert-slides.ps1 `
+   .\.frontier\runtime\plugins\convert-slides\convert-slides.ps1 `
      -Files "docs/presentations/STORY-{topic}.md" `
      -Output "docs/presentations/dist" `
      -Template "<optional brand .pptx>"
@@ -232,7 +232,7 @@ Substitute models when the default is unavailable, but preserve the three-role s
 **How to convene**:
 
 ```pwsh
-pwsh .agentx/frontier.ps1 council `
+pwsh .frontier/runtime/frontier.ps1 council `
   -Topic "{topic-slug}" `
   -Question "{the framing question the council must answer}" `
   -Context "{key claims to stress-test, drawn from the research log}"
@@ -241,7 +241,7 @@ pwsh .agentx/frontier.ps1 council `
 A council is **not limited to one topic** -- put several framing questions to it in one run with `-Questions`:
 
 ```pwsh
-pwsh .agentx/frontier.ps1 council `
+pwsh .frontier/runtime/frontier.ps1 council `
   -Topic "{topic-slug}" `
   -Questions "{first framing question}","{second framing question}","{third framing question}" `
   -Context "{key claims to stress-test, drawn from the research log}"
@@ -339,9 +339,9 @@ Validate the analysis before handoff.
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 

@@ -301,22 +301,22 @@ When this repo runs in **Local Mode**, this file is the source of truth. The CLI
 
 ```powershell
 # Story
-.\.agentx\frontier.ps1 issue create -t "[Story] <title>" -l "type:story,priority:p1" -b "<body or path to spec>"
+.\.frontier\runtime\frontier.ps1 issue create -t "[Story] <title>" -l "type:story,priority:p1" -b "<body or path to spec>"
 
 # Bug
-.\.agentx\frontier.ps1 issue create -t "[Bug] <title>" -l "type:bug,priority:p0"
+.\.frontier\runtime\frontier.ps1 issue create -t "[Bug] <title>" -l "type:bug,priority:p0"
 
 # Epic
-.\.agentx\frontier.ps1 issue create -t "[Epic] <title>" -l "type:epic"
+.\.frontier\runtime\frontier.ps1 issue create -t "[Epic] <title>" -l "type:epic"
 ```
 
 3. Update the row in this file with the issue number returned by the CLI.
 4. As work progresses, update the row's Status column AND run:
 
 ```powershell
-.\.agentx\frontier.ps1 issue update -n <num> -s "In Progress"
-.\.agentx\frontier.ps1 issue update -n <num> -s "In Review"
-.\.agentx\frontier.ps1 issue close  -n <num>
+.\.frontier\runtime\frontier.ps1 issue update -n <num> -s "In Progress"
+.\.frontier\runtime\frontier.ps1 issue update -n <num> -s "In Review"
+.\.frontier\runtime\frontier.ps1 issue close  -n <num>
 ```
 
 ### Migration to GitHub mode

@@ -16,10 +16,10 @@ const githubDirs = ['agents', 'instructions', 'prompts', 'skills', 'templates', 
 
 // Directories from repo root to bundle
 const rootDirs = [
-    { src: path.join(repoRoot, '.agentx', 'hooks'), dest: path.join('.agentx', 'hooks') },
+    { src: path.join(repoRoot, '.frontier', 'runtime', 'hooks'), dest: path.join('.frontier', 'runtime', 'hooks') },
     { src: path.join(repoRoot, '.github', 'hooks'), dest: path.join('.github', 'hooks') },
-    { src: path.join(repoRoot, '.agentx', 'templates'), dest: path.join('.agentx', 'templates') },
-    { src: path.join(repoRoot, '.agentx', 'plugins'), dest: path.join('.agentx', 'plugins') },
+    { src: path.join(repoRoot, '.frontier', 'runtime', 'templates'), dest: path.join('.frontier', 'runtime', 'templates') },
+    { src: path.join(repoRoot, '.frontier', 'runtime', 'plugins'), dest: path.join('.frontier', 'runtime', 'plugins') },
     { src: path.join(repoRoot, '.cursor'), dest: '.cursor' },
     { src: path.join(repoRoot, 'packs'), dest: 'packs' },
 ];
@@ -65,17 +65,18 @@ const rootDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE', 'NOTIC
 // Root-level compatibility docs referenced by bundled markdown via relative paths
 const compatibilityDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE', 'NOTICE'];
 
-// Root-level runtime files that extension-installed workspaces rely on
+// Runtime entry points that extension-installed workspaces rely on
 const rootRuntimeFiles = [
-    { src: path.join(repoRoot, '.agentx', 'frontier.ps1'), dest: path.join('.agentx', 'frontier.ps1') },
-    { src: path.join(repoRoot, '.agentx', 'frontier.sh'), dest: path.join('.agentx', 'frontier.sh') },
-    { src: path.join(repoRoot, '.agentx', 'agentx.ps1'), dest: path.join('.agentx', 'agentx.ps1') },
-    { src: path.join(repoRoot, '.agentx', 'agentx-cli.ps1'), dest: path.join('.agentx', 'agentx-cli.ps1') },
-    { src: path.join(repoRoot, '.agentx', 'agentic-runner.ps1'), dest: path.join('.agentx', 'agentic-runner.ps1') },
-    { src: path.join(repoRoot, '.agentx', 'agentx.sh'), dest: path.join('.agentx', 'agentx.sh') },
-    { src: path.join(repoRoot, '.agentx', 'local-issue-manager.ps1'), dest: path.join('.agentx', 'local-issue-manager.ps1') },
-    { src: path.join(repoRoot, '.agentx', 'local-issue-manager.sh'), dest: path.join('.agentx', 'local-issue-manager.sh') },
-];
+    'frontier.ps1',
+    'frontier.sh',
+    'frontier-cli.ps1',
+    'agentic-runner.ps1',
+    'local-issue-manager.ps1',
+    'local-issue-manager.sh',
+].map((file) => ({
+    src: path.join(repoRoot, '.frontier', 'runtime', file),
+    dest: path.join('.frontier', 'runtime', file),
+}));
 
 // docs/ reference files referenced by agents (bundled to docs/ subdirectory)
 const docFiles = ['BRAND.md', 'WORKFLOW.md', 'GUIDE.md', 'GOLDEN_PRINCIPLES.md', 'QUALITY_SCORE.md', 'tech-debt-tracker.md'];
@@ -90,13 +91,6 @@ const artifactDocFiles = [
     'evaluation/rubrics/stage-gates.md',
     'evaluation/rubrics/README.md',
     'evaluation/baseline.json',
-    'docs/artifacts/adr/ADR-342.md',
-    'docs/artifacts/adr/ADR-341.md',
-    'docs/artifacts/specs/SPEC-341.md',
-    'docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md',
-    'docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md',
-    'docs/artifacts/adr/ADR-Harness-Engineering.md',
-    'docs/artifacts/specs/SPEC-Harness-Engineering.md',
 ].map((relativePath) => ({
     src: path.join(repoRoot, ...relativePath.split('/')),
     dest: path.join(...relativePath.split('/')),
@@ -107,7 +101,7 @@ const bundledMarkdownRewrites = [
         relativePath: 'AGENT-PROTOCOL.md',
         replacements: [
             ['(../evaluation/', '(evaluation/'],
-            ['(../.agentx/', '(.agentx/'],
+            ['(../.frontier/runtime/', '(.frontier/runtime/'],
             ['(../AGENTS.md', '(AGENTS.md'],
             ['(../docs/', '(docs/'],
         ],
@@ -193,7 +187,7 @@ const bundledMarkdownRewrites = [
     {
         relativePath: path.join('agents', 'consulting-research.agent.md'),
         replacements: [
-            ['(../../.agentx/', '(../.agentx/'],
+            ['(../../.frontier/runtime/', '(../.frontier/runtime/'],
         ],
     },
     {
@@ -209,30 +203,6 @@ const bundledMarkdownRewrites = [
         ],
     },
     {
-        relativePath: path.join('docs', 'artifacts', 'adr', 'ADR-342.md'),
-        replacements: [
-            ['(../../../.github/skills/', '(../../../skills/'],
-        ],
-    },
-    {
-        relativePath: path.join('docs', 'artifacts', 'specs', 'SPEC-341.md'),
-        replacements: [
-            ['(../../../.github/templates/', '(../../../templates/'],
-        ],
-    },
-    {
-        relativePath: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-341-self-hosted-runtime.md'),
-        replacements: [
-            ['(../../../.github/templates/', '(../../../templates/'],
-        ],
-    },
-    {
-        relativePath: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-342-browser-automation-skill.md'),
-        replacements: [
-            ['(../../../.github/templates/', '(../../../templates/'],
-        ],
-    },
-    {
         relativePath: path.join('skills', 'development', 'browser-automation', 'SKILL.md'),
         replacements: [
             ['(../../../../docs/', '(../../../docs/'],
@@ -242,22 +212,6 @@ const bundledMarkdownRewrites = [
         relativePath: path.join('skills', 'development', 'browser-automation', 'references', 'wcag-validation.md'),
         replacements: [
             ['(../../../../../docs/', '(../../../../docs/'],
-        ],
-    },
-    {
-        relativePath: path.join('docs', 'artifacts', 'adr', 'ADR-Harness-Engineering.md'),
-        replacements: [
-            ['(../../../.github/templates/', '(../../../templates/'],
-            ['(../../../.github/workflows/', '(../../../workflows/'],
-            ['(../../../vscode-extension/src/', '(../../../../../src/'],
-        ],
-    },
-    {
-        relativePath: path.join('docs', 'artifacts', 'specs', 'SPEC-Harness-Engineering.md'),
-        replacements: [
-            ['(../../../.github/templates/', '(../../../templates/'],
-            ['(../../../.github/workflows/', '(../../../workflows/'],
-            ['(../../../vscode-extension/src/', '(../../../../../src/'],
         ],
     },
     {
@@ -531,7 +485,7 @@ function buildCopilotCliSeedTree() {
 
     // Trees referenced by individual agents.
     copyTree(path.join(repoRoot, 'packs'), 'packs');
-    copyTree(path.join(repoRoot, '.agentx', 'plugins'), path.join('.agentx', 'plugins'));
+    copyTree(path.join(repoRoot, '.frontier', 'runtime', 'plugins'), path.join('.frontier', 'runtime', 'plugins'));
 
     applySeedRewrites(seedRoot);
 
@@ -551,14 +505,6 @@ function applySeedRewrites(seedRoot) {
             relativePath: path.join('docs', 'GUIDE.md'),
             replacements: [
                 ['](../CONTRIBUTING.md)', '](https://github.com/jnPiyush/AgentX/blob/master/CONTRIBUTING.md)'],
-            ],
-        },
-        {
-            // The zero-copy runtime is deliberately never seeded, so drop the link
-            // and keep the path as plain text.
-            relativePath: path.join('docs', 'artifacts', 'adr', 'ADR-341.md'),
-            replacements: [
-                ['[`.agentx/agentic-runner.ps1`](../../../.agentx/agentic-runner.ps1)', '`.agentx/agentic-runner.ps1`'],
             ],
         },
     ];

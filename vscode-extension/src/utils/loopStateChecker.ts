@@ -43,7 +43,7 @@ export function readLoopState(workspaceRoot: string): LoopState | null {
 /**
  * Check whether the engineer is allowed to hand off to reviewer.
  *
- * Gate rules (matches agentx-cli.ps1 quality gate):
+ * Gate rules (matches frontier-cli.ps1 quality gate):
  *  - Loop still active (active=true) -> BLOCKED
  *  - Loop never started (no state file) -> BLOCKED
  *  - Loop cancelled (status=cancelled) -> BLOCKED

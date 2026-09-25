@@ -12,8 +12,8 @@ Paths below are plain text: read them when a task needs them.
 
 ## Before Editing
 
-Run `.agentx/frontier.ps1 loop start -p "<task>"` before the first file mutation
-and finish with `loop complete` after an independent reviewer approves the final
+Run `.frontier/runtime/frontier.ps1 loop start -p "<task>"` before the first file
+mutation and finish with `loop complete` after an independent reviewer approves the final
 state (`--verdict approved --reviewer <id> --high 0 --medium 0`).
 Honesty rule: report gate state from `loop status` and real artifacts; do not
 refresh old evidence or invent scores. Details: `.github/AGENT-PROTOCOL.md`

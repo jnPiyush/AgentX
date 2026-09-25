@@ -6,7 +6,7 @@
 .DESCRIPTION
   Wraps the commit -> push -> PR flow with safety rails:
     * Verifies branch is not the default branch (refuses to push direct to main/master)
-    * Verifies a clean compile/test signal has run (looks at .agentx/state/loop-state.json)
+    * Verifies a clean compile/test signal has run (looks at .frontier/state/loop-state.json)
     * Creates one commit from staged changes (or all changes with -All)
     * Pushes the branch
     * Creates a PR if none exists, or comments on the existing PR

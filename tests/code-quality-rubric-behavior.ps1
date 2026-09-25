@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $evaluatorPath = Join-Path $repoRoot 'scripts/score-code-quality.ps1'
 $rubricPath = Join-Path $repoRoot 'evaluation/rubrics/code-quality.md'
-$cliPath = Join-Path $repoRoot '.agentx/agentx-cli.ps1'
+$cliPath = Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1'
 $script:passed = 0
 $script:failed = 0
 $script:convertFromJsonSupportsDateKind = (Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')
@@ -294,7 +294,7 @@ try {
     Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$cliContent = Get-Content -LiteralPath (Join-Path $repoRoot '.agentx/agentx-cli.ps1') -Raw -Encoding utf8
+$cliContent = Get-Content -LiteralPath (Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1') -Raw -Encoding utf8
 Assert-True ($cliContent -match 'score-code-quality\.ps1') 'Loop CLI dispatches the code-quality evaluator'
 Assert-True ($cliContent -match '(?s)function Invoke-LoopComplete.+Invoke-CodeQualityEvaluator -Mode Validate') 'Loop completion explicitly enforces rubric validation'
 
@@ -311,18 +311,18 @@ try {
 }
 
 $dotPathWorkspace = New-TestWorkspace 'dot-path'
-New-Item -ItemType Directory -Path (Join-Path $dotPathWorkspace '.agentx') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $dotPathWorkspace '.frontier/runtime') -Force | Out-Null
 try {
     & git -C $dotPathWorkspace init --quiet
-    & git -C $dotPathWorkspace config user.email 'agentx-tests@example.invalid'
+    & git -C $dotPathWorkspace config user.email 'frontier-tests@example.invalid'
     & git -C $dotPathWorkspace config user.name 'Frontier Tests'
-    Set-Content -LiteralPath (Join-Path $dotPathWorkspace '.agentx/runtime.ps1') -Value 'Write-Output baseline' -Encoding utf8
+    Set-Content -LiteralPath (Join-Path $dotPathWorkspace '.frontier/runtime/frontier-cli.ps1') -Value 'Write-Output baseline' -Encoding utf8
     & git -C $dotPathWorkspace add .
     & git -C $dotPathWorkspace commit --quiet -m 'test: establish dot-path fixture'
-    Add-Content -LiteralPath (Join-Path $dotPathWorkspace '.agentx/runtime.ps1') -Value 'Write-Output changed' -Encoding utf8
+    Add-Content -LiteralPath (Join-Path $dotPathWorkspace '.frontier/runtime/frontier-cli.ps1') -Value 'Write-Output changed' -Encoding utf8
     $dotPathScopeResult = Invoke-Evaluator $dotPathWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $dotPathWorkspace, '-Json')
     $dotPathScope = $dotPathScopeResult.Output | ConvertFrom-Json
-    Assert-True ($dotPathScopeResult.ExitCode -eq 0 -and $dotPathScope.files[0].path -eq '.agentx/runtime.ps1') 'Scope preserves leading-dot implementation directories'
+    Assert-True ($dotPathScopeResult.ExitCode -eq 0 -and $dotPathScope.files[0].path -eq '.frontier/runtime/frontier-cli.ps1') 'Scope preserves leading-dot runtime implementation directories'
 } finally {
     Remove-Item -LiteralPath $dotPathWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }

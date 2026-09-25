@@ -28,7 +28,7 @@ const AZURE_FILE_EXTENSIONS = new Set([
   '.bicepparam',
 ]);
 const TEXT_HINT_FILES = [
-  '.agentx/config.json',
+  '.frontier/config.json',
   'README.md',
   'package.json',
   'pyproject.toml',

@@ -6,7 +6,7 @@ import { resolveFrontierStateDirectory, resolveFrontierStatePath } from './front
 // Types
 // -----------------------------------------------------------------------
 
-/** Shape of .agentx/version.json written by the installer / wizard. */
+/** Shape of .frontier/version.json written by the installer / wizard. */
 export interface InstalledVersionInfo {
   version: string;
   mode: string;
@@ -56,7 +56,7 @@ export function compareSemver(a: string, b: string): -1 | 0 | 1 {
 // -----------------------------------------------------------------------
 
 /**
- * Read the installed framework version from `.agentx/version.json`
+ * Read the installed framework version from `.frontier/version.json`
  * in the given workspace root. Returns undefined when the file is
  * missing or unreadable.
  */

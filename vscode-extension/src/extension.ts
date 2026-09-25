@@ -98,8 +98,7 @@ export function activate(context: vscode.ExtensionContext) {
 
  // Manual opt-in into the VS Code Agents Window. Power-user command that
  // performs the same idempotent merge as the activation prompt, with no
- // questions asked. See utils/agentsWindowOptIn.ts and
- // docs/execution/contracts/CONTRACT-400-agents-window-slice2.md.
+ // questions asked. See utils/agentsWindowOptIn.ts.
  context.subscriptions.push(
   vscode.commands.registerCommand('frontier.enableInAgentsWindow', async () => {
    try {
@@ -131,7 +130,7 @@ export function activate(context: vscode.ExtensionContext) {
  }
 
  // Auto-discover Frontier when config or MCP files change
- const configWatcher = vscode.workspace.createFileSystemWatcher('**/{.frontier,.hve,.agentx}/config.json');
+ const configWatcher = vscode.workspace.createFileSystemWatcher('**/.frontier/config.json');
  const mcpWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/mcp.json');
  const gitConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.git/config');
 

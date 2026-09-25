@@ -8,23 +8,23 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   level: high
 constraints:
   - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document Changes -> Self-Review -> Decision; MUST NOT issue an approval or rejection before all phases complete; MUST revert any auto-fix that fails the test suite before advancing"
-  - "MUST run '.agentx/frontier.ps1 loop start -p <description>' as the ABSOLUTE FIRST action before any file edits or reviews"
+  - "MUST run '.frontier/runtime/frontier.ps1 loop start -p <description>' as the ABSOLUTE FIRST action before any file edits or reviews"
   - "MUST read the Tech Spec and PRD before reviewing"
   - "MUST verify the Engineer's quality loop reached status=complete before reviewing"
   - "MUST auto-fix ONLY safe categories (formatting, imports, naming, null checks, docs)"
@@ -33,8 +33,8 @@ constraints:
   - "MUST NOT modify business logic without explicit approval"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
   - "MUST revert auto-fixes if tests fail after applying them"
-  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.agentx/frontier.ps1 loop complete -s <summary>' succeeds"
-  - "MUST run '.agentx/frontier.ps1 loop complete -s <summary>' before issuing approval/rejection decision"
+  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.frontier/runtime/frontier.ps1 loop complete -s <summary>' succeeds"
+  - "MUST run '.frontier/runtime/frontier.ps1 loop complete -s <summary>' before issuing approval/rejection decision"
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
@@ -206,9 +206,9 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 

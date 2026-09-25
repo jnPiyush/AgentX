@@ -15,8 +15,8 @@ function createWorkspaceRoot(): string {
     fs.mkdirSync(path.join(root, 'docs', 'execution', 'progress'), { recursive: true });
     fs.mkdirSync(path.join(root, 'docs', 'guides'), { recursive: true });
     fs.mkdirSync(path.join(root, 'docs', 'artifacts', 'specs'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.agentx', 'state'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.agentx', 'issues'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.frontier', 'state'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.frontier', 'issues'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs', 'plans'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs', 'reviews', 'findings'), { recursive: true });
   return root;
@@ -30,7 +30,7 @@ function createAgentxStub(root: string) {
     getPendingClarification: async () => undefined,
     runCli: async () => '[]',
     listExecutionPlanFiles: () => ['docs/execution/plans/EXEC-PLAN-1.md'],
-    getStatePath: (fileName: string) => path.join(root, '.agentx', 'state', fileName),
+    getStatePath: (fileName: string) => path.join(root, '.frontier', 'state', fileName),
   } as any;
 }
 
@@ -42,12 +42,12 @@ describe('sidebar providers', () => {
   it('WorkTreeProvider should show Overview and Open issues sections', async () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
-      path.join(root, '.agentx', 'state', 'agent-status.json'),
+      path.join(root, '.frontier', 'state', 'agent-status.json'),
       JSON.stringify({ engineer: { status: 'working', issue: 7, lastActivity: '2026-03-09T10:00:00Z' } }),
       'utf-8',
     );
     fs.writeFileSync(
-      path.join(root, '.agentx', 'state', 'harness-state.json'),
+      path.join(root, '.frontier', 'state', 'harness-state.json'),
       JSON.stringify({
         version: 1,
         threads: [{
@@ -74,7 +74,7 @@ describe('sidebar providers', () => {
       'utf-8',
     );
     fs.writeFileSync(
-      path.join(root, '.agentx', 'issues', '7.json'),
+      path.join(root, '.frontier', 'issues', '7.json'),
       JSON.stringify({ number: 7, title: 'Add sidebar', state: 'open', status: 'In Progress' }),
       'utf-8',
     );
@@ -119,7 +119,7 @@ describe('sidebar providers', () => {
   it('WorkTreeProvider should fall back to local issues when provider issue listing fails', async () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
-      path.join(root, '.agentx', 'issues', '9.json'),
+      path.join(root, '.frontier', 'issues', '9.json'),
       JSON.stringify({ number: 9, title: 'Fallback issue', state: 'open', status: 'Backlog' }),
       'utf-8',
     );
@@ -141,7 +141,7 @@ describe('sidebar providers', () => {
   it('WorkTreeProvider should fall back to local issues when provider returns empty list', async () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
-      path.join(root, '.agentx', 'issues', '11.json'),
+      path.join(root, '.frontier', 'issues', '11.json'),
       JSON.stringify({ number: 11, title: 'Empty-CLI fallback', state: 'open', status: 'Backlog' }),
       'utf-8',
     );
@@ -171,7 +171,7 @@ describe('sidebar providers', () => {
     fs.writeFileSync(path.join(root, 'docs', 'artifacts', 'specs', 'SPEC-219.md'), '# Spec', 'utf-8');
     fs.writeFileSync(path.join(root, 'docs', 'artifacts', 'specs', 'SPEC-220.md'), '# Spec', 'utf-8');
     fs.writeFileSync(path.join(root, 'docs', 'artifacts', 'specs', 'SPEC-221.md'), '# Spec', 'utf-8');
-    fs.writeFileSync(path.join(root, '.agentx', 'state', 'loop-state.json'), JSON.stringify({
+    fs.writeFileSync(path.join(root, '.frontier', 'state', 'loop-state.json'), JSON.stringify({
       active: false,
       status: 'complete',
       prompt: 'Done',
@@ -182,7 +182,7 @@ describe('sidebar providers', () => {
       lastIterationAt: '2026-03-09T10:10:00Z',
       history: [],
     }), 'utf-8');
-    fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
+    fs.writeFileSync(path.join(root, '.frontier', 'state', 'harness-state.json'), JSON.stringify({
       version: 1,
       threads: [{
         id: 'thread-1',
@@ -218,12 +218,12 @@ describe('sidebar providers', () => {
   it('StatusTreeProvider should show overview with version, mode, and companion state', async () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
-      path.join(root, '.agentx', 'version.json'),
+      path.join(root, '.frontier', 'version.json'),
       JSON.stringify({ version: '8.4.0', mode: 'github' }),
       'utf-8',
     );
     fs.writeFileSync(
-      path.join(root, '.agentx', 'config.json'),
+      path.join(root, '.frontier', 'config.json'),
       JSON.stringify({ mode: 'github' }),
       'utf-8',
     );

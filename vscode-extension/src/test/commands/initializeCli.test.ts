@@ -146,8 +146,8 @@ describe('runInitializeCliCommand', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-init-cli-'));
-    fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
-    fs.writeFileSync(path.join(tempRoot, '.agentx', 'config.json'), '{}', 'utf8');
+    fs.mkdirSync(path.join(tempRoot, '.frontier'), { recursive: true });
+    fs.writeFileSync(path.join(tempRoot, '.frontier', 'config.json'), '{}', 'utf8');
 
     fakeAgentx = {
       invalidateCache: sandbox.stub(),

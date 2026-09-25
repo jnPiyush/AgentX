@@ -9,7 +9,7 @@
 # Options:
 #   -t, --target <path>    Target workspace (default: current directory)
 #   -s, --source <path>    Frontier repo root (default: auto-detect)
-#   -c, --include-cli      Also install .agentx/ CLI utilities
+#   -c, --include-cli      Also install the Frontier CLI (.frontier/runtime)
 #   -f, --force            Overwrite existing files
 #   -n, --dry-run          Show what would be copied
 #   -h, --help             Show this help
@@ -21,13 +21,11 @@ SOURCE=""
 INCLUDE_CLI=false
 FORCE=false
 DRY_RUN=false
-RUNTIME_BUNDLE_ROOT=".github/frontier/.agentx"
+RUNTIME_BUNDLE_ROOT=".github/frontier/.frontier/runtime"
 RUNTIME_BUNDLE_FILES=(
   "frontier.ps1"
   "frontier.sh"
-  "agentx.ps1"
-  "agentx.sh"
-  "agentx-cli.ps1"
+  "frontier-cli.ps1"
   "agentic-runner.ps1"
   "local-issue-manager.ps1"
   "local-issue-manager.sh"
@@ -77,7 +75,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: bash install.sh [-t target] [-s source] [-c] [-f] [-n] [-h]"
       echo "  -t, --target      Target workspace (default: cwd)"
       echo "  -s, --source      Frontier repo root (default: auto-detect)"
-      echo "  -c, --include-cli Install .agentx/ CLI utilities"
+      echo "  -c, --include-cli Install the Frontier CLI (.frontier/runtime)"
       echo "  -f, --force       Overwrite existing files"
       echo "  -n, --dry-run     Preview without changes"
       exit 0
@@ -208,7 +206,7 @@ install_cli_runtime_bundle() {
   local skipped_before=$TOTAL_SKIPPED
 
   for file_name in "${RUNTIME_BUNDLE_FILES[@]}"; do
-    copy_file ".agentx/$file_name" "$RUNTIME_BUNDLE_ROOT/$file_name"
+    copy_file ".frontier/runtime/$file_name" "$RUNTIME_BUNDLE_ROOT/$file_name"
   done
   copy_file "scripts/score-code-quality.ps1" ".github/frontier/scripts/score-code-quality.ps1"
   copy_file "evaluation/rubrics/code-quality.md" ".github/frontier/evaluation/rubrics/code-quality.md"
@@ -219,7 +217,7 @@ install_cli_runtime_bundle() {
 }
 
 install_starter_memories() {
-  copy_tree "$SOURCE/.agentx/templates/memories" "$TARGET/memories" "Starter memories"
+  copy_tree "$SOURCE/.frontier/runtime/templates/memories" "$TARGET/memories" "Starter memories"
 }
 
 initialize_workspace_cli_state() {
@@ -227,7 +225,7 @@ initialize_workspace_cli_state() {
   now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   if [ "$DRY_RUN" = false ]; then
-    FRONTIER_WORKSPACE_ROOT="$TARGET" pwsh -NoProfile -File "$TARGET/$RUNTIME_BUNDLE_ROOT/agentx-cli.ps1" version
+    FRONTIER_WORKSPACE_ROOT="$TARGET" pwsh -NoProfile -File "$TARGET/$RUNTIME_BUNDLE_ROOT/frontier-cli.ps1" version
   fi
 
   for dir in "${RUNTIME_STATE_DIRS[@]}"; do
@@ -319,36 +317,21 @@ EOF
 install_workspace_cli_wrappers() {
   local frontier_ps1='#!/usr/bin/env pwsh
 $ErrorActionPreference = '\''Stop'\''
-$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '\''..'\'')).Path
+$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '\''../..'\'')).Path
 $env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot
 $env:AGENTX_WORKSPACE_ROOT = $workspaceRoot
-& (Join-Path $workspaceRoot '\''.github\\frontier\\.agentx\\frontier.ps1'\'') @args
+& (Join-Path $workspaceRoot '\''.github\\frontier\\.frontier\\runtime\\frontier.ps1'\'') @args
 $succeeded = $?
 $exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
 if ($succeeded) { $exitCode = 0 } elseif ($exitCode -eq 0) { $exitCode = 1 }
 exit $exitCode
 '
-  local agentx_ps1='#!/usr/bin/env pwsh
-$ErrorActionPreference = '\''Stop'\''
-$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '\''..'\'')).Path
-$env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot
-$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot
-& (Join-Path $workspaceRoot '\''.github\\frontier\\.agentx\\agentx.ps1'\'') @args
-$succeeded = $?
-$exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
-if ($succeeded) {
- $exitCode = 0
-} elseif ($exitCode -eq 0) {
- $exitCode = 1
-}
-exit $exitCode
-'
   local issue_ps1='#!/usr/bin/env pwsh
 $ErrorActionPreference = '\''Stop'\''
-$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '\''..'\'')).Path
+$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '\''../..'\'')).Path
 $env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot
 $env:AGENTX_WORKSPACE_ROOT = $workspaceRoot
-& (Join-Path $workspaceRoot '\''.github\\frontier\\.agentx\\local-issue-manager.ps1'\'') @args
+& (Join-Path $workspaceRoot '\''.github\\frontier\\.frontier\\runtime\\local-issue-manager.ps1'\'') @args
 $succeeded = $?
 $exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
 if ($succeeded) {
@@ -361,40 +344,26 @@ exit $exitCode
   local frontier_sh='#!/usr/bin/env bash
 set -euo pipefail
 
-workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export FRONTIER_WORKSPACE_ROOT="$workspace_root"
 export AGENTX_WORKSPACE_ROOT="$workspace_root"
-exec "$workspace_root/.github/frontier/.agentx/frontier.sh" "$@"
-'
-  local agentx_sh='#!/usr/bin/env bash
-set -euo pipefail
-
-workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export FRONTIER_WORKSPACE_ROOT="$workspace_root"
-export AGENTX_WORKSPACE_ROOT="$workspace_root"
-exec "$workspace_root/.github/frontier/.agentx/agentx.sh" "$@"
+exec "$workspace_root/.github/frontier/.frontier/runtime/frontier.sh" "$@"
 '
   local issue_sh='#!/usr/bin/env bash
 set -euo pipefail
 
-workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export FRONTIER_WORKSPACE_ROOT="$workspace_root"
 export AGENTX_WORKSPACE_ROOT="$workspace_root"
-exec "$workspace_root/.github/frontier/.agentx/local-issue-manager.sh" "$@"
+exec "$workspace_root/.github/frontier/.frontier/runtime/local-issue-manager.sh" "$@"
 '
 
   local copied_before=$TOTAL_COPIED
   local skipped_before=$TOTAL_SKIPPED
-  write_file_if_needed "$TARGET/.agentx/frontier.ps1" "$frontier_ps1"
-  write_file_if_needed "$TARGET/.agentx/frontier.sh" "$frontier_sh"
-  write_file_if_needed "$TARGET/.frontier/frontier.ps1" "$frontier_ps1"
-  write_file_if_needed "$TARGET/.frontier/local-issue-manager.ps1" "$issue_ps1"
-  write_file_if_needed "$TARGET/.frontier/frontier.sh" "$frontier_sh"
-  write_file_if_needed "$TARGET/.frontier/local-issue-manager.sh" "$issue_sh"
-  write_file_if_needed "$TARGET/.agentx/agentx.ps1" "$agentx_ps1"
-  write_file_if_needed "$TARGET/.agentx/local-issue-manager.ps1" "$issue_ps1"
-  write_file_if_needed "$TARGET/.agentx/agentx.sh" "$agentx_sh"
-  write_file_if_needed "$TARGET/.agentx/local-issue-manager.sh" "$issue_sh"
+  write_file_if_needed "$TARGET/.frontier/runtime/frontier.ps1" "$frontier_ps1"
+  write_file_if_needed "$TARGET/.frontier/runtime/frontier.sh" "$frontier_sh"
+  write_file_if_needed "$TARGET/.frontier/runtime/local-issue-manager.ps1" "$issue_ps1"
+  write_file_if_needed "$TARGET/.frontier/runtime/local-issue-manager.sh" "$issue_sh"
   ok "CLI wrappers: $((TOTAL_COPIED - copied_before)) copied, $((TOTAL_SKIPPED - skipped_before)) skipped"
 }
 
@@ -439,7 +408,7 @@ info "Installing hooks..."
 copy_tree "$SOURCE/.github/hooks" "$TARGET/.github/hooks" "Hooks"
 
 info "Installing plugins..."
-copy_tree "$SOURCE/.agentx/plugins" "$TARGET/.agentx/plugins" "Plugins"
+copy_tree "$SOURCE/.frontier/runtime/plugins" "$TARGET/.frontier/runtime/plugins" "Plugins"
 
 info "Installing guides..."
 copy_tree "$SOURCE/docs/guides" "$TARGET/docs/guides" "Guides"
@@ -455,8 +424,8 @@ copy_file "scripts/validate-skill.ps1" "scripts/validate-skill.ps1"
 copy_file "scripts/validate-changed-skills.ps1" "scripts/validate-changed-skills.ps1"
 copy_file "scripts/stocktake.ps1" "scripts/stocktake.ps1"
 copy_file "scripts/parse-yaml.js" "scripts/parse-yaml.js"
-# Scripts the bundled CLI dispatches to. Without these, `agentx scrub`,
-# `agentx scan`, `agentx research` and the model council fail in installed
+# Scripts the bundled CLI dispatches to. Without these, `frontier scrub`,
+# `frontier scan`, `frontier research` and the model council fail in installed
 # workspaces.
 for dispatched in scrub dream research ship takeoff land ghcp-review-resolve \
   install-manifest scan model-route model-council check-harness-compliance \
@@ -473,8 +442,8 @@ ok "Scripts: copied scoring, validation and workflow runtime files"
 info "Installing reference docs..."
 copy_file ".token-limits.json" ".token-limits.json"
 copy_file "AGENTS.md" "AGENTS.md"
-copy_file "LICENSE" ".agentx/legal/LICENSE"
-copy_file "NOTICE" ".agentx/legal/NOTICE"
+copy_file "LICENSE" ".frontier/runtime/legal/LICENSE"
+copy_file "NOTICE" ".frontier/runtime/legal/NOTICE"
 copy_file "Skills.md" "Skills.md"
 copy_file "docs/WORKFLOW.md" "docs/WORKFLOW.md"
 copy_file "docs/GUIDE.md" "docs/GUIDE.md"
@@ -486,11 +455,6 @@ copy_file ".github/agent-delegation.md" ".github/agent-delegation.md"
 copy_file ".github/AGENT-PROTOCOL.md" ".github/AGENT-PROTOCOL.md"
 copy_file ".github/copilot-instructions.md" ".github/copilot-instructions.md"
 copy_file "CONTRIBUTING.md" "CONTRIBUTING.md"
-copy_file "docs/artifacts/adr/ADR-341.md" "docs/artifacts/adr/ADR-341.md"
-copy_file "docs/artifacts/adr/ADR-342.md" "docs/artifacts/adr/ADR-342.md"
-copy_file "docs/artifacts/specs/SPEC-341.md" "docs/artifacts/specs/SPEC-341.md"
-copy_file "docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md" "docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md"
-copy_file "docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md" "docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md"
 ok "Docs: copied reference files"
 
 if [ "$INCLUDE_CLI" = true ]; then
@@ -509,7 +473,7 @@ fi
 
 if [ "$DRY_RUN" = false ]; then
   mkdir -p "$TARGET/.github"
-  cat > "$TARGET/.github/.agentx-cli-plugin.json" <<EOF
+  cat > "$TARGET/.github/.frontier-cli-plugin.json" <<EOF
 {
   "plugin": "frontier-copilot-cli",
   "version": "$VERSION",
@@ -518,7 +482,7 @@ if [ "$DRY_RUN" = false ]; then
   "includeCli": $INCLUDE_CLI
 }
 EOF
-  ok "Version stamp written to .github/.agentx-cli-plugin.json"
+  ok "Version stamp written to .github/.frontier-cli-plugin.json"
 fi
 
 # -- Summary ---------------------------------------------------------------
@@ -536,7 +500,7 @@ echo " Skills        : 134 across 14 categories"
 echo " Instructions  : 15 (auto-applied by file pattern)"
 echo " Prompts       : 23 reference templates"
 if [ "$INCLUDE_CLI" = true ]; then
-  echo " CLI utilities : 4 Frontier wrappers + 4 legacy shims + bundled runtime (.github/frontier/.agentx)"
+  echo " CLI utilities : 4 Frontier wrappers + bundled runtime (.github/frontier/.frontier/runtime)"
 fi
 echo ""
 echo -e "${YELLOW} Notes (Copilot CLI vs VS Code):${NC}"

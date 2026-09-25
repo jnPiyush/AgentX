@@ -40,9 +40,9 @@ param(
     # Covers every tracked PowerShell file, not just the three obvious roots.
     # `install.ps1` in particular is documented as `irm ... | iex`, making it
     # the highest blast-radius script in the repository.
-    [string[]]$Path = @('.agentx', 'scripts', 'tests', '.github', 'packs', 'install.ps1'),
+    [string[]]$Path = @('.frontier/runtime', 'scripts', 'tests', '.github', 'packs', 'install.ps1'),
     [switch]$UpdateBaseline,
-    # Repo root, NOT .agentx/state -- that directory is gitignored, so a
+    # Repo root, NOT .frontier/state -- that directory is gitignored, so a
     # baseline stored there can never be committed and CI would always see it
     # as missing.
     [string]$BaselineFile = 'psscriptanalyzer-baseline.json'
@@ -62,7 +62,7 @@ $SECURITY_RULES = @(
 
 # Shipped code. Test fixtures deliberately exercise unusual constructs, so
 # they are held to the ratchet rather than to zero tolerance.
-$PRODUCTION_PATHS = @('.agentx', 'scripts', '.github', 'packs', 'install.ps1')
+$PRODUCTION_PATHS = @('.frontier/runtime', 'scripts', '.github', 'packs', 'install.ps1')
 
 # Pinned: an analyser upgrade that adds or sharpens a rule would otherwise
 # move counts under a fixed baseline and produce red builds unrelated to the diff.

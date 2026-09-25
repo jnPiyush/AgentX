@@ -7,7 +7,7 @@ metadata:
   created: "2026-05-17"
   updated: "2026-05-17"
 compatibility:
-  frameworks: ["agentx", "copilot", "claude-code"]
+  frameworks: ["frontier", "copilot", "claude-code"]
 ---
 
 # Strategic Compaction

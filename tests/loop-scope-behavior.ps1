@@ -6,7 +6,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$cliPath = Join-Path $repoRoot '.agentx/agentx-cli.ps1'
+$cliPath = Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1'
 $evaluatorPath = Join-Path $repoRoot 'scripts/score-code-quality.ps1'
 $script:passed = 0
 $script:failed = 0
@@ -171,9 +171,9 @@ try {
     Assert-True ($review.ExitCode -eq 0 -and $summaryLine -and $summaryLine.Length -lt 240 -and $summaryLine -match '\.\.\.') 'loop iterate echoes a long summary as one short line'
     $lowComplete = Invoke-Loop @('complete', '-s', 'Attempt with a lower suite count', '-e', (New-Evidence 'final-2.txt'), '--passing', 'tool=3')
     Assert-True ($lowComplete.ExitCode -ne 0 -and $lowComplete.Output -match 'would regress passing tests for tool: current=3 last=4') 'loop complete rejects a lower suite count'
-    New-Item -ItemType Directory -Path (Join-Path $installCopy '.agentx') -Force | Out-Null
-    Copy-Item -LiteralPath $cliPath -Destination (Join-Path $installCopy '.agentx/agentx-cli.ps1')
-    $noEvaluator = Invoke-Process @('-File', (Join-Path $installCopy '.agentx/agentx-cli.ps1'), 'loop', 'complete', '-s', 'No evaluator', '-e', (New-Evidence 'final-x.txt'), '--passing', 'widget=3')
+    New-Item -ItemType Directory -Path (Join-Path $installCopy '.frontier/runtime') -Force | Out-Null
+    Copy-Item -LiteralPath $cliPath -Destination (Join-Path $installCopy '.frontier/runtime/frontier-cli.ps1')
+    $noEvaluator = Invoke-Process @('-File', (Join-Path $installCopy '.frontier/runtime/frontier-cli.ps1'), 'loop', 'complete', '-s', 'No evaluator', '-e', (New-Evidence 'final-x.txt'), '--passing', 'widget=3')
     Assert-True ($noEvaluator.ExitCode -ne 0 -and $noEvaluator.Output -match 'Code-quality evaluator is missing' -and $noEvaluator.Output -match 'Code-quality verification failed') 'loop complete reports a missing code-quality evaluator'
     $complete = Invoke-Loop @('complete', '-s', 'Loop scope fixture complete', '-e', (New-Evidence 'final-3.txt'), '--passing', 'widget=3')
     Assert-True ($complete.ExitCode -eq 0 -and $complete.Output -match 'Code-quality: passed\. Code-quality rubric passed at 100/100' -and $complete.Output.Length -lt 1500) 'loop complete prints a one-line code-quality result'

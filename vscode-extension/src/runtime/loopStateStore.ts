@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 //
 // The ONLY filesystem boundary for the shared loop runtime. Reads and parses
-// the loop state file (.agentx/state/loop-state.json) into a `LoopState`. All
+// the loop state file (.frontier/state/loop-state.json) into a `LoopState`. All
 // gate decisions live in `loopState.ts` and operate on the parsed object so the
 // pure logic stays portable to a future Node CLI (SPEC-401).
 // ---------------------------------------------------------------------------

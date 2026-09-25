@@ -318,7 +318,7 @@ Assert-True ($installSh -notmatch 'FRONTIER_OWNED_PATHS|TRACKED_PATHS|agentx-upg
 
 # --- 8. Install manifest integrity -------------------------------------------
 
-$manifestPath = Join-Path $repoRoot '.agentx/install-manifest.json'
+$manifestPath = Join-Path $repoRoot '.frontier/runtime/install-manifest.json'
 Assert-True (Test-Path $manifestPath) 'install manifest exists'
 
 $installManifest = Get-Content $manifestPath -Raw | ConvertFrom-Json

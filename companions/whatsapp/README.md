@@ -22,7 +22,7 @@ Use a dedicated OS account and, ideally, a dedicated WhatsApp account. Protect `
 
 - Node.js 22.12+ (required by the pinned Puppeteer version)
 - PowerShell 7.4+ (`pwsh`) on PATH
-- Frontier checkout with `.agentx/frontier.ps1`
+- Frontier checkout with `.frontier/runtime/frontier.ps1`
 - A supported local Chrome/Chromium installed by Puppeteer or selected via `browser.executablePath`
 
 ## Setup
@@ -96,9 +96,9 @@ Supported MIME types: OGG/Opus, MPEG, MP4/M4A, and WebM. Audio is size-limited a
 
 The companion watches `.frontier/state/loop-state.json` and can notify allowlisted targets for `started`, `iteration`, `complete`, `status`, and `init`. Targets must be a subset of `allowedNumbers`. Partial JSON writes are retried without discarding the previous valid state; watcher failures fall back to polling.
 
-State-file precedence is `.frontier`, then `.hve`, then `.agentx`. Polling detects
-a newly created canonical state file. Malformed canonical JSON does not fall
-back to an older namespace and report stale progress.
+Only `.frontier/state/loop-state.json` is read; legacy `.agentx` and `.hve` state is
+ignored. Polling detects a newly created state file. Malformed JSON is retried
+and never reported as progress.
 
 ## Operations
 

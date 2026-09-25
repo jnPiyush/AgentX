@@ -27,7 +27,7 @@ function Assert-Match($text, $pattern, $message) {
     Assert-True ($text -match $pattern) "$message (pattern: '$pattern' not found in output)"
 }
 
-$cliPath = Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'
+$cliPath = Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'
 $parseTokens = $null
 $parseErrors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($cliPath, [ref]$parseTokens, [ref]$parseErrors)

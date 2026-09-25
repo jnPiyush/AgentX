@@ -12,7 +12,7 @@
 | ID | Area | Description | Impact | Added |
 |----|------|-------------|--------|-------|
 | TD-001 | VS Code Extension | Test coverage gaps remain in `chat/`, `commands/`, and current harness integration paths | Regressions may go undetected in the live extension runtime | v8.0.0 |
-| TD-002 | Bash CLI | `agentx.sh` missing parity with `agentx.ps1` (config, loop, workflow commands) | Linux/macOS users have reduced CLI functionality | v8.0.0 |
+| TD-002 | Bash CLI | `frontier.sh` missing parity with `frontier-cli.ps1` (config, loop, workflow commands) | Linux/macOS users have reduced CLI functionality | v8.0.0 |
 | TD-004 | Documentation | No automated doc count validation in CI -- counts can drift from reality | Agents given wrong counts, confusion in routing | v8.0.0 |
 | TD-012 | Harness Enforcement | Complex-task execution plan policy exists in docs but is not yet enforced by CI or workflow automation | Plan-first workflow can drift or be skipped | v8.2.0 |
 | TD-013 | Harness Runtime | No explicit thread/turn/item/evidence runtime model in the visible extension and CLI surfaces | Limits durable progress tracking and rich agent legibility | v8.2.0 |

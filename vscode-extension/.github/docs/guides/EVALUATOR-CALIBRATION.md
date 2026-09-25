@@ -131,7 +131,7 @@ grep_search: "```typescript|```python" in SPEC-42.md -> 0 matches
 
 **Evaluator verification**:
 ```
-grep_search: "loop status" or ".agentx/frontier.ps1 loop" in docs/artifacts/reviews/REVIEW-42.md -> 0 matches
+grep_search: "loop status" or ".frontier/runtime/frontier.ps1 loop" in docs/artifacts/reviews/REVIEW-42.md -> 0 matches
 ```
 
 **Correct verdict**:
@@ -230,7 +230,7 @@ The reflection is informational. It does not unlock or block the loop. Its purpo
 
 ## How the Runner Uses These Examples
 
-The `Invoke-SelfReviewLoop` function in `.agentx/agentic-runner.ps1` embeds abbreviated
+The `Invoke-SelfReviewLoop` function in `.frontier/runtime/agentic-runner.ps1` embeds abbreviated
 calibration examples directly in the review prompt (3 inline examples). This guide provides
 the full reference set that agents and operators can consult when the evaluator produces
 unexpected results.

@@ -67,7 +67,7 @@ Execute the exact command that proves the claim, against the current commit. Exa
 | Build is clean | `dotnet build -warnaserror` / `tsc --noEmit` / `cargo build --release` |
 | Endpoint works | `curl -sfS http://localhost:PORT/health` |
 | Linter clean | `eslint . --max-warnings 0` / `ruff check .` |
-| Loop complete | `.agentx/frontier.ps1 loop status` |
+| Loop complete | `.frontier/runtime/frontier.ps1 loop status` |
 
 Do not skip to Step 5 from memory. Run it now.
 
@@ -109,7 +109,7 @@ This skill is referenced from:
 - **Reviewer agent** -- before setting `APPROVED` on Pass A or Pass B
 - **Tester agent** -- before marking a certification report green
 - **DevOps agent** -- before claiming deployment success
-- **`.agentx/frontier.ps1 loop complete`** -- the CLI gate that blocks handoff when the loop is not actually complete
+- **`.frontier/runtime/frontier.ps1 loop complete`** -- the CLI gate that blocks handoff when the loop is not actually complete
 
 When this skill fires, the agent MUST cite the command and the output excerpt in the loop's `iterate` or `complete` summary.
 

@@ -45,7 +45,7 @@ describe('workTreeProviderInternals', () => {
   });
 
   it('loads and sorts local issues while skipping invalid records', () => {
-    const issuesDir = path.join(tempRoot, '.agentx', 'issues');
+    const issuesDir = path.join(tempRoot, '.frontier', 'issues');
     fs.mkdirSync(issuesDir, { recursive: true });
     fs.writeFileSync(path.join(issuesDir, '2.json'), JSON.stringify({ number: 2, title: 'Second' }), 'utf-8');
     fs.writeFileSync(path.join(issuesDir, '1.json'), JSON.stringify({ number: 1, title: 'First' }), 'utf-8');

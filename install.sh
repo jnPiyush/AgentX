@@ -33,7 +33,7 @@ NO_SETUP="${NO_SETUP:-false}"
 INSTALL_PATH="${AGENTX_PATH:-}"
 AZURE="${AGENTX_AZURE:-false}"
 BRANCH="v9.4.0"
-TMP=".agentx-install-tmp"
+TMP=".frontier-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.tar.gz"
 ARCHIVE_SOURCE="${AGENTX_INSTALL_ARCHIVE:-$ARCHIVE_URL}"
@@ -111,7 +111,7 @@ detect_azure_workspace() {
   return 0
  fi
 
- for file in README.md package.json pyproject.toml .agentx/config.json; do
+ for file in README.md package.json pyproject.toml .frontier/config.json; do
   if [ -f "$file" ] && grep -Eiq '\bazure\b|\bazd\b|Azure Functions|Container Apps|App Service|Static Web Apps' "$file"; then
    return 0
   fi
@@ -129,12 +129,9 @@ if [ -n "$INSTALL_PATH" ]; then
 fi
 
 INSTALLED_VERSION=""
-for state_directory in .frontier .hve .agentx; do
- if [ -f "$state_directory/version.json" ]; then
-  INSTALLED_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$state_directory/version.json" | head -1)
-  [ -n "$INSTALLED_VERSION" ] && break
- fi
-done
+if [ -f .frontier/version.json ]; then
+ INSTALLED_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .frontier/version.json | head -1)
+fi
 if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != '9.4.0' ] && [ "$FORCE" != true ]; then
  echo "Frontier v$INSTALLED_VERSION is already installed. Re-run with --force to replace managed files with v9.4.0; no files were changed."
  exit 1
@@ -254,7 +251,7 @@ PREFIX=$(tar tzf "$TMPARCHIVE" | awk -F/ 'NR == 1 { prefix = $1 } END { print pr
 
 # Extract only essential paths (skip vscode-extension, tests, and large historical docs content)
 tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
- "$PREFIX/.agentx" \
+ "$PREFIX/.frontier/runtime" \
  "$PREFIX/.github" \
  "$PREFIX/.claude" \
  "$PREFIX/.cursor" \
@@ -275,7 +272,7 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/docs/QUALITY_SCORE.md" \
  "$PREFIX/docs/tech-debt-tracker.md" 2>/dev/null || true
 
-[ -d "$TMP/.agentx" ] || { echo "Download failed. Check network."; exit 1; }
+[ -d "$TMP/.frontier/runtime" ] || { echo "Download failed. Check network."; exit 1; }
 ok "Frontier downloaded (essential files only)"
 
 # -- Step 2: Copy files ----------------------------------
@@ -285,12 +282,13 @@ copied=0; skipped=0
 while IFS= read -r src; do
  rel="${src#$TMP/}"
  case "$rel" in
-  .agentx/config.json|.agentx/version.json|.agentx/issues/*|.agentx/digests/*|.agentx/sessions/*|.agentx/memory/*|.agentx/state/*|.vscode/mcp.json|.vscode/settings.json)
+  .frontier/runtime/*) ;;
+  .frontier/*|.vscode/mcp.json|.vscode/settings.json)
    continue
    ;;
  esac
  case "$rel" in
-  LICENSE|NOTICE) dest="./.agentx/legal/$rel" ;;
+  LICENSE|NOTICE) dest="./.frontier/runtime/legal/$rel" ;;
   *) dest="./$rel" ;;
  esac
  mkdir -p "$(dirname "$dest")"
@@ -324,10 +322,10 @@ fi
 
 # -- Step 3: Generate runtime files ----------------------
 echo -e "${C}[3] Configuring runtime...${N}"
-pwsh -NoProfile -File .agentx/agentx-cli.ps1 version
+pwsh -NoProfile -File .frontier/runtime/frontier-cli.ps1 version
 mkdir -p .frontier/state .frontier/digests docs/artifacts/{prd,adr,specs,reviews} docs/execution/{plans,progress} docs/{ux,architecture} memories/session
 
-memory_template_source=".agentx/templates/memories"
+memory_template_source=".frontier/runtime/templates/memories"
 if [ -d "$memory_template_source" ]; then
  while IFS= read -r src; do
   rel="${src#$memory_template_source/}"
@@ -349,10 +347,6 @@ MARKER_END="# --- /Frontier ---"
 AGENTX_BLOCK="$MARKER_START
 # Frontier framework
 .frontier/
-.frontier-migration.lock/
-.frontier.migrating-*/
-.hve/
-.agentx/
 .github/agents/
 .github/instructions/
 .github/prompts/
@@ -364,14 +358,14 @@ AGENTX_BLOCK="$MARKER_START
 .github/ISSUE_TEMPLATE/
 .github/PULL_REQUEST_TEMPLATE.md
 .github/agent-delegation.md
-.github/agentx-security.yml
+.github/frontier-security.yml
 .github/CODEOWNERS
 .github/copilot-instructions.md
 .claude/
 .cursor/mcp.json
 .cursor/commands/ado-ops.md
 .cursor/commands/ado-prd-to-wit.md
-.cursor/commands/agent-x.md
+.cursor/commands/frontier.md
 .cursor/commands/agile-coach.md
 .cursor/commands/architect.md
 .cursor/commands/consulting-research.md
@@ -387,7 +381,7 @@ AGENTX_BLOCK="$MARKER_START
 .cursor/commands/reviewer.md
 .cursor/commands/tester.md
 .cursor/commands/ux-designer.md
-.cursor/rules/000-agentx-core.mdc
+.cursor/rules/000-frontier-core.mdc
 .cursor/rules/ai.mdc
 .cursor/rules/csharp.mdc
 .cursor/rules/python.mdc
@@ -450,7 +444,7 @@ if [ ! -f "$CONFIG" ]; then
  fi
 fi
 
-chmod +x .agentx/frontier.sh .agentx/agentx.sh .agentx/local-issue-manager.sh
+chmod +x .frontier/runtime/frontier.sh .frontier/runtime/local-issue-manager.sh
 
 # -- Step 4: Interactive setup -------------------------
 if [ "$NO_SETUP" != "true" ]; then
@@ -483,7 +477,7 @@ if [ "$NO_SETUP" != "true" ]; then
  read -rp " GitHub username (for CODEOWNERS): " USERNAME
  fi
  if [ -n "$USERNAME" ]; then
- for f in .github/CODEOWNERS .github/agentx-security.yml; do
+ for f in .github/CODEOWNERS .github/frontier-security.yml; do
  [ -f "$f" ] && (sed -i "s/<YOUR_GITHUB_USERNAME>/$USERNAME/g" "$f" 2>/dev/null || \
  sed -i '' "s/<YOUR_GITHUB_USERNAME>/$USERNAME/g" "$f" 2>/dev/null || true)
  done
@@ -598,13 +592,13 @@ echo -e "${G}===================================================${N}"
 echo -e "${G} Frontier v9.4.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
-echo " CLI: ./.agentx/agentx.sh help"
+echo " CLI: ./.frontier/runtime/frontier.sh help"
 echo " Docs: .github/copilot-instructions.md"
-[ "$LOCAL" = "true" ] && echo -e "${D} Issue: ./.agentx/local-issue-manager.sh create \"[Story] Task\" \"\" \"type:story\"${N}"
+[ "$LOCAL" = "true" ] && echo -e "${D} Issue: ./.frontier/runtime/local-issue-manager.sh create \"[Story] Task\" \"\" \"type:story\"${N}"
 if [ -n "$INSTALL_PATH" ]; then
  echo ""
  echo -e "${Y} [TIP] VS Code nested folder:${N}"
- echo -e "${D}  Set 'agentx.rootPath' in .vscode/settings.json to '$(pwd)'${N}"
+ echo -e "${D}  Set 'frontier.rootPath' in .vscode/settings.json to '$(pwd)'${N}"
  echo -e "${D}  or the extension will auto-detect up to 2 levels deep.${N}"
 fi
 

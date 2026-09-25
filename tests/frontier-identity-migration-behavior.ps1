@@ -4,7 +4,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$cliPath = Join-Path $repoRoot '.agentx/agentx-cli.ps1'
+$cliPath = Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1'
 $scanPath = Join-Path $repoRoot 'scripts/scan.ps1'
 $script:passed = 0
 $script:failed = 0
@@ -100,78 +100,49 @@ Assert-True ($extensionManifest.name -eq 'agentx') 'Published Marketplace packag
 Assert-True ($extensionManifest.repository.url -eq 'https://github.com/jnPiyush/AgentX') 'Published repository coordinate remains factual'
 
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("frontier-identity-{0}" -f [guid]::NewGuid())
-$frontierWorkspace = Join-Path $tempRoot 'frontier-workspace'
-$transitionalWorkspace = Join-Path $tempRoot 'hve-workspace'
-$agentxWorkspace = Join-Path $tempRoot 'agentx-workspace'
 
 try {
-    foreach ($migrationCase in @(
-        @{ Path = $cliPath; Name = 'Initialize-FrontierStateDirectory' },
-        @{ Path = (Join-Path $repoRoot '.agentx/agentic-runner.ps1'); Name = 'Get-FrontierStateDirectory' }
-    )) {
+    $runnerPath = Join-Path $repoRoot '.frontier/runtime/agentic-runner.ps1'
+    foreach ($runtimeFile in @($cliPath, $runnerPath)) {
         $tokens = $null
         $parseErrors = $null
-        $syntax = [Management.Automation.Language.Parser]::ParseFile($migrationCase.Path, [ref]$tokens, [ref]$parseErrors)
-        $definition = $syntax.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $migrationCase.Name }, $false)
-        . ([scriptblock]::Create($definition.Extent.Text))
-        $stagingWorkspace = Join-Path $tempRoot $migrationCase.Name
-        $canonicalDirectory = Join-Path $stagingWorkspace '.frontier'
-        $legacyDirectory = Join-Path $stagingWorkspace '.agentx'
-        New-Item -ItemType Directory -Path "$canonicalDirectory/state", $legacyDirectory -Force | Out-Null
-        $configPath = Join-Path $canonicalDirectory 'config.json'
-        '{"provider":"local","preserve":true}' | Set-Content -LiteralPath $configPath
-        $beforeHash = (Get-FileHash -LiteralPath $configPath).Hash
-        $stagingPath = Join-Path $canonicalDirectory "state/frontier-migration-v1.json.migrating-$PID"
-        New-Item -ItemType HardLink -Path $stagingPath -Target $configPath | Out-Null
-        if ($migrationCase.Name -eq 'Initialize-FrontierStateDirectory') {
-            $null = Initialize-FrontierStateDirectory $canonicalDirectory (Join-Path $stagingWorkspace '.hve') $legacyDirectory
-        } else {
-            $null = Get-FrontierStateDirectory $stagingWorkspace
-        }
-        Assert-True ((Get-FileHash -LiteralPath $configPath).Hash -ceq $beforeHash) "$($migrationCase.Name) never truncates a pre-existing marker staging alias"
-        Assert-True (Test-Path -LiteralPath $stagingPath) "$($migrationCase.Name) does not remove unowned staging files"
+        $syntax = [Management.Automation.Language.Parser]::ParseFile($runtimeFile, [ref]$tokens, [ref]$parseErrors)
+        $migrationFunction = $syntax.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Initialize-FrontierStateDirectory' }, $true)
+        Assert-True ($null -eq $migrationFunction) "$(Split-Path $runtimeFile -Leaf) has no legacy state migration function"
+        Assert-True ((Get-Content -LiteralPath $runtimeFile -Raw) -notmatch 'frontier-migration') "$(Split-Path $runtimeFile -Leaf) has no migration marker or lock handling"
     }
-    New-Item -ItemType Directory -Path (Join-Path $frontierWorkspace '.frontier') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $transitionalWorkspace '.hve') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $agentxWorkspace '.agentx') -Force | Out-Null
-    '{"provider":"local"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.frontier/config.json') -Encoding utf8
-    '{"provider":"ado"}' | Set-Content -LiteralPath (Join-Path $transitionalWorkspace '.hve/config.json') -Encoding utf8
-    '{"provider":"github"}' | Set-Content -LiteralPath (Join-Path $agentxWorkspace '.agentx/config.json') -Encoding utf8
-    'runtime' | Set-Content -LiteralPath (Join-Path $agentxWorkspace '.agentx/agentx-cli.ps1') -Encoding utf8
 
-    $partialWorkspace = Join-Path $tempRoot 'partial'
-    foreach ($directory in @('.frontier', '.hve', '.agentx/issues', '.agentx/state')) {
-        New-Item -ItemType Directory -Path (Join-Path $partialWorkspace $directory) -Force | Out-Null
-    }
-    '{"provider":"local"}' | Set-Content -LiteralPath (Join-Path $partialWorkspace '.hve/config.json')
-    '{"provider":"github"}' | Set-Content -LiteralPath (Join-Path $partialWorkspace '.agentx/config.json')
-    '{"number":1}' | Set-Content -LiteralPath (Join-Path $partialWorkspace '.agentx/issues/1.json')
-    '[]' | Set-Content -LiteralPath (Join-Path $partialWorkspace '.agentx/state/history.json')
-    $partialOutput = Invoke-ConfigShow -FrontierRoot $partialWorkspace -TransitionalRoot '' -AgentXRoot ''
-    Assert-True ($partialOutput -match 'provider\s*=\s*local') 'Partial migration keeps HVE configuration precedence'
-    Assert-True (Test-Path -LiteralPath (Join-Path $partialWorkspace '.frontier/issues/1.json')) 'Partial migration preserves AgentX backlog'
-    Assert-True (Test-Path -LiteralPath (Join-Path $partialWorkspace '.frontier/state/history.json')) 'Partial migration preserves AgentX history'
-    Remove-Item -LiteralPath (Join-Path $partialWorkspace '.frontier/issues/1.json')
-    $null = Invoke-ConfigShow -FrontierRoot $partialWorkspace -TransitionalRoot '' -AgentXRoot ''
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $partialWorkspace '.frontier/issues/1.json'))) 'Completed migration does not resurrect deleted Frontier data'
+    $tokens = $null
+    $parseErrors = $null
+    $runnerSyntax = [Management.Automation.Language.Parser]::ParseFile($runnerPath, [ref]$tokens, [ref]$parseErrors)
+    $stateFunction = $runnerSyntax.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-FrontierStateDirectory' }, $false)
+    . ([scriptblock]::Create($stateFunction.Extent.Text))
+    $runnerWorkspace = Join-Path $tempRoot 'runner-workspace'
+    New-Item -ItemType Directory -Path (Join-Path $runnerWorkspace '.agentx/state') -Force | Out-Null
+    Assert-True ((Get-FrontierStateDirectory $runnerWorkspace) -eq (Join-Path $runnerWorkspace '.frontier')) 'Runner state resolves to .frontier even when .agentx exists'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $runnerWorkspace '.frontier'))) 'Runner state resolution does not copy legacy state'
 
-    $frontierOutput = Invoke-ConfigShow -FrontierRoot $frontierWorkspace -TransitionalRoot $transitionalWorkspace -AgentXRoot $agentxWorkspace
-    Assert-True ($frontierOutput -match 'provider\s*=\s*local') 'Frontier workspace and .frontier state take precedence'
+    $legacyOnlyWorkspace = Join-Path $tempRoot 'legacy-only'
+    New-Item -ItemType Directory -Path (Join-Path $legacyOnlyWorkspace '.agentx/issues'), (Join-Path $legacyOnlyWorkspace '.hve') -Force | Out-Null
+    '{"provider":"github"}' | Set-Content -LiteralPath (Join-Path $legacyOnlyWorkspace '.agentx/config.json') -Encoding utf8
+    '{"provider":"ado"}' | Set-Content -LiteralPath (Join-Path $legacyOnlyWorkspace '.hve/config.json') -Encoding utf8
+    '{"number":1}' | Set-Content -LiteralPath (Join-Path $legacyOnlyWorkspace '.agentx/issues/1.json') -Encoding utf8
+    $legacyOutput = Invoke-ConfigShow -FrontierRoot $legacyOnlyWorkspace -TransitionalRoot '' -AgentXRoot ''
+    Assert-True ($legacyOutput -match 'provider\s*=\s*local') 'Legacy .agentx and .hve configuration is ignored (default local provider)'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $legacyOnlyWorkspace '.frontier/config.json'))) 'Legacy configuration is not migrated into .frontier'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $legacyOnlyWorkspace '.frontier/issues/1.json'))) 'Legacy backlog is not migrated into .frontier'
+    Assert-True (Test-Path -LiteralPath (Join-Path $legacyOnlyWorkspace '.agentx/config.json')) 'Legacy folders are left untouched'
 
-    $transitionalOutput = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot $transitionalWorkspace -AgentXRoot $agentxWorkspace
-    Assert-True ($transitionalOutput -match 'provider\s*=\s*ado') 'Transitional HVE state remains readable'
-    Assert-True (Test-Path -LiteralPath (Join-Path $transitionalWorkspace '.frontier/config.json')) 'Transitional HVE state migrates to Frontier state'
-    Assert-True (Test-Path -LiteralPath (Join-Path $transitionalWorkspace '.hve/config.json')) 'Transitional HVE source remains intact after migration'
-
-    $agentxOutput = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot '' -AgentXRoot $agentxWorkspace
-    Assert-True ($agentxOutput -match 'provider\s*=\s*github') 'Published AgentX state remains readable'
-    Assert-True (Test-Path -LiteralPath (Join-Path $agentxWorkspace '.frontier/config.json')) 'Published AgentX state migrates to Frontier state'
-    Assert-True (Test-Path -LiteralPath (Join-Path $agentxWorkspace '.agentx/config.json')) 'Published AgentX source remains intact after migration'
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $agentxWorkspace '.frontier/agentx-cli.ps1'))) 'Published AgentX runtime files are not copied into Frontier state'
+    $frontierWorkspace = Join-Path $tempRoot 'frontier-workspace'
+    New-Item -ItemType Directory -Path (Join-Path $frontierWorkspace '.frontier'), (Join-Path $frontierWorkspace '.agentx') -Force | Out-Null
+    '{"provider":"ado"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.frontier/config.json') -Encoding utf8
+    '{"provider":"github"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.agentx/config.json') -Encoding utf8
+    $frontierOutput = Invoke-ConfigShow -FrontierRoot $frontierWorkspace -TransitionalRoot '' -AgentXRoot ''
+    Assert-True ($frontierOutput -match 'provider\s*=\s*ado') '.frontier/config.json is the only configuration source'
 
     $scanWorkspace = Join-Path $tempRoot 'scan-workspace'
     New-Item -ItemType Directory -Path (Join-Path $scanWorkspace '.frontier/state') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $scanWorkspace '.hve/state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $scanWorkspace '.agentx/state') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $scanWorkspace 'src') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $scanWorkspace 'scripts') -Force | Out-Null
     foreach ($validatorName in @('validate-frontmatter.ps1', 'check-harness-compliance.ps1', 'validate-references.ps1')) {
@@ -179,7 +150,6 @@ try {
     }
     $tokenShapedFixture = 'ghp_' + ('A' * 36)
     $tokenShapedFixture | Set-Content -LiteralPath (Join-Path $scanWorkspace '.frontier/state/captured-output.json') -Encoding utf8
-    $tokenShapedFixture | Set-Content -LiteralPath (Join-Path $scanWorkspace '.hve/state/captured-output.json') -Encoding utf8
     'export const value = 1;' | Set-Content -LiteralPath (Join-Path $scanWorkspace 'src/app.ts') -Encoding utf8
     $scanReportPath = Join-Path $tempRoot 'scan-report.json'
     & pwsh -NoProfile -File $scanPath -Path $scanWorkspace -Json -OutFile $scanReportPath *> $null
@@ -189,18 +159,21 @@ try {
 
     $tokenShapedFixture | Set-Content -LiteralPath (Join-Path $scanWorkspace 'src/credential.ts') -Encoding utf8
     $tokenShapedFixture | Set-Content -LiteralPath (Join-Path $scanWorkspace '.frontier/config.json') -Encoding utf8
-    $tokenShapedFixture | Set-Content -LiteralPath (Join-Path $scanWorkspace '.hve/config.json') -Encoding utf8
+    $tokenShapedFixture | Set-Content -LiteralPath (Join-Path $scanWorkspace '.agentx/state/captured-output.json') -Encoding utf8
     & pwsh -NoProfile -File $scanPath -Path $scanWorkspace -Json -OutFile $scanReportPath *> $null
     $sourceScanExit = $LASTEXITCODE
     $sourceScan = Get-Content -LiteralPath $scanReportPath -Raw | ConvertFrom-Json
     Assert-True ($sourceScanExit -eq 2 -and [int]$sourceScan.counts.CRITICAL -eq 3) 'Security scan detects token-shaped source and configuration content'
     $findingPaths = @($sourceScan.findings | ForEach-Object { $_.file.Replace('\', '/') })
-    Assert-True ('.frontier/config.json' -in $findingPaths -and '.hve/config.json' -in $findingPaths) 'State exclusions do not conceal canonical or transitional configuration secrets'
+    Assert-True ('.frontier/config.json' -in $findingPaths) 'State exclusions do not conceal configuration secrets'
+    Assert-True ('.agentx/state/captured-output.json' -in $findingPaths) 'Legacy .agentx state is scanned, not treated as Frontier state'
 
-    Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot '.agentx/frontier.ps1')) 'Canonical Frontier PowerShell launcher exists'
-    Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot '.agentx/frontier.sh')) 'Canonical Frontier Bash launcher exists'
-    Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot '.agentx/agentx.ps1')) 'Published AgentX PowerShell launcher remains a compatibility shim'
-    Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot '.agentx/agentx.sh')) 'Published AgentX Bash launcher remains a compatibility shim'
+    Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot '.frontier/runtime/frontier.ps1')) 'Frontier PowerShell launcher lives in .frontier/runtime'
+    Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot '.frontier/runtime/frontier.sh')) 'Frontier Bash launcher lives in .frontier/runtime'
+    Assert-True (Test-Path -LiteralPath $cliPath) 'Frontier CLI lives in .frontier/runtime'
+    foreach ($legacyLauncher in @('.agentx/agentx.ps1', '.agentx/agentx.sh', '.agentx/agentx-cli.ps1', '.agentx/frontier.ps1')) {
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $repoRoot $legacyLauncher))) "Legacy launcher $legacyLauncher is removed"
+    }
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

@@ -52,7 +52,7 @@ describe('harnessEvaluator facade', () => {
     const agentx = {
       workspaceRoot: 'c:/repo',
       listExecutionPlanFiles: () => ['docs/execution/plans/EXEC-PLAN-1.md'],
-      getStatePath: (fileName: string) => `c:/repo/.agentx/state/${fileName}`,
+      getStatePath: (fileName: string) => `c:/repo/.frontier/state/${fileName}`,
     } as any;
 
     const report = evaluateHarnessQuality(agentx);

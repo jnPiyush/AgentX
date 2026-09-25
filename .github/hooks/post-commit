@@ -10,8 +10,6 @@
 # would let the same complete loop pass the pre-commit gate on the next commit.
 
 LOOP_STATE=".frontier/state/loop-state.json"
-[ -f "$LOOP_STATE" ] || LOOP_STATE=".hve/state/loop-state.json"
-[ -f "$LOOP_STATE" ] || LOOP_STATE=".agentx/state/loop-state.json"
 [ -f "$LOOP_STATE" ] || exit 0
 
 LOOP_STATUS=$(grep -o '"status":[[:space:]]*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":[[:space:]]*"//' | sed 's/"//')

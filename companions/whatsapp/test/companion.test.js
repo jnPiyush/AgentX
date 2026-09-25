@@ -89,8 +89,8 @@ test('routeCommand returns usage guidance for unsupported or incomplete commands
 test('loadConfig prefers environment overrides for allowlist and repo path', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-config-'));
   const configPath = path.join(tempRoot, 'config.json');
-  fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
-  fs.writeFileSync(path.join(tempRoot, '.agentx', 'agentx.ps1'), '', 'utf8');
+  fs.mkdirSync(path.join(tempRoot, '.frontier', 'runtime'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, '.frontier', 'runtime', 'frontier.ps1'), '', 'utf8');
   fs.writeFileSync(configPath, JSON.stringify({ allowedNumbers: ['14155550999'] }));
 
   try {
@@ -113,7 +113,7 @@ test('runFrontier fails cleanly when the local CLI path is missing', async () =>
   try {
     const result = await runFrontier(['ready'], {
       repoPath: tempRoot,
-      cliRelativePath: '.agentx/agentx.ps1',
+      cliRelativePath: '.frontier/runtime/frontier.ps1',
       commandTimeoutMs: 1000,
       maxOutputChars: 1000,
     });
@@ -140,7 +140,7 @@ test('transcribeVoiceNote rejects voice-note execution when no OpenAI key is con
 test('startLoopWatcher pushes WhatsApp notifications for loop state transitions', async () => {
   const { startLoopWatcher } = freshRequire(path.resolve(__dirname, '..', 'src', 'loopWatcher.js'));
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-loop-'));
-  const stateDir = path.join(repoRoot, '.agentx', 'state');
+  const stateDir = path.join(repoRoot, '.frontier', 'state');
   const statePath = path.join(stateDir, 'loop-state.json');
   fs.mkdirSync(stateDir, { recursive: true });
   fs.writeFileSync(statePath, JSON.stringify(loopState('idle', false, 0)), 'utf8');

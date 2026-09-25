@@ -72,8 +72,8 @@ try {
     Assert-True ($LASTEXITCODE -eq 0) 'Copilot CLI pack installation succeeds'
     Assert-True (Test-Path -LiteralPath (Join-Path $installTarget $skillPath)) 'installed pack contains no-ai-slop'
     Assert-True (Test-Path -LiteralPath (Join-Path $installTarget $licensePath)) 'installed pack contains the upstream MIT license'
-    Assert-True ((Get-Content -LiteralPath (Join-Path $installTarget '.agentx/legal/LICENSE') -Raw) -match 'Apache License') 'PowerShell-installed pack contains the Frontier Apache license'
-    Assert-True (Test-Path -LiteralPath (Join-Path $installTarget '.agentx/legal/NOTICE')) 'installed pack contains repository NOTICE'
+    Assert-True ((Get-Content -LiteralPath (Join-Path $installTarget '.frontier/runtime/legal/LICENSE') -Raw) -match 'Apache License') 'PowerShell-installed pack contains the Frontier Apache license'
+    Assert-True (Test-Path -LiteralPath (Join-Path $installTarget '.frontier/runtime/legal/NOTICE')) 'installed pack contains repository NOTICE'
 } finally {
     Remove-Item -LiteralPath $installTarget -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -108,8 +108,8 @@ if ($bash) {
         if ($bashInstallSucceeded) {
             Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget $skillPath)) 'Bash-installed pack contains no-ai-slop'
             Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget $licensePath)) 'Bash-installed pack contains the upstream MIT license'
-            Assert-True ((Get-Content -LiteralPath (Join-Path $bashInstallTarget '.agentx/legal/LICENSE') -Raw) -match 'Apache License') 'Bash-installed pack contains the Frontier Apache license'
-            Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget '.agentx/legal/NOTICE')) 'Bash-installed pack contains repository NOTICE'
+            Assert-True ((Get-Content -LiteralPath (Join-Path $bashInstallTarget '.frontier/runtime/legal/LICENSE') -Raw) -match 'Apache License') 'Bash-installed pack contains the Frontier Apache license'
+            Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget '.frontier/runtime/legal/NOTICE')) 'Bash-installed pack contains repository NOTICE'
         }
         Assert-True ($bashOutput -match 'Skills\s+: 134 across 14 categories') 'Bash installer reports the current skill inventory'
         Assert-True ($bashOutput -match 'Prompts\s+: 23 reference templates') 'Bash installer reports the current prompt inventory'

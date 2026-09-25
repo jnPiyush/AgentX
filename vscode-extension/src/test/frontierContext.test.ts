@@ -12,13 +12,13 @@ import {
 import { FrontierContext } from '../frontierContext';
 
 /**
- * Create a temporary directory that looks like an Frontier project root
- * (contains .agentx/ directory with config.json).
+ * Create a temporary directory that looks like a Frontier project root
+ * (contains .frontier/ directory with config.json).
  */
 function createFrontierRoot(dir: string): void {
-  const agentxDir = path.join(dir, '.agentx');
-  fs.mkdirSync(agentxDir, { recursive: true });
-  fs.writeFileSync(path.join(agentxDir, 'config.json'), '{}');
+  const frontierDir = path.join(dir, '.frontier');
+  fs.mkdirSync(frontierDir, { recursive: true });
+  fs.writeFileSync(path.join(frontierDir, 'config.json'), '{}');
 }
 
 /**
@@ -214,7 +214,7 @@ describe('FrontierContext', () => {
       const result = await ctx.checkInitialized();
       // Local mode works without any project files
       assert.equal(result, true);
-      assert.equal(fs.existsSync(path.join(root, '.agentx', 'config.json')), false);
+      assert.equal(fs.existsSync(path.join(root, '.frontier', 'config.json')), false);
     });
 
     it('should return false when no workspace folder', async () => {
@@ -262,8 +262,8 @@ describe('FrontierContext', () => {
   describe('integration detection', () => {
     it('should return false for githubConnected when no mcp.json', () => {
       const root = path.join(tmpBase, 'nomcp');
-      fs.mkdirSync(path.join(root, '.agentx'), { recursive: true });
-      fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }));
+      fs.mkdirSync(path.join(root, '.frontier'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.frontier', 'config.json'), JSON.stringify({ provider: 'local' }));
       __setWorkspaceFolders([{ path: root }]);
       const ctx = new FrontierContext(fakeExtensionContext());
       assert.equal(ctx.githubConnected, false);
@@ -284,8 +284,8 @@ describe('FrontierContext', () => {
 
     it('should detect ado integration from workspace config', () => {
       const root = path.join(tmpBase, 'adoint');
-      fs.mkdirSync(path.join(root, '.agentx'), { recursive: true });
-      fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({
+      fs.mkdirSync(path.join(root, '.frontier'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.frontier', 'config.json'), JSON.stringify({
         provider: 'ado',
         organization: 'octo-org',
         project: 'OctoProject'
@@ -299,13 +299,13 @@ describe('FrontierContext', () => {
     it('should detect both integrations simultaneously', () => {
       const root = path.join(tmpBase, 'bothint');
       fs.mkdirSync(path.join(root, '.vscode'), { recursive: true });
-      fs.mkdirSync(path.join(root, '.agentx'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.frontier'), { recursive: true });
       fs.writeFileSync(path.join(root, '.vscode', 'mcp.json'), JSON.stringify({
         servers: {
           github: { type: 'http', url: 'https://api.githubcopilot.com/mcp/' }
         }
       }));
-      fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({
+      fs.writeFileSync(path.join(root, '.frontier', 'config.json'), JSON.stringify({
         provider: 'ado',
         organization: 'octo-org',
         project: 'OctoProject'
@@ -347,7 +347,7 @@ describe('FrontierContext', () => {
 
       const ctx = new FrontierContext(fakeExtensionContext());
       const cli = ctx.getCliCommand();
-      assert.ok(cli.includes(path.join('.github', 'frontier', '.agentx')));
+      assert.ok(cli.includes(path.join('.github', 'frontier', '.frontier', 'runtime')));
       if (process.platform === 'win32') {
         assert.ok(cli.endsWith('frontier.ps1'), 'should use PS1 on Windows');
       } else {
@@ -364,21 +364,21 @@ describe('FrontierContext', () => {
 
       const ctx = new FrontierContext(fakeExtensionContext());
       assert.ok(ctx.getCliCommand().endsWith('frontier.sh'));
-      assert.ok(ctx.getCliCommand().includes(path.join('.github', 'frontier', '.agentx')));
+      assert.ok(ctx.getCliCommand().includes(path.join('.github', 'frontier', '.frontier', 'runtime')));
     });
 
     it('should still resolve bundled runtime path when no workspace root', () => {
       __setWorkspaceFolders(undefined);
       const ctx = new FrontierContext(fakeExtensionContext());
       const cli = ctx.getCliCommand();
-      assert.ok(cli.includes(path.join('.github', 'frontier', '.agentx')));
+      assert.ok(cli.includes(path.join('.github', 'frontier', '.frontier', 'runtime')));
     });
   });
 
   // --- harness helpers -------------------------------------------------
 
   describe('harness helpers', () => {
-    it('should resolve a state path under .agentx/state', () => {
+    it('should resolve a state path under .frontier/state', () => {
       const root = path.join(tmpBase, 'state-root');
       fs.mkdirSync(root, { recursive: true });
       createFrontierRoot(root);
@@ -386,7 +386,7 @@ describe('FrontierContext', () => {
 
       const ctx = new FrontierContext(fakeExtensionContext());
       const statePath = ctx.getStatePath('harness-state.json');
-      assert.equal(statePath, path.join(root, '.agentx', 'state', 'harness-state.json'));
+      assert.equal(statePath, path.join(root, '.frontier', 'state', 'harness-state.json'));
     });
 
     it('should list execution plan files relative to the workspace root', () => {

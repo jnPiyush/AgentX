@@ -87,7 +87,7 @@ describe('agentContextLoader', () => {
   });
 
   it('should fall back to hidden runtime agent definitions', async () => {
-    const filePath = path.join(tmpDir, '.agentx', 'runtime', 'agents', 'runtime.agent.md');
+    const filePath = path.join(tmpDir, '.frontier', 'runtime', 'agents', 'runtime.agent.md');
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, '---\nname: Runtime Agent\n---\n\nRuntime body');
 
@@ -185,7 +185,7 @@ describe('agentContextLoader', () => {
       'bundled',
     );
 
-    const runtimeDir = path.join(tmpDir, '.agentx', 'runtime', 'templates');
+    const runtimeDir = path.join(tmpDir, '.frontier', 'runtime', 'templates');
     fs.mkdirSync(runtimeDir, { recursive: true });
     fs.writeFileSync(path.join(runtimeDir, 'ARCH-REVIEW-TEMPLATE.md'), 'runtime');
 
@@ -199,7 +199,7 @@ describe('agentContextLoader', () => {
       const agentx = createFakeAgentx(tmpDir, extensionPath);
       const result = await loadAgentInstructions(agentx, 'reviewer-runtime.agent.md');
 
-      assert.ok(result!.includes('.agentx/runtime/templates/ARCH-REVIEW-TEMPLATE.md'),
+      assert.ok(result!.includes('.frontier/runtime/templates/ARCH-REVIEW-TEMPLATE.md'),
         'should rewrite to workspace runtime path');
       assert.ok(!result!.includes(extensionPath.replace(/\\/g, '/')),
         'should not use bundled path when runtime mirror exists');

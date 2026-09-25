@@ -9,17 +9,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -149,7 +149,7 @@ Report actual outcomes per pass, including unexecuted checks; do not prefill PAS
 
 **Pre-edit gate (NON-SKIPPABLE)**: When delegated, verify the parent's active loop
 and return evidence to that owner; MUST NOT start, reset, iterate or complete the
-parent loop. For explicitly standalone work, run `.agentx/frontier.ps1 loop start`
+parent loop. For explicitly standalone work, run `.frontier/runtime/frontier.ps1 loop start`
 before mutation. Follow the shared protocol's ownership rule.
 
 **Honesty rule**: Read `loop status` before reporting gate state. A delegated audit

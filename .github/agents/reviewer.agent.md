@@ -7,17 +7,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   level: high
@@ -132,7 +132,7 @@ If a format cannot be extracted (e.g. password-protected `.vsd`, missing convert
 **This is a hard gate -- do not proceed if the loop is not complete.**
 
 ```bash
-.agentx/frontier.ps1 loop status
+.frontier/runtime/frontier.ps1 loop status
 ```
 
 - Status MUST be `complete`
@@ -221,7 +221,7 @@ npm test  # or equivalent for the project
 
 ### 5.1 Pattern Advisory (Read-Only)
 
-Before drafting the review, run `.agentx/frontier.ps1 patterns` to surface any in-flight pattern candidates relevant to the diff. This is advisory: if a candidate pattern matches code in this PR, mention it in the review document's Notes section and consider whether the diff strengthens or weakens the candidate. Do NOT block approval on pattern advisory output alone.
+Before drafting the review, run `.frontier/runtime/frontier.ps1 patterns` to surface any in-flight pattern candidates relevant to the diff. This is advisory: if a candidate pattern matches code in this PR, mention it in the review document's Notes section and consider whether the diff strengthens or weakens the candidate. Do NOT block approval on pattern advisory output alone.
 
 ### 5.5 Model Council Deliberation (MANDATORY for non-trivial reviews)
 
@@ -350,9 +350,9 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 

@@ -4,7 +4,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$cliPath = Join-Path $repoRoot '.agentx/agentx-cli.ps1'
+$cliPath = Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1'
 $script:passed = 0
 $script:failed = 0
 $script:skipped = 0
@@ -105,7 +105,7 @@ try {
         (Join-Path $workspace '.frontier/state/*.json'),
         (Join-Path $workspace '.frontier/state/loop-stat?.json'),
         (Join-Path $workspace '.frontier/state/loop-stat[e].json'),
-        (Join-Path $workspace '.agentx/*/*.json')
+        (Join-Path $workspace '.frontier/*/*.json')
     )) {
         foreach ($toolName in @('apply_patch', 'editFiles')) {
             $absoluteWildcard = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = $toolName; tool_input = @{ filePath = $absolutePattern } } | ConvertTo-Json -Compress)
@@ -223,16 +223,18 @@ try {
     $completedEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = 'src/app.ts' } } | ConvertTo-Json -Compress)
     Assert-True ($completedEdit.ExitCode -eq 2) 'Completed loop blocks follow-up edits'
     Assert-True ($completedEdit.Output -match 'loop start') 'Blocked edit explains fresh loop start'
-    $trustedLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = './.agentx/frontier.ps1 loop start -p "Next task"' } } | ConvertTo-Json -Compress)
+    $trustedLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = './.frontier/runtime/frontier.ps1 loop start -p "Next task"' } } | ConvertTo-Json -Compress)
     Assert-True ($trustedLoopStart.ExitCode -eq 0) 'Completed loop permits the trusted next-loop lifecycle command'
-    $trustedWrappedLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'pwsh -NoProfile -File ''.agentx/frontier.ps1'' loop start -p ''Next task''' } } | ConvertTo-Json -Compress)
+    $legacyLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = './.agentx/frontier.ps1 loop start -p "Next task"' } } | ConvertTo-Json -Compress)
+    Assert-True ($legacyLoopStart.ExitCode -eq 2) 'Completed loop does not trust the removed .agentx launcher path'
+    $trustedWrappedLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'pwsh -NoProfile -File ''.frontier/runtime/frontier.ps1'' loop start -p ''Next task''' } } | ConvertTo-Json -Compress)
     Assert-True ($trustedWrappedLoopStart.ExitCode -eq 0) 'Completed loop permits the trusted wrapped next-loop lifecycle command'
-    $trustedMinimalWrappedLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'pwsh -File ''.agentx/frontier.ps1'' loop start -p ''Next task''' } } | ConvertTo-Json -Compress)
+    $trustedMinimalWrappedLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'pwsh -File ''.frontier/runtime/frontier.ps1'' loop start -p ''Next task''' } } | ConvertTo-Json -Compress)
     Assert-True ($trustedMinimalWrappedLoopStart.ExitCode -eq 0) 'Completed loop permits the minimal trusted wrapped next-loop lifecycle command'
     foreach ($smuggledLoopStart in @(
-        'pwsh -Command ''Set-Content payload.txt pwned'' -File ''.agentx/frontier.ps1'' loop start -p ''Next task''',
-        'pwsh -EncodedCommand ZQBjAGgAbwAgAHAAdwBuAGUAZAA= -File ''.agentx/frontier.ps1'' loop start -p ''Next task''',
-        'pwsh -File ''.agentx/frontier.ps1'' -File ''.agentx/frontier.ps1'' loop start -p ''Next task'''
+        'pwsh -Command ''Set-Content payload.txt pwned'' -File ''.frontier/runtime/frontier.ps1'' loop start -p ''Next task''',
+        'pwsh -EncodedCommand ZQBjAGgAbwAgAHAAdwBuAGUAZAA= -File ''.frontier/runtime/frontier.ps1'' loop start -p ''Next task''',
+        'pwsh -File ''.frontier/runtime/frontier.ps1'' -File ''.frontier/runtime/frontier.ps1'' loop start -p ''Next task'''
     )) {
         $smuggledStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = $smuggledLoopStart } } | ConvertTo-Json -Compress)
         Assert-True ($smuggledStart.ExitCode -eq 2) "Completed loop blocks wrapped execution-mode smuggling: $smuggledLoopStart"

@@ -65,7 +65,7 @@ gh issue create --title "[Story] Add /health endpoint" --label "type:story"
 
 **Or via CLI** (Local mode):
 ```powershell
-.\.agentx\local-issue-manager.ps1 -Action create -Title "[Story] Add /health endpoint" -Labels "type:story"
+.\.frontier\runtime\local-issue-manager.ps1 -Action create -Title "[Story] Add /health endpoint" -Labels "type:story"
 ```
 
 The Orchestration FDE classifies this as a simple `type:story` and can complete it using the Engineering FDE workflow.
@@ -168,11 +168,12 @@ to `pwsh`. Installers preserve an existing `.vscode/mcp.json`, including during
 forced setup; merge any new server configuration explicitly.
 
 On macOS, use PowerShell 7.4+, Git, Node.js, and VS Code 1.134+ for the extension.
-The canonical CLI entry point is `bash .agentx/frontier.sh`; the legacy
-`bash .agentx/agentx.sh` wrapper remains supported. Both tracked launchers are
-executable, and the installer enables their executable permissions. Extension
-commands preserve literal argument strings in both Bash and PowerShell, and
-PowerShell version detection does not invoke an intermediate shell.
+The canonical CLI entry points are `bash .frontier/runtime/frontier.sh` and
+`pwsh .frontier/runtime/frontier.ps1`; there is no legacy wrapper. The Bash
+launchers are tracked executable and the installer enables their executable
+permissions. Extension commands preserve literal argument strings in both Bash
+and PowerShell, and PowerShell version detection does not invoke an intermediate
+shell.
 
 The `Quality Loop` jobs in `.github/workflows/quality-gates.yml` run launcher,
 shell-argument, review-state, parity, rollback and code-quality tests on native
@@ -228,12 +229,11 @@ using force: it replaces files supplied by the release but does not uninstall
 old trees or remove files absent from the archive. Obsolete customizations can
 therefore remain and should be reviewed manually.
 
-Configuration, issues, state, sessions, memory and digests are preserved.
-Runtime writes use `.frontier/`. The first runtime access fills missing files
-from `.hve/`, then `.agentx/`, without replacing existing Frontier files. Sources
-remain intact. Migration uses an exclusive `.frontier-migration.lock` directory,
-per-file atomic publication and a completion marker. Recover a stale lock only
-after confirming no migration process is running.
+Configuration, issues, state, sessions, memory and digests are preserved under
+`.frontier/`, alongside the tracked runtime code in `.frontier/runtime/`. Legacy
+`.agentx/` and `.hve/` state is not read and not migrated: the runtime ignores
+those folders and leaves them untouched. Copy anything you still need out of them
+manually, then delete them.
 
 ### Install Profiles
 
@@ -481,7 +481,7 @@ Frontier now resolves runtime behavior from `.frontier/config.json` in this orde
 
 Use `provider` for new workspaces. Older fields are still read so existing repos continue to work.
 
-When the `claude-code` provider is used through `.agentx/agentic-runner.ps1`, the bridge runs in text-only mode with `--permission-mode dontAsk` and no Claude-native tools. Native Read/Write/Edit/Grep/Glob/Bash execute inside the Claude process and cannot pass through Frontier workspace-path, boundary, or command guards, so they remain disabled until a guarded MCP adapter is available. Use the Copilot or direct API adapters when an Frontier run requires tool execution.
+When the `claude-code` provider is used through `.frontier/runtime/agentic-runner.ps1`, the bridge runs in text-only mode with `--permission-mode dontAsk` and no Claude-native tools. Native Read/Write/Edit/Grep/Glob/Bash execute inside the Claude process and cannot pass through Frontier workspace-path, boundary, or command guards, so they remain disabled until a guarded MCP adapter is available. Use the Copilot or direct API adapters when an Frontier run requires tool execution.
 
 ---
 
@@ -615,13 +615,13 @@ gh issue create --title "[Story] Add /health endpoint" \
 None"
 
 # Step 2: Check the ready queue for prioritized work
-.\.agentx\frontier.ps1 ready
+.\.frontier\runtime\frontier.ps1 ready
 
 # Step 3: Update status as work progresses
 # If .frontier/config.json includes a GitHub project number, the CLI also syncs
 # the Project V2 Status field for these transitions.
-.\.agentx\frontier.ps1 issue update -n 42 -s "In Progress"
-.\.agentx\frontier.ps1 issue update -n 42 -s "In Review"
+.\.frontier\runtime\frontier.ps1 issue update -n 42 -s "In Progress"
+.\.frontier\runtime\frontier.ps1 issue update -n 42 -s "In Review"
 
 # Step 4: Commit with issue reference
 git commit -m "feat: add health endpoint (refs #42)"
@@ -706,46 +706,46 @@ New-Item -ItemType Directory -Path ".frontier/issues" -Force
 ```powershell
 # Local mode: issues are optional by default
 # Enable if you want commit-msg hook to require issue references:
-.\.agentx\frontier.ps1 config set enforceIssues true
+.\.frontier\runtime\frontier.ps1 config set enforceIssues true
 
 # Disable again:
-.\.agentx\frontier.ps1 config set enforceIssues false
+.\.frontier\runtime\frontier.ps1 config set enforceIssues false
 ```
 
 ### Issue Management
 
 ```powershell
 # Create issue
-.\.agentx\local-issue-manager.ps1 -Action create `
+.\.frontier\runtime\local-issue-manager.ps1 -Action create `
     -Title "[Story] Add user login" `
     -Body "Implement user authentication" `
     -Labels "type:story"
 
 # List all issues
-.\.agentx\local-issue-manager.ps1 -Action list
+.\.frontier\runtime\local-issue-manager.ps1 -Action list
 
 # Get specific issue
-.\.agentx\local-issue-manager.ps1 -Action get -IssueNumber 1
+.\.frontier\runtime\local-issue-manager.ps1 -Action get -IssueNumber 1
 
 # Update status
-.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
+.\.frontier\runtime\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
 
 # Add comment
-.\.agentx\local-issue-manager.ps1 -Action comment -IssueNumber 1 -Comment "Started implementation"
+.\.frontier\runtime\local-issue-manager.ps1 -Action comment -IssueNumber 1 -Comment "Started implementation"
 
 # Close issue
-.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
+.\.frontier\runtime\local-issue-manager.ps1 -Action close -IssueNumber 1
 ```
 
 **Bash (Linux/Mac):**
 ```bash
-./.agentx/local-issue-manager.sh create "[Story] Add user login" "Implement auth" "type:story"
-./.agentx/local-issue-manager.sh list
+./.frontier/runtime/local-issue-manager.sh create "[Story] Add user login" "Implement auth" "type:story"
+./.frontier/runtime/local-issue-manager.sh list
 ```
 
 **Optional alias** (add to `$PROFILE`):
 ```powershell
-function issue { .\.agentx\local-issue-manager.ps1 @args }
+function issue { .\.frontier\runtime\local-issue-manager.ps1 @args }
 # Then: issue -Action create -Title "[Bug] Fix login" -Labels "type:bug"
 ```
 
@@ -758,20 +758,21 @@ function issue { .\.agentx\local-issue-manager.ps1 @args }
 ### File Structure
 
 ```
-.agentx/
+.frontier/                       # Runtime data (git-ignored)
   config.json                    # Provider configuration (`provider` is canonical)
-  agentx.ps1                     # PowerShell CLI launcher
-  agentx.sh                      # Bash CLI launcher
-  agentx-cli.ps1                 # CLI implementation (all subcommands)
-  agentic-runner.ps1             # LLM-powered agentic loop runner
   issues/
     1.json                       # Issue #1 data
     2.json                       # Issue #2 data
   state/
     agent-status.json            # Agent state tracking
   digests/                       # Weekly issue digests
-  local-issue-manager.ps1        # PowerShell issue manager
-  local-issue-manager.sh         # Bash issue manager
+  runtime/                       # Runtime code (tracked)
+    frontier.ps1                 # PowerShell CLI launcher
+    frontier.sh                  # Bash CLI launcher
+    frontier-cli.ps1             # CLI implementation (all subcommands)
+    agentic-runner.ps1           # LLM-powered agentic loop runner
+    local-issue-manager.ps1      # PowerShell issue manager
+    local-issue-manager.sh       # Bash issue manager
 ```
 
 ### Frontier CLI Commands
@@ -780,25 +781,25 @@ The CLI works across Local, GitHub, and ADO providers. It resolves the active pl
 
 ```powershell
 # PowerShell
-.\.agentx\frontier.ps1 ready                          # Show priority-sorted work queue
-.\.agentx\frontier.ps1 state                          # Show all agent states
-.\.agentx\frontier.ps1 state -a engineer -s working -i 42
-.\.agentx\frontier.ps1 deps 42                        # Check issue dependencies
-.\.agentx\frontier.ps1 digest                         # Generate weekly digest
-.\.agentx\frontier.ps1 workflow engineer              # Show workflow steps
-.\.agentx\frontier.ps1 hook -Phase start -Agent engineer -Issue 42
-.\.agentx\frontier.ps1 run engineer "Fix the tests"   # Run agentic loop (LLM + tools)
-.\.agentx\frontier.ps1 config show                    # View current configuration
-.\.agentx\frontier.ps1 backlog-sync github --force    # Force re-sync local backlog to GitHub
+.\.frontier\runtime\frontier.ps1 ready                          # Show priority-sorted work queue
+.\.frontier\runtime\frontier.ps1 state                          # Show all agent states
+.\.frontier\runtime\frontier.ps1 state -a engineer -s working -i 42
+.\.frontier\runtime\frontier.ps1 deps 42                        # Check issue dependencies
+.\.frontier\runtime\frontier.ps1 digest                         # Generate weekly digest
+.\.frontier\runtime\frontier.ps1 workflow engineer              # Show workflow steps
+.\.frontier\runtime\frontier.ps1 hook -Phase start -Agent engineer -Issue 42
+.\.frontier\runtime\frontier.ps1 run engineer "Fix the tests"   # Run agentic loop (LLM + tools)
+.\.frontier\runtime\frontier.ps1 config show                    # View current configuration
+.\.frontier\runtime\frontier.ps1 backlog-sync github --force    # Force re-sync local backlog to GitHub
 ```
 
 ```bash
 # Bash
-./.agentx/frontier.sh ready
-./.agentx/frontier.sh state engineer working 42
-./.agentx/frontier.sh deps 42
-./.agentx/frontier.sh hook start engineer 42
-./.agentx/frontier.sh run engineer "Fix the tests"
+./.frontier/runtime/frontier.sh ready
+./.frontier/runtime/frontier.sh state engineer working 42
+./.frontier/runtime/frontier.sh deps 42
+./.frontier/runtime/frontier.sh hook start engineer 42
+./.frontier/runtime/frontier.sh run engineer "Fix the tests"
 ```
 
 ### Forced GitHub Backlog Re-Sync
@@ -806,7 +807,7 @@ The CLI works across Local, GitHub, and ADO providers. It resolves the active pl
 If you want to re-apply the current local backlog state to GitHub after the initial migration, run:
 
 ```powershell
-.\.agentx\frontier.ps1 backlog-sync github --force
+.\.frontier\runtime\frontier.ps1 backlog-sync github --force
 ```
 
 This reuses the stored local-to-remote issue mapping when available, updates remote issue title/body/labels, replays any new local comments that have not been migrated yet, and reapplies the latest local open/closed status plus GitHub Project V2 status.
@@ -837,11 +838,11 @@ git commit -m "feat: add user login"
 git commit -m "fix: resolve timeout"
 
 # Enable issue enforcement if you want it:
-.\.agentx\frontier.ps1 config set enforceIssues true
+.\.frontier\runtime\frontier.ps1 config set enforceIssues true
 
 # Full issue workflow (optional but recommended for complex work):
 # Step 1: Create issue BEFORE starting work
-.\.agentx\local-issue-manager.ps1 -Action create `
+.\.frontier\runtime\local-issue-manager.ps1 -Action create `
     -Title "[Bug] Fix login timeout" `
     -Body "## Problem
 Login times out after 30s on slow connections.
@@ -854,38 +855,38 @@ Login times out after 30s on slow connections.
 # -> Creates .frontier/issues/1.json
 
 # Step 2: Check the ready queue for prioritized work
-.\.agentx\frontier.ps1 ready
+.\.frontier\runtime\frontier.ps1 ready
 
 # Step 3: Update status as you work
-.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
-.\.agentx\local-issue-manager.ps1 -Action comment -IssueNumber 1 `
+.\.frontier\runtime\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
+.\.frontier\runtime\local-issue-manager.ps1 -Action comment -IssueNumber 1 `
     -Comment "Started implementation - increasing timeout and adding retry"
 
 # Step 4: Commit with issue reference
 git commit -m "fix: resolve login timeout with retry logic (#1)"
 
 # Step 5: Move to review, then close
-.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Review"
+.\.frontier\runtime\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Review"
 # After self-review or peer review:
-.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "Done"
-.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
+.\.frontier\runtime\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "Done"
+.\.frontier\runtime\local-issue-manager.ps1 -Action close -IssueNumber 1
 ```
 
 ```bash
 # Bash equivalent
-./.agentx/local-issue-manager.sh create "[Bug] Fix login timeout" "Fix timeout issue" "type:bug"
-./.agentx/frontier.sh ready
+./.frontier/runtime/local-issue-manager.sh create "[Bug] Fix login timeout" "Fix timeout issue" "type:bug"
+./.frontier/runtime/frontier.sh ready
 git commit -m "fix: resolve login timeout (#1)"
-./.agentx/local-issue-manager.sh close 1
+./.frontier/runtime/local-issue-manager.sh close 1
 ```
 
 **Emergency bypass**: Add `[skip-issue]` to the commit message. Create a retroactive issue afterward:
 ```powershell
-.\.agentx\local-issue-manager.ps1 -Action create `
+.\.frontier\runtime\local-issue-manager.ps1 -Action create `
     -Title "[Bug] Fix login timeout" `
     -Body "Fixed in commit abc1234. Retroactive issue for traceability." `
     -Labels "type:bug"
-.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber <ID>
+.\.frontier\runtime\local-issue-manager.ps1 -Action close -IssueNumber <ID>
 ```
 
 ### Agent Handoffs (Manual)
@@ -933,7 +934,7 @@ gh label create "type:docs" --color "0075CA"
 # 3. Trigger Frontier once after GitHub is available
 # Frontier auto-detects the GitHub repo, switches provider, and syncs the full
 # local backlog to GitHub with the latest local status.
-.\.agentx\frontier.ps1 config show
+.\.frontier\runtime\frontier.ps1 config show
 
 # 4. Push and verify config
 git push -u origin master
@@ -1147,10 +1148,10 @@ go install github.com/github/github-mcp-server@latest
 
 | What | Command |
 |------|---------|
-| **See pending work** | `.\.agentx\frontier.ps1 ready` |
-| **Check agent states** | `.\.agentx\frontier.ps1 state` |
-| **View workflow steps** | `.\.agentx\frontier.ps1 workflow engineer` |
-| **Check dependencies** | `.\.agentx\frontier.ps1 deps 1` |
+| **See pending work** | `.\.frontier\runtime\frontier.ps1 ready` |
+| **Check agent states** | `.\.frontier\runtime\frontier.ps1 state` |
+| **View workflow steps** | `.\.frontier\runtime\frontier.ps1 workflow engineer` |
+| **Check dependencies** | `.\.frontier\runtime\frontier.ps1 deps 1` |
 | **Scaffold an AI agent** | `python .github/skills/ai-systems/ai-agent-development/scripts/scaffold-agent.py --name my-agent` |
 | **Scaffold RAG/Memory** | `python .github/skills/ai-systems/cognitive-architecture/scripts/scaffold-cognitive.py --name my-agent` |
 | **Run security scan** | `.github/skills/architecture/security/scripts/scan-secrets.ps1` |
@@ -1186,7 +1187,7 @@ go install github.com/github/github-mcp-server@latest
 | Problem | Solution |
 |---------|----------|
 | "Issue reference required" error | In local mode: this is now off by default. In GitHub mode: include issue number `git commit -m "feat: add login (#123)"` or bypass with `[skip-issue]` |
-| Issue enforcement in local mode | Toggle with `.agentx/frontier.ps1 config set enforceIssues true` (or `false`) |
+| Issue enforcement in local mode | Toggle with `.frontier/runtime/frontier.ps1 config set enforceIssues true` (or `false`) |
 | Status not updating | Verify GitHub Projects V2 (not V1), check Status field has correct values |
 | Agent not triggering | Check Actions is enabled, verify workflow syntax, check Actions tab for failures |
 

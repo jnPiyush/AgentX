@@ -27,7 +27,7 @@ applyTo: '**'
 
 ### 1.1 Pre-Edit Gate (NON-SKIPPABLE)
 
-Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as the ABSOLUTE FIRST
+Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as the ABSOLUTE FIRST
 tool call BEFORE editing, creating, or deleting any file. Reading the task and the
 artifacts the active role is required to read is allowed; mutating the workspace
 before `loop start` succeeds is a contract violation.
@@ -39,9 +39,9 @@ parent's baseline or approval history. Standalone work starts its own loop.
 
 ### 1.2 Honesty Rule
 
-If asked whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the
+If asked whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the
 actual state verbatim. Never claim completion unless
-`.agentx/frontier.ps1 loop complete` succeeded in the current session.
+`.frontier/runtime/frontier.ps1 loop complete` succeeded in the current session.
 
 ### 1.3 Risk-Based Minimum Iterations
 
@@ -50,7 +50,7 @@ mechanically, not by per-agent prose:
 
 | Task class | Min iterations | Enforced in |
 |------------|----------------|-------------|
-| standard (simple bug/docs/review/research/coaching) | 1 | `agentx-cli.ps1`, `loopState.ts`, pre-commit hook |
+| standard (simple bug/docs/review/research/coaching) | 1 | `frontier-cli.ps1`, `loopState.ts`, pre-commit hook |
 | auto-fix-review | 2 | same |
 | complex-delivery | 3 | same |
 | agent-x | 3 | same |
@@ -62,7 +62,7 @@ never lowered. The loop is done only when
 structured reviewer verdict on the FINAL iteration:
 
 ```
-.agentx/frontier.ps1 loop iterate -s "Subagent Review: <outcome>" -e <evidence> \
+.frontier/runtime/frontier.ps1 loop iterate -s "Subagent Review: <outcome>" -e <evidence> \
   --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
 ```
 
@@ -114,12 +114,12 @@ shown by `loop status`. The canonical tiers are:
 ### 1.5 Per-Iteration Reporting + Final Summary (MANDATORY)
 
 - **Report each iteration as it happens**: call
-  `.agentx/frontier.ps1 loop iterate -s "<what changed + verification result>" -e <evidence>`
+  `.frontier/runtime/frontier.ps1 loop iterate -s "<what changed + verification result>" -e <evidence>`
   after every fix/verify cycle. State the iteration number, focus, what you did,
   and the gate result.
 - **Summarize at the end**: before handoff, print the role's Delivery Report table
   (a one-line outcome plus the per-row results) and run
-  `.agentx/frontier.ps1 loop complete -s "<summary>" -e <fresh-evidence>`.
+  `.frontier/runtime/frontier.ps1 loop complete -s "<summary>" -e <fresh-evidence>`.
 
 ### 1.6 Hard Gate
 
@@ -188,7 +188,7 @@ MUST NOT impersonate several council members or invent independent consensus.
 ## 4. Scrub / Deslop (MANDATORY, NO SKIP)
 
 Every run that changes files MUST pass a deslop scrub before review/handoff:
-`pwsh .agentx/frontier.ps1 scrub -Path <changed-area>`. Run scrub through the agentx
+`pwsh .frontier/runtime/frontier.ps1 scrub -Path <changed-area>`. Run scrub through the Frontier
 CLI (not a literal `scripts/scrub.ps1` path) so it resolves the bundled scanner in
 zero-copy workspaces. Apply safe fixes; behavior MUST NOT change. The pre-commit
 hook hard-fails on HIGH-severity scrub findings in staged files; there is no skip
@@ -262,9 +262,9 @@ live only in deeper docs.
 
 ## 9. Plugins (Optional Capabilities)
 
-Agents MAY invoke workspace plugins from `.agentx/plugins/` when the active phase
+Agents MAY invoke workspace plugins from `.frontier/runtime/plugins/` when the active phase
 needs a capability beyond core tooling. Plugins are inspected via
-[.agentx/plugins/registry.json](../.agentx/plugins/registry.json). Always prefer
+[.frontier/runtime/plugins/registry.json](../.frontier/runtime/plugins/registry.json). Always prefer
 canonical Markdown deliverables as the source of truth and use plugins only as
 conversion bridges -- inbound (binary -> Markdown so the agent can review and cite
 text) or outbound (Markdown -> binary when the user explicitly asks for a `.docx`
@@ -272,11 +272,11 @@ or `.pptx`).
 
 | Plugin | Direction | Capability | When to use |
 |--------|-----------|------------|-------------|
-| [convert-docs](../.agentx/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
-| [convert-slides](../.agentx/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
-| [read-docs](../.agentx/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
-| [read-slides](../.agentx/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
-| [read-pdf](../.agentx/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
+| [convert-docs](../.frontier/runtime/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
+| [convert-slides](../.frontier/runtime/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
+| [read-docs](../.frontier/runtime/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
+| [read-slides](../.frontier/runtime/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
+| [read-pdf](../.frontier/runtime/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
 
 Plugin invocation rules:
 

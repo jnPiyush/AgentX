@@ -51,7 +51,7 @@ test('Native loop CI includes macOS, literal shell tests, baseline gates and rea
   assert.ok(job['timeout-minutes'] > 0);
   assert.equal(job.steps[0].with['persist-credentials'], false);
   const commands = job.steps.map(step => step.run || '').join('\n');
-  for (const required of ['test -x .agentx/frontier.sh', 'test -x .agentx/agentx.sh',
+  for (const required of ['test -x .frontier/runtime/frontier.sh',
     'shell.test.js', 'loopStateChecker.test.js', 'loop-parity-behavior.ps1',
     'loop-rollback-behavior.ps1', 'code-quality-rubric-behavior.ps1']) {
     assert.ok(commands.includes(required), required);
@@ -227,7 +227,7 @@ async function routeIssue(command, status = '', labels = ['type:powerbi'], pullR
     rest: {
       issues: { get: async () => ({ data: { labels: labels.map(name => ({ name })), title: 'Report', body: '', node_id: 'test' } }) },
       repos: { getContent: async ({ path: target }) => {
-        if (target !== '.agentx/config.json') throw new Error('No architecture');
+        if (target !== '.frontier/config.json') throw new Error('No architecture');
         return { data: { content: Buffer.from('{"project":1}').toString('base64'), encoding: 'base64' } };
       } }
     },

@@ -135,7 +135,7 @@ function Register-FrontierMcpServer {
 
   $entry = [ordered]@{
     command = 'node'
-    args    = @((Join-Path $SourceRoot '.agentx' 'mcp-server' 'index.js'))
+    args    = @((Join-Path $SourceRoot '.frontier' 'runtime' 'mcp-server' 'index.js'))
     env     = [ordered]@{
       FRONTIER_REPO_ROOT = $SourceRoot
     }

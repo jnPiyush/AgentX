@@ -79,9 +79,10 @@ when the shorter form is unambiguous.
 |---------|-----------------|--------------------|
 | VS Code commands and settings | `frontier.*` | Hidden `agentx.*` aliases may remain for published clients |
 | Chat participant | `frontier.chat`, `@frontier` | Keep legacy chat aliases only when the host supports hidden registration |
-| CLI-facing name | `frontier` | Legacy launchers delegate to Frontier and emit deprecation guidance |
+| CLI-facing name | `frontier` | Launchers live in `.frontier/runtime/`; no legacy `.agentx` launchers |
 | MCP tools | `frontier_*` | Legacy tool aliases are callable but not advertised |
-| Mutable state | `.frontier/` | Read and migrate `.agentx/` or partial `.hve/` state; write only `.frontier/` |
+| Runtime code | `.frontier/runtime/` | Tracked CLI, MCP server, hooks, plugins and templates |
+| Mutable state | `.frontier/` | Write and read only `.frontier/`; legacy `.agentx/` and `.hve/` state is ignored |
 | Environment variables | `FRONTIER_*` | Read `AGENTX_*` and partial `HVE_*` only as compatibility fallbacks |
 | Pack names | `frontier-*` | Preserve old package coordinates only where already published |
 

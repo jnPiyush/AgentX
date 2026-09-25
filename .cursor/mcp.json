@@ -1,11 +1,8 @@
 {
   "mcpServers": {
-    "agentx": {
+    "frontier": {
       "command": "node",
-      "args": [".agentx/mcp-server/index.js"],
-      "env": {
-        "AGENTX_REPO_ROOT": "."
-      }
+      "args": [".frontier/runtime/mcp-server/index.js"]
     }
   }
 }

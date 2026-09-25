@@ -158,7 +158,7 @@ foreach ($planFile in $planFiles) {
 # ever written must be retrofitted".
 #
 # NOT checkable in CI: the quality-loop iteration gate.
-# `.agentx/state/loop-state.json` is untracked by design (per-developer
+# `.frontier/state/loop-state.json` is untracked by design (per-developer
 # working state), so CI has nothing to inspect. That gate remains hook-only.
 # ---------------------------------------------------------------------------
 

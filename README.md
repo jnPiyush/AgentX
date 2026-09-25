@@ -266,7 +266,7 @@ Frontier: Add LLM Adapter
 
 Secrets are collected through secure VS Code prompts and stored in secret storage, not committed to `.frontier/config.json`.
 
-Standalone workspace installers keep Frontier legal material under `.agentx/legal` and never replace the repository's root `LICENSE` or `NOTICE`. When upgrading an existing 9.x workspace installation to a different version, rerun with explicit `-Force` or `--force` so the installer cannot report a new version while retaining older managed files.
+Standalone workspace installers keep Frontier legal material under `.frontier/runtime/legal` and never replace the repository's root `LICENSE` or `NOTICE`. When upgrading an existing 9.x workspace installation to a different version, rerun with explicit `-Force` or `--force` so the installer cannot report a new version while retaining older managed files.
 
 ### 4. Start with one prompt
 
@@ -295,7 +295,7 @@ Evaluate three deployment options for this service and create an ADR with the tr
 | [docs/GUIDE.md](docs/GUIDE.md) | Setup, adapters, local mode, troubleshooting |
 | [.github/agents/](.github/agents/) | Canonical agent role contracts |
 | [.github/skills/](.github/skills/) | Canonical production skills |
-| [.agentx/](.agentx/) | CLI, plugins, hooks, and workspace runtime state |
+| [.frontier/runtime/](.frontier/runtime/) | CLI, MCP server, plugins, hooks and templates (runtime state lives in gitignored `.frontier/`) |
 | [docs/artifacts/](docs/artifacts/) | PRDs, ADRs, specs, reviews, learnings |
 | `docs/execution/` | Living plans, progress, contracts, evidence (created on use) |
 | [vscode-extension/](vscode-extension/) | Extension source, tests, package, bundled runtime |

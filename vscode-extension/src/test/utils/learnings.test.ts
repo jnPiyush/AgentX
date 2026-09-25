@@ -89,9 +89,9 @@ describe('learnings utility', () => {
       'utf-8',
     );
 
-    fs.mkdirSync(path.join(tmpDir, '.agentx', 'state'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier', 'state'), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpDir, '.agentx', 'state', 'harness-state.json'),
+      path.join(tmpDir, '.frontier', 'state', 'harness-state.json'),
       JSON.stringify({
         version: 1,
         threads: [{

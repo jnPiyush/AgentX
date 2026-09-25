@@ -31,7 +31,7 @@ export const ESSENTIAL_DIRS: string[] = [];
 
 export const RUNTIME_ASSET_DIRS: Array<{ source: string; destination: string }> = [
   {
-    source: path.join('.github', 'frontier', '.agentx', 'templates', 'memories'),
+    source: path.join('.github', 'frontier', '.frontier', 'runtime', 'templates', 'memories'),
     destination: 'memories',
   },
 ];
@@ -84,8 +84,8 @@ export const COPILOT_CLI_SUPPORT_DIRS: Array<{ source: string; destination: stri
   { source: path.join(SEED_ROOT, 'evaluation'), destination: 'evaluation' },
   { source: path.join(SEED_ROOT, 'packs'), destination: 'packs' },
   {
-    source: path.join(SEED_ROOT, '.agentx', 'plugins'),
-    destination: path.join('.agentx', 'plugins'),
+    source: path.join(SEED_ROOT, '.frontier', 'runtime', 'plugins'),
+    destination: path.join('.frontier', 'runtime', 'plugins'),
   },
 ];
 
@@ -113,14 +113,10 @@ export const COPILOT_CLI_ASSET_FILES: Array<{ source: string; destination: strin
 ];
 
 const WORKSPACE_WRAPPER_FILES = [
-  { relativePath: path.join('.agentx', 'frontier.ps1'), entryFile: 'frontier.ps1', shell: 'pwsh' as const },
-  { relativePath: path.join('.agentx', 'frontier.sh'), entryFile: 'frontier.sh', shell: 'bash' as const },
-  { relativePath: path.join('.frontier', 'frontier.ps1'), entryFile: 'frontier.ps1', shell: 'pwsh' as const },
-  { relativePath: path.join('.frontier', 'local-issue-manager.ps1'), entryFile: 'local-issue-manager.ps1', shell: 'pwsh' as const },
-  { relativePath: path.join('.frontier', 'frontier.sh'), entryFile: 'frontier.sh', shell: 'bash' as const },
-  { relativePath: path.join('.frontier', 'local-issue-manager.sh'), entryFile: 'local-issue-manager.sh', shell: 'bash' as const },
-  { relativePath: path.join('.agentx', 'agentx.ps1'), entryFile: 'agentx.ps1', shell: 'pwsh' as const },
-  { relativePath: path.join('.agentx', 'agentx.sh'), entryFile: 'agentx.sh', shell: 'bash' as const },
+  { relativePath: path.join('.frontier', 'runtime', 'frontier.ps1'), entryFile: 'frontier.ps1', shell: 'pwsh' as const },
+  { relativePath: path.join('.frontier', 'runtime', 'frontier.sh'), entryFile: 'frontier.sh', shell: 'bash' as const },
+  { relativePath: path.join('.frontier', 'runtime', 'local-issue-manager.ps1'), entryFile: 'local-issue-manager.ps1', shell: 'pwsh' as const },
+  { relativePath: path.join('.frontier', 'runtime', 'local-issue-manager.sh'), entryFile: 'local-issue-manager.sh', shell: 'bash' as const },
 ];
 
 export const ESSENTIAL_FILES: string[] = [];
@@ -521,13 +517,13 @@ function quoteShellLiteral(value: string): string {
 }
 
 function renderPowerShellWrapper(entryFile: string, extensionRoot: string): string {
-  const runtimeRelativePath = quotePowerShellLiteral(path.join('.github', 'frontier', '.agentx', entryFile));
+  const runtimeRelativePath = quotePowerShellLiteral(path.join('.github', 'frontier', '.frontier', 'runtime', entryFile));
   const preferredExtensionRoot = quotePowerShellLiteral(extensionRoot);
 
   return [
     '#!/usr/bin/env pwsh',
     "$ErrorActionPreference = 'Stop'",
-    "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path",
+    "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path",
     '',
     'function Resolve-FrontierExtensionRoot {',
     '  $extensionRootOverride = if ($env:FRONTIER_EXTENSION_ROOT) { $env:FRONTIER_EXTENSION_ROOT } elseif ($env:HVE_EXTENSION_ROOT) { $env:HVE_EXTENSION_ROOT } else { $env:AGENTX_EXTENSION_ROOT }',
@@ -590,14 +586,14 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
 }
 
 function renderBashWrapper(entryFile: string, extensionRoot: string): string {
-  const runtimeRelativePath = quoteShellLiteral(toPosixPath(path.join('.github', 'frontier', '.agentx', entryFile)));
+  const runtimeRelativePath = quoteShellLiteral(toPosixPath(path.join('.github', 'frontier', '.frontier', 'runtime', entryFile)));
   const preferredExtensionRoot = quoteShellLiteral(toPosixPath(extensionRoot));
 
   return [
     '#!/usr/bin/env bash',
     'set -euo pipefail',
     '',
-    'workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"',
+    'workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"',
     `runtime_relative='${runtimeRelativePath}'`,
     '',
     'resolve_frontier_extension_root() {',
@@ -757,10 +753,6 @@ export function mergeGitignore(root: string): void {
   const agentxEntries = [
     '# Frontier runtime state',
     '.frontier/',
-    '.frontier.migrating-*/',
-    '.frontier-migration.lock/',
-    '.hve/',
-    '.agentx/',
   ];
 
   const gitignorePath = path.join(root, '.gitignore');

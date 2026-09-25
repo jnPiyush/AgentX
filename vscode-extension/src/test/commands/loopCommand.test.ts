@@ -114,14 +114,14 @@ describe('registerLoopCommand', () => {
       fakeAgentx.checkInitialized.resolves(true);
       sandbox.stub(vscode.window, 'showInputBox')
         .onFirstCall().resolves('Verified the gate')
-        .onSecondCall().resolves('.agentx/state/gate.log')
+        .onSecondCall().resolves('.frontier/state/gate.log')
         .onThirdCall().resolves('');
       sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
       fakeAgentx.runCli.resolves('Iteration recorded');
 
       await registeredCallbacks['frontier.loopIterate']!();
       assert.ok(fakeAgentx.runCli.calledWith('loop', sinon.match.array.deepEquals([
-        'iterate', '-s', 'Verified the gate', '-e', '.agentx/state/gate.log',
+        'iterate', '-s', 'Verified the gate', '-e', '.frontier/state/gate.log',
       ])));
     });
 

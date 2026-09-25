@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
-# Smoke tests for the agentx diagnose subcommand (formerly: doctor).
+# Smoke tests for the frontier diagnose subcommand (formerly: doctor).
 # Asserts: JSON shape, expected check ids present, exit code semantics.
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$cli  = Join-Path $root '.agentx/agentx-cli.ps1'
+$cli  = Join-Path $root '.frontier/runtime/frontier-cli.ps1'
 
 $pass = 0
 $fail = 0
@@ -20,7 +20,7 @@ function Assert-True {
 }
 
 Write-Host ""
-Write-Host "  agentx diagnose smoke tests" -ForegroundColor Cyan
+Write-Host "  frontier diagnose smoke tests" -ForegroundColor Cyan
 Write-Host "  ================================================" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -67,13 +67,13 @@ Assert-True (($exit -eq 0) -eq ($obj.ok -eq $true)) "exit code matches ok flag (
 
 # Zero-copy workspaces keep runtime scripts in the extension bundle and only
 # persist state in the workspace.
-$zeroCopyRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-diagnose-" + [guid]::NewGuid().ToString('N'))
-$previousWorkspaceRoot = $env:AGENTX_WORKSPACE_ROOT
+$zeroCopyRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("frontier-diagnose-" + [guid]::NewGuid().ToString('N'))
+$previousWorkspaceRoot = $env:FRONTIER_WORKSPACE_ROOT
 try {
-    New-Item -ItemType Directory -Path (Join-Path $zeroCopyRoot '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $zeroCopyRoot '.frontier') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $zeroCopyRoot '.github') -Force | Out-Null
-    Set-Content -Path (Join-Path $zeroCopyRoot '.agentx/config.json') -Value '{"provider":"local"}' -Encoding utf8
-    $env:AGENTX_WORKSPACE_ROOT = $zeroCopyRoot
+    Set-Content -Path (Join-Path $zeroCopyRoot '.frontier/config.json') -Value '{"provider":"local"}' -Encoding utf8
+    $env:FRONTIER_WORKSPACE_ROOT = $zeroCopyRoot
 
     $zeroCopyRaw = & pwsh -NoProfile -File $cli diagnose --json 2>&1
     $zeroCopyExit = $LASTEXITCODE
@@ -126,12 +126,12 @@ try {
     @{ status = 'complete'; issueNumber = 7 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $canonicalState 'loop-state.json') -Encoding utf8
     $handoffJson = & pwsh -NoProfile -File (Join-Path $root 'scripts/validate-handoff.ps1') -IssueNumber 7 -FromAgent pm -ToAgent architect -Json 2>&1
     $handoffText = ($handoffJson | Out-String)
-    Assert-True ($handoffText -match '"loopCompleted":\s*true') 'handoff reads canonical .frontier loop state before stale legacy state'
+    Assert-True ($handoffText -match '"loopCompleted":\s*true') 'handoff reads only canonical .frontier loop state and ignores legacy .agentx state'
 } finally {
     if ($null -eq $previousWorkspaceRoot) {
-        Remove-Item Env:AGENTX_WORKSPACE_ROOT -ErrorAction SilentlyContinue
+        Remove-Item Env:FRONTIER_WORKSPACE_ROOT -ErrorAction SilentlyContinue
     } else {
-        $env:AGENTX_WORKSPACE_ROOT = $previousWorkspaceRoot
+        $env:FRONTIER_WORKSPACE_ROOT = $previousWorkspaceRoot
     }
     Remove-Item -LiteralPath $zeroCopyRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -143,7 +143,7 @@ if ($LASTEXITCODE -ne 0) {
     $copyOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
 }
 
-$isolatedExtension = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-extension-" + [guid]::NewGuid().ToString('N'))
+$isolatedExtension = Join-Path ([System.IO.Path]::GetTempPath()) ("frontier-extension-" + [guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path $isolatedExtension -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $root 'vscode-extension/.github') `

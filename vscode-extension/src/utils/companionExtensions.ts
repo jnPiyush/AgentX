@@ -37,7 +37,7 @@ export async function checkCompanionExtensions(workspaceRoot?: string): Promise<
     return;
   }
 
-  const config = vscode.workspace.getConfiguration('agentx');
+  const config = vscode.workspace.getConfiguration('frontier');
   const dismissed: string[] = config.get<string[]>('companionDismissed', []);
   if (dismissed.includes(AZURE_PRIMARY_EXTENSION_ID)) {
     return;

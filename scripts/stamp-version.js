@@ -212,7 +212,7 @@ function syncBundledAssets(version) {
 
   const requiredFiles = [
     {
-      relativePath: 'vscode-extension/.github/frontier/.agentx/agentic-runner.ps1',
+      relativePath: 'vscode-extension/.github/frontier/.frontier/runtime/agentic-runner.ps1',
       label: 'bundled agentic runner',
     },
     {
@@ -281,7 +281,7 @@ function syncBundledAssets(version) {
 function stampMcpPackage(version) {
   runCommand(
     process.execPath,
-    [path.join(root, 'scripts', 'stamp-package-version.js'), '.agentx/mcp-server', version],
+    [path.join(root, 'scripts', 'stamp-package-version.js'), '.frontier/runtime/mcp-server', version],
     root,
   );
 }

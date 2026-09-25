@@ -7,17 +7,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -29,7 +29,7 @@ constraints:
   - "MUST perform a design-alignment checkpoint with Architect before coding when the implementation crosses architecture boundaries, introduces a new pattern outside the ADR/Spec, or requires a meaningful design deviation"
   - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
-  - "MUST run '.agentx/frontier.ps1 loop start -p <task> -i <issue>' before the first file edit (-p is required)"
+  - "MUST run '.frontier/runtime/frontier.ps1 loop start -p <task> -i <issue>' before the first file edit (-p is required)"
   - "MUST meet the risk-based quality-loop minimum from AGENT-PROTOCOL.md before declaring implementation done"
   - "MUST attach a real evidence file (--evidence <path>) to every loop iterate and to loop complete"
   - "MUST run adversarial checks only for applicable high-risk surfaces: property tests for changed pure logic, mutation tests for security/correctness-critical branches, fuzzing for changed parsers/deserializers, and negative tests for changed public endpoints"
@@ -39,7 +39,7 @@ constraints:
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
-  - "MUST run 'pwsh .agentx/frontier.ps1 scrub -Path <changed-path>' on every modified area before independent review; if scrub changes files, rerun focused checks; HIGH-severity findings block handoff"
+  - "MUST run 'pwsh .frontier/runtime/frontier.ps1 scrub -Path <changed-path>' on every modified area before independent review; if scrub changes files, rerun focused checks; HIGH-severity findings block handoff"
   - "MUST reuse or extend existing shared code (endpoints, services, modules, queries, stored procedures, components) before writing new code, extract logic into one shared unit once two callers need it, and record each reuse decision in the plan"
   - "MUST NOT modify PRD, ADR, UX docs, or CI/CD workflows"
   - "MUST NOT make architectural decisions not covered by the Spec/ADR -- escalate to Architect"
@@ -272,7 +272,7 @@ as an evidenced iteration; never defer `loop start` until after an edit or commi
 ## Phase 5b: Scrub (Deslop)
 
 Load the `scrub` skill, run
-`pwsh .agentx/frontier.ps1 scrub -Path <changed-path> -Fix` for every changed area,
+`pwsh .frontier/runtime/frontier.ps1 scrub -Path <changed-path> -Fix` for every changed area,
 resolve all HIGH and flag-only findings, then rerun focused tests. Scrub changes MUST
 remain behavior-neutral.
 
@@ -369,7 +369,7 @@ Reviewer prompt:
 Write JSON evidence and record its verdict on the final iteration:
 
 ```
-.agentx/frontier.ps1 loop iterate -s "Subagent Review: <outcome>" -e .frontier/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
+.frontier/runtime/frontier.ps1 loop iterate -s "Subagent Review: <outcome>" -e .frontier/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
 ```
 
 All verdict flags shown above are required. HIGH/MEDIUM findings require
@@ -379,7 +379,7 @@ All verdict flags shown above are required. HIGH/MEDIUM findings require
 ### 7.5 Complete the Loop and Hand Off
 
 ```bash
-.agentx/frontier.ps1 loop complete -s "Selected verification gates passed" -e .frontier/state/final-gate.json --passing <suite>=<count>
+.frontier/runtime/frontier.ps1 loop complete -s "Selected verification gates passed" -e .frontier/state/final-gate.json --passing <suite>=<count>
 ```
 
 Complete the loop before an authorized commit: the commit hook rejects active
@@ -440,7 +440,7 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 ### Exit
 
-- PASS: The Phase 7 gate holds and `.agentx/frontier.ps1 validate <issue> engineer` passes.
+- PASS: The Phase 7 gate holds and `.frontier/runtime/frontier.ps1 validate <issue> engineer` passes.
 
 ---
 
@@ -456,9 +456,9 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 

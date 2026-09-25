@@ -20,7 +20,7 @@
  Defaults to the parent of the packs/ directory (auto-detected from script location).
 
 .PARAMETER IncludeCli
- Also copy .agentx/ CLI utilities (agentx.ps1, local-issue-manager.ps1, etc.)
+ Also install the Frontier CLI (.frontier/runtime wrappers backed by a bundled runtime).
 
 .PARAMETER Force
  Overwrite existing files (default: skip files that already exist)
@@ -75,14 +75,12 @@ function Write-Skip { param([string]$msg) Write-Host "[SKIP] $msg" -ForegroundCo
 function Write-Info { param([string]$msg) Write-Host "[INFO] $msg" -ForegroundColor Cyan }
 function Write-Err { param([string]$msg) Write-Host "[FAIL] $msg" -ForegroundColor Red }
 
-$RuntimeBundleRoot = Join-Path '.github' 'frontier' '.agentx'
+$RuntimeBundleRoot = Join-Path '.github' 'frontier' '.frontier' 'runtime'
 $PackManifestPath = Join-Path $PSScriptRoot 'manifest.json'
 $RuntimeBundleFiles = @(
  'frontier.ps1',
  'frontier.sh',
- 'agentx.ps1',
- 'agentx.sh',
- 'agentx-cli.ps1',
+ 'frontier-cli.ps1',
  'agentic-runner.ps1',
  'local-issue-manager.ps1',
  'local-issue-manager.sh'
@@ -205,7 +203,7 @@ function Get-PackInstallPlan {
     @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' },
     @{ Key = 'registries'; Label = 'Registries'; RelativePath = '.github/registries' },
     @{ Key = 'hooks'; Label = 'Hooks'; RelativePath = '.github/hooks' },
-    @{ Key = 'plugins'; Label = 'Plugins'; RelativePath = '.agentx/plugins' },
+    @{ Key = 'plugins'; Label = 'Plugins'; RelativePath = '.frontier/runtime/plugins' },
     @{ Key = 'guides'; Label = 'Guides'; RelativePath = 'docs/guides' }
  )
 
@@ -303,11 +301,11 @@ function Write-FileIfNeeded {
 function Get-PowerShellWrapperContent {
  param([string]$EntryFile)
 
- $runtimeRelative = ".github\\frontier\\.agentx\\$EntryFile"
+ $runtimeRelative = ".github\\frontier\\.frontier\\runtime\\$EntryFile"
  return @(
   '#!/usr/bin/env pwsh',
   "`$ErrorActionPreference = 'Stop'",
-  "`$workspaceRoot = (Resolve-Path (Join-Path `$PSScriptRoot '..')).Path",
+  "`$workspaceRoot = (Resolve-Path (Join-Path `$PSScriptRoot '../..')).Path",
   "`$env:FRONTIER_WORKSPACE_ROOT = `$workspaceRoot",
   "`$env:AGENTX_WORKSPACE_ROOT = `$workspaceRoot",
   "& (Join-Path `$workspaceRoot '$runtimeRelative') @args",
@@ -330,10 +328,10 @@ function Get-BashWrapperContent {
   '#!/usr/bin/env bash',
   'set -euo pipefail',
   '',
-  'workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"',
+  'workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"',
   'export FRONTIER_WORKSPACE_ROOT="$workspace_root"',
   'export AGENTX_WORKSPACE_ROOT="$workspace_root"',
-  ('exec "$workspace_root/.github/frontier/.agentx/' + $EntryFile + '" "$@"'),
+  ('exec "$workspace_root/.github/frontier/.frontier/runtime/' + $EntryFile + '" "$@"'),
   ''
  ) -join "`n"
 }
@@ -344,7 +342,7 @@ function Install-CliRuntimeBundle {
  $copied = 0
  $skipped = 0
  foreach ($fileName in $RuntimeBundleFiles) {
-  $result = Copy-FileIfNeeded -SrcPath (Join-Path $SourceRoot '.agentx' $fileName) -DestPath (Join-Path $TargetRoot $RuntimeBundleRoot $fileName) -Overwrite:$Force
+  $result = Copy-FileIfNeeded -SrcPath (Join-Path $SourceRoot '.frontier' 'runtime' $fileName) -DestPath (Join-Path $TargetRoot $RuntimeBundleRoot $fileName) -Overwrite:$Force
   $copied += $result.Copied
   $skipped += $result.Skipped
  }
@@ -366,7 +364,7 @@ function Install-CliRuntimeBundle {
 function Install-StarterMemories {
  param([string]$SourceRoot, [string]$TargetRoot)
 
- return Copy-Tree -SrcDir (Join-Path $SourceRoot '.agentx' 'templates' 'memories') -DestDir (Join-Path $TargetRoot 'memories')
+ return Copy-Tree -SrcDir (Join-Path $SourceRoot '.frontier' 'runtime' 'templates' 'memories') -DestDir (Join-Path $TargetRoot 'memories')
 }
 
 function Initialize-WorkspaceCliState {
@@ -374,12 +372,12 @@ function Initialize-WorkspaceCliState {
  param([string]$TargetRoot)
 
  $stateRoot = Join-Path $TargetRoot '.frontier'
- if ($PSCmdlet.ShouldProcess($stateRoot, 'Migrate existing state')) {
+ if ($PSCmdlet.ShouldProcess($stateRoot, 'Verify bundled runtime')) {
   $previousRoot = $env:FRONTIER_WORKSPACE_ROOT
   try {
    $env:FRONTIER_WORKSPACE_ROOT = $TargetRoot
-   & pwsh -NoProfile -File (Join-Path $TargetRoot $RuntimeBundleRoot 'agentx-cli.ps1') version
-   if ($LASTEXITCODE -ne 0) { throw 'Frontier state migration failed; defaults were not written.' }
+   & pwsh -NoProfile -File (Join-Path $TargetRoot $RuntimeBundleRoot 'frontier-cli.ps1') version
+   if ($LASTEXITCODE -ne 0) { throw 'Frontier CLI failed to start; defaults were not written.' }
   } finally { $env:FRONTIER_WORKSPACE_ROOT = $previousRoot }
  }
 
@@ -434,16 +432,10 @@ function Install-WorkspaceCliWrappers {
  $copied = 0
  $skipped = 0
  $wrappers = @(
-  @{ Path = Join-Path $TargetRoot '.agentx' 'frontier.ps1'; Content = Get-PowerShellWrapperContent -EntryFile 'frontier.ps1' },
-  @{ Path = Join-Path $TargetRoot '.agentx' 'frontier.sh'; Content = Get-BashWrapperContent -EntryFile 'frontier.sh' },
-  @{ Path = Join-Path $TargetRoot '.frontier' 'frontier.ps1'; Content = Get-PowerShellWrapperContent -EntryFile 'frontier.ps1' },
-  @{ Path = Join-Path $TargetRoot '.frontier' 'local-issue-manager.ps1'; Content = Get-PowerShellWrapperContent -EntryFile 'local-issue-manager.ps1' },
-  @{ Path = Join-Path $TargetRoot '.frontier' 'frontier.sh'; Content = Get-BashWrapperContent -EntryFile 'frontier.sh' },
-  @{ Path = Join-Path $TargetRoot '.frontier' 'local-issue-manager.sh'; Content = Get-BashWrapperContent -EntryFile 'local-issue-manager.sh' },
-  @{ Path = Join-Path $TargetRoot '.agentx' 'agentx.ps1'; Content = Get-PowerShellWrapperContent -EntryFile 'agentx.ps1' },
-  @{ Path = Join-Path $TargetRoot '.agentx' 'local-issue-manager.ps1'; Content = Get-PowerShellWrapperContent -EntryFile 'local-issue-manager.ps1' },
-  @{ Path = Join-Path $TargetRoot '.agentx' 'agentx.sh'; Content = Get-BashWrapperContent -EntryFile 'agentx.sh' },
-  @{ Path = Join-Path $TargetRoot '.agentx' 'local-issue-manager.sh'; Content = Get-BashWrapperContent -EntryFile 'local-issue-manager.sh' }
+  @{ Path = Join-Path $TargetRoot '.frontier' 'runtime' 'frontier.ps1'; Content = Get-PowerShellWrapperContent -EntryFile 'frontier.ps1' },
+  @{ Path = Join-Path $TargetRoot '.frontier' 'runtime' 'frontier.sh'; Content = Get-BashWrapperContent -EntryFile 'frontier.sh' },
+  @{ Path = Join-Path $TargetRoot '.frontier' 'runtime' 'local-issue-manager.ps1'; Content = Get-PowerShellWrapperContent -EntryFile 'local-issue-manager.ps1' },
+  @{ Path = Join-Path $TargetRoot '.frontier' 'runtime' 'local-issue-manager.sh'; Content = Get-BashWrapperContent -EntryFile 'local-issue-manager.sh' }
  )
 
  foreach ($wrapper in $wrappers) {
@@ -517,7 +509,7 @@ foreach ($group in @($installPlan.Entries | Group-Object Label)) {
  foreach ($entry in $group.Group) {
   $srcPath = Join-Path $Source $entry.RelativePath
   $isLegalFile = $entry.Type -eq 'file' -and $entry.RelativePath -in @('LICENSE', 'NOTICE')
-  $destinationRelativePath = if ($isLegalFile) { ".agentx/legal/$($entry.RelativePath)" } else { $entry.RelativePath }
+  $destinationRelativePath = if ($isLegalFile) { ".frontier/runtime/legal/$($entry.RelativePath)" } else { $entry.RelativePath }
   $destPath = Join-Path $Target $destinationRelativePath
 
   if ($entry.Type -eq 'tree') {
@@ -556,7 +548,7 @@ if ($IncludeCli) {
 
 # -- Write version stamp ----------------------------------------------------
 
-$versionFile = Join-Path $Target ".github" ".agentx-cli-plugin.json"
+$versionFile = Join-Path $Target ".github" ".frontier-cli-plugin.json"
 $versionDir = Split-Path $versionFile -Parent
 if (-not (Test-Path $versionDir)) {
  New-Item -ItemType Directory -Path $versionDir -Force | Out-Null
@@ -569,7 +561,7 @@ if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
   source = $Source
   includeCli = [bool]$IncludeCli
  } | ConvertTo-Json | Set-Content $versionFile
- Write-OK "Version stamp written to .github/.agentx-cli-plugin.json"
+ Write-OK "Version stamp written to .github/.frontier-cli-plugin.json"
 }
 
 # -- Summary ----------------------------------------------------------------
@@ -587,7 +579,7 @@ Write-Host ""
  Write-Host " Instructions  : 15 (auto-applied by file pattern)" -ForegroundColor White
  Write-Host " Prompts       : 23 reference templates" -ForegroundColor White
 if ($IncludeCli) {
- Write-Host " CLI utilities : 4 Frontier wrappers + 4 legacy shims + bundled runtime (.github/frontier/.agentx)" -ForegroundColor White
+ Write-Host " CLI utilities : 4 Frontier wrappers + bundled runtime (.github/frontier/.frontier/runtime)" -ForegroundColor White
 }
 Write-Host ""
 Write-Host " Notes (Copilot CLI vs VS Code):" -ForegroundColor Yellow

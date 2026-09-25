@@ -62,24 +62,18 @@ if ($ghPath) {
     } catch {}
 }
 
-# Ready queue (best-effort: the first existing issue store, .frontier being canonical)
-$issuesDir = @('.frontier', '.hve', '.agentx') |
-    ForEach-Object { Join-Path $root "$_/issues" } |
-    Where-Object { Test-Path -LiteralPath $_ -PathType Container } |
-    Select-Object -First 1
-if ($issuesDir) {
+# Ready queue (best-effort: local issue store)
+$issuesDir = Join-Path $root '.frontier/issues'
+if (Test-Path -LiteralPath $issuesDir -PathType Container) {
     $open = Get-ChildItem -Path $issuesDir -Filter '*.json' -ErrorAction SilentlyContinue | ForEach-Object {
         try { Get-Content $_.FullName -Raw | ConvertFrom-Json } catch { $null }
     } | Where-Object { $_ -and $_.state -eq 'open' }
     $report.readyQueue = $open | Sort-Object { $_.number } -Descending | Select-Object -First 5 number,title,status,labels
 }
 
-# Loop state (.frontier is canonical; legacy directories are read only before migration)
-$loopFile = @('.frontier', '.hve', '.agentx') |
-    ForEach-Object { Join-Path $root "$_/state/loop-state.json" } |
-    Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
-    Select-Object -First 1
-if ($loopFile) {
+# Loop state
+$loopFile = Join-Path $root '.frontier/state/loop-state.json'
+if (Test-Path -LiteralPath $loopFile -PathType Leaf) {
     try {
         $loop = Get-Content $loopFile -Raw | ConvertFrom-Json
         $report.loop = [ordered]@{
@@ -92,13 +86,9 @@ if ($loopFile) {
     } catch {}
 }
 
-# Signal activity: the newest signal log, including one written before the state migration
-$signalFile = @('.frontier', '.agentx') |
-    ForEach-Object { Join-Path $root "$_/signals/sessions.jsonl" } |
-    Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
-    Sort-Object { (Get-Item -LiteralPath $_).LastWriteTime } -Descending |
-    Select-Object -First 1
-if ($signalFile) {
+# Signal activity: age of the signal log
+$signalFile = Join-Path $root '.frontier/signals/sessions.jsonl'
+if (Test-Path -LiteralPath $signalFile -PathType Leaf) {
     $age = (Get-Date) - (Get-Item $signalFile).LastWriteTime
     $report.signalAgeHours = [math]::Round($age.TotalHours, 1)
 }
@@ -108,7 +98,7 @@ $suggest = @()
 if ($report.loop -and $report.loop.status -eq 'started' -and -not $report.loop.consumed) {
     $suggest += "Active loop (iter $($report.loop.iteration)/$($report.loop.maxIterations)): $($report.loop.prompt)"
 }
-if ($report.uncommitted -gt 0) { $suggest += "$($report.uncommitted) uncommitted file(s) on '$($report.branch)' -- consider 'agentx land' when ready" }
+if ($report.uncommitted -gt 0) { $suggest += "$($report.uncommitted) uncommitted file(s) on '$($report.branch)' -- consider 'frontier land' when ready" }
 if ($report.failedCi.Count -gt 0) { $suggest += "Investigate failing CI: $($report.failedCi[0].name) on $($report.failedCi[0].headBranch)" }
 if ($report.openPrs.Count -gt 0) { $suggest += "$($report.openPrs.Count) open PR(s) awaiting review" }
 if (-not $suggest) { $suggest += 'Workspace is clean. Pick a ready-queue item or start new work with an issue.' }

@@ -13,7 +13,7 @@
 | Templates | 15 | PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning |
 | Schemas | 7 | Frontmatter, handoff, pack and plugin manifest schemas |
 | Hooks | 1 | Copilot CLI lifecycle hook configuration plus its handler |
-| CLI Utilities | 4 | Optional `.agentx/` wrappers backed by a bundled hidden runtime |
+| CLI Utilities | 4 | Optional `.frontier/runtime/` wrappers backed by a bundled hidden runtime |
 
 ## Installation Options
 
@@ -113,12 +113,12 @@ your-project/
       ...
     templates/                 # 15 document templates
     schemas/                   # Validation schemas
-    .agentx-cli-plugin.json   # Version stamp
-    agentx/
-      .agentx/                 # Hidden bundled CLI runtime (only if --include-cli / -c)
-        agentx.ps1
-        agentx.sh
-        agentx-cli.ps1
+    .frontier-cli-plugin.json  # Version stamp
+    frontier/
+      .frontier/runtime/       # Hidden bundled CLI runtime (only if --include-cli / -c)
+        frontier.ps1
+        frontier.sh
+        frontier-cli.ps1
         agentic-runner.ps1
         local-issue-manager.ps1
         local-issue-manager.sh
@@ -126,11 +126,12 @@ your-project/
   Skills.md                    # Skills index
   docs/
     WORKFLOW.md                # Workflow reference
-  .agentx/                     # Only if --include-cli / -c
-    agentx.ps1                 # Workspace wrapper -> bundled runtime
-    agentx.sh                  # Workspace wrapper -> bundled runtime
-    local-issue-manager.ps1    # Workspace wrapper -> bundled runtime
-    local-issue-manager.sh     # Workspace wrapper -> bundled runtime
+  .frontier/                   # Only if --include-cli / -c
+    runtime/
+      frontier.ps1             # Workspace wrapper -> bundled runtime
+      frontier.sh              # Workspace wrapper -> bundled runtime
+      local-issue-manager.ps1  # Workspace wrapper -> bundled runtime
+      local-issue-manager.sh   # Workspace wrapper -> bundled runtime
     config.json                # Local CLI state
     version.json               # Local CLI version stamp
     state/
@@ -139,7 +140,7 @@ your-project/
   memories/                    # Starter memory files (only if --include-cli / -c)
 ```
 
-When you install with `--include-cli` or `-c`, the plugin seeds a complete local runtime shape: workspace state lives under `.frontier/`, while the executable implementation is bundled under `.github/frontier/.agentx/`. The visible `.frontier/*` scripts set `FRONTIER_WORKSPACE_ROOT` and delegate into that bundled runtime; `.agentx/agentx.*` remains as a deprecated launcher shim.
+When you install with `--include-cli` or `-c`, the plugin seeds a complete local runtime shape: workspace state lives under `.frontier/`, while the executable implementation is bundled under `.github/frontier/.frontier/runtime/`. The `.frontier/runtime/*` wrappers set `FRONTIER_WORKSPACE_ROOT` and delegate into that bundled runtime.
 
 ## Usage with Copilot CLI
 
@@ -199,10 +200,10 @@ Remove the installed directories from your workspace:
 
 ```bash
 rm -rf .github/agents .github/skills .github/instructions .github/prompts
-rm -rf .github/templates .github/schemas .github/.agentx-cli-plugin.json
+rm -rf .github/templates .github/schemas .github/.frontier-cli-plugin.json
 rm -rf .github/frontier
 rm -f AGENTS.md Skills.md docs/WORKFLOW.md
-rm -rf .agentx  # if CLI utilities were installed
+rm -rf .frontier  # if CLI utilities were installed (also removes local CLI state)
 rm -rf memories  # if starter memories were installed with CLI utilities
 ```
 

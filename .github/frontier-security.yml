@@ -30,7 +30,7 @@ protected_paths:
 
  # Security configurations
  - .github/CODEOWNERS
- - .github/agentx-security.yml
+ - .github/frontier-security.yml
  - .github/hooks/**
 
  # Dependency manifests (supply chain risk)

@@ -273,7 +273,7 @@ function Test-AgentProtocolContract([string]$FilePath) {
 }
 
 function Test-HookBundle([string]$RootPath) {
- $hooksDir = Join-Path $RootPath '.agentx/hooks'
+ $hooksDir = Join-Path $RootPath '.frontier/runtime/hooks'
  $events = @('session-start', 'pre-tool', 'post-tool', 'session-end')
 
  foreach ($event in $events) {

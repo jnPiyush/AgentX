@@ -82,12 +82,12 @@
 | memory.instructions.md | A | Cross-session memory protocol |
 | project-conventions.instructions.md | A | Learned patterns and pitfalls |
 
-### CLI Utilities (.agentx/)
+### CLI Utilities (.frontier/runtime/)
 
 | Script | Grade | Notes |
 |--------|-------|-------|
-| agentx.ps1 | A | Main CLI with 14 commands |
-| agentx.sh | B | Bash wrapper -- covers core commands, missing some PS1-only features |
+| frontier.ps1 / frontier-cli.ps1 | A | Launcher and main CLI with 14 commands |
+| frontier.sh | B | Bash wrapper -- covers core commands, missing some PS1-only features |
 | agentic-runner.ps1 | B | Standalone loop works, no sub-agent chaining by design |
 | local-issue-manager.ps1 | A | Full CRUD for local issues |
 

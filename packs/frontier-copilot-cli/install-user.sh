@@ -142,7 +142,7 @@ if (!cfg.mcpServers) cfg.mcpServers = {};
 delete cfg.mcpServers.agentx;
 cfg.mcpServers.frontier = {
   command: 'node',
-  args: [path.join(repo, '.agentx', 'mcp-server', 'index.js')],
+  args: [path.join(repo, '.frontier', 'runtime', 'mcp-server', 'index.js')],
   env: { FRONTIER_REPO_ROOT: repo }
 };
 fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n', 'utf8');

@@ -46,9 +46,9 @@ describe('syncDetectedGitHubAdapter', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-adapter-sync-'));
-    fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
+    fs.mkdirSync(path.join(tempRoot, '.frontier'), { recursive: true });
     fs.writeFileSync(
-      path.join(tempRoot, '.agentx', 'config.json'),
+      path.join(tempRoot, '.frontier', 'config.json'),
       JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-03-17T00:00:00.000Z' }, null, 2),
     );
 
@@ -77,7 +77,7 @@ describe('syncDetectedGitHubAdapter', () => {
 
     assert.equal(changed, true);
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf-8'));
     assert.equal(config.provider, 'github');
     assert.equal(config.integration, 'github');
     assert.equal(config.mode, 'github');
@@ -117,9 +117,9 @@ describe('syncDetectedAdoAdapter', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ado-sync-'));
-    fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
+    fs.mkdirSync(path.join(tempRoot, '.frontier'), { recursive: true });
     fs.writeFileSync(
-      path.join(tempRoot, '.agentx', 'config.json'),
+      path.join(tempRoot, '.frontier', 'config.json'),
       JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-03-17T00:00:00.000Z' }, null, 2),
     );
 
@@ -148,7 +148,7 @@ describe('syncDetectedAdoAdapter', () => {
 
     assert.equal(changed, true);
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf-8'));
     assert.equal(config.provider, 'ado');
     assert.equal(config.integration, 'ado');
     assert.equal(config.mode, 'ado');
@@ -175,7 +175,7 @@ describe('syncDetectedAdoAdapter', () => {
 
     assert.equal(changed, true);
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf-8'));
     assert.equal(config.adapters.ado.organization, 'octo-org');
     assert.equal(config.adapters.ado.project, 'OctoProject');
   });

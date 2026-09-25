@@ -7,17 +7,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -209,9 +209,9 @@ Create `docs/fabric/` artifacts covering architecture, data dictionary, lineage,
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as the absolute first tool call before editing. Reading the active task and required artifacts is allowed; mutating files before loop start succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as the absolute first tool call before editing. Reading the active task and required artifacts is allowed; mutating files before loop start succeeds is a contract violation.
 
-**Honesty rule**: Before answering whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state. Never claim completion unless `.agentx/frontier.ps1 loop complete` succeeded in the current session.
+**Honesty rule**: Before answering whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state. Never claim completion unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in the current session.
 
 Cross-cutting rules are defined in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). Do not duplicate them here.
 

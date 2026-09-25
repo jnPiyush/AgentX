@@ -114,13 +114,13 @@ $archivePath = Join-Path $tempRoot 'fixture.zip'
 $installTarget = Join-Path $tempRoot 'installed'
 
 try {
-	foreach ($directory in @('.agentx', '.github', '.claude', '.cursor', '.vscode', 'scripts', 'packs', 'docs')) {
+	foreach ($directory in @('.frontier/runtime', '.github', '.claude', '.cursor', '.vscode', 'scripts', 'packs', 'docs')) {
 		New-Item -ItemType Directory -Path (Join-Path $fixtureRoot $directory) -Force | Out-Null
 	}
 	New-Item -ItemType Directory -Path (Join-Path $fixtureRoot '.github/agents') -Force | Out-Null
-	Set-Content -LiteralPath (Join-Path $fixtureRoot '.agentx/agentx-cli.ps1') -Value '# fixture' -Encoding ascii
-	foreach ($launcher in @('frontier.sh', 'agentx.sh', 'local-issue-manager.sh')) {
-		Copy-Item -LiteralPath (Join-Path $repoRoot '.agentx' $launcher) -Destination (Join-Path $fixtureRoot '.agentx' $launcher)
+	Set-Content -LiteralPath (Join-Path $fixtureRoot '.frontier/runtime/frontier-cli.ps1') -Value '# fixture' -Encoding ascii
+	foreach ($launcher in @('frontier.sh', 'local-issue-manager.sh')) {
+		Copy-Item -LiteralPath (Join-Path $repoRoot '.frontier/runtime' $launcher) -Destination (Join-Path $fixtureRoot '.frontier/runtime' $launcher)
 	}
 	Set-Content -LiteralPath (Join-Path $fixtureRoot '.github/agents/frontier.agent.md') -Value 'fixture' -Encoding ascii
 	Set-Content -LiteralPath (Join-Path $fixtureRoot '.vscode/settings.json') -Value '{ "chat.agentFilesLocations": { ".github/agents": false } }' -Encoding ascii
@@ -147,7 +147,7 @@ try {
 	if ($installResult.ExitCode -ne 0) { Write-Host $installResult.Output }
 
 	foreach ($file in @('LICENSE', 'NOTICE')) {
-		$installedPath = Join-Path $installTarget ".agentx/legal/$file"
+		$installedPath = Join-Path $installTarget ".frontier/runtime/legal/$file"
 		Assert-True (Test-Path -LiteralPath $installedPath -PathType Leaf) "PowerShell installer namescopes $file"
 		if (Test-Path -LiteralPath $installedPath -PathType Leaf) {
 			Assert-True (
@@ -166,13 +166,22 @@ try {
 	$forcedResult = Invoke-Installer -InstallerPath (Join-Path $repoRoot 'install.ps1') -ArchivePath $archivePath -TargetPath $installTarget
 	Assert-True ($forcedResult.ExitCode -eq 0 -and (Get-FileHash -LiteralPath $configPath).Hash -ceq $configBeforeForce) 'Forced code refresh preserves existing Frontier configuration'
 
+	$legacyOnlyTarget = Join-Path $tempRoot 'legacy-only'
+	New-Item -ItemType Directory -Path (Join-Path $legacyOnlyTarget '.agentx') -Force | Out-Null
+	$legacyVersionPath = Join-Path $legacyOnlyTarget '.agentx/version.json'
+	Set-Content -LiteralPath $legacyVersionPath -Value (@{ version = '9.0.0' } | ConvertTo-Json -Compress)
+	$legacyVersionHash = (Get-FileHash -LiteralPath $legacyVersionPath).Hash
+	$legacyOnly = Invoke-Installer -InstallerPath (Join-Path $repoRoot 'install.ps1') -ArchivePath $archivePath -TargetPath $legacyOnlyTarget -WithoutForce
+	Assert-True ($legacyOnly.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $legacyOnlyTarget '.frontier/version.json'))) 'Legacy .agentx state does not block a fresh Frontier install'
+	Assert-True ((Get-FileHash -LiteralPath $legacyVersionPath).Hash -ceq $legacyVersionHash) 'Installer leaves legacy .agentx state untouched'
+
 	$bashCommand = if ($IsWindows) { 'C:/Program Files/Git/bin/bash.exe' } else { (Get-Command bash).Source }
 	$bashCopy = Join-Path $tempRoot 'install.sh'
 	[IO.File]::WriteAllText($bashCopy, (Get-Content -LiteralPath (Join-Path $repoRoot 'install.sh') -Raw).Replace("`r`n", "`n"))
 	$tarArchive = Join-Path $tempRoot 'fixture.tar.gz'
 	& tar -czf $tarArchive -C $tempRoot (Split-Path $fixtureRoot -Leaf)
 	if ($LASTEXITCODE -ne 0) { throw 'Unable to create the Bash release fixture.' }
-	foreach ($stateDirectory in @('.agentx', '.hve', '.frontier')) {
+	foreach ($stateDirectory in @('.frontier')) {
 	 foreach ($oldVersion in @('8.4.45', '9.0.0')) {
 		$upgradeTarget = Join-Path $tempRoot "upgrade-$($stateDirectory.TrimStart('.'))-$oldVersion"
 		New-Item -ItemType Directory -Path (Join-Path $upgradeTarget $stateDirectory) -Force | Out-Null
@@ -221,9 +230,9 @@ try {
 
 	$powerShellInstaller = Get-Content -LiteralPath (Join-Path $repoRoot 'install.ps1') -Raw
 	$bashInstaller = Get-Content -LiteralPath (Join-Path $repoRoot 'install.sh') -Raw
-	Assert-True ($powerShellInstaller -match "Join-Path '\.agentx/legal'") 'PowerShell installer declares the protected legal destination'
+	Assert-True ($powerShellInstaller -match "Join-Path '\.frontier/runtime/legal'") 'PowerShell installer declares the protected legal destination'
 	Assert-True ($bashInstaller -match '\$PREFIX/LICENSE' -and $bashInstaller -match '\$PREFIX/NOTICE') 'Bash installer extracts legal files'
-	Assert-True ($bashInstaller -match '\.agentx/legal/\$rel') 'Bash installer declares the protected legal destination'
+	Assert-True ($bashInstaller -match '\.frontier/runtime/legal/\$rel') 'Bash installer declares the protected legal destination'
 
 	$packTarget = Join-Path $tempRoot 'pack-installed'
 	New-Item -ItemType Directory -Path $packTarget -Force | Out-Null
@@ -232,20 +241,20 @@ try {
 	& (Join-Path $repoRoot 'packs/frontier-copilot-cli/install.ps1') -Source $fixtureRoot -Target $packTarget -Force *> $null
 	$packSucceeded = $?
 	Assert-True $packSucceeded 'Frontier workspace-pack installer succeeds'
-	Assert-True (Test-Path -LiteralPath (Join-Path $packTarget '.agentx/legal/LICENSE')) 'Frontier workspace pack namescopes LICENSE'
-	Assert-True (Test-Path -LiteralPath (Join-Path $packTarget '.agentx/legal/NOTICE')) 'Frontier workspace pack namescopes NOTICE'
+	Assert-True (Test-Path -LiteralPath (Join-Path $packTarget '.frontier/runtime/legal/LICENSE')) 'Frontier workspace pack namescopes LICENSE'
+	Assert-True (Test-Path -LiteralPath (Join-Path $packTarget '.frontier/runtime/legal/NOTICE')) 'Frontier workspace pack namescopes NOTICE'
 	Assert-True ((Get-Content -LiteralPath (Join-Path $packTarget 'LICENSE') -Raw).Trim() -eq 'consumer-license') 'Frontier workspace pack preserves consumer LICENSE'
 	Assert-True ((Get-Content -LiteralPath (Join-Path $packTarget 'NOTICE') -Raw).Trim() -eq 'consumer-notice') 'Frontier workspace pack preserves consumer NOTICE'
 
-	$mcpPackage = Get-Content -LiteralPath (Join-Path $repoRoot '.agentx/mcp-server/package.json') -Raw | ConvertFrom-Json
+	$mcpPackage = Get-Content -LiteralPath (Join-Path $repoRoot '.frontier/runtime/mcp-server/package.json') -Raw | ConvertFrom-Json
 	Assert-True ($mcpPackage.license -eq 'Apache-2.0') 'MCP package declares Apache-2.0'
 	foreach ($shell in @('PowerShell', 'Bash')) {
 		$targetRoot = Join-Path $tempRoot "real-pack-$shell"
-		New-Item -ItemType Directory -Path "$targetRoot/.hve/state" -Force | Out-Null
-		$legacyConfig = '{"provider":"local","enforceIssues":true,"nextIssueNumber":42,"custom":"retain"}'
-		$legacyStatus = '{"engineer":{"status":"working","issue":42}}'
-		Set-Content -LiteralPath "$targetRoot/.hve/config.json" -Value $legacyConfig
-		Set-Content -LiteralPath "$targetRoot/.hve/state/agent-status.json" -Value $legacyStatus
+		New-Item -ItemType Directory -Path "$targetRoot/.frontier/state" -Force | Out-Null
+		$existingConfig = '{"provider":"local","enforceIssues":true,"nextIssueNumber":42,"custom":"retain"}'
+		$existingStatus = '{"engineer":{"status":"working","issue":42}}'
+		Set-Content -LiteralPath "$targetRoot/.frontier/config.json" -Value $existingConfig
+		Set-Content -LiteralPath "$targetRoot/.frontier/state/agent-status.json" -Value $existingStatus
 		$startInfo = [Diagnostics.ProcessStartInfo]::new()
 		$startInfo.WorkingDirectory = $repoRoot
 		$startInfo.UseShellExecute = $false
@@ -264,9 +273,9 @@ try {
 		$result = Invoke-CapturedInstaller $startInfo -TimeoutMilliseconds 600000
 		Assert-True ($result.ExitCode -eq 0) "$shell real pack installs the runtime"
 		if ($result.ExitCode -ne 0) { Write-Host $result.Output; continue }
-		Assert-True ((Get-Content "$targetRoot/.frontier/config.json" -Raw).Trim() -ceq $legacyConfig) "$shell pack preserves HVE config before defaults"
-		Assert-True ((Get-Content "$targetRoot/.frontier/state/agent-status.json" -Raw).Trim() -ceq $legacyStatus) "$shell pack preserves HVE active status"
-		$output = & pwsh -NoProfile -File "$targetRoot/.agentx/frontier.ps1" loop start -p 'Installed launcher fixture' 2>&1 | Out-String
+		Assert-True ((Get-Content "$targetRoot/.frontier/config.json" -Raw).Trim() -ceq $existingConfig) "$shell pack preserves existing Frontier config instead of writing defaults"
+		Assert-True ((Get-Content "$targetRoot/.frontier/state/agent-status.json" -Raw).Trim() -ceq $existingStatus) "$shell pack preserves existing agent status"
+		$output = & pwsh -NoProfile -File "$targetRoot/.frontier/runtime/frontier.ps1" loop start -p 'Installed launcher fixture' 2>&1 | Out-String
 		Assert-True ($LASTEXITCODE -eq 0 -and (Test-Path "$targetRoot/.frontier/state/loop-state.json")) "$shell pack executes the documented loop-start command"
 	}
 } finally {

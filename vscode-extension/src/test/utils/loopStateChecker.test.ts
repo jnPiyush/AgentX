@@ -18,12 +18,12 @@ import { getLoopHealth, hasSubagentReviewIteration } from '../../runtime';
 
 function makeTmpWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-loop-test-'));
-  fs.mkdirSync(path.join(dir, '.agentx', 'state'), { recursive: true });
+  fs.mkdirSync(path.join(dir, '.frontier', 'state'), { recursive: true });
   return dir;
 }
 
 function writeLoopState(wsRoot: string, state: Record<string, unknown>): void {
-  const filePath = path.join(wsRoot, '.agentx', 'state', 'loop-state.json');
+  const filePath = path.join(wsRoot, '.frontier', 'state', 'loop-state.json');
   fs.writeFileSync(filePath, JSON.stringify(state), 'utf-8');
 }
 
@@ -141,7 +141,7 @@ describe('readLoopState', () => {
   });
 
   it('returns null for invalid JSON', () => {
-    const filePath = path.join(wsRoot, '.agentx', 'state', 'loop-state.json');
+    const filePath = path.join(wsRoot, '.frontier', 'state', 'loop-state.json');
     fs.writeFileSync(filePath, '{ broken json !!!', 'utf-8');
 
     const result = readLoopState(wsRoot);
@@ -149,7 +149,7 @@ describe('readLoopState', () => {
   });
 
   it('returns null for empty file', () => {
-    const filePath = path.join(wsRoot, '.agentx', 'state', 'loop-state.json');
+    const filePath = path.join(wsRoot, '.frontier', 'state', 'loop-state.json');
     fs.writeFileSync(filePath, '', 'utf-8');
 
     const result = readLoopState(wsRoot);

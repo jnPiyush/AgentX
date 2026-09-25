@@ -279,8 +279,8 @@ describe('chatParticipant', () => {
   it('starts a chat-first remote adapter flow from chat', async () => {
     const response = createMockResponseStream();
     let pending: unknown;
-    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
+    fs.mkdirSync(path.join(tmpDir, '.frontier'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
 
     const agentx = {
       checkInitialized: async () => true,
@@ -339,8 +339,8 @@ describe('chatParticipant', () => {
       for (const testCase of cases) {
         const response = createMockResponseStream();
         let pending: unknown;
-        fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
-        fs.writeFileSync(path.join(tmpDir, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
+        fs.mkdirSync(path.join(tmpDir, '.frontier'), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, '.frontier', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
 
         const agentx = {
           checkInitialized: async () => true,
@@ -391,9 +391,9 @@ describe('chatParticipant', () => {
       for (const testCase of cases) {
         const response = createMockResponseStream();
         (vscode.commands as any).executeCommand = async () => undefined;
-        fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+        fs.mkdirSync(path.join(tmpDir, '.frontier'), { recursive: true });
         fs.writeFileSync(
-          path.join(tmpDir, '.agentx', 'config.json'),
+          path.join(tmpDir, '.frontier', 'config.json'),
           JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
         );
 
@@ -421,7 +421,7 @@ describe('chatParticipant', () => {
 
         (vscode.window as any).showInputBox = originalShowInputBox;
 
-        const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+        const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.frontier', 'config.json'), 'utf-8'));
         assert.equal(config.llmProvider, testCase.expectedProvider);
         assert.ok(response.getMarkdown().includes(testCase.expectedText));
       }
@@ -433,8 +433,8 @@ describe('chatParticipant', () => {
   it('starts a chat-first LLM adapter setup flow for switch llm', async () => {
     const response = createMockResponseStream();
     let pending: unknown;
-    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
+    fs.mkdirSync(path.join(tmpDir, '.frontier'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
 
     const agentx = {
       checkInitialized: async () => true,
@@ -466,9 +466,9 @@ describe('chatParticipant', () => {
     const originalExecuteCommand = vscode.commands.executeCommand;
     const originalShowInputBox = vscode.window.showInputBox;
 
-    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier'), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpDir, '.agentx', 'config.json'),
+      path.join(tmpDir, '.frontier', 'config.json'),
       JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
     );
 
@@ -506,7 +506,7 @@ describe('chatParticipant', () => {
         agentx as any,
       );
 
-      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.frontier', 'config.json'), 'utf-8'));
       assert.equal(config.llmProvider, 'claude-code');
       assert.equal(config.llmProviders['claude-code'].profile, 'local-gateway');
       assert.equal(config.llmProviders['claude-code'].defaultModel, 'qwen2.5-coder:14b');
@@ -525,9 +525,9 @@ describe('chatParticipant', () => {
     const originalExecuteCommand = vscode.commands.executeCommand;
     const originalShowInputBox = vscode.window.showInputBox;
 
-    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier'), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpDir, '.agentx', 'config.json'),
+      path.join(tmpDir, '.frontier', 'config.json'),
       JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
     );
 
@@ -565,7 +565,7 @@ describe('chatParticipant', () => {
         agentx as any,
       );
 
-      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.frontier', 'config.json'), 'utf-8'));
       assert.equal(config.llmProvider, 'openai-api');
       assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.5');
       assert.equal(storedSecrets.get('openai-api'), 'sk-test-openai-key');
@@ -584,9 +584,9 @@ describe('chatParticipant', () => {
     const sandbox = sinon.createSandbox();
     const originalExecuteCommand = vscode.commands.executeCommand;
 
-    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier'), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpDir, '.agentx', 'config.json'),
+      path.join(tmpDir, '.frontier', 'config.json'),
       JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
     );
 
@@ -631,7 +631,7 @@ describe('chatParticipant', () => {
         agentx as any,
       );
 
-      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.frontier', 'config.json'), 'utf-8'));
       assert.equal(config.provider, 'ado');
       assert.equal(config.integration, 'ado');
       assert.equal(config.organization, 'contoso');
@@ -747,14 +747,14 @@ describe('chatParticipant', () => {
   });
 
   it('returns workflow next-step guidance from chat', async () => {
-    fs.mkdirSync(path.join(tmpDir, '.agentx', 'issues'), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, '.agentx', 'state'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier', 'issues'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier', 'state'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'execution', 'plans'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'execution', 'progress'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'artifacts', 'specs'), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'issues', '219.json'), JSON.stringify({ number: 219, title: 'Create rollout scorecard', state: 'open', status: 'In Progress' }), 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'state', 'harness-state.json'), JSON.stringify({ version: 1, threads: [{ id: 'thread-1', title: 'Create rollout scorecard', taskType: 'story', status: 'active', issueNumber: 219, planPath: 'docs/execution/plans/ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md', startedAt: '2026-03-13T10:00:00Z', updatedAt: '2026-03-13T10:05:00Z' }], turns: [], items: [], evidence: [] }), 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'state', 'loop-state.json'), JSON.stringify({ active: false, status: 'complete', prompt: 'Done', iteration: 3, minIterations: 3, maxIterations: 10, completionCriteria: 'TASK_COMPLETE', startedAt: '2026-03-13T10:00:00Z', lastIterationAt: '2026-03-13T10:05:00Z', history: [] }), 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'issues', '219.json'), JSON.stringify({ number: 219, title: 'Create rollout scorecard', state: 'open', status: 'In Progress' }), 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'state', 'harness-state.json'), JSON.stringify({ version: 1, threads: [{ id: 'thread-1', title: 'Create rollout scorecard', taskType: 'story', status: 'active', issueNumber: 219, planPath: 'docs/execution/plans/ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md', startedAt: '2026-03-13T10:00:00Z', updatedAt: '2026-03-13T10:05:00Z' }], turns: [], items: [], evidence: [] }), 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'state', 'loop-state.json'), JSON.stringify({ active: false, status: 'complete', prompt: 'Done', iteration: 3, minIterations: 3, maxIterations: 10, completionCriteria: 'TASK_COMPLETE', startedAt: '2026-03-13T10:00:00Z', lastIterationAt: '2026-03-13T10:05:00Z', history: [] }), 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'docs', 'execution', 'plans', 'ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md'), '# Plan', 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'docs', 'execution', 'progress', 'ROLLOUT-SCORECARD-IMPLEMENTATION-PROGRESS.md'), '# Progress', 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'docs', 'guides', 'WORKFLOW-ROLLOUT-SCORECARD.md'), '# Scorecard', 'utf-8');
@@ -783,13 +783,13 @@ describe('chatParticipant', () => {
   });
 
   it('returns review kickoff context from chat', async () => {
-    fs.mkdirSync(path.join(tmpDir, '.agentx', 'issues'), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, '.agentx', 'state'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier', 'issues'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.frontier', 'state'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'execution', 'plans'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'execution', 'progress'), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'issues', '219.json'), JSON.stringify({ number: 219, title: 'Create rollout scorecard', state: 'open', status: 'In Progress' }), 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'state', 'harness-state.json'), JSON.stringify({ version: 1, threads: [{ id: 'thread-1', title: 'Create rollout scorecard', taskType: 'story', status: 'active', issueNumber: 219, planPath: 'docs/execution/plans/ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md', startedAt: '2026-03-13T10:00:00Z', updatedAt: '2026-03-13T10:05:00Z' }], turns: [], items: [], evidence: [] }), 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, '.agentx', 'state', 'loop-state.json'), JSON.stringify({ active: false, status: 'complete', prompt: 'Done', iteration: 3, minIterations: 3, maxIterations: 10, completionCriteria: 'TASK_COMPLETE', startedAt: '2026-03-13T10:00:00Z', lastIterationAt: '2026-03-13T10:05:00Z', history: [] }), 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'issues', '219.json'), JSON.stringify({ number: 219, title: 'Create rollout scorecard', state: 'open', status: 'In Progress' }), 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'state', 'harness-state.json'), JSON.stringify({ version: 1, threads: [{ id: 'thread-1', title: 'Create rollout scorecard', taskType: 'story', status: 'active', issueNumber: 219, planPath: 'docs/execution/plans/ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md', startedAt: '2026-03-13T10:00:00Z', updatedAt: '2026-03-13T10:05:00Z' }], turns: [], items: [], evidence: [] }), 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, '.frontier', 'state', 'loop-state.json'), JSON.stringify({ active: false, status: 'complete', prompt: 'Done', iteration: 3, minIterations: 3, maxIterations: 10, completionCriteria: 'TASK_COMPLETE', startedAt: '2026-03-13T10:00:00Z', lastIterationAt: '2026-03-13T10:05:00Z', history: [] }), 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'docs', 'execution', 'plans', 'ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md'), '# Plan', 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'docs', 'execution', 'progress', 'ROLLOUT-SCORECARD-IMPLEMENTATION-PROGRESS.md'), '# Progress', 'utf-8');
 

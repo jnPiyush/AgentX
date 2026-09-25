@@ -25,7 +25,7 @@ import {
 
 function makeWorkspace(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-harness-'));
-  fs.mkdirSync(path.join(root, '.agentx', 'state'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.frontier', 'state'), { recursive: true });
   return root;
 }
 

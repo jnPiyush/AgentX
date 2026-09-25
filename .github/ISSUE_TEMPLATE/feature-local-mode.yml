@@ -26,7 +26,7 @@ body:
  attributes:
  label: Description
  description: What Local Mode capability are you requesting?
- placeholder: "Add support for local status transitions using .agentx/ directory"
+ placeholder: "Add support for local status transitions using the .frontier/ directory"
  validations:
  required: true
 
@@ -48,7 +48,7 @@ body:
  description: How does this feature interact with or differ from GitHub Mode?
  placeholder: |
  - In GitHub Mode: status is tracked via GitHub Projects
- - In Local Mode: status is tracked via .agentx/issues.json
+ - In Local Mode: status is tracked via .frontier/issues/
  - Both modes should share the same agent workflows
  - Switching between modes should preserve issue state
  validations:
@@ -75,7 +75,7 @@ body:
  placeholder: |
  - [ ] Feature works in Local Mode without GitHub
  - [ ] Feature works in GitHub Mode (no regressions)
- - [ ] .agentx/ directory structure is maintained
+ - [ ] .frontier/ directory structure is maintained
  - [ ] Agent coordination functions correctly
  - [ ] Tests cover both modes (80%+ coverage)
  validations:

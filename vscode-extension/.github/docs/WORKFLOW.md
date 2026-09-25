@@ -29,12 +29,12 @@ Every piece of work -- bug fix, feature, docs update -- **SHOULD** start with an
 **Issue enforcement by mode:**
 - **GitHub Mode**: Issue references in commits are **required** by default (teams need traceability)
 - **Local Mode**: Issue references are **optional** by default (solo developers can commit freely)
-- To toggle enforcement: `.agentx/frontier.ps1 config set enforceIssues true` (or `false`)
+- To toggle enforcement: `.frontier/runtime/frontier.ps1 config set enforceIssues true` (or `false`)
 
 **GitHub Mode:**
 ```bash
 gh issue create --title "[Story] Add /health endpoint" --label "type:story"  # Creates #42
-.\.agentx\frontier.ps1 ready                        # Pick from ready queue
+.\.frontier\runtime\frontier.ps1 ready                        # Pick from ready queue
 # Work... then commit:
 git commit -m "feat: add health endpoint (refs #42)"
 # Final delivery should use a closing keyword in the PR body or merge commit:
@@ -51,13 +51,13 @@ gh issue close 42 --reason completed
 git commit -m "feat: add user login"
 
 # Or use full issue workflow if preferred:
-.\.agentx\local-issue-manager.ps1 -Action create -Title "[Bug] Fix timeout" -Labels "type:bug"
-.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
+.\.frontier\runtime\local-issue-manager.ps1 -Action create -Title "[Bug] Fix timeout" -Labels "type:bug"
+.\.frontier\runtime\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
 git commit -m "fix: resolve login timeout (#1)"
-.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
+.\.frontier\runtime\local-issue-manager.ps1 -Action close -IssueNumber 1
 
 # Enable issue enforcement in local mode:
-.\.agentx\frontier.ps1 config set enforceIssues true
+.\.frontier\runtime\frontier.ps1 config set enforceIssues true
 ```
 
 **Emergency bypass (GitHub mode)**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward.
@@ -135,7 +135,7 @@ The current checkpoint is resolved from durable evidence, not chat history or mo
 | `Plan` | Turn scope into a durable execution path | Active issue or task context exists, but no linked plan anchors the work | Execution plan exists and can carry progress forward | Issue context, `docs/execution/plans/`, optional `docs/execution/progress/` |
 | `Work` | Produce the change while keeping evidence current | Durable plan exists and the task is in active delivery | Validation evidence is strong enough to begin or resume review | Execution plan, progress log, optional bounded work contract, loop state, implementation evidence |
 | `Review` | Assess readiness, correctness, and follow-up work | Validation-ready output exists or review has already started | Review outcome is explicit: approved, changes requested, or follow-up captured | Review artifact, durable findings, `In Review` or `Validating` status |
-| `Compound Capture` | Preserve reusable learning before final closure drifts | Delivery is closed or closing, but reusable outcome capture is unresolved | Curated learning capture exists or an explicit closeout rationale is recorded | `docs/artifacts/learnings/`, issue closeout comment, related ADR/spec/review links; CLI helpers `agentx learn` (capture session observations) and `agentx promote` (graduate stable patterns) |
+| `Compound Capture` | Preserve reusable learning before final closure drifts | Delivery is closed or closing, but reusable outcome capture is unresolved | Curated learning capture exists or an explicit closeout rationale is recorded | `docs/artifacts/learnings/`, issue closeout comment, related ADR/spec/review links; CLI helpers `frontier learn` (capture session observations) and `frontier promote` (graduate stable patterns) |
 | `Done` | Mark the lifecycle complete with no remaining compound work | Review outcome and compound closeout are both settled | No further required lifecycle work remains | Closed issue, stable review outcome, durable capture or documented skip |
 
 #### Transition Guardrails
@@ -459,7 +459,7 @@ These checks are the target validation model. Where automation is not yet presen
 |------|-------------|----------|
 | **Mode 1: Frontier Autonomous** | Frontier classifies work and executes it end to end in one session, applying PM -> [Architect, UX, Data Scientist] -> Engineer -> Reviewer -> [DevOps, Tester] as internal phases when needed while preserving each specialist agent's own rules and gates | VS Code, Claude Code |
 | **Mode 2: Human-Orchestrated** | User picks the next agent from the Copilot agent picker and hands off manually between specialist roles | VS Code |
-| **CLI Standalone** | `agentx.ps1 run <agent> <task>` runs agent via GitHub Models API; no sub-agent chaining | CLI |
+| **CLI Standalone** | `.frontier/runtime/frontier.ps1 run <agent> <task>` runs agent via GitHub Models API; no sub-agent chaining | CLI |
 
 ### Agent-to-Agent Communication
 

@@ -20,13 +20,12 @@ function Assert-True($condition, $message) {
 function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-harness-audit-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.frontier' 'runtime') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root '.frontier' 'state') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
 
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') (Join-Path $root '.frontier\runtime\frontier.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') (Join-Path $root '.frontier\runtime\frontier-cli.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot 'scripts\check-harness-compliance.ps1') (Join-Path $root 'scripts\check-harness-compliance.ps1') -Force
 
     @{ provider = 'local'; mode = 'local'; enforceIssues = $false } | ConvertTo-Json | Set-Content (Join-Path $root '.frontier\config.json') -Encoding utf8
@@ -41,7 +40,7 @@ function Remove-TestWorkspace([string]$root) {
 }
 
 function Invoke-Frontier([string]$root, [string[]]$arguments) {
-    return Invoke-FrontierLauncher -Root $root -LauncherPath (Join-Path $root '.agentx\agentx.ps1') -Arguments $arguments
+    return Invoke-FrontierLauncher -Root $root -LauncherPath (Join-Path $root '.frontier\runtime\frontier.ps1') -Arguments $arguments
 }
 
 function Invoke-FrontierLauncher([string]$Root, [string]$LauncherPath, [string[]]$Arguments) {
@@ -164,7 +163,7 @@ if ($SubprocessOnly) {
         $tokens = $null
         $errors = $null
         $source = [Management.Automation.Language.Parser]::ParseFile(
-            (Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'), [ref]$tokens, [ref]$errors)
+            (Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'), [ref]$tokens, [ref]$errors)
         $definitions = @($source.FindAll({
             param($node)
             $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
@@ -209,7 +208,7 @@ if ($SubprocessOnly) {
         foreach ($scenario in @('noisy', 'exit-error', 'timeout', 'missing')) {
             $probe = Join-Path $workspace 'probe.ps1'
             if ($scenario -eq 'noisy') {
-                Set-Content -LiteralPath (Join-Path $workspace '.agentx/agentx-cli.ps1') -Value '[Console]::Error.Write(("x" * 131072)); [Console]::Out.Write("ok"); exit 0'
+                Set-Content -LiteralPath (Join-Path $workspace '.frontier/runtime/frontier-cli.ps1') -Value '[Console]::Error.Write(("x" * 131072)); [Console]::Out.Write("ok"); exit 0'
                 $call = 'Get-HarnessLoopAuditResult $Script:ROOT | ConvertTo-Json -Compress'
             } elseif ($scenario -eq 'exit-error') {
                 Set-Content -LiteralPath (Join-Path $workspace 'scripts/check-harness-compliance.ps1') -Value 'param([switch]$ReportOnly); [Console]::Error.Write("checker crashed"); exit 7'
@@ -221,7 +220,7 @@ if ($SubprocessOnly) {
                     '$info.ArgumentList.Add(''while ($true) { }''); ' +
                     'Invoke-LoopCheckProcess -StartInfo $info -TimeoutMilliseconds 250 | ConvertTo-Json -Compress'
             }
-            $preamble = '$Script:ROOT = $PSScriptRoot; $Script:INSTALL_RUNTIME_DIR = Join-Path $PSScriptRoot ''.agentx'''
+            $preamble = '$Script:ROOT = $PSScriptRoot; $Script:INSTALL_RUNTIME_DIR = Join-Path $PSScriptRoot ''.frontier/runtime'''
             Set-Content -LiteralPath $probe -Value ($preamble + "`n" + $definitions + "`n" + $call)
             $info = [Diagnostics.ProcessStartInfo]::new((Get-Command pwsh).Source)
             $info.UseShellExecute = $false
@@ -318,11 +317,10 @@ try {
 $zeroCopyWorkspace = New-TestWorkspace 'zero-copy-hooks'
 $bundleFixture = Join-Path ([System.IO.Path]::GetTempPath()) ("frontier-hook-bundle-{0}\.github\frontier" -f [guid]::NewGuid().ToString('N'))
 try {
-    New-Item -ItemType Directory -Path (Join-Path $bundleFixture '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $bundleFixture '.frontier\runtime') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture '.github\hooks') -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.agentx\agentx.ps1') -Destination (Join-Path $bundleFixture '.agentx\agentx.ps1') -Force
-    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.agentx\frontier.ps1') -Destination (Join-Path $bundleFixture '.agentx\frontier.ps1') -Force
-    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') -Destination (Join-Path $bundleFixture '.agentx\agentx-cli.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') -Destination (Join-Path $bundleFixture '.frontier\runtime\frontier.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') -Destination (Join-Path $bundleFixture '.frontier\runtime\frontier-cli.ps1') -Force
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture 'scripts') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $script:repoRoot 'scripts\scrub.ps1') -Destination (Join-Path $bundleFixture 'scripts\scrub.ps1') -Force
     foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
@@ -337,7 +335,7 @@ try {
     } finally {
         Pop-Location
     }
-    $zeroCopyInstall = Invoke-FrontierLauncher -Root $zeroCopyWorkspace -LauncherPath (Join-Path $bundleFixture '.agentx\agentx.ps1') -Arguments @('hooks', 'install')
+    $zeroCopyInstall = Invoke-FrontierLauncher -Root $zeroCopyWorkspace -LauncherPath (Join-Path $bundleFixture '.frontier\runtime\frontier.ps1') -Arguments @('hooks', 'install')
     Assert-True ($zeroCopyInstall.ExitCode -eq 0) 'Zero-copy hook installer exits successfully from bundled sources'
     foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
         $installedHook = Join-Path $zeroCopyWorkspace ".custom-hooks\$hook"
@@ -346,8 +344,8 @@ try {
     }
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $zeroCopyWorkspace '.git\hooks\pre-commit') -PathType Leaf)) 'Zero-copy installer does not write to inactive .git/hooks'
 
-    $workspaceLauncher = Join-Path $zeroCopyWorkspace '.agentx\agentx.ps1'
-    $bundleLauncher = Join-Path $bundleFixture '.agentx\agentx.ps1'
+    $workspaceLauncher = Join-Path $zeroCopyWorkspace '.frontier\runtime\frontier.ps1'
+    $bundleLauncher = Join-Path $bundleFixture '.frontier\runtime\frontier.ps1'
     $escapedWorkspace = $zeroCopyWorkspace.Replace("'", "''")
     $escapedBundleLauncher = $bundleLauncher.Replace("'", "''")
     @(
@@ -356,7 +354,7 @@ try {
         "& '$escapedBundleLauncher' @args"
         'exit $LASTEXITCODE'
     ) -join "`n" | Set-Content -LiteralPath $workspaceLauncher -Encoding utf8
-    Remove-Item -LiteralPath (Join-Path $zeroCopyWorkspace '.agentx\agentx-cli.ps1') -Force
+    Remove-Item -LiteralPath (Join-Path $zeroCopyWorkspace '.frontier\runtime\frontier-cli.ps1') -Force
     Remove-Item -LiteralPath (Join-Path $zeroCopyWorkspace 'scripts') -Recurse -Force
     Set-WorkspaceHarnessState $zeroCopyWorkspace
     Set-Content -LiteralPath (Join-Path $zeroCopyWorkspace 'change.ps1') -Value 'Write-Output "zero-copy hook execution"' -Encoding utf8

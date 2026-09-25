@@ -10,7 +10,7 @@ metadata:
   updated: "2026-08-30"
 compatibility:
   agents: ["agent-x", "product-manager", "engineer", "reviewer", "consulting-research"]
-  frameworks: ["agentx", "copilot", "claude-code"]
+  frameworks: ["frontier", "copilot", "claude-code"]
   output-formats: ["markdown", "text"]
 ---
 

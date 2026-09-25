@@ -7,7 +7,7 @@ metadata:
   created: "2026-04-28"
   updated: "2026-05-21"
 compatibility:
-  frameworks: ["agentx", "copilot", "claude-code"]
+  frameworks: ["frontier", "copilot", "claude-code"]
 ---
 
 # Experimentation Loop

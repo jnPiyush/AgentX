@@ -1,0 +1,9164 @@
+#!/usr/bin/env pwsh
+# ---------------------------------------------------------------------------
+# Frontier CLI - Unified PowerShell 7 implementation (cross-platform)
+# ---------------------------------------------------------------------------
+# Replaces cli.mjs - runs on Windows, macOS, Linux via PowerShell 7+.
+#
+# Usage:
+#   pwsh .frontier/runtime/frontier-cli.ps1 ready
+#   pwsh .frontier/runtime/frontier-cli.ps1 issue create -t "Title" -l "type:story"
+#   pwsh .frontier/runtime/frontier-cli.ps1 state -a engineer -s working -i 42
+#   pwsh .frontier/runtime/frontier-cli.ps1 deps 42
+#   pwsh .frontier/runtime/frontier-cli.ps1 workflow engineer
+#   pwsh .frontier/runtime/frontier-cli.ps1 loop start -p "Fix tests" -m 20
+#   pwsh .frontier/runtime/frontier-cli.ps1 run engineer "Fix the failing tests"
+#   pwsh .frontier/runtime/frontier-cli.ps1 validate 42 engineer
+#   pwsh .frontier/runtime/frontier-cli.ps1 hooks install
+#   pwsh .frontier/runtime/frontier-cli.ps1 digest
+#   pwsh .frontier/runtime/frontier-cli.ps1 version
+#   pwsh .frontier/runtime/frontier-cli.ps1 help
+# ---------------------------------------------------------------------------
+
+#Requires -Version 7.0
+# PSScriptAnalyzer file-level suppressions
+# PSUseSingularNouns: Internal collection-returning helpers use plural names by design.
+# PSUseShouldProcessForStateChangingFunctions: These are private internal helpers, not exported cmdlets.
+# PSAvoidUsingWriteHost: Write-CliOutput is the sanctioned console-output wrapper; Console::Write is used only for prompt styling.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Scope = 'Function', Target = '*')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Scope = 'Function', Target = '*')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Scope = 'Function', Target = 'Write-CliOutput')]
+param(
+    [Alias('h')]
+    [switch]$Help
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+
+$workspaceRootOverride = if ($env:FRONTIER_WORKSPACE_ROOT) {
+    $env:FRONTIER_WORKSPACE_ROOT
+} elseif ($env:HVE_WORKSPACE_ROOT) {
+    $env:HVE_WORKSPACE_ROOT
+} else {
+    $env:AGENTX_WORKSPACE_ROOT
+}
+$defaultWorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
+$Script:ROOT = if ($workspaceRootOverride) { $workspaceRootOverride } else { $defaultWorkspaceRoot }
+$Script:INSTALL_ROOT = $defaultWorkspaceRoot
+$Script:INSTALL_RUNTIME_DIR = $PSScriptRoot
+$Script:FRONTIER_STATE_DIR = Join-Path $Script:ROOT '.frontier'
+$Script:STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'agent-status.json'
+$Script:LOOP_STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'loop-state.json'
+$Script:LOOP_STALE_AFTER_HOURS = 8
+$Script:LOOP_STUCK_AFTER_MINUTES = 90
+$Script:LOOP_STANDARD_MIN_ITERATIONS  = 1
+$Script:LOOP_AUTO_FIX_MIN_ITERATIONS  = 2
+$Script:LOOP_COMPLEX_MIN_ITERATIONS   = 3
+$Script:LOOP_FRONTIER_MIN_ITERATIONS = 3
+$Script:LOOP_HIGH_RISK_MIN_ITERATIONS = 5
+$Script:ISSUES_DIR = Join-Path $FRONTIER_STATE_DIR 'issues'
+$Script:TASK_BUNDLES_DIR = Join-Path $ROOT 'docs' 'execution' 'task-bundles'
+$Script:BOUNDED_PARALLEL_DIR = Join-Path $ROOT 'docs' 'execution' 'bounded-parallel'
+$Script:DIGESTS_DIR = Join-Path $FRONTIER_STATE_DIR 'digests'
+$Script:CONFIG_FILE = Join-Path $FRONTIER_STATE_DIR 'config.json'
+$Script:VERSION_FILE = Join-Path $FRONTIER_STATE_DIR 'version.json'
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# Write-CliOutput: thin wrapper over Write-Information so PSAvoidUsingWriteHost
+# does not flag every console output line in this CLI script.
+# -NoNewline uses [Console]::Write for interactive prompts (e.g. Read-Host pairs).
+
+
+function Write-CliOutput {
+    param([string]$Message = '', [switch]$NoNewline)
+    if ($NoNewline) {
+        [Console]::Write($Message)
+    } else {
+        Write-Information $Message -InformationAction Continue
+    }
+}
+
+function Get-FrontierEnvironmentValue([string]$Name) {
+    $value = [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
+    if ($value) { return $value }
+    $value = [string][Environment]::GetEnvironmentVariable("HVE_$Name")
+    if ($value) { return $value }
+    return [string][Environment]::GetEnvironmentVariable("AGENTX_$Name")
+}
+
+function Read-JsonFile([string]$p) {
+    if (-not (Test-Path $p)) { return $null }
+    try { return Get-Content $p -Raw -Encoding utf8 | ConvertFrom-Json } catch { return $null }
+}
+
+function Write-JsonFile([string]$p, $data) {
+    $parentDir = Split-Path $p -Parent
+    if (-not (Test-Path $parentDir)) { New-Item -ItemType Directory -Path $parentDir -Force | Out-Null }
+    $data | ConvertTo-Json -Depth 10 | Set-Content $p -Encoding utf8 -NoNewline
+    # Ensure trailing newline
+    Add-Content $p -Value '' -NoNewline:$false
+}
+
+function Resolve-FrontierRuntimeScript([string]$RelativePath) {
+    foreach ($basePath in @($Script:ROOT, $Script:INSTALL_ROOT) | Select-Object -Unique) {
+        $candidate = Join-Path $basePath $RelativePath
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return $candidate
+        }
+    }
+    return $null
+}
+
+# ---------------------------------------------------------------------------
+# File locking helpers (cross-process atomic JSON writes)
+# ---------------------------------------------------------------------------
+
+<#
+  Acquire an exclusive .lock file for a given JSON path.
+  Returns $true on success, $false on timeout.
+#>
+function Lock-JsonFile([string]$jsonPath, [string]$agent = 'cli') {
+    $lockPath = $jsonPath + '.lock'
+    $maxRetries = 5
+    $delayMs = 200
+    $staleSecs = 30
+
+    for ($i = 0; $i -lt $maxRetries; $i++) {
+        if (Test-Path $lockPath) {
+            try {
+                $lockData = Get-Content $lockPath -Raw -Encoding utf8 | ConvertFrom-Json
+                $created = [datetime]$lockData.created
+                if (([datetime]::UtcNow - $created).TotalSeconds -gt $staleSecs) {
+                    Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+                } else {
+                    Start-Sleep -Milliseconds ([int]($delayMs * [Math]::Pow(1.5, $i)))
+                    continue
+                }
+            } catch {
+                Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        try {
+            $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+            $payloadObject = @{
+                agent = $agent
+                created = [datetime]::UtcNow.ToString('o')
+            }
+            $payload = $payloadObject | ConvertTo-Json -Compress
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+            $stream.Write($bytes, 0, $bytes.Length)
+            $stream.Dispose()
+            return $true
+        } catch [System.IO.IOException] {
+            Start-Sleep -Milliseconds ([int]($delayMs * [Math]::Pow(1.5, $i)))
+        }
+    }
+
+    return $false
+}
+
+<#
+.SYNOPSIS
+  Release the .lock file for a given JSON path.
+#>
+function Unlock-JsonFile([string]$jsonPath) {
+    $lockPath = $jsonPath + '.lock'
+    Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+}
+
+<#
+.SYNOPSIS
+  Run a script block with an exclusive lock on $jsonPath.
+  Automatically releases on success or error.
+#>
+function Invoke-WithJsonLock([string]$jsonPath, [string]$agent = 'cli', [scriptblock]$fn) {
+    $acquired = Lock-JsonFile $jsonPath $agent
+    if (-not $acquired) { throw "Lock timeout for '$jsonPath'" }
+    try {
+        & $fn
+    } finally {
+        Unlock-JsonFile $jsonPath
+    }
+}
+
+function Get-Timestamp { return (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ') }
+
+
+
+
+function Get-AgentDefinitionDirectories {
+    return @(
+        (Join-Path $Script:ROOT '.github' 'agents'),
+        (Join-Path $Script:FRONTIER_STATE_DIR 'runtime' 'agents'),
+        (Join-Path $Script:INSTALL_ROOT '.github' 'agents')
+    )
+}
+
+
+
+
+function Get-AgentDefinitionFiles([switch]$IncludeInternal) {
+    $files = @{}
+    foreach ($agentsDir in (Get-AgentDefinitionDirectories)) {
+        if (Test-Path $agentsDir) {
+            foreach ($file in (Get-ChildItem $agentsDir -Filter '*.agent.md' -File -ErrorAction SilentlyContinue)) {
+                $files[$file.Name] = $file.FullName
+            }
+        }
+
+        if ($IncludeInternal) {
+            $internalDir = Join-Path $agentsDir 'internal'
+            if (Test-Path $internalDir) {
+                foreach ($file in (Get-ChildItem $internalDir -Filter '*.agent.md' -File -ErrorAction SilentlyContinue)) {
+                    $files[$file.Name] = $file.FullName
+                }
+            }
+        }
+    }
+
+    return @($files.Values | Sort-Object)
+}
+
+function Resolve-AgentDefinitionFile([string]$agentName) {
+    $fileName = if ($agentName -like '*.agent.md') { $agentName } else { "$agentName.agent.md" }
+    foreach ($agentsDir in (Get-AgentDefinitionDirectories)) {
+        foreach ($candidate in @(
+            (Join-Path $agentsDir $fileName),
+            (Join-Path $agentsDir 'internal' $fileName)
+        )) {
+            if (Test-Path $candidate) {
+                return $candidate
+            }
+        }
+    }
+
+    return $null
+}
+
+function Get-ConfigValue($cfg, [string]$name, $default = $null) {
+    if ($cfg -is [hashtable]) {
+        if ($cfg.ContainsKey($name)) { return $cfg[$name] }
+        return $default
+    }
+
+    if ($null -eq $cfg) { return $default }
+    $prop = $cfg.PSObject.Properties[$name]
+    if ($prop) { return $prop.Value }
+    return $default
+}
+
+
+
+
+function Set-ConfigValue($cfg, [string]$name, $value) {
+    if ($cfg -is [hashtable]) {
+        $cfg[$name] = $value
+        return
+    }
+
+    $cfg | Add-Member -NotePropertyName $name -NotePropertyValue $value -Force
+}
+
+function Get-FrontierConfig {
+    $cfg = Read-JsonFile $Script:CONFIG_FILE
+    if (-not $cfg) { return @{ provider = 'local'; mode = 'local' } }
+    return $cfg
+}
+
+function Get-NestedConfigValue($cfg, [string]$parentName, [string]$childName, $default = $null) {
+    $parent = Get-ConfigValue $cfg $parentName
+    if ($null -eq $parent) { return $default }
+    return Get-ConfigValue $parent $childName $default
+}
+
+function ConvertTo-StringArray($value) {
+    if ($null -eq $value) { return @() }
+
+    if ($value -is [string]) {
+        $trimmed = $value.Trim()
+        if (-not $trimmed) { return @() }
+
+        if ($trimmed.StartsWith('[') -and $trimmed.EndsWith(']')) {
+            try {
+                return @(ConvertTo-StringArray ($trimmed | ConvertFrom-Json -Depth 10))
+            } catch {
+                Write-Verbose "JSON array parse failed, falling back to delimiter parsing."
+            }
+        }
+
+        return @(
+            ($trimmed -split '[,;\r\n]+') |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                Select-Object -Unique
+        )
+    }
+
+    if ($value -is [System.Collections.IEnumerable]) {
+        $items = @()
+        foreach ($entry in $value) {
+            $items += @(ConvertTo-StringArray $entry)
+        }
+
+        return @($items | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    }
+
+    return @([string]$value)
+}
+
+function Get-HarnessEnforcementProfile($cfg, [string]$override = '') {
+    $rawValue = if (-not [string]::IsNullOrWhiteSpace($override)) {
+        $override
+    } else {
+        $nested = Get-NestedConfigValue $cfg 'harness' 'enforcementProfile'
+        if ($null -ne $nested -and -not [string]::IsNullOrWhiteSpace([string]$nested)) {
+            [string]$nested
+        } else {
+            [string](Get-ConfigValue $cfg 'harnessEnforcementProfile' 'balanced')
+        }
+    }
+
+    switch ($rawValue.Trim().ToLowerInvariant()) {
+        'strict' { return 'strict' }
+        'balanced' { return 'balanced' }
+        'standard' { return 'balanced' }
+        'default' { return 'balanced' }
+        'advisory' { return 'advisory' }
+        'off' { return 'off' }
+        'disabled' { return 'off' }
+        'none' { return 'off' }
+        'false' { return 'off' }
+        'true' { return 'balanced' }
+        default { return 'balanced' }
+    }
+}
+
+
+
+
+function Get-HarnessDisabledChecks($cfg, [string[]]$overrides = @()) {
+    $rawValues = @()
+    if ($overrides.Count -gt 0) {
+        $rawValues += $overrides
+    } else {
+        $nested = Get-NestedConfigValue $cfg 'harness' 'disabledChecks'
+        if ($null -ne $nested) {
+            $rawValues += @(ConvertTo-StringArray $nested)
+        } else {
+            $rawValues += @(ConvertTo-StringArray (Get-ConfigValue $cfg 'harnessDisabledChecks' @()))
+        }
+    }
+
+    return @(
+        $rawValues |
+            ForEach-Object { ([string]$_).Trim().ToLowerInvariant() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Select-Object -Unique |
+            Sort-Object
+    )
+}
+
+
+
+
+function Initialize-FrontierAdapters($cfg) {
+    $adapters = Get-ConfigValue $cfg 'adapters'
+    if ($adapters) { return $adapters }
+
+    $adapters = @{}
+    Set-ConfigValue $cfg 'adapters' $adapters
+    return $adapters
+}
+
+function Get-FrontierAdapterValue($cfg, [string]$adapterName, [string]$name, $default = $null) {
+    $adapters = Get-ConfigValue $cfg 'adapters'
+    if (-not $adapters) { return $default }
+
+    $adapter = Get-ConfigValue $adapters $adapterName
+    if (-not $adapter) { return $default }
+
+    return Get-ConfigValue $adapter $name $default
+}
+
+
+
+
+function Set-FrontierAdapterValue($cfg, [string]$adapterName, [string]$name, $value) {
+    $adapters = Initialize-FrontierAdapters $cfg
+    $adapter = Get-ConfigValue $adapters $adapterName
+    if (-not $adapter) {
+        $adapter = @{}
+        Set-ConfigValue $adapters $adapterName $adapter
+    }
+
+    Set-ConfigValue $adapter $name $value
+}
+
+
+
+
+function Get-FrontierConfiguredAdapters {
+    $cfg = Get-FrontierConfig
+    $configured = @()
+
+    $githubRepo = [string](Get-FrontierAdapterValue $cfg 'github' 'repo' '')
+    if ([string]::IsNullOrWhiteSpace($githubRepo)) {
+        $githubRepo = [string](Get-ConfigValue $cfg 'repo' '')
+    }
+    if (-not [string]::IsNullOrWhiteSpace($githubRepo)) {
+        $configured += 'github'
+    }
+
+    $adoOrg = [string](Get-FrontierAdapterValue $cfg 'ado' 'organization' '')
+    if ([string]::IsNullOrWhiteSpace($adoOrg)) {
+        $adoOrg = [string](Get-ConfigValue $cfg 'organization' '')
+    }
+    $adoProject = [string](Get-FrontierAdapterValue $cfg 'ado' 'project' '')
+    if ([string]::IsNullOrWhiteSpace($adoProject)) {
+        $adoProject = [string](Get-ConfigValue $cfg 'project' '')
+    }
+    if (-not [string]::IsNullOrWhiteSpace($adoOrg) -and -not [string]::IsNullOrWhiteSpace($adoProject)) {
+        $configured += 'ado'
+    }
+
+    return @($configured | Sort-Object -Unique)
+}
+
+function Resolve-FrontierProviderName([string]$value) {
+    $normalized = if ($value) { $value.Trim().ToLowerInvariant() } else { 'local' }
+    switch ($normalized) {
+        'github' { return 'github' }
+        'ado' { return 'ado' }
+        'azure-devops' { return 'ado' }
+        'azure_devops' { return 'ado' }
+        'local' { return 'local' }
+        default { return 'local' }
+    }
+}
+
+function Get-FrontierProvider {
+    return (Get-FrontierProviderResolution).name
+}
+
+function Get-FrontierMode { return Get-FrontierProvider }
+
+function Get-AdoOrganizationUrl {
+    $cfg = Get-FrontierConfig
+    $organization = [string](Get-ConfigValue $cfg 'organization' '')
+    if ([string]::IsNullOrWhiteSpace($organization)) {
+        $organization = [string](Get-FrontierAdapterValue $cfg 'ado' 'organization' '')
+    }
+    if ([string]::IsNullOrWhiteSpace($organization)) { return '' }
+    if ($organization -match '^https?://') { return $organization.TrimEnd('/') }
+    return "https://dev.azure.com/$($organization.Trim('/'))"
+}
+
+function Get-AdoProjectName {
+    $cfg = Get-FrontierConfig
+    $project = [string](Get-ConfigValue $cfg 'project' '')
+    if ([string]::IsNullOrWhiteSpace($project)) {
+        $project = [string](Get-FrontierAdapterValue $cfg 'ado' 'project' '')
+    }
+    return $project
+}
+
+function Test-CommandAvailable([string]$commandName) {
+    try {
+        $null = Get-Command $commandName -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Test-InteractiveConsole {
+    try {
+        return -not [Console]::IsInputRedirected
+    } catch {
+        return $false
+    }
+}
+
+function Test-GitHubCliAuthenticated {
+    if (-not (Test-CommandAvailable 'gh')) { return $false }
+    try {
+        $null = & gh auth status 2>$null
+        $exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
+        return $exitCode -eq 0
+    } catch {
+        return $false
+    }
+}
+
+$Script:ProviderInferencePrompted = $false
+
+function Save-InferredProvider([string]$provider, [string]$reason, [string]$repo = '') {
+    if ($Script:ProviderInferencePrompted) { return }
+    $Script:ProviderInferencePrompted = $true
+
+    try {
+        Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+            $cfg = Get-FrontierConfig
+            Set-ConfigValue $cfg 'provider' $provider
+            Set-ConfigValue $cfg 'integration' $provider
+            Set-ConfigValue $cfg 'mode' $provider
+            if ($provider -eq 'github' -and -not [string]::IsNullOrWhiteSpace($repo)) {
+                Set-ConfigValue $cfg 'repo' $repo
+            }
+            Write-JsonFile $Script:CONFIG_FILE $cfg
+        }
+        if (-not $Script:JsonOutput) {
+            Write-CliOutput "$($C.y)  [WARN] Auto-switched provider to '$provider' because $reason.$($C.n)"
+        }
+        if ($provider -eq 'github' -and -not [string]::IsNullOrWhiteSpace($repo)) {
+            Sync-LocalBacklogToGitHubIfNeeded -Repo $repo -Reason $reason
+        }
+    } catch {
+        if (-not $Script:JsonOutput) {
+            Write-CliOutput "$($C.y)  [WARN] Failed to persist inferred provider '$provider': $_$($C.n)"
+        }
+    }
+}
+
+function Get-FrontierProviderResolution {
+    $cfg = Get-FrontierConfig
+    $provider = Get-ConfigValue $cfg 'provider'
+    $integration = Get-ConfigValue $cfg 'integration'
+    $mode = Get-ConfigValue $cfg 'mode'
+
+    if ($provider) {
+        $resolved = Resolve-FrontierProviderName "$provider"
+        if ($resolved -eq 'github') {
+            $repoSlug = Get-GitHubRepoSlug
+            if (-not [string]::IsNullOrWhiteSpace($repoSlug) -and (Test-GitHubCliAuthenticated)) {
+                Sync-LocalBacklogToGitHubIfNeeded -Repo $repoSlug -Reason 'GitHub provider is configured'
+            }
+        }
+        return [PSCustomObject]@{ name = $resolved; source = 'provider'; inferred = $false; warning = '' }
+    }
+
+    if ($integration) {
+        $resolved = Resolve-FrontierProviderName "$integration"
+        if ($resolved -eq 'github') {
+            $repoSlug = Get-GitHubRepoSlug
+            if (-not [string]::IsNullOrWhiteSpace($repoSlug) -and (Test-GitHubCliAuthenticated)) {
+                Sync-LocalBacklogToGitHubIfNeeded -Repo $repoSlug -Reason 'GitHub integration is configured'
+            }
+        }
+        return [PSCustomObject]@{ name = $resolved; source = 'integration'; inferred = $false; warning = '' }
+    }
+
+    $resolved = Resolve-FrontierProviderName "$mode"
+    return [PSCustomObject]@{ name = $resolved; source = 'mode'; inferred = $false; warning = '' }
+}
+
+    # --- ADO MCP transport ---------------------------------------------------------
+    # Frontier's built-in ADO work-item provider uses MCP only.
+    # Tool overrides: adapters.ado.mcpTools (hashtable: get/create/update/comment/query/list).
+    # Server override: adapters.ado.mcpCommand (defaults to 'npx -y @azure-devops/mcp <org>').
+
+    $Script:AdoMcpProcess = $null
+    $Script:AdoMcpRequestId = 0
+    $Script:AdoMcpInitialized = $false
+
+    function Get-AdoOrganizationName {
+        $cfg = Get-FrontierConfig
+        $organization = [string](Get-ConfigValue $cfg 'organization' '')
+        if ([string]::IsNullOrWhiteSpace($organization)) {
+            $organization = [string](Get-FrontierAdapterValue $cfg 'ado' 'organization' '')
+        }
+        if ([string]::IsNullOrWhiteSpace($organization)) { return '' }
+
+        $organization = $organization.Trim()
+        if ($organization -notmatch '^https?://') {
+            if ($organization -match '^([^.]+)\.visualstudio\.com/?$') {
+                return $matches[1]
+            }
+            return $organization.Trim('/')
+        }
+
+        try {
+            $uri = [System.Uri]$organization
+        } catch {
+            throw "ADO organization '$organization' is not a valid URL. Use an organization name, a dev.azure.com URL, a visualstudio.com URL, or set adapters.ado.mcpCommand explicitly."
+        }
+
+        if ($uri.Host -eq 'dev.azure.com') {
+            $segments = @($uri.AbsolutePath.Trim('/') -split '/' | Where-Object { $_ })
+            if ($segments.Count -gt 0) { return $segments[0] }
+        }
+
+        if ($uri.Host -match '^([^.]+)\.visualstudio\.com$') {
+            return $matches[1]
+        }
+
+        throw "Unable to derive Azure DevOps organization name from '$organization'. Use an organization name, a dev.azure.com URL, a visualstudio.com URL, or set adapters.ado.mcpCommand explicitly."
+    }
+
+    function Get-AdoMcpToolName([string]$operation) {
+        $defaults = @{
+            get     = 'wit_get_work_item'
+            create  = 'wit_create_work_item'
+            update  = 'wit_update_work_item'
+            comment = 'wit_add_work_item_comment'
+            query   = 'wit_query_by_wiql'
+            list    = 'wit_list_backlog_work_items'
+        }
+        $cfg = Get-FrontierConfig
+        $override = Get-FrontierAdapterValue $cfg 'ado' 'mcpTools' $null
+        if ($override) {
+            $value = Get-ConfigValue $override $operation ''
+            if (-not [string]::IsNullOrWhiteSpace([string]$value)) { return [string]$value }
+        }
+        return $defaults[$operation]
+    }
+
+    function Get-AdoMcpServerCommand {
+        $cfg = Get-FrontierConfig
+        $override = [string](Get-FrontierAdapterValue $cfg 'ado' 'mcpCommand' '')
+        if (-not [string]::IsNullOrWhiteSpace($override)) {
+            return $override
+        }
+
+        $org = Get-AdoOrganizationName
+        if ([string]::IsNullOrWhiteSpace($org)) {
+            throw 'ADO MCP requires an organization name or URL in .frontier/config.json, or adapters.ado.mcpCommand.'
+        }
+        return "npx -y @azure-devops/mcp $org"
+    }
+
+    function Start-AdoMcpServer {
+        if ($Script:AdoMcpProcess -and -not $Script:AdoMcpProcess.HasExited) {
+            return $Script:AdoMcpProcess
+        }
+
+        $command = Get-AdoMcpServerCommand
+        if ([string]::IsNullOrWhiteSpace($command)) {
+            throw 'ADO MCP server command is empty. Configure adapters.ado.organization or adapters.ado.mcpCommand.'
+        }
+
+        $exe = ''
+        $rawArguments = ''
+        if ($command -match '^\s*"([^"]+)"\s*(.*)$') {
+            $exe = $matches[1]
+            $rawArguments = $matches[2]
+        } elseif ($command -match '^\s*(\S+)\s*(.*)$') {
+            $exe = $matches[1]
+            $rawArguments = $matches[2]
+        }
+
+        if ([string]::IsNullOrWhiteSpace($exe)) {
+            throw "ADO MCP server command is invalid: '$command'."
+        }
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $exe
+        if (-not [string]::IsNullOrWhiteSpace($rawArguments)) {
+            $psi.Arguments = $rawArguments.Trim()
+        }
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardInput = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+
+        try {
+            $proc = [System.Diagnostics.Process]::Start($psi)
+        } catch {
+            throw "Failed to start ADO MCP server '$command': $($_.Exception.Message)"
+        }
+        if (-not $proc) {
+            throw "Failed to start ADO MCP server: $command"
+        }
+
+        $Script:AdoMcpProcess = $proc
+        $Script:AdoMcpRequestId = 0
+        $Script:AdoMcpInitialized = $false
+        return $proc
+    }
+
+    function Stop-AdoMcpServer {
+        if ($Script:AdoMcpProcess) {
+            try {
+                if (-not $Script:AdoMcpProcess.HasExited) {
+                    $Script:AdoMcpProcess.StandardInput.Close()
+                    if (-not $Script:AdoMcpProcess.WaitForExit(2000)) {
+                        $Script:AdoMcpProcess.Kill()
+                    }
+                }
+            } catch { Write-Verbose "Stop-AdoMcpServer: $_" }
+            $Script:AdoMcpProcess = $null
+            $Script:AdoMcpInitialized = $false
+        }
+    }
+
+    function Send-AdoMcpRpc([System.Diagnostics.Process]$proc, [hashtable]$message, [int]$timeoutMs = 30000) {
+        $json = ($message | ConvertTo-Json -Depth 10 -Compress)
+        $proc.StandardInput.WriteLine($json)
+        $proc.StandardInput.Flush()
+
+        $deadline = [DateTime]::UtcNow.AddMilliseconds($timeoutMs)
+        $expectedId = if ($message.ContainsKey('id')) { [string]$message.id } else { $null }
+        while ([DateTime]::UtcNow -lt $deadline) {
+            if ($proc.HasExited) {
+                $stderr = ''
+                try { $stderr = $proc.StandardError.ReadToEnd() }
+                catch { Write-Verbose "Unable to read ADO MCP stderr: $_" }
+                throw "ADO MCP server exited unexpectedly. stderr: $stderr"
+            }
+
+            $remainingMs = [Math]::Max(1, [int]($deadline - [DateTime]::UtcNow).TotalMilliseconds)
+            $readTask = $proc.StandardOutput.ReadLineAsync()
+            if (-not $readTask.Wait($remainingMs)) {
+                throw "Timed out waiting for ADO MCP response (>${timeoutMs}ms)."
+            }
+
+            $line = $readTask.Result
+            if ($null -eq $line) { continue }
+            $trimmed = $line.Trim()
+            if (-not $trimmed) { continue }
+            if ($trimmed[0] -ne '{') { continue }
+            try {
+                $response = ($trimmed | ConvertFrom-Json -Depth 20)
+                if ($null -ne $expectedId) {
+                    $responseId = $response.PSObject.Properties['id']
+                    if ($null -eq $responseId -or [string]$responseId.Value -ne $expectedId) {
+                        continue
+                    }
+                }
+                return $response
+            } catch {
+                continue
+            }
+        }
+        throw "Timed out waiting for ADO MCP response (>${timeoutMs}ms)."
+    }
+
+    function Initialize-AdoMcpSession {
+        if ($Script:AdoMcpInitialized) { return }
+        $proc = Start-AdoMcpServer
+        $Script:AdoMcpRequestId++
+        $req = @{
+            jsonrpc = '2.0'
+            id = $Script:AdoMcpRequestId
+            method = 'initialize'
+            params = @{
+                protocolVersion = '2024-11-05'
+                capabilities = @{}
+                clientInfo = @{ name = 'frontier-cli'; version = '1.0.0' }
+            }
+        }
+        $resp = Send-AdoMcpRpc $proc $req
+        $errorProperty = $resp.PSObject.Properties['error']
+        if ($errorProperty -and $errorProperty.Value) {
+            throw "ADO MCP initialize failed: $($errorProperty.Value.message)"
+        }
+        $note = @{ jsonrpc = '2.0'; method = 'notifications/initialized'; params = @{} }
+        $proc.StandardInput.WriteLine(($note | ConvertTo-Json -Depth 5 -Compress))
+        $proc.StandardInput.Flush()
+        $Script:AdoMcpInitialized = $true
+    }
+
+    function Invoke-AdoMcpTool {
+        param(
+            [Parameter(Mandatory)][string]$Tool,
+            [hashtable]$Arguments = @{}
+        )
+        Initialize-AdoMcpSession
+        $proc = $Script:AdoMcpProcess
+        $Script:AdoMcpRequestId++
+        $req = @{
+            jsonrpc = '2.0'
+            id = $Script:AdoMcpRequestId
+            method = 'tools/call'
+            params = @{ name = $Tool; arguments = $Arguments }
+        }
+        $resp = Send-AdoMcpRpc $proc $req
+        $errorProperty = $resp.PSObject.Properties['error']
+        if ($errorProperty -and $errorProperty.Value) {
+            throw "ADO MCP tool '$Tool' failed: $($errorProperty.Value.message)"
+        }
+        $resultProperty = $resp.PSObject.Properties['result']
+        if (-not $resultProperty -or -not $resultProperty.Value) {
+            throw "ADO MCP tool '$Tool' returned an empty result."
+        }
+        $toolResult = $resultProperty.Value
+        $isErrorProperty = $toolResult.PSObject.Properties['isError']
+        if ($isErrorProperty -and $isErrorProperty.Value) {
+            $msg = ''
+            $contentProperty = $toolResult.PSObject.Properties['content']
+            if ($contentProperty -and $contentProperty.Value) {
+                $msg = (@($contentProperty.Value) | ForEach-Object { [string]$_.text }) -join "`n"
+            }
+            throw "ADO MCP tool '$Tool' returned an error: $msg"
+        }
+        return $toolResult
+    }
+
+    function ConvertFrom-AdoMcpToolResult($result) {
+        if (-not $result) { return $null }
+        if ($result.structuredContent) { return $result.structuredContent }
+        $content = @($result.content)
+        foreach ($block in $content) {
+            if ($block.type -eq 'text' -and $block.text) {
+                $text = [string]$block.text
+                try { return ($text | ConvertFrom-Json -Depth 20) } catch { return $text }
+            }
+        }
+        return $null
+    }
+
+    function Invoke-AdoOperation {
+        param(
+            [Parameter(Mandatory)][scriptblock]$McpBlock,
+            [string]$OperationName = 'ado'
+        )
+        try {
+            return (& $McpBlock)
+        } catch {
+            $message = $_.Exception.Message
+            Stop-AdoMcpServer
+            throw "ADO MCP $OperationName failed: $message"
+        }
+    }
+
+function Get-FrontierProviderInfo {
+    $providerResolution = Get-FrontierProviderResolution
+    $provider = $providerResolution.name
+    $configuredAdapters = Get-FrontierConfiguredAdapters
+    return [PSCustomObject]@{
+        name = $provider
+        source = $providerResolution.source
+        inferred = $providerResolution.inferred
+        warning = $providerResolution.warning
+        adapters = $configuredAdapters
+        readyUsesExplicitReadyState = ($provider -eq 'local')
+        validationHost = if ($provider -eq 'github') { 'github-actions' } elseif ($provider -eq 'ado') { 'azure-pipelines' } else { 'local' }
+    }
+}
+
+
+
+
+function Get-LocalBacklogIssues {
+    $backend = Get-LocalIssueBackend
+    if ($backend -eq 'backlog') {
+        $paths = Get-BacklogLocalPaths
+        $records = @()
+        foreach ($pair in @(
+            @{ Path = $paths.tasksDir; State = 'open' },
+            @{ Path = $paths.completedDir; State = 'closed' }
+        )) {
+            if (-not (Test-Path $pair.Path)) { continue }
+            $records += @(Get-ChildItem $pair.Path -Filter '*.md' -File -ErrorAction SilentlyContinue |
+                ForEach-Object { Convert-BacklogTaskFileToFrontierIssue $_.FullName $pair.State } |
+                Where-Object { $_ })
+        }
+        return @($records | Sort-Object -Property number)
+    }
+
+    if ((Get-PersistenceMode) -eq 'git') {
+        $files = Get-GitFileList 'issues'
+        return @($files | Where-Object { $_ -match '\.json$' } | ForEach-Object {
+            Read-GitJson "issues/$_"
+        } | Where-Object { $_ } | Sort-Object -Property number)
+    }
+
+    if (-not (Test-Path $Script:ISSUES_DIR)) { return @() }
+    return @(Get-ChildItem $Script:ISSUES_DIR -Filter '*.json' |
+        ForEach-Object { Read-JsonFile $_.FullName } |
+        Where-Object { $_ } |
+        Sort-Object -Property number)
+}
+
+
+
+
+
+function Remove-SurroundingQuotes([string]$value) {
+    $trimmed = [string]$value
+    if ([string]::IsNullOrWhiteSpace($trimmed)) { return '' }
+    $trimmed = $trimmed.Trim()
+    if ($trimmed.Length -ge 2) {
+        if ($trimmed.StartsWith("'") -and $trimmed.EndsWith("'")) {
+            return $trimmed.Substring(1, $trimmed.Length - 2).Replace("''", "'")
+        }
+        if ($trimmed.StartsWith('"') -and $trimmed.EndsWith('"')) {
+            return $trimmed.Substring(1, $trimmed.Length - 2)
+        }
+    }
+    return $trimmed
+}
+
+function ConvertFrom-BacklogInlineArray([string]$value) {
+    $trimmed = [string]$value
+    if ([string]::IsNullOrWhiteSpace($trimmed)) { return @() }
+    $trimmed = $trimmed.Trim()
+    if ($trimmed -eq '[]') { return @() }
+    if (-not ($trimmed.StartsWith('[') -and $trimmed.EndsWith(']'))) { return @() }
+    $inner = $trimmed.Substring(1, $trimmed.Length - 2).Trim()
+    if (-not $inner) { return @() }
+    return @(($inner -split ',') | ForEach-Object { Remove-SurroundingQuotes $_ } | Where-Object { $_ })
+}
+
+function ConvertFrom-BacklogYamlFrontmatter([string]$yamlText) {
+    $metadata = @{}
+    $currentArrayKey = ''
+    foreach ($rawLine in ($yamlText -split '\r?\n')) {
+        if ($rawLine -match '^\s*$') { continue }
+        if ($rawLine.TrimStart().StartsWith('#')) { continue }
+
+        if ($rawLine -match '^\s{2,}-\s*(.*)$' -and $currentArrayKey) {
+            $itemValue = Remove-SurroundingQuotes $Matches[1]
+            if (-not $metadata.ContainsKey($currentArrayKey)) { $metadata[$currentArrayKey] = @() }
+            $metadata[$currentArrayKey] = @($metadata[$currentArrayKey]) + @($itemValue)
+            continue
+        }
+
+        $currentArrayKey = ''
+        if ($rawLine -match '^([A-Za-z0-9_]+)\s*:\s*(.*)$') {
+            $key = [string]$Matches[1]
+            $value = [string]$Matches[2]
+            if ([string]::IsNullOrWhiteSpace($value)) {
+                $metadata[$key] = @()
+                $currentArrayKey = $key
+                continue
+            }
+
+            if ($value.Trim().StartsWith('[') -and $value.Trim().EndsWith(']')) {
+                $metadata[$key] = @(ConvertFrom-BacklogInlineArray $value)
+                continue
+            }
+
+            $metadata[$key] = Remove-SurroundingQuotes $value
+        }
+    }
+    return $metadata
+}
+
+
+
+
+function Get-BacklogFrontmatterParts([string]$content) {
+    if ($content -match '(?ms)^---\s*\r?\n(?<yaml>.*?)\r?\n---\s*\r?\n?(?<body>.*)$') {
+        return [PSCustomObject]@{
+            metadata = ConvertFrom-BacklogYamlFrontmatter $Matches['yaml']
+            body = [string]$Matches['body']
+        }
+    }
+    return [PSCustomObject]@{
+        metadata = @{}
+        body = [string]$content
+    }
+}
+
+
+
+
+function Read-BacklogConfigMetadata([string]$configPath) {
+    if (-not (Test-Path $configPath)) { return @{} }
+    try {
+        $content = Get-Content $configPath -Raw -Encoding utf8
+    } catch {
+        return @{}
+    }
+    return ConvertFrom-BacklogYamlFrontmatter $content
+}
+
+function Get-BacklogLocalResolution {
+    $rootConfigPath = Join-Path $Script:ROOT 'backlog.config.yml'
+    $rootMetadata = Read-BacklogConfigMetadata $rootConfigPath
+    $configuredDir = ''
+    if ($rootMetadata.ContainsKey('backlog_directory')) { $configuredDir = [string]$rootMetadata['backlog_directory'] }
+    elseif ($rootMetadata.ContainsKey('backlogDirectory')) { $configuredDir = [string]$rootMetadata['backlogDirectory'] }
+
+    if (-not [string]::IsNullOrWhiteSpace($configuredDir)) {
+        $normalizedDir = $configuredDir.Trim().Trim('/').Trim('\\')
+        return [PSCustomObject]@{
+            backlogDir = $normalizedDir
+            backlogPath = Join-Path $Script:ROOT $normalizedDir
+            configPath = $rootConfigPath
+            configSource = 'root'
+            exists = (Test-Path (Join-Path $Script:ROOT $normalizedDir))
+        }
+    }
+
+    foreach ($dirName in @('backlog', '.backlog')) {
+        $dirPath = Join-Path $Script:ROOT $dirName
+        $configCandidates = @(
+            (Join-Path $dirPath 'config.yml'),
+            (Join-Path $dirPath 'config.yaml')
+        )
+            $configPath = $configCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($configPath) {
+            return [PSCustomObject]@{
+                backlogDir = $dirName
+                backlogPath = $dirPath
+                configPath = $configPath
+                configSource = 'folder'
+                exists = $true
+            }
+        }
+        if (Test-Path $dirPath) {
+            return [PSCustomObject]@{
+                backlogDir = $dirName
+                backlogPath = $dirPath
+                configPath = (Join-Path $dirPath 'config.yml')
+                configSource = 'folder'
+                exists = $true
+            }
+        }
+    }
+
+    return [PSCustomObject]@{
+        backlogDir = 'backlog'
+        backlogPath = (Join-Path $Script:ROOT 'backlog')
+        configPath = (Join-Path $Script:ROOT 'backlog' 'config.yml')
+        configSource = 'folder'
+        exists = $false
+    }
+}
+
+function Get-LocalIssueBackend {
+    if ((Get-PersistenceMode) -eq 'git') { return 'json' }
+    $cfg = Get-FrontierConfig
+    $configured = [string](Get-ConfigValue $cfg 'localBackend' '')
+    if (-not [string]::IsNullOrWhiteSpace($configured)) {
+        $normalized = $configured.Trim().ToLowerInvariant()
+        if ($normalized -eq 'backlog') { return 'backlog' }
+        return 'json'
+    }
+
+    $resolution = Get-BacklogLocalResolution
+    if ($resolution.exists) { return 'backlog' }
+    return 'json'
+}
+
+
+
+
+function Get-BacklogLocalPaths {
+    $resolution = Get-BacklogLocalResolution
+    return [PSCustomObject]@{
+        backlogDir = $resolution.backlogDir
+        backlogPath = $resolution.backlogPath
+        configPath = $resolution.configPath
+        tasksDir = (Join-Path $resolution.backlogPath 'tasks')
+        completedDir = (Join-Path $resolution.backlogPath 'completed')
+        configSource = $resolution.configSource
+    }
+}
+
+function Get-BacklogTaskPrefix {
+    $paths = Get-BacklogLocalPaths
+    $metadata = Read-BacklogConfigMetadata $paths.configPath
+    if ($metadata.ContainsKey('task_prefix') -and -not [string]::IsNullOrWhiteSpace([string]$metadata['task_prefix'])) {
+        return [string]$metadata['task_prefix']
+    }
+    if ($metadata.ContainsKey('taskPrefix') -and -not [string]::IsNullOrWhiteSpace([string]$metadata['taskPrefix'])) {
+        return [string]$metadata['taskPrefix']
+    }
+    return 'task'
+}
+
+function Format-BacklogTaskId([string]$taskPrefix, [int]$number) {
+    return "{0}-{1}" -f $taskPrefix.ToUpperInvariant(), $number
+}
+
+function Format-BacklogTaskDependencyId([string]$taskPrefix, [int]$number) {
+    return "{0}-{1}" -f $taskPrefix.ToLowerInvariant(), $number
+}
+
+function Get-BacklogTaskNumber([string]$taskId) {
+    if ([string]::IsNullOrWhiteSpace($taskId)) { return 0 }
+    $trimmed = $taskId.Trim()
+    if ($trimmed -match '^[A-Za-z]+-(\d+)$') { return [int]$Matches[1] }
+    return 0
+}
+
+function Convert-FrontierLabelsToBacklogPriority([string[]]$labels) {
+    foreach ($label in @($labels)) {
+        switch ([string]$label) {
+            'priority:p0' { return 'urgent' }
+            'priority:p1' { return 'high' }
+            'priority:p2' { return 'medium' }
+            'priority:p3' { return 'low' }
+        }
+    }
+    return 'medium'
+}
+
+function Convert-BacklogPriorityToFrontierLabel([string]$priority) {
+    switch (($priority ?? '').Trim().ToLowerInvariant()) {
+        'urgent' { return 'priority:p0' }
+        'critical' { return 'priority:p0' }
+        'high' { return 'priority:p1' }
+        'medium' { return 'priority:p2' }
+        'low' { return 'priority:p3' }
+        default { return '' }
+    }
+}
+
+function Get-FrontierMetadataFromMarkdown([string]$content) {
+    if ($content -match '(?ms)<!--\s*AGENTX:METADATA\s*(?<json>\{.*?\})\s*-->') {
+        try { return ($Matches['json'] | ConvertFrom-Json -Depth 10) } catch { return $null }
+    }
+    return $null
+}
+
+function Get-MarkdownSectionContent([string]$content, [string]$heading) {
+    $pattern = '(?ms)^##\s+' + [regex]::Escape($heading) + '\s*\r?\n(?<section>.*?)(?=^##\s|\z)'
+    $match = [regex]::Match($content, $pattern)
+    if (-not $match.Success) { return '' }
+    return $match.Groups['section'].Value.Trim()
+}
+
+
+
+
+function Remove-MarkdownSection([string]$content, [string]$heading) {
+    $pattern = '(?ms)^##\s+' + [regex]::Escape($heading) + '\s*\r?\n.*?(?=^##\s|\z)'
+    return ([regex]::Replace($content, $pattern, '')).Trim()
+}
+
+
+
+
+function Set-MarkdownSectionContent([string]$content, [string]$heading, [string]$sectionContent) {
+    $replacement = "## $heading`n`n$($sectionContent.Trim())"
+    $pattern = '(?ms)^##\s+' + [regex]::Escape($heading) + '\s*\r?\n.*?(?=^##\s|\z)'
+    if ([regex]::IsMatch($content, $pattern)) {
+        $updated = [regex]::Replace($content, $pattern, $replacement, 1)
+        return $updated.Trim() + "`n"
+    }
+    if ([string]::IsNullOrWhiteSpace($content)) {
+        return $replacement + "`n"
+    }
+    return ($content.Trim() + "`n`n" + $replacement + "`n")
+}
+
+function Format-YamlScalar([string]$value) {
+    $escaped = ([string]$value).Replace("'", "''")
+    return "'$escaped'"
+}
+
+function Format-BacklogTaskFileName([string]$taskPrefix, [int]$number, [string]$title) {
+    $safeTitle = [string]$title
+    foreach ($char in [System.IO.Path]::GetInvalidFileNameChars()) {
+        $safeTitle = $safeTitle.Replace([string]$char, '-')
+    }
+    foreach ($char in @('[', ']')) {
+        $safeTitle = $safeTitle.Replace($char, '-')
+    }
+    $safeTitle = ($safeTitle -replace '\s+', '-').Trim('-')
+    $safeTitle = ($safeTitle -replace '-{2,}', '-')
+    if (-not $safeTitle) { $safeTitle = "issue-$number" }
+    return "{0}-{1} - {2}.md" -f $taskPrefix.ToLowerInvariant(), $number, $safeTitle
+}
+
+function Initialize-BacklogLocalStructure {
+    $paths = Get-BacklogLocalPaths
+    foreach ($dir in @($paths.backlogPath, $paths.tasksDir, $paths.completedDir)) {
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    }
+
+    if (-not (Test-Path $paths.configPath)) {
+        $projectName = Split-Path $Script:ROOT -Leaf
+        $configContent = @(
+            "project_name: $(Format-YamlScalar $projectName)",
+            "default_status: 'Backlog'",
+            "statuses: ['Backlog', 'Ready', 'In Progress', 'In Review', 'Done']",
+            'labels: []',
+            'milestones: []',
+            'definition_of_done: []',
+            'date_format: yyyy-mm-dd hh:mm',
+            'auto_open_browser: true',
+            'default_port: 6420',
+            'remote_operations: true',
+            'auto_commit: false',
+            'zero_padded_ids: 0',
+            'bypass_git_hooks: false',
+            'check_active_branches: true',
+            'active_branch_days: 30',
+            "task_prefix: 'task'"
+        ) -join "`n"
+        $parentDir = Split-Path $paths.configPath -Parent
+        if (-not (Test-Path $parentDir)) { New-Item -ItemType Directory -Path $parentDir -Force | Out-Null }
+        Set-Content -LiteralPath $paths.configPath -Value $configContent -Encoding utf8
+    }
+}
+
+function Convert-BacklogTaskFileToFrontierIssue([string]$path, [string]$defaultState) {
+    if (-not (Test-Path $path)) { return $null }
+    try {
+        $content = Get-Content -LiteralPath $path -Raw -Encoding utf8
+    } catch {
+        return $null
+    }
+    $parts = Get-BacklogFrontmatterParts $content
+    $metadata = $parts.metadata
+    $taskId = if ($metadata.ContainsKey('id')) { [string]$metadata['id'] } else { '' }
+    $number = Get-BacklogTaskNumber $taskId
+    if ($number -le 0) { return $null }
+
+    $labels = @()
+    if ($metadata.ContainsKey('labels')) { $labels = @($metadata['labels']) }
+    $priorityValue = if ($metadata.ContainsKey('priority')) { [string]$metadata['priority'] } else { '' }
+    $priorityLabel = Convert-BacklogPriorityToFrontierLabel $priorityValue
+    if ($priorityLabel -and $priorityLabel -notin $labels) { $labels += $priorityLabel }
+
+    $dependencies = @()
+    if ($metadata.ContainsKey('dependencies')) {
+        $dependencies = @($metadata['dependencies'] | ForEach-Object { Get-BacklogTaskNumber ([string]$_) } | Where-Object { $_ -gt 0 })
+    }
+
+    $agentxMetadata = Get-FrontierMetadataFromMarkdown $parts.body
+    $comments = if ($agentxMetadata -and $agentxMetadata.PSObject.Properties['comments']) { @($agentxMetadata.comments) } else { @() }
+    $description = Get-MarkdownSectionContent $parts.body 'Description'
+    $status = if ($metadata.ContainsKey('status')) { [string]$metadata['status'] } else { '' }
+    $normalizedState = if ($defaultState -eq 'closed' -or $status -eq 'Done') { 'closed' } else { 'open' }
+
+    return [PSCustomObject]@{
+        number = $number
+        title = if ($metadata.ContainsKey('title')) { [string]$metadata['title'] } else { "Issue $number" }
+        body = $description
+        labels = @($labels)
+        status = $status
+        state = $normalizedState
+        created = if ($metadata.ContainsKey('created_date')) { [string]$metadata['created_date'] } else { '' }
+        updated = if ($metadata.ContainsKey('updated_date')) { [string]$metadata['updated_date'] } else { '' }
+        comments = @($comments)
+        dependencies = @($dependencies)
+        priority = $priorityValue
+        filePath = $path
+        taskId = $taskId
+    }
+}
+
+function Get-BacklogIssueRecord([int]$num) {
+    return Get-LocalBacklogIssues | Where-Object { [int]$_.number -eq $num } | Select-Object -First 1
+}
+
+function Build-BacklogTaskContent($issue, [string]$existingContent = '') {
+    $taskPrefix = Get-BacklogTaskPrefix
+    $taskId = Format-BacklogTaskId $taskPrefix ([int]$issue.number)
+    $labels = @($issue.labels | ForEach-Object { [string]$_ } | Where-Object { $_ })
+    $dependencies = @()
+    if ($issue.PSObject.Properties['dependencies']) {
+        $dependencies = @($issue.dependencies | ForEach-Object { [int]$_ } | Where-Object { $_ -gt 0 })
+    }
+    $priority = Convert-FrontierLabelsToBacklogPriority $labels
+
+    $frontmatterLines = @(
+        '---',
+        "id: $(Format-YamlScalar $taskId)",
+        "title: $(Format-YamlScalar ([string]$issue.title))",
+        "status: $(Format-YamlScalar ([string]$issue.status))",
+        'assignee: []',
+        "created_date: $(Format-YamlScalar ([string]$issue.created))",
+        "updated_date: $(Format-YamlScalar ([string]$issue.updated))"
+    )
+
+    if (@($labels).Count -gt 0) {
+        $frontmatterLines += 'labels:'
+        foreach ($label in $labels) {
+            $frontmatterLines += "  - $(Format-YamlScalar $label)"
+        }
+    } else {
+        $frontmatterLines += 'labels: []'
+    }
+
+    if (@($dependencies).Count -gt 0) {
+        $frontmatterLines += 'dependencies:'
+        foreach ($dependency in $dependencies) {
+            $frontmatterLines += "  - $(Format-YamlScalar (Format-BacklogTaskDependencyId $taskPrefix $dependency))"
+        }
+    } else {
+        $frontmatterLines += 'dependencies: []'
+    }
+
+    $frontmatterLines += "priority: $(Format-YamlScalar $priority)"
+    $frontmatterLines += '---'
+
+    $bodyContent = if ($existingContent) {
+        (Get-BacklogFrontmatterParts $existingContent).body
+    } else {
+        ''
+    }
+    $bodyContent = Set-MarkdownSectionContent $bodyContent 'Description' ([string]$issue.body)
+
+    $commentPayload = [PSCustomObject]@{ comments = @($issue.comments) }
+    if (@($issue.comments).Count -gt 0) {
+        $metadataJson = $commentPayload | ConvertTo-Json -Depth 10
+        $metadataSection = "<!-- AGENTX:METADATA`n$metadataJson`n-->"
+        $bodyContent = Set-MarkdownSectionContent $bodyContent 'Frontier Metadata' $metadataSection
+    } else {
+        $bodyContent = Remove-MarkdownSection $bodyContent 'Frontier Metadata'
+    }
+
+    return (($frontmatterLines -join "`n") + "`n`n" + $bodyContent.Trim() + "`n")
+}
+
+
+
+
+function New-LocalIssue([string]$title, [string]$body, [string[]]$labels) {
+    $num = Get-NextIssueNumber
+    $issue = [PSCustomObject]@{
+        number = $num
+        title = $title
+        body = $body
+        labels = @($labels)
+        status = 'Backlog'
+        state = 'open'
+        created = Get-Timestamp
+        updated = Get-Timestamp
+        comments = @()
+        dependencies = @()
+    }
+    Save-LocalIssue $issue
+    return $issue
+}
+
+function Get-LocalIssue([int]$num) {
+    if ((Get-LocalIssueBackend) -eq 'backlog') {
+        return Get-BacklogIssueRecord $num
+    }
+
+    if ((Get-PersistenceMode) -eq 'git') {
+        return Read-GitJson "issues/$num.json"
+    }
+    return Read-JsonFile (Join-Path $Script:ISSUES_DIR "$num.json")
+}
+
+function Save-LocalIssue($issue) {
+    if ((Get-LocalIssueBackend) -eq 'backlog') {
+        Initialize-BacklogLocalStructure
+        $paths = Get-BacklogLocalPaths
+        $taskPrefix = Get-BacklogTaskPrefix
+        $existing = Get-BacklogIssueRecord ([int]$issue.number)
+        $targetDir = if ($issue.state -eq 'closed' -or $issue.status -eq 'Done') { $paths.completedDir } else { $paths.tasksDir }
+        $targetPath = Join-Path $targetDir (Format-BacklogTaskFileName $taskPrefix ([int]$issue.number) ([string]$issue.title))
+        $existingPath = if ($existing -and $existing.PSObject.Properties['filePath']) { [string]$existing.filePath } else { '' }
+        $existingContent = if ($existingPath -and (Test-Path $existingPath)) { Get-Content -LiteralPath $existingPath -Raw -Encoding utf8 } else { '' }
+        $content = Build-BacklogTaskContent $issue $existingContent
+        Set-Content -LiteralPath $targetPath -Value $content -Encoding utf8
+        if ($existingPath -and $existingPath -ne $targetPath -and (Test-Path $existingPath)) {
+            Remove-Item -LiteralPath $existingPath -Force
+        }
+        return
+    }
+
+    if ((Get-PersistenceMode) -eq 'git') {
+        Write-GitJson "issues/$($issue.number).json" $issue "issue: update #$($issue.number) - $($issue.title)"
+        return
+    }
+    if (-not (Test-Path $Script:ISSUES_DIR)) { New-Item -ItemType Directory -Path $Script:ISSUES_DIR -Force | Out-Null }
+    Write-JsonFile (Join-Path $Script:ISSUES_DIR "$($issue.number).json") $issue
+}
+
+function Get-ProviderIssue([int]$num) {
+    $provider = Get-FrontierProvider
+    if ($provider -eq 'github') { return Get-GitHubIssue $num }
+    if ($provider -eq 'ado') { return Get-AdoIssue $num }
+    return Get-LocalIssue $num
+}
+
+
+
+
+function Get-ProviderIssues {
+    $provider = Get-FrontierProvider
+    if ($provider -eq 'github') {
+        try {
+            $json = & gh issue list --state all --json number,title,labels,body,state,url --limit 200 2>$null
+            if ($json) {
+                $raw = $json | ConvertFrom-Json
+                $statusByIssue = if (Test-GitHubProjectConfigured) { Get-GitHubProjectIssueStatusMap } else { @{} }
+                return @($raw | ForEach-Object {
+                    $status = ''
+                    $issueNumber = [int]$_.number
+                    if ($statusByIssue.ContainsKey($issueNumber)) {
+                        $status = [string]$statusByIssue[$issueNumber]
+                    }
+                    Convert-GitHubIssueToFrontierIssue $_ $status
+                })
+            }
+        } catch { Write-Verbose "Provider issue fetch failed: $_" }
+        return @()
+    }
+
+    if ($provider -eq 'ado') {
+        try {
+            $orgUrl = Get-AdoOrganizationUrl
+            $project = Get-AdoProjectName
+            if ([string]::IsNullOrWhiteSpace($orgUrl) -or [string]::IsNullOrWhiteSpace($project)) {
+                return @()
+            }
+            $wiql = "Select [System.Id] From WorkItems Where [System.TeamProject] = '$project' Order By [System.ChangedDate] Desc"
+            $refs = Invoke-AdoOperation -OperationName 'list' -McpBlock {
+                $tool = Get-AdoMcpToolName 'query'
+                $result = Invoke-AdoMcpTool -Tool $tool -Arguments @{ project = $project; wiql = $wiql }
+                $payload = ConvertFrom-AdoMcpToolResult $result
+                if ($payload.workItems) { return @($payload.workItems) }
+                if ($payload.value) { return @($payload.value) }
+                return @($payload)
+            }
+
+            $issues = @()
+            foreach ($ref in (@($refs) | Select-Object -First 200)) {
+                $workItemId = if ($ref.id) { [int]$ref.id } elseif ($ref.fields.'System.Id') { [int]$ref.fields.'System.Id' } else { 0 }
+                if ($workItemId -le 0) { continue }
+                $issue = Get-AdoIssue $workItemId
+                if ($issue) { $issues += $issue }
+            }
+            if ($issues.Count -gt 0) { return $issues }
+        } catch { Write-Verbose "ADO issue fetch failed: $_" }
+        return @()
+    }
+
+    return @(Get-LocalBacklogIssues)
+}
+
+
+
+
+function Update-ProviderIssue([int]$num, [string]$title, [string]$body, [string]$status, [string]$labelStr) {
+    $provider = Get-FrontierProvider
+    $issue = Get-ProviderIssue $num
+    if (-not $issue) { throw "Issue #$num not found" }
+
+    if ($provider -eq 'github') {
+        $ghArgs = @('issue', 'edit', "$num")
+        $hasEdit = $false
+
+        if ($title) {
+            $ghArgs += @('--title', $title)
+            $hasEdit = $true
+        }
+        if ($body) {
+            $ghArgs += @('--body', $body)
+            $hasEdit = $true
+        }
+        if ($labelStr) {
+            $newLabels = ConvertTo-IssueLabels $labelStr
+            $existingLabels = @($issue.labels)
+            foreach ($label in $newLabels | Where-Object { $_ -notin $existingLabels }) {
+                $ghArgs += @('--add-label', $label)
+                $hasEdit = $true
+            }
+            foreach ($label in $existingLabels | Where-Object { $_ -notin $newLabels }) {
+                $ghArgs += @('--remove-label', $label)
+                $hasEdit = $true
+            }
+        }
+
+        if ($hasEdit) {
+            $null = Invoke-GitHubCli $ghArgs "Failed to update GitHub issue #$num." -AllowEmptyOutput
+        }
+        if ($status) {
+            if (-not (Set-GitHubProjectIssueStatus $num $status $false)) {
+                if (Test-GitHubProjectConfigured) {
+                    Write-CliOutput "$($C.y)GitHub project status was not updated for issue #${num}. Ensure the issue is added to the configured project and the project has a matching Status option.$($C.n)"
+                } else {
+                    Write-CliOutput "$($C.y)GitHub project status was not updated because no project number is configured. Set .frontier/config.json `project` to enable Project V2 status sync.$($C.n)"
+                }
+            }
+        }
+
+        return (Get-GitHubIssue $num)
+    }
+
+    if ($provider -eq 'ado') {
+        $project = Get-AdoProjectName
+        $hasEdit = $false
+
+        $mcpFields = @{}
+        if ($title) { $mcpFields['System.Title'] = $title; $hasEdit = $true }
+        if ($body) { $mcpFields['System.Description'] = $body; $hasEdit = $true }
+        if ($status) { $mcpFields['System.State'] = (Convert-FrontierStatusToAdoState $status); $hasEdit = $true }
+        if ($labelStr) {
+            $labels = ConvertTo-IssueLabels $labelStr
+            $mcpFields['System.Tags'] = ($labels -join '; ')
+            $hasEdit = $true
+        }
+
+        if ($hasEdit) {
+            Invoke-AdoOperation -OperationName 'update' -McpBlock {
+                $tool = Get-AdoMcpToolName 'update'
+                $toolArguments = @{ project = $project; id = $num; fields = $mcpFields }
+                $null = Invoke-AdoMcpTool -Tool $tool -Arguments $toolArguments
+            }
+        }
+
+        return (Get-AdoIssue $num)
+    }
+
+    if ($title) { $issue.title = $title }
+    if ($status) { $issue.status = $status }
+    if ($body) { $issue.body = $body }
+    if ($labelStr) { $issue.labels = @(ConvertTo-IssueLabels $labelStr) }
+    $issue.updated = Get-Timestamp
+    Save-LocalIssue $issue
+    return $issue
+}
+
+function Close-ProviderIssue([int]$num) {
+    $provider = Get-FrontierProvider
+
+    if ($provider -eq 'github') {
+        $ghArgs = @('issue', 'close', "$num", '--reason', 'completed')
+        $null = Invoke-GitHubCli $ghArgs "Failed to close GitHub issue #$num." -AllowEmptyOutput
+        if (Test-GitHubProjectConfigured) {
+            if (-not (Set-GitHubProjectIssueStatus $num 'Done' $false)) {
+                Write-CliOutput "$($C.y)GitHub issue #${num} was closed, but the configured project status could not be updated to Done.$($C.n)"
+            }
+        }
+        return (Get-GitHubIssue $num)
+    }
+
+    if ($provider -eq 'ado') {
+        $project = Get-AdoProjectName
+        Invoke-AdoOperation -OperationName 'close' -McpBlock {
+            $tool = Get-AdoMcpToolName 'update'
+            $null = Invoke-AdoMcpTool -Tool $tool -Arguments @{
+                project = $project
+                id = $num
+                fields = @{ 'System.State' = 'Closed' }
+            }
+        }
+        return (Get-AdoIssue $num)
+    }
+
+    $issue = Get-LocalIssue $num
+    if (-not $issue) { throw "Issue #$num not found" }
+    $issue.state = 'closed'
+    $issue.status = 'Done'
+    $issue.updated = Get-Timestamp
+    Save-LocalIssue $issue
+    return $issue
+}
+
+function Add-ProviderIssueComment([int]$num, [string]$body) {
+    $provider = Get-FrontierProvider
+
+    if ($provider -eq 'github') {
+        $ghArgs = @('issue', 'comment', "$num", '--body', $body)
+        $null = Invoke-GitHubCli $ghArgs "Failed to add a comment to GitHub issue #$num." -AllowEmptyOutput
+        return (Get-GitHubIssue $num)
+    }
+
+    if ($provider -eq 'ado') {
+        $project = Get-AdoProjectName
+        Invoke-AdoOperation -OperationName 'comment' -McpBlock {
+            $tool = Get-AdoMcpToolName 'comment'
+            $null = Invoke-AdoMcpTool -Tool $tool -Arguments @{
+                project = $project
+                workItemId = $num
+                comment = $body
+            }
+        }
+        return (Get-AdoIssue $num)
+    }
+
+    $issue = Get-LocalIssue $num
+    if (-not $issue) { throw "Issue #$num not found" }
+    $comment = [PSCustomObject]@{ body = $body; created = Get-Timestamp }
+    $issue.comments = @($issue.comments) + @($comment)
+    $issue.updated = Get-Timestamp
+    Save-LocalIssue $issue
+    return $issue
+}
+
+function Get-BacklogSyncStatus($issue) {
+    if ($issue.state -eq 'closed') { return 'Done' }
+    if (-not [string]::IsNullOrWhiteSpace([string]$issue.status)) { return [string]$issue.status }
+    return 'Backlog'
+}
+
+function Get-GitHubBacklogSyncState($cfg, [string]$repo) {
+    $rawState = Get-ConfigValue $cfg 'githubBacklogSync'
+    $issueMap = @{}
+    if ($rawState) {
+        $rawMap = Get-ConfigValue $rawState 'issueMap'
+        if ($rawMap -is [hashtable]) {
+            foreach ($entry in $rawMap.GetEnumerator()) {
+                $issueMap[[string]$entry.Key] = [int]$entry.Value
+            }
+        } elseif ($rawMap) {
+            foreach ($property in $rawMap.PSObject.Properties) {
+                $issueMap[[string]$property.Name] = [int]$property.Value
+            }
+        }
+    }
+
+    $stateRepo = [string](Get-ConfigValue $rawState 'repo' '')
+    if ($stateRepo -and $repo -and $stateRepo -ne $repo) {
+        $issueMap = @{}
+        $rawState = $null
+        $stateRepo = ''
+    }
+
+    return [PSCustomObject]@{
+        repo = if ($stateRepo) { $stateRepo } else { $repo }
+        completed = [bool](Get-ConfigValue $rawState 'completed' $false)
+        issueMap = $issueMap
+        migratedAt = [string](Get-ConfigValue $rawState 'migratedAt' '')
+    }
+}
+
+function Save-GitHubBacklogSyncState($cfg, [string]$repo, [hashtable]$issueMap, [bool]$completed) {
+    $syncState = [PSCustomObject]@{
+        repo = $repo
+        completed = $completed
+        issueMap = $issueMap
+        migratedAt = if ($completed) { Get-Timestamp } else { '' }
+    }
+    Set-ConfigValue $cfg 'githubBacklogSync' $syncState
+}
+
+function Sync-LocalIssueCommentsToGitHub($localIssue, $remoteIssue, [int]$remoteIssueNumber) {
+    $remoteCommentBodies = @{}
+    foreach ($remoteComment in @($remoteIssue.comments)) {
+        $body = [string](Get-ConfigValue $remoteComment 'body' '')
+        if (-not [string]::IsNullOrWhiteSpace($body)) {
+            $remoteCommentBodies[$body] = $true
+        }
+    }
+
+    $syncStatus = Get-BacklogSyncStatus $localIssue
+    $migrationSummary = "[Frontier migration] Migrated from local issue #$($localIssue.number). Original status: $syncStatus. Original state: $($localIssue.state)."
+    if (-not $remoteCommentBodies.ContainsKey($migrationSummary)) {
+        $null = Invoke-GitHubCli @('issue', 'comment', "$remoteIssueNumber", '--body', $migrationSummary) "Failed to write migration summary for GitHub issue #$remoteIssueNumber." -AllowEmptyOutput
+        $remoteCommentBodies[$migrationSummary] = $true
+    }
+
+    foreach ($comment in @($localIssue.comments)) {
+        $commentBody = [string](Get-ConfigValue $comment 'body' '')
+        if ([string]::IsNullOrWhiteSpace($commentBody)) { continue }
+        $createdAt = [string](Get-ConfigValue $comment 'created' '')
+        $prefix = if ($createdAt) {
+            "[Migrated local comment from $createdAt]"
+        } else {
+            '[Migrated local comment]'
+        }
+        $formattedBody = "$prefix`n$commentBody"
+        if ($remoteCommentBodies.ContainsKey($formattedBody)) { continue }
+        $null = Invoke-GitHubCli @('issue', 'comment', "$remoteIssueNumber", '--body', $formattedBody) "Failed to migrate a comment for GitHub issue #$remoteIssueNumber." -AllowEmptyOutput
+        $remoteCommentBodies[$formattedBody] = $true
+    }
+}
+
+function Sync-LocalIssueToGitHub($localIssue, [int]$remoteIssueNumber) {
+    $remoteIssue = Get-GitHubIssue $remoteIssueNumber
+    if (-not $remoteIssue) { return $false }
+
+    $editArgs = @('issue', 'edit', "$remoteIssueNumber")
+    $hasEdit = $false
+    if ($remoteIssue.title -ne $localIssue.title) {
+        $editArgs += @('--title', $localIssue.title)
+        $hasEdit = $true
+    }
+
+    $localBody = if ($localIssue.body) { [string]$localIssue.body } else { '' }
+    $remoteBody = if ($remoteIssue.body) { [string]$remoteIssue.body } else { '' }
+    if ($remoteBody -ne $localBody) {
+        $editArgs += @('--body', $localBody)
+        $hasEdit = $true
+    }
+
+    $localLabels = @($localIssue.labels | ForEach-Object { [string]$_ } | Where-Object { $_ })
+    $remoteLabels = @($remoteIssue.labels | ForEach-Object { [string]$_ } | Where-Object { $_ })
+    foreach ($label in ($localLabels | Where-Object { $_ -notin $remoteLabels })) {
+        $editArgs += @('--add-label', $label)
+        $hasEdit = $true
+    }
+    foreach ($label in ($remoteLabels | Where-Object { $_ -notin $localLabels })) {
+        $editArgs += @('--remove-label', $label)
+        $hasEdit = $true
+    }
+
+    if ($hasEdit) {
+        $null = Invoke-GitHubCli $editArgs "Failed to update migrated GitHub issue #$remoteIssueNumber." -AllowEmptyOutput
+        $remoteIssue = Get-GitHubIssue $remoteIssueNumber
+        if (-not $remoteIssue) { return $false }
+    }
+
+    Sync-LocalIssueCommentsToGitHub $localIssue $remoteIssue $remoteIssueNumber
+
+    $syncStatus = Get-BacklogSyncStatus $localIssue
+    if ($localIssue.state -eq 'closed') {
+        if ($remoteIssue.state -ne 'closed') {
+            $null = Invoke-GitHubCli @('issue', 'close', "$remoteIssueNumber", '--reason', 'completed') "Failed to close migrated GitHub issue #$remoteIssueNumber." -AllowEmptyOutput
+        }
+        if (Test-GitHubProjectConfigured) {
+            $null = Set-GitHubProjectIssueStatus $remoteIssueNumber 'Done' $true
+        }
+        return $true
+    }
+
+    if ($remoteIssue.state -eq 'closed') {
+        $null = Invoke-GitHubCli @('issue', 'reopen', "$remoteIssueNumber") "Failed to reopen migrated GitHub issue #$remoteIssueNumber." -AllowEmptyOutput
+    }
+    if (Test-GitHubProjectConfigured) {
+        $null = Set-GitHubProjectIssueStatus $remoteIssueNumber $syncStatus $true
+    }
+    return $true
+}
+
+
+
+
+function New-GitHubIssueFromLocalIssue($localIssue, [string]$localIssueNumber) {
+    $createArgs = @('issue', 'create', '--title', $localIssue.title)
+    $issueBody = if ([string]::IsNullOrWhiteSpace($localIssue.body)) { $localIssue.title } else { $localIssue.body }
+    $createArgs += @('--body', $issueBody)
+    foreach ($label in @($localIssue.labels)) {
+        if ($label) { $createArgs += @('--label', [string]$label) }
+    }
+
+    $createResult = Invoke-GitHubCli $createArgs "Failed to migrate local issue #$localIssueNumber to GitHub."
+    $createText = ($createResult | Out-String).Trim()
+    if ($createText -notmatch '/issues/(\d+)') {
+        throw "GitHub migration created local issue #$localIssueNumber but could not determine the remote issue number."
+    }
+
+    return [int]$Matches[1]
+}
+
+function Sync-LocalBacklogToGitHubIfNeeded([string]$Repo, [string]$Reason, [switch]$Force) {
+    if ([string]::IsNullOrWhiteSpace($Repo) -or -not (Test-GitHubCliAuthenticated)) { return }
+
+    $localIssues = @(Get-LocalBacklogIssues)
+    Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+        $cfg = Get-FrontierConfig
+        $syncState = Get-GitHubBacklogSyncState $cfg $Repo
+        Set-ConfigValue $cfg 'repo' $Repo
+        Set-FrontierAdapterValue $cfg 'github' 'repo' $Repo
+        if (-not $syncState.completed) {
+            Save-GitHubBacklogSyncState $cfg $Repo $syncState.issueMap $false
+        }
+        Write-JsonFile $Script:CONFIG_FILE $cfg
+    }
+
+    $cfg = Get-FrontierConfig
+    $syncState = Get-GitHubBacklogSyncState $cfg $Repo
+    if ($syncState.completed -and -not $Force) { return }
+
+    if ($localIssues.Count -eq 0) {
+        Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+            $lockedCfg = Get-FrontierConfig
+            Save-GitHubBacklogSyncState $lockedCfg $Repo $syncState.issueMap $true
+            Write-JsonFile $Script:CONFIG_FILE $lockedCfg
+        }
+        return
+    }
+
+    $migratedCount = 0
+    $syncedCount = 0
+    foreach ($issue in $localIssues) {
+        $localIssueNumber = [string]$issue.number
+        if ($syncState.issueMap.ContainsKey($localIssueNumber)) {
+            $remoteIssueNumber = [int]$syncState.issueMap[$localIssueNumber]
+            if (-not (Sync-LocalIssueToGitHub $issue $remoteIssueNumber)) {
+                $remoteIssueNumber = New-GitHubIssueFromLocalIssue $issue $localIssueNumber
+                $syncState.issueMap[$localIssueNumber] = $remoteIssueNumber
+                $migratedCount++
+            } else {
+                $syncedCount++
+                continue
+            }
+        } else {
+            $remoteIssueNumber = New-GitHubIssueFromLocalIssue $issue $localIssueNumber
+            $syncState.issueMap[$localIssueNumber] = $remoteIssueNumber
+            $migratedCount++
+        }
+
+        $null = Sync-LocalIssueToGitHub $issue $remoteIssueNumber
+
+        Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+            $lockedCfg = Get-FrontierConfig
+            Save-GitHubBacklogSyncState $lockedCfg $Repo $syncState.issueMap $false
+            Write-JsonFile $Script:CONFIG_FILE $lockedCfg
+        }
+    }
+
+    Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+        $lockedCfg = Get-FrontierConfig
+        Save-GitHubBacklogSyncState $lockedCfg $Repo $syncState.issueMap $true
+        Write-JsonFile $Script:CONFIG_FILE $lockedCfg
+    }
+
+    if (-not $Script:JsonOutput -and ($migratedCount -gt 0 -or $syncedCount -gt 0)) {
+        Write-CliOutput "$($C.g)  Synced local backlog to GitHub for $Repo. Created: $migratedCount, refreshed: $syncedCount.$($C.n)"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Git-backed persistence helpers
+# ---------------------------------------------------------------------------
+# When config.persistence = 'git', issues and memory are stored on a Git
+# orphan branch (agentx/data) using low-level plumbing commands. The working
+# tree and real index are never touched.
+# ---------------------------------------------------------------------------
+
+$Script:DATA_BRANCH = 'agentx/data'
+$Script:EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf899d15f3277a76d'
+
+function Get-PersistenceMode {
+    $cfg = Get-FrontierConfig
+    if ($cfg -is [hashtable]) {
+        if ($cfg.ContainsKey('persistence') -and $null -ne $cfg['persistence']) { return $cfg['persistence'] }
+        return 'file'
+    }
+    $p = $cfg.PSObject.Properties['persistence']
+    if ($p) { return $p.Value }
+    return 'file'
+}
+
+function Test-GitDataBranch {
+    try {
+        $null = & git -C $Script:ROOT rev-parse --verify "refs/heads/$Script:DATA_BRANCH" 2>$null
+        return $LASTEXITCODE -eq 0
+    } catch { return $false }
+}
+
+function Initialize-GitDataBranch {
+    if (Test-GitDataBranch) { return }
+    try {
+        $commitHash = (& git -C $Script:ROOT commit-tree $Script:EMPTY_TREE_HASH -m 'Initialize agentx data branch' 2>$null).Trim()
+        & git -C $Script:ROOT update-ref "refs/heads/$Script:DATA_BRANCH" $commitHash 2>$null
+    } catch {
+        throw "Failed to initialize Git data branch: $_"
+    }
+}
+
+function Read-GitFile([string]$filePath) {
+    $normalized = $filePath -replace '\\', '/'
+    try {
+        $content = & git -C $Script:ROOT show "${Script:DATA_BRANCH}:${normalized}" 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        return ($content -join "`n")
+    } catch { return $null }
+}
+
+function Read-GitJson([string]$filePath) {
+    $raw = Read-GitFile $filePath
+    if (-not $raw) { return $null }
+    try { return $raw | ConvertFrom-Json } catch { return $null }
+}
+
+
+
+
+function Write-GitFiles([array]$entries, [string]$message) {
+    Initialize-GitDataBranch
+    $gitDir = (& git -C $Script:ROOT rev-parse --git-dir 2>$null).Trim()
+    if (-not [System.IO.Path]::IsPathRooted($gitDir)) {
+        $gitDir = Join-Path $Script:ROOT $gitDir
+    }
+    $rand = [System.IO.Path]::GetRandomFileName() -replace '\.', ''
+    $tmpIndex = Join-Path $gitDir "agentx-tmp-index-$rand"
+    $savedIndex = $env:GIT_INDEX_FILE
+
+    try {
+        $env:GIT_INDEX_FILE = $tmpIndex
+
+        # Read current tree into temp index
+        if (Test-GitDataBranch) {
+            & git -C $Script:ROOT read-tree $Script:DATA_BRANCH 2>$null
+        }
+
+        # Hash each file and add to temp index
+        foreach ($entry in $entries) {
+            $normalized = $entry.filePath -replace '\\', '/'
+            $blobHash = ($entry.content | & git -C $Script:ROOT hash-object -w --stdin 2>$null).Trim()
+            & git -C $Script:ROOT update-index --add --cacheinfo "100644,$blobHash,$normalized" 2>$null
+        }
+
+        # Write tree from temp index
+        $treeHash = (& git -C $Script:ROOT write-tree 2>$null).Trim()
+
+        # Get parent commit
+        $parentArgs = @()
+        try {
+            $parent = (& git -C $Script:ROOT rev-parse $Script:DATA_BRANCH 2>$null).Trim()
+            if ($parent) { $parentArgs = @('-p', $parent) }
+        } catch { Write-Verbose "No existing data branch parent: $_" }
+
+        $commitHash = (& git -C $Script:ROOT commit-tree $treeHash @parentArgs -m $message 2>$null).Trim()
+
+        # Update branch ref
+        & git -C $Script:ROOT update-ref "refs/heads/$Script:DATA_BRANCH" $commitHash 2>$null
+
+        return $commitHash
+    } finally {
+        if ($savedIndex) { $env:GIT_INDEX_FILE = $savedIndex }
+        else { Remove-Item Env:GIT_INDEX_FILE -ErrorAction SilentlyContinue }
+        Remove-Item $tmpIndex -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Write-GitFile([string]$filePath, [string]$content, [string]$message) {
+    return Write-GitFiles @(@{ filePath = $filePath; content = $content }) $message
+}
+
+function Write-GitJson([string]$filePath, $data, [string]$message) {
+    $json = ($data | ConvertTo-Json -Depth 10) + "`n"
+    return Write-GitFile $filePath $json $message
+}
+
+
+
+
+function Remove-GitFile([string]$filePath, [string]$message) {
+    if (-not (Test-GitDataBranch)) { return $null }
+    $gitDir = (& git -C $Script:ROOT rev-parse --git-dir 2>$null).Trim()
+    if (-not [System.IO.Path]::IsPathRooted($gitDir)) {
+        $gitDir = Join-Path $Script:ROOT $gitDir
+    }
+    $rand = [System.IO.Path]::GetRandomFileName() -replace '\.', ''
+    $tmpIndex = Join-Path $gitDir "agentx-tmp-index-$rand"
+    $savedIndex = $env:GIT_INDEX_FILE
+
+    try {
+        $env:GIT_INDEX_FILE = $tmpIndex
+        & git -C $Script:ROOT read-tree $Script:DATA_BRANCH 2>$null
+        $normalized = $filePath -replace '\\', '/'
+        & git -C $Script:ROOT update-index --force-remove $normalized 2>$null
+        $treeHash = (& git -C $Script:ROOT write-tree 2>$null).Trim()
+        $parent = (& git -C $Script:ROOT rev-parse $Script:DATA_BRANCH 2>$null).Trim()
+        $commitHash = (& git -C $Script:ROOT commit-tree $treeHash -p $parent -m $message 2>$null).Trim()
+        & git -C $Script:ROOT update-ref "refs/heads/$Script:DATA_BRANCH" $commitHash 2>$null
+        return $commitHash
+    } finally {
+        if ($savedIndex) { $env:GIT_INDEX_FILE = $savedIndex }
+        else { Remove-Item Env:GIT_INDEX_FILE -ErrorAction SilentlyContinue }
+        Remove-Item $tmpIndex -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Get-GitFileList([string]$dirPath) {
+    $normalized = ($dirPath -replace '\\', '/').TrimEnd('/')
+    if ($normalized) { $normalized += '/' }
+    try {
+        $output = & git -C $Script:ROOT ls-tree --name-only "${Script:DATA_BRANCH}" $normalized 2>$null
+        if ($LASTEXITCODE -ne 0) { return @() }
+        return @($output | Where-Object { $_ } | ForEach-Object {
+            if ($_.StartsWith($normalized)) { $_.Substring($normalized.Length) } else { $_ }
+        })
+    } catch { return @() }
+}
+
+# ---------------------------------------------------------------------------
+# Git Sync: Push/pull the data branch to/from remote
+# ---------------------------------------------------------------------------
+
+function Invoke-GitSyncCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'status' }
+    switch ($action) {
+        'push' {
+            if (-not (Test-GitDataBranch)) { Write-CliOutput "$($C.y)No data branch to push.$($C.n)"; return }
+            try {
+                & git -C $Script:ROOT push origin "${Script:DATA_BRANCH}:${Script:DATA_BRANCH}" 2>&1
+                Write-CliOutput "$($C.g)  Pushed data branch to origin.$($C.n)"
+            } catch {
+                Write-CliOutput "$($C.r)  Push failed: $_$($C.n)"
+            }
+        }
+        'pull' {
+            try {
+                & git -C $Script:ROOT fetch origin "${Script:DATA_BRANCH}:${Script:DATA_BRANCH}" 2>&1
+                Write-CliOutput "$($C.g)  Pulled data branch from origin.$($C.n)"
+            } catch {
+                Write-CliOutput "$($C.r)  Pull failed: $_$($C.n)"
+            }
+        }
+        default {
+            Write-CliOutput "`n$($C.c)  Git Data Sync$($C.n)"
+            Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+            $persistence = Get-PersistenceMode
+            Write-CliOutput "  Persistence mode: $persistence"
+            if (Test-GitDataBranch) {
+                $lastCommit = (& git -C $Script:ROOT log -1 --format='%h %s (%ar)' $Script:DATA_BRANCH 2>$null)
+                if ($lastCommit) { Write-CliOutput "  Branch: $Script:DATA_BRANCH" ; Write-CliOutput "  Last commit: $lastCommit" }
+            } else {
+                Write-CliOutput "  No data branch found. Run 'frontier config set persistence git' to enable."
+            }
+            Write-CliOutput "`n  Usage: frontier git-sync [push|pull]`n"
+        }
+    }
+}
+
+function Invoke-BacklogSyncCmd {
+    $target = if ($Script:SubArgs.Count -gt 0 -and -not $Script:SubArgs[0].StartsWith('-')) { $Script:SubArgs[0] } else { 'github' }
+    $force = Test-Flag @('--force', '-f')
+
+    switch ($target.ToLowerInvariant()) {
+        'github' {
+            $repo = Get-GitHubRepoSlug
+            if ([string]::IsNullOrWhiteSpace($repo)) {
+                Write-CliOutput 'Error: No GitHub repo configured or detected from origin.'
+                exit 1
+            }
+            if (-not (Test-GitHubCliAuthenticated)) {
+                Write-CliOutput 'Error: GitHub CLI authentication is required to sync backlog to GitHub.'
+                exit 1
+            }
+            Sync-LocalBacklogToGitHubIfNeeded -Repo $repo -Reason 'manual backlog sync request' -Force:$force
+            if (-not $Script:JsonOutput) {
+                Write-CliOutput "$($C.g)  GitHub backlog sync completed for $repo.$($C.n)"
+            }
+        }
+        default {
+            Write-CliOutput "Usage: frontier backlog-sync [github] [--force]"
+            exit 1
+        }
+    }
+}
+
+function Invoke-Shell([string]$cmd) {
+    try {
+        $result = & $env:COMSPEC /c $cmd 2>$null
+        if ($IsLinux -or $IsMacOS) {
+            $result = bash -c $cmd 2>$null
+        }
+        return ($result -join "`n").Trim()
+    } catch { return '' }
+}
+
+# ANSI colors (disabled when NO_COLOR env is set per https://no-color.org/)
+if ($env:NO_COLOR) {
+    $Script:C = @{ r = ''; g = ''; y = ''; b = ''; m = ''; c = ''; w = ''; d = ''; n = '' }
+} else {
+    $Script:C = @{
+        r = "`e[31m"; g = "`e[32m"; y = "`e[33m"; b = "`e[34m"
+        m = "`e[35m"; c = "`e[36m"; w = "`e[37m"; d = "`e[90m"; n = "`e[0m"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Parse CLI args
+# ---------------------------------------------------------------------------
+
+$Script:CliArgs = @(if ($Help) { 'help' } else { $args })
+$requestedCommand = if ($CliArgs.Count -gt 0) { $CliArgs[0] } else { 'help' }
+$Script:Command = if ($requestedCommand -in @('-h', '--help', '/?')) { 'help' } else { $requestedCommand }
+$Script:SubArgs = @(if ($CliArgs.Count -gt 1) { $CliArgs[1..($CliArgs.Count - 1)] } else { @() })
+
+function Get-Flag([string[]]$flags, [string]$default = '') {
+    for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
+        if ($flags -contains $Script:SubArgs[$i] -and ($i + 1) -lt $Script:SubArgs.Count) {
+            return $Script:SubArgs[$i + 1]
+        }
+    }
+    return $default
+}
+
+function Get-JoinedFlagValue([string[]]$flags) {
+    # Every occurrence counts, and an unquoted PowerShell list such as a=1,b=2 arrives as an array.
+    $values = for ($i = 0; $i -lt $Script:SubArgs.Count - 1; $i++) {
+        if ($flags -contains $Script:SubArgs[$i]) { @($Script:SubArgs[$i + 1]) -join ',' }
+    }
+    return @($values) -join ','
+}
+
+function Get-DecodedFlag([string[]]$plainFlags, [string[]]$encodedFlags, [string]$default = '') {
+    $encoded = Get-Flag $encodedFlags
+    if (-not [string]::IsNullOrWhiteSpace($encoded)) {
+        try {
+            return [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encoded))
+        } catch {
+            throw "Invalid base64 value provided for $($encodedFlags -join '/')."
+        }
+    }
+
+    return Get-Flag $plainFlags $default
+}
+
+function Test-Flag([string[]]$flags) {
+    return @($Script:SubArgs | Where-Object { $flags -contains $_ }).Count -gt 0
+}
+
+$Script:JsonOutput = Test-Flag @('--json', '-j')
+
+# ---------------------------------------------------------------------------
+# BUNDLE: Task bundle management
+# ---------------------------------------------------------------------------
+
+function Get-TaskBundleDirectory {
+    return $Script:TASK_BUNDLES_DIR
+}
+
+function Get-TaskBundleFilePath([string]$bundleId) {
+    return Join-Path (Get-TaskBundleDirectory) ("$bundleId.json")
+}
+
+function Format-TaskBundleState([string]$value, [string]$default = 'Ready') {
+    if ([string]::IsNullOrWhiteSpace($value)) { return $default }
+    switch ($value.Trim().ToLowerInvariant()) {
+        'proposed' { return 'Proposed' }
+        'ready' { return 'Ready' }
+        'in progress' { return 'In Progress' }
+        'in-progress' { return 'In Progress' }
+        'in_review' { return 'In Review' }
+        'in review' { return 'In Review' }
+        'in-review' { return 'In Review' }
+        'done' { return 'Done' }
+        'archived' { return 'Archived' }
+        default { throw "Unsupported task bundle state '$value'. Use Proposed, Ready, In Progress, In Review, Done, or Archived." }
+    }
+}
+
+function Format-TaskBundlePriority([string]$value, [string]$default = 'p1') {
+    if ([string]::IsNullOrWhiteSpace($value)) { return $default }
+    $normalized = $value.Trim().ToLowerInvariant()
+    if ($normalized -notin @('p0', 'p1', 'p2', 'p3')) {
+        throw "Unsupported task bundle priority '$value'. Use p0, p1, p2, or p3."
+    }
+    return $normalized
+}
+
+function Format-TaskBundlePromotionMode([string]$value, [string]$default = 'none') {
+    if ([string]::IsNullOrWhiteSpace($value)) { return $default }
+    switch ($value.Trim().ToLowerInvariant()) {
+        'none' { return 'none' }
+        'story' { return 'story_candidate' }
+        'story_candidate' { return 'story_candidate' }
+        'feature' { return 'feature_candidate' }
+        'feature_candidate' { return 'feature_candidate' }
+        'review-finding' { return 'review_finding_candidate' }
+        'review_finding' { return 'review_finding_candidate' }
+        'review_finding_candidate' { return 'review_finding_candidate' }
+        'review-finding_candidate' { return 'review_finding_candidate' }
+        default { throw "Unsupported task bundle promotion mode '$value'." }
+    }
+}
+
+function Format-TaskBundleTargetType([string]$value, [string]$default = '') {
+    if ([string]::IsNullOrWhiteSpace($value)) { return $default }
+    switch ($value.Trim().ToLowerInvariant()) {
+        'story' { return 'story' }
+        'feature' { return 'feature' }
+        'review-finding' { return 'review-finding' }
+        'review_finding' { return 'review-finding' }
+        'none' { return 'none' }
+        default { throw "Unsupported task bundle promotion target '$value'." }
+    }
+}
+
+function Format-TaskBundleTitleKey([string]$value) {
+    if ([string]::IsNullOrWhiteSpace($value)) { return '' }
+    return (($value.ToLowerInvariant() -replace '[^a-z0-9]+', '-') -replace '^-+', '' -replace '-+$', '')
+}
+
+function ConvertTo-StringArray([string]$raw) {
+    if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
+    return @(($raw -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+}
+
+function ConvertTo-RelativeWorkspacePath([string]$pathValue) {
+    if ([string]::IsNullOrWhiteSpace($pathValue)) { return '' }
+    $candidate = $pathValue.Replace('/', [IO.Path]::DirectorySeparatorChar).Replace('\\', [IO.Path]::DirectorySeparatorChar)
+    if ([IO.Path]::IsPathRooted($candidate)) {
+        $resolved = [IO.Path]::GetFullPath($candidate)
+    } else {
+        $resolved = [IO.Path]::GetFullPath((Join-Path $Script:ROOT $candidate))
+    }
+
+    $rootWithSeparator = $Script:ROOT.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    if ($resolved.StartsWith($rootWithSeparator, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $resolved.Substring($rootWithSeparator.Length).Replace([IO.Path]::DirectorySeparatorChar, '/')
+    }
+
+    return $resolved.Replace([IO.Path]::DirectorySeparatorChar, '/')
+}
+
+function Get-FrontierIssueByNumber([int]$number) {
+    $provider = Get-FrontierProvider
+    if ($provider -eq 'github') { return Get-GitHubIssue $number }
+    if ($provider -eq 'ado') { return Get-AdoIssue $number }
+    return Get-Issue $number
+}
+
+function Get-TaskBundleActiveThreadContext {
+    $filePath = Join-Path $Script:FRONTIER_STATE_DIR 'state' 'harness-state.json'
+    $state = Read-JsonFile $filePath
+    if (-not $state) { return $null }
+    $activeThreads = @($state.threads | Where-Object { $_.status -eq 'active' })
+    if (@($activeThreads).Count -gt 1) {
+        return [PSCustomObject]@{ ambiguous = $true; source = 'active-thread' }
+    }
+    if (@($activeThreads).Count -ne 1) { return $null }
+
+    $thread = $activeThreads[0]
+    return [PSCustomObject]@{
+        issueNumber = if ($thread.PSObject.Properties['issueNumber'] -and $thread.issueNumber) { [int]$thread.issueNumber } else { $null }
+        planReference = if ($thread.PSObject.Properties['planPath']) { [string]$thread.planPath } else { '' }
+        threadId = if ($thread.PSObject.Properties['id']) { [string]$thread.id } else { '' }
+        source = 'active-thread'
+    }
+}
+
+function Get-TaskBundleActiveIssueContext {
+    $activeIssues = @(
+        Get-AllIssues | Where-Object {
+            $state = if ($_.state) { [string]$_.state } else { 'open' }
+            $status = if ($_.status) { [string]$_.status } else { '' }
+            ($state -eq 'open') -and ($status.Trim().ToLowerInvariant() -eq 'in progress')
+        }
+    )
+    if (@($activeIssues).Count -gt 1) {
+        return [PSCustomObject]@{ ambiguous = $true; source = 'active-issue' }
+    }
+    if (@($activeIssues).Count -ne 1) { return $null }
+
+    return [PSCustomObject]@{
+        issueNumber = [int]$activeIssues[0].number
+        issueTitle = [string]$activeIssues[0].title
+        source = 'active-issue'
+    }
+}
+
+
+
+
+function Get-TaskBundlePlanCandidates {
+    $candidates = @()
+    foreach ($relativeDir in @('docs/execution/plans', 'docs/plans')) {
+        $directory = Join-Path $Script:ROOT $relativeDir.Replace('/', [IO.Path]::DirectorySeparatorChar)
+        if (-not (Test-Path $directory)) { continue }
+        $candidates += @(Get-ChildItem -Path $directory -Filter '*.md' -File -Recurse | ForEach-Object {
+            ConvertTo-RelativeWorkspacePath $_.FullName
+        })
+    }
+    return @($candidates | Sort-Object -Unique)
+}
+
+function Resolve-TaskBundleContext([int]$issueNumber = 0, [string]$planReference = '', [switch]$AllowAll) {
+    $normalizedPlan = if ([string]::IsNullOrWhiteSpace($planReference)) { '' } else { ConvertTo-RelativeWorkspacePath $planReference }
+
+    if ($issueNumber -gt 0 -or $normalizedPlan) {
+        $issue = if ($issueNumber -gt 0) { Get-FrontierIssueByNumber $issueNumber } else { $null }
+        if ($issueNumber -gt 0 -and -not $issue) {
+            throw "Task bundle parent issue #$issueNumber was not found."
+        }
+        if ($normalizedPlan) {
+            $absolutePlanPath = Join-Path $Script:ROOT $normalizedPlan.Replace('/', [IO.Path]::DirectorySeparatorChar)
+            if (-not (Test-Path $absolutePlanPath)) {
+                throw "Task bundle parent plan '$normalizedPlan' was not found."
+            }
+        }
+
+        return [PSCustomObject]@{
+            issueNumber = if ($issueNumber -gt 0) { $issueNumber } else { $null }
+            issueTitle = if ($issue) { [string]$issue.title } else { '' }
+            planReference = $normalizedPlan
+            threadId = ''
+            source = if ($issueNumber -gt 0 -and $normalizedPlan) { 'explicit-issue-and-plan' } elseif ($issueNumber -gt 0) { 'explicit-issue' } else { 'explicit-plan' }
+        }
+    }
+
+    $threadContext = Get-TaskBundleActiveThreadContext
+    if ($threadContext -and $threadContext.PSObject.Properties['ambiguous'] -and $threadContext.ambiguous) {
+        throw 'Task bundle context is ambiguous. Use --issue <number>, --plan <path>, or --all for a repo-wide list.'
+    }
+    if ($threadContext -and ($threadContext.issueNumber -or $threadContext.planReference)) {
+        $issueTitle = ''
+        if ($threadContext.issueNumber) {
+            $issue = Get-FrontierIssueByNumber ([int]$threadContext.issueNumber)
+            if ($issue) { $issueTitle = [string]$issue.title }
+        }
+        return [PSCustomObject]@{
+            issueNumber = $threadContext.issueNumber
+            issueTitle = $issueTitle
+            planReference = $threadContext.planReference
+            threadId = $threadContext.threadId
+            source = $threadContext.source
+        }
+    }
+
+    $issueContext = Get-TaskBundleActiveIssueContext
+    if ($issueContext -and $issueContext.PSObject.Properties['ambiguous'] -and $issueContext.ambiguous) {
+        throw 'Task bundle context is ambiguous. Use --issue <number>, --plan <path>, or --all for a repo-wide list.'
+    }
+    if ($issueContext) {
+        return [PSCustomObject]@{
+            issueNumber = $issueContext.issueNumber
+            issueTitle = $issueContext.issueTitle
+            planReference = ''
+            threadId = ''
+            source = $issueContext.source
+        }
+    }
+
+    $planCandidates = Get-TaskBundlePlanCandidates
+    if (@($planCandidates).Count -eq 1) {
+        return [PSCustomObject]@{
+            issueNumber = $null
+            issueTitle = ''
+            planReference = $planCandidates[0]
+            threadId = ''
+            source = 'single-plan'
+        }
+    }
+
+    if ($AllowAll) {
+        return [PSCustomObject]@{
+            issueNumber = $null
+            issueTitle = ''
+            planReference = ''
+            threadId = ''
+            source = 'all'
+        }
+    }
+
+    throw 'Task bundle context is ambiguous. Use --issue <number>, --plan <path>, or --all for a repo-wide list.'
+}
+
+
+
+
+function New-TaskBundleId {
+    $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmssfff')
+    $suffix = [System.Guid]::NewGuid().ToString('N').Substring(0, 6)
+    return "bundle-$stamp-$suffix"
+}
+
+
+
+
+function Get-TaskBundles {
+    $directory = Get-TaskBundleDirectory
+    if (-not (Test-Path $directory)) { return @() }
+
+    $records = @()
+    foreach ($file in Get-ChildItem -Path $directory -Filter '*.json' -File) {
+        $record = Read-JsonFile $file.FullName
+        if (-not $record) { continue }
+        if (-not $record.PSObject.Properties['bundle_id']) { continue }
+        $records += @($record)
+    }
+
+    return @($records | Sort-Object -Property @{ Expression = { $_.updated_at } ; Descending = $true })
+}
+
+function Get-TaskBundle([string]$bundleId) {
+    if ([string]::IsNullOrWhiteSpace($bundleId)) { return $null }
+    $filePath = Get-TaskBundleFilePath $bundleId
+    return Read-JsonFile $filePath
+}
+
+function Save-TaskBundle($bundle) {
+    if (-not $bundle) { throw 'Cannot save an empty task bundle.' }
+    $filePath = Get-TaskBundleFilePath ([string]$bundle.bundle_id)
+    Write-JsonFile $filePath $bundle
+}
+
+function Get-TaskBundleFilterMatch($bundle, $context, [string]$stateFilter = '', [string]$priorityFilter = '') {
+    if ($context.issueNumber) {
+        $bundleIssueNumber = if ($bundle.parent_context.PSObject.Properties['issue_number']) { [int]$bundle.parent_context.issue_number } else { 0 }
+        if ($bundleIssueNumber -ne [int]$context.issueNumber) { return $false }
+    }
+    if ($context.planReference) {
+        $bundlePlan = if ($bundle.parent_context.PSObject.Properties['plan_reference']) { [string]$bundle.parent_context.plan_reference } else { '' }
+        if ($bundlePlan -ne [string]$context.planReference) { return $false }
+    }
+    if ($stateFilter) {
+        if ((Format-TaskBundleState $bundle.state) -ne (Format-TaskBundleState $stateFilter)) { return $false }
+    }
+    if ($priorityFilter) {
+        if ((Format-TaskBundlePriority $bundle.priority) -ne (Format-TaskBundlePriority $priorityFilter)) { return $false }
+    }
+    return $true
+}
+
+function Get-TaskBundleDefaultEvidence($context) {
+    $evidence = @()
+    if ($context.issueNumber) { $evidence += @("issue:#$($context.issueNumber)") }
+    if ($context.planReference) { $evidence += @([string]$context.planReference) }
+    return @($evidence | Sort-Object -Unique)
+}
+
+function Get-TaskBundlePromotionTargetFromMode([string]$promotionMode) {
+    switch (Format-TaskBundlePromotionMode $promotionMode) {
+        'story_candidate' { return 'story' }
+        'feature_candidate' { return 'feature' }
+        'review_finding_candidate' { return 'review-finding' }
+        default { return 'none' }
+    }
+}
+
+function Get-TaskBundleIssueDraft($bundle, [string]$targetType) {
+    $labels = @("type:$targetType", "priority:$($bundle.priority)", 'source:task-bundle')
+    $bodyLines = @(
+        '## Source Bundle',
+        "- Bundle ID: $($bundle.bundle_id)",
+        "- Parent Issue: $(if ($bundle.parent_context.issue_number) { "#$($bundle.parent_context.issue_number)" } else { 'none' })",
+        "- Parent Plan: $(if ($bundle.parent_context.plan_reference) { $bundle.parent_context.plan_reference } else { 'none' })",
+        "- Promotion Mode: $($bundle.promotion_mode)",
+        '',
+        '## Summary',
+        $(if ($bundle.summary) { [string]$bundle.summary } else { 'No bundle summary provided.' })
+    )
+    if (@($bundle.evidence_links).Count -gt 0) {
+        $bodyLines += @('', '## Evidence Links')
+        $bodyLines += @($bundle.evidence_links | ForEach-Object { "- $_" })
+    }
+
+    return [PSCustomObject]@{
+        title = $bundle.title
+        body = ($bodyLines -join "`n")
+        labels = $labels
+    }
+}
+
+function Get-TaskBundleDuplicateIssueMatch($bundle, [string]$targetType) {
+    $targetLabel = "type:$targetType"
+    $titleKey = Format-TaskBundleTitleKey $bundle.title
+    $parentIssue = if ($bundle.parent_context.issue_number) { [int]$bundle.parent_context.issue_number } else { 0 }
+    $parentPlan = if ($bundle.parent_context.plan_reference) { [string]$bundle.parent_context.plan_reference } else { '' }
+
+    foreach ($issue in @(Get-AllIssues)) {
+        $issueState = if ($null -ne $issue.state -and $issue.state) { $issue.state } else { 'open' }
+        if ($issueState -ne 'open') { continue }
+        if ($targetLabel -notin @($issue.labels)) { continue }
+        $issueBody = if ($issue.body) { [string]$issue.body } else { '' }
+        $issueTitleKey = Format-TaskBundleTitleKey ([string]$issue.title)
+        if ($issueTitleKey -ne $titleKey) { continue }
+
+        $issueParentMatch = [regex]::Match($issueBody, 'Parent Issue:\s+#(?<issue>\d+)')
+        $issuePlanMatch = [regex]::Match($issueBody, 'Parent Plan:\s+(?<plan>[^\r\n]+)')
+        $issueParent = if ($issueParentMatch.Success) { [int]$issueParentMatch.Groups['issue'].Value } else { 0 }
+        $issuePlan = if ($issuePlanMatch.Success) { $issuePlanMatch.Groups['plan'].Value.Trim() } else { '' }
+
+        if ($parentIssue -gt 0 -and $issueParent -ne $parentIssue) { continue }
+        if ($parentPlan -and $issuePlan -ne $parentPlan) { continue }
+        return $issue
+    }
+
+    return $null
+}
+
+function Get-TaskBundleFindingDirectory {
+    return Join-Path $Script:ROOT 'docs' 'artifacts' 'reviews' 'findings'
+}
+
+function Get-TaskBundleFindingPath([string]$bundleId) {
+    return Join-Path (Get-TaskBundleFindingDirectory) ("FINDING-$bundleId.md")
+}
+
+
+
+
+function New-TaskBundleFinding($bundle) {
+    $directory = Get-TaskBundleFindingDirectory
+    if (-not (Test-Path $directory)) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
+
+    $findingPath = Get-TaskBundleFindingPath ([string]$bundle.bundle_id)
+    if (-not (Test-Path $findingPath)) {
+        $content = @(
+            '---',
+            "id: FINDING-$($bundle.bundle_id)",
+            "title: $($bundle.title)",
+            "source_review: task-bundle:$($bundle.bundle_id)",
+            "source_issue: $(if ($bundle.parent_context.issue_number) { $bundle.parent_context.issue_number } else { '' })",
+            'severity: medium',
+            'status: Backlog',
+            "priority: $($bundle.priority)",
+            "owner: $($bundle.owner)",
+            'promotion: required',
+            'suggested_type: story',
+            'labels: type:story,source:task-bundle',
+            "evidence: $((@($bundle.evidence_links) -join ','))",
+            'backlog_issue: ',
+            "created: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd'))",
+            "updated: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd'))",
+            '---',
+            '',
+            "# Review Finding: $($bundle.title)",
+            '',
+            '## Summary',
+            '',
+            $(if ($bundle.summary) { [string]$bundle.summary } else { 'Task bundle promoted into a durable review finding.' }),
+            '',
+            '## Impact',
+            '',
+            '- Follow-up should remain visible in durable review findings.',
+            '',
+            '## Recommended Action',
+            '',
+            '- Promote this finding into the normal backlog if it becomes durable implementation work.',
+            ''
+        ) -join "`n"
+        Set-Content -Path $findingPath -Value $content -Encoding utf8
+    }
+
+    return ConvertTo-RelativeWorkspacePath $findingPath
+}
+
+function Get-TaskBundlePromotionResult($bundle, [string]$targetType, [string]$targetReference, [string]$duplicateCheckResult) {
+    return [PSCustomObject]@{
+        bundle = $bundle
+        targetType = $targetType
+        targetReference = $targetReference
+        duplicateCheckResult = $duplicateCheckResult
+    }
+}
+
+function Invoke-BundleCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'list' }
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+    switch ($action) {
+        'create' { Invoke-BundleCreate }
+        'list' { Invoke-BundleList }
+        'get' { Invoke-BundleGet }
+        'resolve' { Invoke-BundleResolve }
+        'promote' { Invoke-BundlePromote }
+        default { Write-CliOutput "Unknown bundle action: $action"; exit 1 }
+    }
+}
+
+function Invoke-BundleCreate {
+    $title = Get-DecodedFlag @('-t', '--title') @('--title-base64')
+    $summary = Get-DecodedFlag @('-s', '--summary') @('--summary-base64')
+    $owner = Get-Flag @('-o', '--owner') 'engineer'
+    $priority = Format-TaskBundlePriority (Get-Flag @('-p', '--priority') 'p1')
+    $promotionMode = Format-TaskBundlePromotionMode (Get-Flag @('--promotion-mode') 'none')
+    $explicitIssueNumber = [int](Get-Flag @('-i', '--issue') '0')
+    $explicitPlan = Get-Flag @('--plan')
+    $tags = ConvertTo-StringArray (Get-Flag @('--tags'))
+    $evidenceLinks = ConvertTo-StringArray (Get-Flag @('-e', '--evidence'))
+
+    if ([string]::IsNullOrWhiteSpace($title)) { Write-CliOutput 'Error: --title is required'; exit 1 }
+
+    try {
+        $context = Resolve-TaskBundleContext -issueNumber $explicitIssueNumber -planReference $explicitPlan
+        $bundle = [PSCustomObject]@{
+            bundle_id = New-TaskBundleId
+            title = $title
+            summary = $summary
+            parent_context = [PSCustomObject]@{
+                issue_number = $context.issueNumber
+                issue_title = $context.issueTitle
+                plan_reference = $context.planReference
+                thread_id = $context.threadId
+                source = $context.source
+            }
+            priority = $priority
+            state = 'Ready'
+            owner = $owner
+            evidence_links = @((@($evidenceLinks) + @(Get-TaskBundleDefaultEvidence $context)) | Sort-Object -Unique)
+            promotion_mode = $promotionMode
+            created_at = Get-Timestamp
+            updated_at = Get-Timestamp
+            tags = @($tags)
+        }
+        Save-TaskBundle $bundle
+        if ($Script:JsonOutput) {
+            $bundle | ConvertTo-Json -Depth 8
+        } else {
+            Write-CliOutput "$($C.g)Created task bundle $($bundle.bundle_id): $($bundle.title)$($C.n)"
+        }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-BundleList {
+    $explicitIssueNumber = [int](Get-Flag @('-i', '--issue') '0')
+    $explicitPlan = Get-Flag @('--plan')
+    $stateFilter = Get-Flag @('--state')
+    $priorityFilter = Get-Flag @('--priority')
+    $showAll = Test-Flag @('--all')
+
+    try {
+        $context = Resolve-TaskBundleContext -issueNumber $explicitIssueNumber -planReference $explicitPlan -AllowAll:$showAll
+        $bundles = @(Get-TaskBundles | Where-Object { Get-TaskBundleFilterMatch $_ $context $stateFilter $priorityFilter })
+        if ($Script:JsonOutput) {
+            $bundles | ConvertTo-Json -Depth 8
+            return
+        }
+        if ($bundles.Count -eq 0) {
+            Write-CliOutput "$($C.y)No task bundles found.$($C.n)"
+            return
+        }
+        foreach ($bundle in $bundles) {
+            Write-CliOutput "$($bundle.bundle_id) [$($bundle.state)] $($bundle.priority) - $($bundle.title)"
+        }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-BundleGet {
+    $bundleId = Get-Flag @('--id', '-n')
+    if ([string]::IsNullOrWhiteSpace($bundleId)) { Write-CliOutput 'Error: --id is required'; exit 1 }
+    $bundle = Get-TaskBundle $bundleId
+    if (-not $bundle) { Write-CliOutput "Error: Task bundle '$bundleId' was not found."; exit 1 }
+    $bundle | ConvertTo-Json -Depth 8
+}
+
+function Invoke-BundleResolve {
+    $bundleId = Get-Flag @('--id', '-n')
+    $stateValue = Get-Flag @('--state')
+    $archiveReason = Get-DecodedFlag @('--archive-reason') @('--archive-reason-base64')
+    if ([string]::IsNullOrWhiteSpace($bundleId)) { Write-CliOutput 'Error: --id is required'; exit 1 }
+
+    $bundle = Get-TaskBundle $bundleId
+    if (-not $bundle) { Write-CliOutput "Error: Task bundle '$bundleId' was not found."; exit 1 }
+
+    try {
+        $targetState = if ($stateValue) { Format-TaskBundleState $stateValue } elseif ($archiveReason) { 'Archived' } else { 'Done' }
+        if ($targetState -eq 'Archived' -and [string]::IsNullOrWhiteSpace($archiveReason)) {
+            throw 'Archived task bundles require --archive-reason.'
+        }
+        $bundle.state = $targetState
+        if ($archiveReason) {
+            $bundle | Add-Member -NotePropertyName 'archive_reason' -NotePropertyValue $archiveReason -Force
+        }
+        $bundle.updated_at = Get-Timestamp
+        Save-TaskBundle $bundle
+        if ($Script:JsonOutput) {
+            $bundle | ConvertTo-Json -Depth 8
+        } else {
+            Write-CliOutput "$($C.g)Resolved task bundle $bundleId as $targetState.$($C.n)"
+        }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-BundlePromote {
+    $bundleId = Get-Flag @('--id', '-n')
+    $targetType = Format-TaskBundleTargetType (Get-Flag @('--target') (Get-TaskBundlePromotionTargetFromMode (Get-Flag @('--promotion-mode'))))
+    if ([string]::IsNullOrWhiteSpace($bundleId)) { Write-CliOutput 'Error: --id is required'; exit 1 }
+
+    $bundle = Get-TaskBundle $bundleId
+    if (-not $bundle) { Write-CliOutput "Error: Task bundle '$bundleId' was not found."; exit 1 }
+    if ([string]::IsNullOrWhiteSpace($targetType)) {
+        $targetType = Get-TaskBundlePromotionTargetFromMode ([string]$bundle.promotion_mode)
+    }
+    if ($targetType -eq 'none') {
+        Write-CliOutput "Error: Task bundle '$bundleId' has no durable promotion target. Set --target or use a candidate promotion mode."
+        exit 1
+    }
+
+    if ($bundle.PSObject.Properties['promotion_history'] -and $bundle.promotion_history -and $bundle.promotion_history.target_reference) {
+        $result = Get-TaskBundlePromotionResult $bundle ([string]$bundle.promotion_history.target_type) ([string]$bundle.promotion_history.target_reference) 'already-promoted'
+        if ($Script:JsonOutput) { $result | ConvertTo-Json -Depth 8 } else { Write-CliOutput "$($C.y)Task bundle $bundleId already promoted to $($bundle.promotion_history.target_reference).$($C.n)" }
+        return
+    }
+
+    try {
+        $targetReference = ''
+        $duplicateCheckResult = 'created-new'
+
+        switch ($targetType) {
+            'story' {
+                $existing = Get-TaskBundleDuplicateIssueMatch $bundle 'story'
+                if ($existing) {
+                    $targetReference = "#$($existing.number)"
+                    $duplicateCheckResult = 'linked-existing'
+                } else {
+                    $draft = Get-TaskBundleIssueDraft $bundle 'story'
+                    $issue = New-FrontierIssue $draft.title $draft.body $draft.labels
+                    $targetReference = "#$($issue.number)"
+                }
+            }
+            'feature' {
+                $existing = Get-TaskBundleDuplicateIssueMatch $bundle 'feature'
+                if ($existing) {
+                    $targetReference = "#$($existing.number)"
+                    $duplicateCheckResult = 'linked-existing'
+                } else {
+                    $draft = Get-TaskBundleIssueDraft $bundle 'feature'
+                    $issue = New-FrontierIssue $draft.title $draft.body $draft.labels
+                    $targetReference = "#$($issue.number)"
+                }
+            }
+            'review-finding' {
+                $targetReference = New-TaskBundleFinding $bundle
+            }
+            default {
+                throw "Unsupported promotion target '$targetType'."
+            }
+        }
+
+        $bundle | Add-Member -NotePropertyName 'promotion_history' -NotePropertyValue ([PSCustomObject]@{
+            promotion_decision = $targetType
+            target_type = $targetType
+            target_reference = $targetReference
+            duplicate_check_result = $duplicateCheckResult
+            searchable_status = 'archived'
+            promoted_at = Get-Timestamp
+        }) -Force
+        $bundle.state = 'Archived'
+        $bundle | Add-Member -NotePropertyName 'archive_reason' -NotePropertyValue "Promoted to $targetReference" -Force
+        $bundle.updated_at = Get-Timestamp
+        Save-TaskBundle $bundle
+
+        $result = Get-TaskBundlePromotionResult $bundle $targetType $targetReference $duplicateCheckResult
+        if ($Script:JsonOutput) {
+            $result | ConvertTo-Json -Depth 8
+        } else {
+            Write-CliOutput "$($C.g)Promoted task bundle $bundleId -> $targetReference.$($C.n)"
+        }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+# ---------------------------------------------------------------------------
+# PARALLEL: Bounded parallel delivery
+# ---------------------------------------------------------------------------
+
+function Get-BoundedParallelDirectory {
+    return $Script:BOUNDED_PARALLEL_DIR
+}
+
+function Get-BoundedParallelFilePath([string]$parallelId) {
+    return Join-Path (Get-BoundedParallelDirectory) ("$parallelId.json")
+}
+
+
+
+
+function New-BoundedParallelId {
+    $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmssfff')
+    $suffix = [System.Guid]::NewGuid().ToString('N').Substring(0, 6)
+    return "parallel-$stamp-$suffix"
+}
+
+function Format-ParallelScopeIndependence([string]$value) {
+    switch ($value.Trim().ToLowerInvariant()) {
+        'independent' { return 'independent' }
+        'loosely-coupled' { return 'loosely-coupled' }
+        'loosely_coupled' { return 'loosely-coupled' }
+        'coupled' { return 'coupled' }
+        default { throw "Unsupported scope independence '$value'." }
+    }
+}
+
+function Format-ParallelRisk([string]$value, [string]$fieldName) {
+    $normalized = $value.Trim().ToLowerInvariant()
+    if ($normalized -notin @('low', 'medium', 'high')) {
+        throw "Unsupported $fieldName '$value'. Use low, medium, or high."
+    }
+    return $normalized
+}
+
+function Format-ParallelReviewComplexity([string]$value) {
+    switch ($value.Trim().ToLowerInvariant()) {
+        'bounded' { return 'bounded' }
+        'heightened' { return 'heightened' }
+        'high' { return 'high' }
+        default { throw "Unsupported review complexity '$value'. Use bounded, heightened, or high." }
+    }
+}
+
+function Format-ParallelRecoveryComplexity([string]$value) {
+    switch ($value.Trim().ToLowerInvariant()) {
+        'recoverable' { return 'recoverable' }
+        'contained' { return 'contained' }
+        'high' { return 'high' }
+        default { throw "Unsupported recovery complexity '$value'. Use recoverable, contained, or high." }
+    }
+}
+
+function Format-TaskUnitIsolationMode([string]$value, [string]$default = 'logical') {
+    if ([string]::IsNullOrWhiteSpace($value)) { return $default }
+    switch ($value.Trim().ToLowerInvariant()) {
+        'logical' { return 'logical' }
+        'file_scoped' { return 'file_scoped' }
+        'file-scoped' { return 'file_scoped' }
+        'branch_scoped' { return 'branch_scoped' }
+        'branch-scoped' { return 'branch_scoped' }
+        'worktree_scoped' { return 'worktree_scoped' }
+        'worktree-scoped' { return 'worktree_scoped' }
+        default { throw "Unsupported isolation mode '$value'." }
+    }
+}
+
+function Format-TaskUnitStatus([string]$value, [string]$default = 'Ready') {
+    if ([string]::IsNullOrWhiteSpace($value)) { return $default }
+    switch ($value.Trim().ToLowerInvariant()) {
+        'ready' { return 'Ready' }
+        'in progress' { return 'In Progress' }
+        'in-progress' { return 'In Progress' }
+        'in review' { return 'In Review' }
+        'in-review' { return 'In Review' }
+        'done' { return 'Done' }
+        'blocked' { return 'Blocked' }
+        'abandoned' { return 'Abandoned' }
+        default { throw "Unsupported task-unit status '$value'." }
+    }
+}
+
+function Format-TaskUnitMergeReadiness([string]$value, [string]$default = 'Not Ready') {
+    if ([string]::IsNullOrWhiteSpace($value)) { return $default }
+    switch ($value.Trim().ToLowerInvariant()) {
+        'not ready' { return 'Not Ready' }
+        'ready for review' { return 'Ready For Review' }
+        'ready for reconciliation' { return 'Ready For Reconciliation' }
+        'do not merge' { return 'Do Not Merge' }
+        default { throw "Unsupported task-unit merge readiness '$value'." }
+    }
+}
+
+function Format-ReconciliationVerdict([string]$value, [string]$fieldName) {
+    switch ($value.Trim().ToLowerInvariant()) {
+        'pending' { return 'pending' }
+        'pass' { return 'pass' }
+        'fail' { return 'fail' }
+        default { throw "Unsupported $fieldName '$value'. Use pending, pass, or fail." }
+    }
+}
+
+function Format-OwnerApproval([string]$value) {
+    switch ($value.Trim().ToLowerInvariant()) {
+        'pending' { return 'pending' }
+        'approved' { return 'approved' }
+        'rejected' { return 'rejected' }
+        default { throw "Unsupported owner approval '$value'. Use pending, approved, or rejected." }
+    }
+}
+
+function Get-BoundedParallelDecision($assessment) {
+    if ($assessment.scope_independence -notin @('independent', 'loosely-coupled')) { return 'ineligible' }
+    if ($assessment.dependency_coupling -ne 'low') { return 'ineligible' }
+    if ($assessment.artifact_overlap -ne 'low') { return 'ineligible' }
+    if ($assessment.review_complexity -ne 'bounded') { return 'ineligible' }
+    if ($assessment.recovery_complexity -ne 'recoverable') { return 'ineligible' }
+    return 'eligible'
+}
+
+function Get-BoundedParallelReviewLevel($assessment) {
+    if ((Get-BoundedParallelDecision $assessment) -eq 'eligible') { return 'tightened' }
+    return 'sequential-only'
+}
+
+
+
+
+function Get-BoundedParallelRuns {
+    $directory = Get-BoundedParallelDirectory
+    if (-not (Test-Path $directory)) { return @() }
+    return @(
+        Get-ChildItem -Path $directory -Filter '*.json' -File |
+            ForEach-Object { Read-JsonFile $_.FullName } |
+            Where-Object { $_ -and $_.PSObject.Properties['parallel_id'] }
+    )
+}
+
+function Get-BoundedParallelRun([string]$parallelId) {
+    if ([string]::IsNullOrWhiteSpace($parallelId)) { return $null }
+    return Read-JsonFile (Get-BoundedParallelFilePath $parallelId)
+}
+
+function Save-BoundedParallelRun($run) {
+    Write-JsonFile (Get-BoundedParallelFilePath ([string]$run.parallel_id)) $run
+}
+
+function Get-BoundedParallelSummary($run) {
+    $units = @($run.units)
+    $unitCount = @($units).Count
+    $blockedCount = @($units | Where-Object {
+        $_.status -in @('Blocked', 'Abandoned') -or ([string]$_.summary_signal).Trim().ToLowerInvariant() -eq 'blocked'
+    }).Count
+    $readyForReconciliationCount = @($units | Where-Object { $_.merge_readiness -eq 'Ready For Reconciliation' }).Count
+    $summaryState = if ($blockedCount -gt 0) {
+        'blocked'
+    } elseif ($unitCount -eq 0) {
+        'assessed'
+    } elseif ($readyForReconciliationCount -eq $unitCount) {
+        'ready-for-reconciliation'
+    } else {
+        'active'
+    }
+    $closeoutReady = ($run.reconciliation.final_decision -eq 'passed')
+
+    return [PSCustomObject]@{
+        unit_count = $unitCount
+        blocked_count = $blockedCount
+        ready_for_reconciliation_count = $readyForReconciliationCount
+        summary_state = $summaryState
+        closeout_ready = $closeoutReady
+    }
+}
+
+
+
+
+function ConvertTo-TaskUnits([string]$encodedUnits) {
+    if ([string]::IsNullOrWhiteSpace($encodedUnits)) { throw 'Task units are required. Use --units-base64 with a JSON array.' }
+    try {
+        $json = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encodedUnits))
+        $parsed = ConvertFrom-Json $json -Depth 10
+    } catch {
+        throw 'Task units must be a valid base64-encoded JSON array.'
+    }
+    if ($parsed -isnot [System.Collections.IEnumerable]) {
+        throw 'Task units must be a JSON array.'
+    }
+    $units = @()
+    $index = 1
+    foreach ($unit in @($parsed)) {
+        $title = [string]$unit.title
+        $scopeBoundary = [string]$unit.scope_boundary
+        $owner = [string]$unit.owner
+        $recoveryGuidance = [string]$unit.recovery_guidance
+        $isolationMode = if ($unit.PSObject.Properties['isolation_mode']) { [string]$unit.isolation_mode } else { '' }
+        $status = if ($unit.PSObject.Properties['status']) { [string]$unit.status } else { '' }
+        $mergeReadiness = if ($unit.PSObject.Properties['merge_readiness']) { [string]$unit.merge_readiness } else { '' }
+        $summarySignal = if ($unit.PSObject.Properties['summary_signal']) { [string]$unit.summary_signal } else { '' }
+
+        if (-not $title -or -not $scopeBoundary -or -not $owner -or -not $recoveryGuidance) {
+            throw 'Each task unit requires title, scope_boundary, owner, and recovery_guidance.'
+        }
+        $units += @([PSCustomObject]@{
+            unit_id = ("unit-{0:D2}" -f $index)
+            title = $title
+            scope_boundary = $scopeBoundary
+            owner = $owner
+            isolation_mode = Format-TaskUnitIsolationMode $isolationMode
+            status = Format-TaskUnitStatus $status
+            merge_readiness = Format-TaskUnitMergeReadiness $mergeReadiness
+            recovery_guidance = $recoveryGuidance
+            summary_signal = if ($summarySignal) { $summarySignal } else { $title }
+        })
+        $index++
+    }
+    return $units
+}
+
+
+
+
+function New-ParallelReviewFinding($run, [string]$title, [string]$summary) {
+    $directory = Get-TaskBundleFindingDirectory
+    if (-not (Test-Path $directory)) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
+    $findingId = "FINDING-$($run.parallel_id)"
+    $findingPath = Join-Path $directory "$findingId.md"
+    if (-not (Test-Path $findingPath)) {
+        $content = @(
+            '---',
+            "id: $findingId",
+            "title: $title",
+            "source_review: bounded-parallel:$($run.parallel_id)",
+            "source_issue: $(if ($run.parent_context.issue_number) { $run.parent_context.issue_number } else { '' })",
+            'severity: medium',
+            'status: Backlog',
+            "priority: $($run.priority)",
+            'owner: engineer',
+            'promotion: required',
+            'suggested_type: story',
+            'labels: type:story,source:bounded-parallel',
+            "evidence: $((@($run.parent_context.plan_reference, $run.parallel_id) | Where-Object { $_ }) -join ',' )",
+            'backlog_issue: ',
+            "created: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd'))",
+            "updated: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd'))",
+            '---',
+            '',
+            "# Review Finding: $title",
+            '',
+            '## Summary',
+            '',
+            $summary,
+            ''
+        ) -join "`n"
+        Set-Content -Path $findingPath -Value $content -Encoding utf8
+    }
+    return ConvertTo-RelativeWorkspacePath $findingPath
+}
+
+function Invoke-ParallelCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'list' }
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+    switch ($action) {
+        'assess' { Invoke-ParallelAssess }
+        'start' { Invoke-ParallelStart }
+        'list' { Invoke-ParallelList }
+        'get' { Invoke-ParallelGet }
+        'reconcile' { Invoke-ParallelReconcile }
+        default { Write-CliOutput "Unknown parallel action: $action"; exit 1 }
+    }
+}
+
+function Invoke-ParallelAssess {
+    $title = Get-DecodedFlag @('-t', '--title') @('--title-base64') 'Bounded parallel delivery'
+    $issueNumber = [int](Get-Flag @('-i', '--issue') '0')
+    $planReference = Get-Flag @('--plan')
+    try {
+        $context = Resolve-TaskBundleContext -issueNumber $issueNumber -planReference $planReference
+        $assessment = [PSCustomObject]@{
+            scope_independence = Format-ParallelScopeIndependence (Get-Flag @('--scope-independence') 'coupled')
+            dependency_coupling = Format-ParallelRisk (Get-Flag @('--dependency-coupling') 'high') 'dependency coupling'
+            artifact_overlap = Format-ParallelRisk (Get-Flag @('--artifact-overlap') 'high') 'artifact overlap'
+            review_complexity = Format-ParallelReviewComplexity (Get-Flag @('--review-complexity') 'high')
+            recovery_complexity = Format-ParallelRecoveryComplexity (Get-Flag @('--recovery-complexity') 'high')
+        }
+        $assessment | Add-Member -NotePropertyName 'decision' -NotePropertyValue (Get-BoundedParallelDecision $assessment) -Force
+        $assessment | Add-Member -NotePropertyName 'required_review_level' -NotePropertyValue (Get-BoundedParallelReviewLevel $assessment) -Force
+
+        $run = [PSCustomObject]@{
+            parallel_id = New-BoundedParallelId
+            title = $title
+            priority = 'p1'
+            mode = 'opt-in'
+            parent_context = [PSCustomObject]@{
+                issue_number = $context.issueNumber
+                issue_title = $context.issueTitle
+                plan_reference = $context.planReference
+                thread_id = $context.threadId
+                source = $context.source
+            }
+            assessment = $assessment
+            units = @()
+            reconciliation = [PSCustomObject]@{
+                state = 'pending'
+                overlap_review = 'pending'
+                conflict_review = 'pending'
+                acceptance_evidence = 'pending'
+                owner_approval = 'pending'
+                follow_up_disposition = 'none'
+                follow_up_references = @()
+                final_decision = 'blocked'
+            }
+            created_at = Get-Timestamp
+            updated_at = Get-Timestamp
+        }
+        $run | Add-Member -NotePropertyName 'parent_summary' -NotePropertyValue (Get-BoundedParallelSummary $run) -Force
+        Save-BoundedParallelRun $run
+        if ($Script:JsonOutput) { $run | ConvertTo-Json -Depth 10 } else { Write-CliOutput "$($C.g)Recorded bounded parallel assessment $($run.parallel_id): $($assessment.decision).$($C.n)" }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-ParallelStart {
+    $parallelId = Get-Flag @('--id', '-n')
+    $unitsBase64 = Get-Flag @('--units-base64')
+    if ([string]::IsNullOrWhiteSpace($parallelId)) { Write-CliOutput 'Error: --id is required'; exit 1 }
+    $run = Get-BoundedParallelRun $parallelId
+    if (-not $run) { Write-CliOutput "Error: Bounded parallel record '$parallelId' was not found."; exit 1 }
+    if ($run.assessment.decision -ne 'eligible') { Write-CliOutput "Error: Bounded parallel record '$parallelId' is ineligible and must remain sequential."; exit 1 }
+
+    try {
+        $run.units = @(ConvertTo-TaskUnits $unitsBase64)
+        $run.updated_at = Get-Timestamp
+        $run.parent_summary = Get-BoundedParallelSummary $run
+        Save-BoundedParallelRun $run
+        if ($Script:JsonOutput) { $run | ConvertTo-Json -Depth 10 } else { Write-CliOutput "$($C.g)Started bounded parallel run $parallelId with $(@($run.units).Count) task units.$($C.n)" }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-ParallelList {
+    $runs = @(Get-BoundedParallelRuns)
+    if ($Script:JsonOutput) { $runs | ConvertTo-Json -Depth 10; return }
+    if ($runs.Count -eq 0) { Write-CliOutput "$($C.y)No bounded parallel records found.$($C.n)"; return }
+    foreach ($run in $runs) {
+        Write-CliOutput "$($run.parallel_id) [$($run.assessment.decision)] $($run.title) -> $($run.parent_summary.summary_state)"
+    }
+}
+
+function Invoke-ParallelGet {
+    $parallelId = Get-Flag @('--id', '-n')
+    if ([string]::IsNullOrWhiteSpace($parallelId)) { Write-CliOutput 'Error: --id is required'; exit 1 }
+    $run = Get-BoundedParallelRun $parallelId
+    if (-not $run) { Write-CliOutput "Error: Bounded parallel record '$parallelId' was not found."; exit 1 }
+    $run | ConvertTo-Json -Depth 10
+}
+
+function Invoke-ParallelReconcile {
+    $parallelId = Get-Flag @('--id', '-n')
+    $followUpTarget = Format-TaskBundleTargetType (Get-Flag @('--follow-up-target') 'none')
+    $followUpTitle = Get-DecodedFlag @('--follow-up-title') @('--follow-up-title-base64')
+    $followUpSummary = Get-DecodedFlag @('--follow-up-summary') @('--follow-up-summary-base64')
+    if ([string]::IsNullOrWhiteSpace($parallelId)) { Write-CliOutput 'Error: --id is required'; exit 1 }
+
+    $run = Get-BoundedParallelRun $parallelId
+    if (-not $run) { Write-CliOutput "Error: Bounded parallel record '$parallelId' was not found."; exit 1 }
+
+    try {
+        $run.reconciliation.overlap_review = Format-ReconciliationVerdict (Get-Flag @('--overlap-review') 'pending') 'overlap review'
+        $run.reconciliation.conflict_review = Format-ReconciliationVerdict (Get-Flag @('--conflict-review') 'pending') 'conflict review'
+        $run.reconciliation.acceptance_evidence = Format-ReconciliationVerdict (Get-Flag @('--acceptance-evidence') 'pending') 'acceptance evidence'
+        $run.reconciliation.owner_approval = Format-OwnerApproval (Get-Flag @('--owner-approval') 'pending')
+
+        $allUnitsReady = @($run.units).Count -gt 0 -and @($run.units | Where-Object { $_.merge_readiness -eq 'Ready For Reconciliation' }).Count -eq @($run.units).Count
+        $passed = (
+            $run.reconciliation.overlap_review -eq 'pass' -and
+            $run.reconciliation.conflict_review -eq 'pass' -and
+            $run.reconciliation.acceptance_evidence -eq 'pass' -and
+            $run.reconciliation.owner_approval -eq 'approved' -and
+            $allUnitsReady
+        )
+        $run.reconciliation.final_decision = if ($passed) { 'passed' } else { 'blocked' }
+        $run.reconciliation.state = if ($passed) { 'passed' } else { 'blocked' }
+
+        if (-not $passed -and $followUpTarget -ne 'none' -and $followUpTitle) {
+            $reference = ''
+            $followUpBody = if ($followUpSummary) { $followUpSummary } else { $followUpTitle }
+            switch ($followUpTarget) {
+                'story' {
+                    $issue = New-FrontierIssue $followUpTitle $followUpBody @('type:story', 'source:bounded-parallel')
+                    $reference = "#$($issue.number)"
+                }
+                'feature' {
+                    $issue = New-FrontierIssue $followUpTitle $followUpBody @('type:feature', 'source:bounded-parallel')
+                    $reference = "#$($issue.number)"
+                }
+                'review-finding' {
+                    $findingSummary = if ($followUpSummary) { $followUpSummary } else { 'Parallel reconciliation follow-up.' }
+                    $reference = New-ParallelReviewFinding $run $followUpTitle $findingSummary
+                }
+            }
+            if ($reference) {
+                $run.reconciliation.follow_up_disposition = 'captured'
+                $run.reconciliation.follow_up_references = @($run.reconciliation.follow_up_references) + @($reference)
+            }
+        }
+
+        $run.updated_at = Get-Timestamp
+        $run.parent_summary = Get-BoundedParallelSummary $run
+        Save-BoundedParallelRun $run
+        if ($Script:JsonOutput) { $run | ConvertTo-Json -Depth 10 } else { Write-CliOutput "$($C.g)Reconciled bounded parallel run $parallelId -> $($run.reconciliation.final_decision).$($C.n)" }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+# ---------------------------------------------------------------------------
+# ISSUE: Local issue manager
+# ---------------------------------------------------------------------------
+
+
+
+
+function New-FrontierIssue([string]$title, [string]$body, [string[]]$labels, [string]$issueType = '') {
+    $provider = Get-FrontierProvider
+    $normalizedLabels = @($labels | Where-Object { $_ })
+
+    if ($provider -eq 'github') {
+        $ghArgs = @('issue', 'create', '--title', $title)
+        $issueBody = if ([string]::IsNullOrWhiteSpace($body)) { $title } else { $body }
+        $ghArgs += @('--body', $issueBody)
+        foreach ($label in $normalizedLabels) {
+            $ghArgs += @('--label', $label)
+        }
+
+        $result = Invoke-GitHubCli $ghArgs "Failed to create GitHub issue '$title'."
+        $issueNumber = 0
+        $resultText = ($result | Out-String).Trim()
+        if ($resultText -match '/issues/(\d+)') {
+            $issueNumber = [int]$Matches[1]
+        }
+        $issue = if ($issueNumber -gt 0) { Get-GitHubIssue $issueNumber } else { $null }
+        if (-not $issue) {
+            throw 'GitHub issue was created but could not be read back for verification.'
+        }
+        if (Test-GitHubProjectConfigured) {
+            if (-not (Set-GitHubProjectIssueStatus $issue.number 'Backlog' $true) -and -not $Script:JsonOutput) {
+                Write-CliOutput "$($C.y)GitHub project status was not updated for issue #$($issue.number). Ensure the configured project is accessible and has a matching Status option.$($C.n)"
+            }
+        }
+        return $issue
+    }
+
+    if ($provider -eq 'ado') {
+        $project = Get-AdoProjectName
+        if ([string]::IsNullOrWhiteSpace($project)) {
+            throw 'ADO provider requires organization and project in .frontier/config.json.'
+        }
+
+        $workItemType = if ($issueType) { $issueType } else { Convert-FrontierTypeToAdoWorkItemType $normalizedLabels }
+        $tagString = if ($normalizedLabels.Count -gt 0) { $normalizedLabels -join '; ' } else { '' }
+
+        $issue = Invoke-AdoOperation -OperationName 'create' -McpBlock {
+            $tool = Get-AdoMcpToolName 'create'
+            $fields = @{ 'System.Title' = $title }
+            if ($body) { $fields['System.Description'] = $body }
+            if ($tagString) { $fields['System.Tags'] = $tagString }
+            $toolArguments = @{ project = $project; workItemType = $workItemType; fields = $fields }
+            $result = Invoke-AdoMcpTool -Tool $tool -Arguments $toolArguments
+            $payload = ConvertFrom-AdoMcpToolResult $result
+            if ($payload) { return Convert-AdoWorkItemToFrontierIssue $payload }
+            return $null
+        }
+
+        if (-not $issue) {
+            throw "ADO work item '$title' was created but could not be read back for verification."
+        }
+        return $issue
+    }
+
+    return (New-LocalIssue $title $body $normalizedLabels)
+}
+
+function Invoke-IssueCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'list' }
+    # Shift subargs past the action for issue subcommands
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+    switch ($action) {
+        'create'  { Invoke-IssueCreate }
+        'update'  { Invoke-IssueUpdate }
+        'close'   { Invoke-IssueClose }
+        'get'     { Invoke-IssueGet }
+        'comment' { Invoke-IssueComment }
+        'list'    { Invoke-IssueList }
+        default   { Write-CliOutput "Unknown issue action: $action"; exit 1 }
+    }
+}
+
+function Get-NextIssueNumber {
+    if ((Get-LocalIssueBackend) -eq 'backlog') {
+        $result = @{ num = 1 }
+        Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+            $existingNumbers = @(Get-LocalBacklogIssues | ForEach-Object { [int]$_.number } | Where-Object { $_ -gt 0 })
+            $lockedCfg = Get-FrontierConfig
+            $configuredNext = [int](Get-ConfigValue $lockedCfg 'nextIssueNumber' 1)
+            $candidate = if (@($existingNumbers).Count -gt 0) { ((($existingNumbers | Measure-Object -Maximum).Maximum) + 1) } else { 1 }
+            $result.num = [Math]::Max($candidate, $configuredNext)
+            Set-ConfigValue $lockedCfg 'nextIssueNumber' ($result.num + 1)
+            Write-JsonFile $Script:CONFIG_FILE $lockedCfg
+        }
+        return $result.num
+    }
+
+    if ((Get-PersistenceMode) -eq 'git') {
+        Initialize-GitDataBranch
+        $counter = Read-GitJson 'state/counter.json'
+        $num = if ($counter -and $counter.PSObject.Properties['nextIssueNumber']) { $counter.nextIssueNumber } else { 1 }
+        $newCounter = [PSCustomObject]@{ nextIssueNumber = ($num + 1) }
+        Write-GitJson 'state/counter.json' $newCounter "state: increment issue counter to $($num + 1)"
+        return $num
+    }
+    $cfg = Get-FrontierConfig
+    $num = if ($cfg.PSObject.Properties['nextIssueNumber']) { $cfg.nextIssueNumber } else { 1 }
+    $cfg | Add-Member -NotePropertyName 'nextIssueNumber' -NotePropertyValue ($num + 1) -Force
+    Write-JsonFile $Script:CONFIG_FILE $cfg
+    return $num
+}
+
+function Get-Issue([int]$num) {
+    return Get-LocalIssue $num
+}
+
+function Convert-GitHubIssueStateToIssueState([string]$state) {
+    $normalized = if ($state) { $state.Trim().ToLowerInvariant() } else { '' }
+    if ($normalized -eq 'closed') { return 'closed' }
+    return 'open'
+}
+
+function Convert-GitHubIssueToFrontierIssue($issue, [string]$status = '') {
+    $getProp = {
+        param($obj, $name)
+        if ($null -eq $obj) { return $null }
+        $prop = $obj.PSObject.Properties[$name]
+        if ($prop) { return $prop.Value }
+        return $null
+    }
+    $labelsValue = & $getProp $issue 'labels'
+    $issueLabels = if ($null -ne $labelsValue) { @($labelsValue) } else { @() }
+    $bodyValue = & $getProp $issue 'body'
+    $stateValue = & $getProp $issue 'state'
+    $urlValue = & $getProp $issue 'url'
+    $commentsValue = & $getProp $issue 'comments'
+    return [PSCustomObject]@{
+        number = $issue.number
+        title = $issue.title
+        body = if ($bodyValue) { $bodyValue } else { '' }
+        state = Convert-GitHubIssueStateToIssueState $(if ($stateValue) { [string]$stateValue } else { '' })
+        url = if ($urlValue) { $urlValue } else { '' }
+        labels = @($issueLabels | ForEach-Object {
+            if ($_ -is [string]) { $_ } else { $_.name }
+        } | Where-Object { $_ })
+        status = $status
+        comments = @(if ($null -ne $commentsValue) { @($commentsValue) | ForEach-Object {
+            $cBody = & $getProp $_ 'body'
+            $cCreated = & $getProp $_ 'createdAt'
+            [PSCustomObject]@{ body = $cBody; created = $cCreated }
+        } })
+    }
+}
+
+function Convert-AdoStateToIssueState([string]$state) {
+    $normalized = if ($state) { $state.Trim().ToLowerInvariant() } else { '' }
+    if ($normalized -in @('closed', 'done', 'completed', 'removed')) { return 'closed' }
+    return 'open'
+}
+
+function Convert-AdoWorkItemToFrontierIssue($item) {
+    $fields = if ($item.fields) { $item.fields } else { [PSCustomObject]@{} }
+    $tagsRaw = ''
+    $tagsProp = $fields.PSObject.Properties['System.Tags']
+    if ($tagsProp) { $tagsRaw = [string]$tagsProp.Value }
+    $labels = @($tagsRaw -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $stateProp = $fields.PSObject.Properties['System.State']
+    $titleProp = $fields.PSObject.Properties['System.Title']
+    $descriptionProp = $fields.PSObject.Properties['System.Description']
+
+    return [PSCustomObject]@{
+        number = [int]$item.id
+        title = if ($titleProp) { [string]$titleProp.Value } else { "Work item $($item.id)" }
+        body = if ($descriptionProp) { [string]$descriptionProp.Value } else { '' }
+        state = Convert-AdoStateToIssueState $(if ($stateProp) { [string]$stateProp.Value } else { '' })
+        labels = $labels
+        status = if ($stateProp) { [string]$stateProp.Value } else { '' }
+        comments = @()
+    }
+}
+
+function Get-GitHubIssue([int]$num) {
+    $json = & gh issue view $num --json number,title,body,state,url,labels,comments 2>$null
+    if (-not $json) { return $null }
+    return Convert-GitHubIssueToFrontierIssue ($json | ConvertFrom-Json)
+}
+
+function Invoke-GitHubCli([string[]]$arguments, [string]$failureMessage, [switch]$AllowEmptyOutput) {
+    Assert-GitHubCliAvailable
+    $repo = Get-GitHubRepoSlug
+    if (-not [string]::IsNullOrWhiteSpace($repo) -and $arguments.Count -gt 0 -and $arguments[0] -eq 'issue' -and ('-R' -notin $arguments) -and ('--repo' -notin $arguments)) {
+        $arguments = @($arguments[0], '-R', $repo) + @($arguments[1..($arguments.Count - 1)])
+    }
+    $output = & gh @arguments 2>&1
+    $exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
+    $outputText = ($output | Out-String).Trim()
+
+    if ($exitCode -ne 0) {
+        if ($outputText) {
+            throw "$failureMessage $outputText"
+        }
+        throw $failureMessage
+    }
+
+    if (-not $AllowEmptyOutput -and [string]::IsNullOrWhiteSpace($outputText)) {
+        throw $failureMessage
+    }
+
+    return $output
+}
+
+function Get-GitHubRepoSlug {
+    $cfg = Get-FrontierConfig
+    $adapterRepo = [string](Get-FrontierAdapterValue $cfg 'github' 'repo' '')
+    if (-not [string]::IsNullOrWhiteSpace($adapterRepo)) { return $adapterRepo }
+
+    $rootRepo = [string](Get-ConfigValue $cfg 'repo' '')
+    if (-not [string]::IsNullOrWhiteSpace($rootRepo)) { return $rootRepo }
+
+    try {
+        $remoteUrl = (& git -C $Script:ROOT remote get-url origin 2>$null | Out-String).Trim()
+        if ($remoteUrl -match 'github\.com[:/]([^/]+/[^/.]+)') {
+            return $Matches[1].Trim()
+        }
+    } catch { Write-Verbose "Could not resolve GitHub repo from remote URL: $_" }
+
+    return ''
+}
+
+function Get-GitHubProjectOwner {
+    $cfg = Get-FrontierConfig
+    $owner = [string](Get-ConfigValue $cfg 'projectOwner' '')
+    if (-not [string]::IsNullOrWhiteSpace($owner)) { return $owner }
+
+    $repo = Get-GitHubRepoSlug
+    if ($repo -match '^([^/]+)/') { return $Matches[1] }
+    return ''
+}
+
+function Get-GitHubProjectNumber {
+    $cfg = Get-FrontierConfig
+    $project = Get-FrontierAdapterValue $cfg 'github' 'project'
+    if ($null -eq $project -or [string]::IsNullOrWhiteSpace("$project")) {
+        $project = Get-ConfigValue $cfg 'project'
+    }
+    if ($project -is [int]) { return $project }
+    if ($project -and "$project" -match '^\d+$') { return [int]$project }
+    return 0
+}
+
+function Test-GitHubProjectConfigured {
+    return (Get-GitHubProjectNumber) -gt 0
+}
+
+function Resolve-GitHubProjectStatusName([string]$status) {
+    $cfg = Get-FrontierConfig
+    $customMap = Get-ConfigValue $cfg 'githubProjectStatusMap'
+    if ($customMap) {
+        if ($customMap -is [hashtable]) {
+            if ($customMap.ContainsKey($status)) { return [string]$customMap[$status] }
+        } else {
+            $prop = $customMap.PSObject.Properties[$status]
+            if ($prop) { return [string]$prop.Value }
+        }
+    }
+
+    switch ($status) {
+        'Backlog' { return 'Backlog' }
+        'Ready' { return 'Ready' }
+        'In Progress' { return 'In progress' }
+        'In Review' { return 'In review' }
+        'Validating' { return 'In review' }
+        'Done' { return 'Done' }
+        default { return $status }
+    }
+}
+
+function Get-GitHubProjectView {
+    $projectNumber = Get-GitHubProjectNumber
+    $owner = Get-GitHubProjectOwner
+    if ($projectNumber -le 0 -or [string]::IsNullOrWhiteSpace($owner)) { return $null }
+
+    $json = & gh project view $projectNumber --owner $owner --format json 2>$null
+    if (-not $json) { return $null }
+    $result = $json | ConvertFrom-Json
+    if ($result.PSObject.Properties['id']) { return $result }
+    if ($result.PSObject.Properties['project']) { return $result.project }
+    return $result
+}
+
+function Get-GitHubProjectStatusField {
+    Assert-GitHubCliAvailable
+    $projectNumber = Get-GitHubProjectNumber
+    $owner = Get-GitHubProjectOwner
+    if ($projectNumber -le 0 -or [string]::IsNullOrWhiteSpace($owner)) { return $null }
+
+    $json = & gh project field-list $projectNumber --owner $owner --format json 2>$null
+    if (-not $json) { return $null }
+    $result = $json | ConvertFrom-Json
+    $fields = if ($result.PSObject.Properties['fields']) { @($result.fields) } else { @($result) }
+    return ($fields | Where-Object { $_.name -eq 'Status' } | Select-Object -First 1)
+}
+
+function Test-GitHubProjectIssueIdentity($content, [string]$repo, [int]$issueNumber) {
+    if ($issueNumber -le 0 -or $repo -notmatch '\A[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/[a-z0-9_.-]+\z' -or
+        ($repo.Split('/')[-1] -in @('.', '..'))) { return $false }
+    if (-not $content -or -not $content.PSObject.Properties['number'] -or
+        -not $content.PSObject.Properties['url'] -or -not $content.PSObject.Properties['type']) { return $false }
+    return $content.type -eq 'Issue' -and [string]$content.number -ceq [string]$issueNumber -and
+        [string]$content.url -ieq "https://github.com/$repo/issues/$issueNumber"
+}
+
+function Get-GitHubProjectIssueItem([int]$issueNumber) {
+    Assert-GitHubCliAvailable
+    $projectNumber = Get-GitHubProjectNumber
+    $owner = Get-GitHubProjectOwner
+    $repo = Get-GitHubRepoSlug
+    if ($projectNumber -le 0 -or [string]::IsNullOrWhiteSpace($owner)) { return $null }
+
+    $json = & gh project item-list $projectNumber --owner $owner --limit 500 --format json 2>$null
+    if (-not $json) { return $null }
+    $result = $json | ConvertFrom-Json
+    $items = if ($result.PSObject.Properties['items']) { @($result.items) } else { @($result) }
+
+    return ($items | Where-Object {
+        Test-GitHubProjectIssueIdentity $_.content $repo $issueNumber
+    } | Select-Object -First 1)
+}
+
+function Get-GitHubProjectIssueStatusMap {
+    $map = @{}
+    $projectNumber = Get-GitHubProjectNumber
+    $owner = Get-GitHubProjectOwner
+    $repo = Get-GitHubRepoSlug
+    if ($projectNumber -le 0 -or [string]::IsNullOrWhiteSpace($owner)) { return $map }
+
+    $json = & gh project item-list $projectNumber --owner $owner --limit 500 --format json 2>$null
+    if (-not $json) { return $map }
+    $result = $json | ConvertFrom-Json
+    $items = if ($result.PSObject.Properties['items']) { @($result.items) } else { @($result) }
+
+    foreach ($item in $items) {
+        $content = $item.content
+        if (-not $content) { continue }
+        if (-not $content.PSObject.Properties['number']) { continue }
+        $issueNumber = 0
+        if (-not [int]::TryParse([string]$content.number, [ref]$issueNumber)) { continue }
+        if (-not (Test-GitHubProjectIssueIdentity $content $repo $issueNumber)) { continue }
+        $map[$issueNumber] = if ($item.PSObject.Properties['status']) { [string]$item.status } else { '' }
+    }
+
+    return $map
+}
+
+function Initialize-GitHubIssueInProject([int]$issueNumber) {
+    $existing = Get-GitHubProjectIssueItem $issueNumber
+    if ($existing) { return $existing }
+
+    $projectNumber = Get-GitHubProjectNumber
+    $owner = Get-GitHubProjectOwner
+    $repo = Get-GitHubRepoSlug
+    if ($projectNumber -le 0 -or [string]::IsNullOrWhiteSpace($owner) -or [string]::IsNullOrWhiteSpace($repo)) { return $null }
+
+    $issueUrl = "https://github.com/$repo/issues/$issueNumber"
+    try {
+        $projectArgs = @('project', 'item-add', "$projectNumber", '--owner', $owner, '--url', $issueUrl)
+        $null = Invoke-GitHubCli $projectArgs "Failed to add GitHub issue #$issueNumber to project $projectNumber." -AllowEmptyOutput
+    } catch {
+        return $null
+    }
+    return Get-GitHubProjectIssueItem $issueNumber
+}
+
+
+
+
+function Set-GitHubProjectIssueStatus([int]$issueNumber, [string]$status, [bool]$addIfMissing = $false) {
+    $projectInfo = Get-GitHubProjectView
+    if (-not $projectInfo) { return $false }
+
+    $statusField = Get-GitHubProjectStatusField
+    if (-not $statusField) { return $false }
+
+    $targetStatusName = Resolve-GitHubProjectStatusName $status
+    $targetOption = ($statusField.options | Where-Object { $_.name -ieq $targetStatusName } | Select-Object -First 1)
+    if (-not $targetOption) { return $false }
+
+    $item = if ($addIfMissing) { Initialize-GitHubIssueInProject $issueNumber } else { Get-GitHubProjectIssueItem $issueNumber }
+    if (-not $item) { return $false }
+
+    try {
+        $projectArgs = @('project', 'item-edit', '--id', $item.id, '--project-id', $projectInfo.id, '--field-id', $statusField.id, '--single-select-option-id', $targetOption.id)
+        $null = Invoke-GitHubCli $projectArgs "Failed to set GitHub project status for issue #$issueNumber." -AllowEmptyOutput
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Get-AdoIssue([int]$num) {
+    $orgUrl = Get-AdoOrganizationUrl
+    $project = Get-AdoProjectName
+    if ([string]::IsNullOrWhiteSpace($orgUrl) -or [string]::IsNullOrWhiteSpace($project)) {
+        throw 'ADO provider requires organization and project in .frontier/config.json.'
+    }
+    return Invoke-AdoOperation -OperationName 'get' -McpBlock {
+        $tool = Get-AdoMcpToolName 'get'
+        $result = Invoke-AdoMcpTool -Tool $tool -Arguments @{ project = $project; id = $num }
+        $payload = ConvertFrom-AdoMcpToolResult $result
+        if ($payload) { return Convert-AdoWorkItemToFrontierIssue $payload }
+        return $null
+    }
+}
+
+function Assert-GitHubCliAvailable {
+    if (-not (Test-CommandAvailable 'gh')) {
+        throw 'GitHub CLI is required for GitHub provider support. Install gh and run gh auth login.'
+    }
+}
+
+
+
+
+function ConvertTo-IssueLabels([string]$labelStr) {
+    if (-not $labelStr) { return @() }
+    return @(($labelStr -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+}
+
+
+
+
+function Get-IssueTypeFromLabels([string[]]$labels) {
+    foreach ($label in @($labels)) {
+        if ($label -match '^type:(.+)$') { return $Matches[1].Trim().ToLowerInvariant() }
+    }
+    return 'story'
+}
+
+function Convert-FrontierTypeToAdoWorkItemType([string[]]$labels) {
+    switch (Get-IssueTypeFromLabels $labels) {
+        'epic' { return 'Epic' }
+        'feature' { return 'Feature' }
+        'bug' { return 'Bug' }
+        'story' { return 'User Story' }
+        default { return 'Task' }
+    }
+}
+
+function Convert-FrontierStatusToAdoState([string]$status) {
+    $cfg = Get-FrontierConfig
+    $customMap = Get-ConfigValue $cfg 'adoStateMap'
+    if ($customMap) {
+        if ($customMap -is [hashtable]) {
+            if ($customMap.ContainsKey($status)) { return [string]$customMap[$status] }
+        } else {
+            $prop = $customMap.PSObject.Properties[$status]
+            if ($prop) { return [string]$prop.Value }
+        }
+    }
+
+    switch ($status) {
+        'Backlog' { return 'New' }
+        'Ready' { return 'New' }
+        'In Progress' { return 'Active' }
+        'In Review' { return 'Resolved' }
+        'Validating' { return 'Resolved' }
+        'Done' { return 'Closed' }
+        default { return $status }
+    }
+}
+
+function Save-Issue($issue) {
+    Save-LocalIssue $issue
+}
+
+function Invoke-IssueCreate {
+    $title = Get-DecodedFlag @('-t', '--title') @('--title-base64')
+    $body = Get-DecodedFlag @('-b', '--body') @('--body-base64')
+    $labelStr = Get-Flag @('-l', '--labels')
+    $issueType = Get-Flag @('--type')
+    if (-not $title) { Write-CliOutput 'Error: --title is required'; exit 1 }
+
+    $labels = ConvertTo-IssueLabels $labelStr
+    try {
+        $issue = New-FrontierIssue $title $body $labels $issueType
+        Write-CliOutput "$($C.g)Created issue #$($issue.number): $($issue.title)$($C.n)"
+        if ($Script:JsonOutput) { $issue | ConvertTo-Json -Depth 5 }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-IssueUpdate {
+    $num = [int](Get-Flag @('-n', '--number') '0')
+    if (-not $num) { Write-CliOutput 'Error: --number required'; exit 1 }
+
+    $title = Get-DecodedFlag @('-t', '--title') @('--title-base64')
+    $body = Get-DecodedFlag @('-b', '--body') @('--body-base64')
+    $status = Get-Flag @('-s', '--status')
+    $labelStr = Get-Flag @('-l', '--labels')
+
+    try {
+        $updatedIssue = Update-ProviderIssue $num $title $body $status $labelStr
+        Write-CliOutput "$($C.g)Updated issue #${num}$($C.n)"
+        if ($Script:JsonOutput) { $updatedIssue | ConvertTo-Json -Depth 5 }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-IssueClose {
+    $num = [int](Get-Flag @('-n', '--number') '')
+    if (-not $num -and $Script:SubArgs.Count -gt 0) { $num = [int]$Script:SubArgs[0] }
+    if (-not $num) { Write-CliOutput 'Error: issue number required'; exit 1 }
+
+    try {
+        $issue = Close-ProviderIssue $num
+        Write-CliOutput "$($C.g)Closed issue #${num}$($C.n)"
+        if ($Script:JsonOutput -and $issue) { $issue | ConvertTo-Json -Depth 5 }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-IssueGet {
+    $num = [int](Get-Flag @('-n', '--number') '')
+    if (-not $num -and $Script:SubArgs.Count -gt 0) { $num = [int]$Script:SubArgs[0] }
+    if (-not $num) { Write-CliOutput 'Error: issue number required'; exit 1 }
+    $issue = Get-ProviderIssue $num
+    if (-not $issue) { Write-CliOutput "Error: Issue #$num not found"; exit 1 }
+    $issue | ConvertTo-Json -Depth 5
+}
+
+function Invoke-IssueComment {
+    $num = [int](Get-Flag @('-n', '--number') '0')
+    $body = Get-DecodedFlag @('-c', '--comment', '-b', '--body') @('--comment-base64', '--body-base64')
+    if (-not $num -or -not $body) { Write-CliOutput 'Error: --number and --comment required'; exit 1 }
+
+    try {
+        $issue = Add-ProviderIssueComment $num $body
+        Write-CliOutput "$($C.g)Added comment to issue #${num}$($C.n)"
+        if ($Script:JsonOutput -and $issue) { $issue | ConvertTo-Json -Depth 5 }
+    } catch {
+        Write-CliOutput "Error: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Invoke-IssueList {
+    $issues = @(Get-AllIssues | Sort-Object -Property number -Descending)
+
+    if ($Script:JsonOutput) { $issues | ConvertTo-Json -Depth 5; return }
+    if ($issues.Count -eq 0) { Write-CliOutput "$($C.y)No issues found.$($C.n)"; return }
+
+    Write-CliOutput "`n$($C.c)Issues [$((Get-FrontierProviderInfo).name)]:$($C.n)"
+    Write-CliOutput "$($C.c)===========================================================$($C.n)"
+    foreach ($i in $issues) {
+        $icon = if ($i.state -eq 'open') { '( )' } else { '(*)' }
+        $labels = if ($i.labels -and $i.labels.Count -gt 0) { " [$($i.labels -join ', ')]" } else { '' }
+        Write-CliOutput "$icon #$($i.number) $($i.status) - $($i.title)$labels"
+    }
+    Write-CliOutput "$($C.c)===========================================================$($C.n)"
+}
+
+# ---------------------------------------------------------------------------
+# READY: Show unblocked work
+# ---------------------------------------------------------------------------
+
+
+
+
+function Get-AllIssues {
+    return @(Get-ProviderIssues)
+}
+
+
+
+
+function Get-IssueDeps($issue) {
+    $deps = @{ blocks = @(); blocked_by = @() }
+    if ($issue -and $issue.PSObject.Properties['dependencies']) {
+        $deps.blocked_by = @($issue.dependencies | ForEach-Object { [int]$_ } | Where-Object { $_ -gt 0 })
+    }
+    if (-not $issue.body) { return $deps }
+    $inDeps = $false
+    foreach ($line in ($issue.body -split "`n")) {
+        if ($line -match '^\s*##\s*Dependencies') { $inDeps = $true; continue }
+        if ($line -match '^\s*##\s' -and $inDeps) { break }
+        if (-not $inDeps) { continue }
+        if ($line -match '^\s*-?\s*Blocks:\s*(.+)') {
+            $deps.blocks = @([regex]::Matches($Matches[1], '#(\d+)') | ForEach-Object { [int]$_.Groups[1].Value })
+        }
+        if (-not $issue.PSObject.Properties['dependencies'] -and $line -match '^\s*-?\s*Blocked[- ]by:\s*(.+)') {
+            $deps.blocked_by = @([regex]::Matches($Matches[1], '#(\d+)') | ForEach-Object { [int]$_.Groups[1].Value })
+        }
+    }
+    return $deps
+}
+
+function Get-IssuePriority($issue) {
+    $issueLabels = if ($null -ne $issue.labels) { @($issue.labels) } else { @() }
+    foreach ($l in $issueLabels) {
+        $label = if ($l -is [string]) { $l } elseif ($null -ne $l.name) { $l.name } else { '' }
+        if ($label -match 'priority:p(\d)') { return [int]$Matches[1] }
+    }
+
+    if ($issue -and $issue.PSObject.Properties['priority']) {
+        switch (([string]$issue.priority).Trim().ToLowerInvariant()) {
+            'urgent' { return 0 }
+            'critical' { return 0 }
+            'high' { return 1 }
+            'medium' { return 2 }
+            'low' { return 3 }
+        }
+    }
+
+    return 9
+}
+
+function Get-IssueType($issue) {
+    $issueLabels = if ($null -ne $issue.labels) { @($issue.labels) } else { @() }
+    foreach ($l in $issueLabels) {
+        $label = if ($l -is [string]) { $l } elseif ($null -ne $l.name) { $l.name } else { '' }
+        if ($label -match 'type:(\w+)') { return $Matches[1] }
+    }
+    return 'story'
+}
+
+function Invoke-ReadyCmd {
+    $all = Get-AllIssues
+    $providerInfo = Get-FrontierProviderInfo
+    $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
+    $open = if ($usesExplicitReadyState) {
+        @($all | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
+    } else {
+        @($all | Where-Object { $_.state -eq 'open' })
+    }
+
+    $ready = @($open | Where-Object {
+        $deps = Get-IssueDeps $_
+        $blocked = $false
+        foreach ($bid in $deps.blocked_by) {
+            $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
+            if ($b -and $b.state -eq 'open') { $blocked = $true }
+        }
+        -not $blocked
+    } | Sort-Object { Get-IssuePriority $_ })
+
+    if ($Script:JsonOutput) { $ready | ConvertTo-Json -Depth 5; return }
+    if ($ready.Count -eq 0) { Write-CliOutput 'No ready work found.'; return }
+
+    Write-CliOutput "`n$($C.c)  Ready Work (unblocked, sorted by priority):$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    foreach ($i in $ready) {
+        $p = Get-IssuePriority $i
+        $pLabel = if ($p -lt 9) { "P$p" } else { '  ' }
+        $pc = switch ($p) { 0 { $C.r } 1 { $C.y } default { $C.d } }
+        $typ = Get-IssueType $i
+
+        Write-CliOutput "  $pc[$pLabel]$($C.n) $($C.c)#$($i.number)$($C.n) $($C.d)($typ)$($C.n) $($i.title)"
+    }
+    Write-CliOutput ''
+}
+
+# ---------------------------------------------------------------------------
+# STATE: Agent status tracking
+# ---------------------------------------------------------------------------
+
+function Invoke-StateCmd {
+    $agent = Get-Flag @('-a', '--agent')
+    $set = Get-Flag @('-s', '--set')
+    $issue = [int](Get-Flag @('-i', '--issue') '0')
+
+    $data = Read-JsonFile $Script:STATE_FILE
+    if (-not $data) { $data = [PSCustomObject]@{} }
+
+    if ($agent -and $set) {
+        $entry = [PSCustomObject]@{ status = $set; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }
+        $data | Add-Member -NotePropertyName $agent -NotePropertyValue $entry -Force
+        Write-JsonFile $Script:STATE_FILE $data
+        Write-CliOutput "$($C.g)  Agent '$agent' -> $set$($C.n)"
+        if ($issue) { Write-CliOutput "$($C.d)  Working on: #$issue$($C.n)" }
+        return
+    }
+
+    if ($Script:JsonOutput) { $data | ConvertTo-Json -Depth 5; return }
+
+    Write-CliOutput "`n$($C.c)  Agent Status:$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    $agents = @('product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'auto-fix-reviewer', 'devops-engineer', 'data-scientist', 'tester', 'fabric-engineer', 'power-platform-builder', 'powerbi-analyst', 'consulting-research', 'agile-coach')
+    foreach ($a in $agents) {
+        $prop = $data.PSObject.Properties[$a]
+        $info = if ($prop) { $prop.Value } else { $null }
+        $status = if ($info -and $info.status) { $info.status } else { 'idle' }
+        $sc = switch ($status) { 'working' { $C.y } 'reviewing' { $C.m } 'stuck' { $C.r } 'done' { $C.g } default { $C.d } }
+        $ref = if ($info -and $info.issue) { " -> #$($info.issue)" } else { '' }
+        $dt = if ($info -and $info.lastActivity) { " ($("$($info.lastActivity)".Substring(0, 10)))" } else { '' }
+        Write-CliOutput "  $($C.w)$a$($C.n) $sc[$status]$($C.n)$($C.d)$ref$dt$($C.n)"
+    }
+    Write-CliOutput ''
+}
+
+# ---------------------------------------------------------------------------
+# DEPS: Dependency check
+# ---------------------------------------------------------------------------
+
+function Invoke-DepsCmd {
+    $rawNum = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { Get-Flag @('-n', '--number') '0' }
+    $num = [int]$rawNum
+    if (-not $num) { Write-CliOutput 'Usage: frontier deps <issue-number>'; exit 1 }
+
+    $all = Get-AllIssues
+    $issue = $all | Where-Object { $_.number -eq $num } | Select-Object -First 1
+    if (-not $issue) { Write-CliOutput "Error: Issue #$num not found"; exit 1 }
+
+    $deps = Get-IssueDeps $issue
+    $hasBlockers = $false
+
+    Write-CliOutput "`n$($C.c)  Dependency Check: #$num - $($issue.title)$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    if ($deps.blocked_by.Count -gt 0) {
+        Write-CliOutput "$($C.y)  Blocked by:$($C.n)"
+        foreach ($bid in $deps.blocked_by) {
+            $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
+            if ($b) {
+                $ok = $b.state -eq 'closed'
+                $mark = if ($ok) { "$($C.g)[PASS]" } else { "$($C.r)[FAIL]" }
+                Write-CliOutput "    $mark #$bid - $($b.title) [$($b.state)]$($C.n)"
+                if (-not $ok) { $hasBlockers = $true }
+            } else {
+                Write-CliOutput "    $($C.y)? #$bid - (not found)$($C.n)"
+            }
+        }
+    } else {
+        Write-CliOutput "$($C.g)  No blockers - ready to start.$($C.n)"
+    }
+
+    if ($deps.blocks.Count -gt 0) {
+        Write-CliOutput "$($C.d)  Blocks:$($C.n)"
+        foreach ($bid in $deps.blocks) {
+            $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
+            $bTitle = if ($b -and $b.title) { $b.title } else { '(not found)' }
+            Write-CliOutput "$($C.d)    -> #$bid - $bTitle$($C.n)"
+        }
+    }
+
+    if ($hasBlockers) {
+        Write-CliOutput "`n$($C.r)  [WARN] BLOCKED - resolve open blockers first.$($C.n)`n"
+    } else {
+        Write-CliOutput "`n$($C.g)  [PASS] All clear - issue is unblocked.$($C.n)`n"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# DIGEST: Weekly summary
+# ---------------------------------------------------------------------------
+
+function Invoke-DigestCmd {
+    if (-not (Test-Path $Script:DIGESTS_DIR)) { New-Item -ItemType Directory -Path $Script:DIGESTS_DIR -Force | Out-Null }
+    $all = Get-AllIssues
+    $closed = @($all | Where-Object { $_.state -eq 'closed' } | Sort-Object {
+        if ($null -ne $_.updated) { $_.updated } else { '' }
+    } -Descending)
+
+    if ($closed.Count -eq 0) { Write-CliOutput 'No closed issues to digest.'; return }
+
+    $d = Get-Date
+    $weekOfYear = [math]::Ceiling(($d.DayOfYear + [int]([datetime]::new($d.Year, 1, 1)).DayOfWeek) / 7)
+    $weekNum = '{0}-W{1:D2}' -f $d.Year, [int]$weekOfYear
+    $digestFile = Join-Path $Script:DIGESTS_DIR "DIGEST-$weekNum.md"
+
+    $lines = @(
+        "# Weekly Digest - $weekNum", ''
+        "> Auto-generated on $($d.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm'))", ''
+        '## Completed Issues', ''
+        '| # | Type | Title | Closed |', '|---|------|-------|--------|'
+    )
+    foreach ($i in $closed) {
+        $typ = Get-IssueType $i
+        $updatedStr = if ($null -ne $i.updated) { "$($i.updated)" } else { '' }
+        $closedDate = if ($updatedStr.Length -ge 10) { $updatedStr.Substring(0, 10) } else { $updatedStr }
+        $lines += "| #$($i.number) | $typ | $($i.title) | $closedDate |"
+    }
+    $lines += @('', '## Key Decisions', '', '_Review closed issues above and note key decisions._', ''
+        '## Outcomes', '', "- **Issues closed**: $($closed.Count)", "- **Generated**: $($d.ToString('yyyy-MM-dd'))", '')
+
+    $lines -join "`n" | Set-Content $digestFile -Encoding utf8
+    Write-CliOutput "$($C.g)  Digest generated: $digestFile$($C.n)"
+    Write-CliOutput "$($C.d)  Closed issues: $($closed.Count)$($C.n)"
+}
+
+# ---------------------------------------------------------------------------
+# WORKFLOW: Show/run workflow steps
+# ---------------------------------------------------------------------------
+
+function Invoke-WorkflowCmd {
+    $agentName = if ($Script:SubArgs.Count -gt 0 -and -not $Script:SubArgs[0].StartsWith('-')) {
+        $Script:SubArgs[0]
+    } else {
+        Get-Flag @('-t', '--type', '-Type', '--Type')
+    }
+
+    if (-not $agentName) {
+        Write-CliOutput "`n$($C.c)  Agent Handoff Chains:$($C.n)"
+        Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+        foreach ($agentFilePath in (Get-AgentDefinitionFiles)) {
+            $f = Get-Item $agentFilePath
+                $name = $f.BaseName -replace '\.agent$', ''
+                $content = Get-Content $f.FullName -Raw -Encoding utf8
+                $desc = ''
+                if ($content -match '(?m)^description:\s*[''"]?(.+?)[''"]?\s*$') { $desc = $Matches[1] }
+                Write-CliOutput "  $($C.w)$name$($C.n) $($C.d)- $desc$($C.n)"
+        }
+        Write-CliOutput "`n$($C.d)  Usage: frontier workflow <agent-name|issue-type>$($C.n)"
+        Write-CliOutput "$($C.d)  Examples: frontier workflow engineer, frontier workflow feature, frontier workflow bug$($C.n)`n"
+        return
+    }
+
+    $typeAliasMap = @{
+        'bug' = 'engineer'
+        'data-science' = 'data-scientist'
+        'devops' = 'devops'
+        'docs' = 'engineer'
+        'epic' = 'product-manager'
+        'feature' = 'architect'
+        'fabric' = 'fabric-engineer'
+        'lowcode' = 'power-platform-builder'
+        'power-platform' = 'power-platform-builder'
+        'powerbi' = 'powerbi-analyst'
+        'spike' = 'architect'
+        'story' = 'engineer'
+        'testing' = 'tester'
+    }
+    if ($typeAliasMap.ContainsKey($agentName)) {
+        $agentName = $typeAliasMap[$agentName]
+    }
+
+    $agentFile = Resolve-AgentDefinitionFile $agentName
+    if (-not (Test-Path $agentFile)) { Write-CliOutput "Error: Agent '$agentName' not found"; exit 1 }
+
+    $content = Get-Content $agentFile -Raw -Encoding utf8
+
+    # Extract handoffs from YAML frontmatter
+    $handoffs = @()
+    if ($content -match '(?s)^---\r?\n(.+?)\r?\n---') {
+        $fm = $Matches[1]
+        # Parse handoffs: array
+        $inHandoffs = $false
+        foreach ($line in ($fm -split '\r?\n')) {
+            if ($line -match '^\s*handoffs:\s*$') { $inHandoffs = $true; continue }
+            if ($inHandoffs -and $line -match '^\s+-\s+') {
+                # Start of a new handoff entry
+                $agent = ''; $label = ''
+                if ($line -match 'agent:\s*(.+)') { $agent = $Matches[1].Trim().Trim("'`"") }
+            }
+            if ($inHandoffs -and $line -match '^\s+agent:\s*(.+)') { $agent = $Matches[1].Trim().Trim("'`"") }
+            if ($inHandoffs -and $line -match '^\s+label:\s*(.+)') { $label = $Matches[1].Trim().Trim("'`"") }
+            if ($inHandoffs -and $line -match '^\s+send:\s*(.+)') {
+                if ($agent) { $handoffs += [PSCustomObject]@{ agent = $agent; label = $label } }
+            }
+            # Stop parsing handoffs when we hit a non-indented line (next top-level key)
+            if ($inHandoffs -and $line -match '^\w' -and $line -notmatch '^\s*handoffs:') { $inHandoffs = $false }
+        }
+    }
+
+    Write-CliOutput "`n$($C.c)  Handoff Chain: $agentName$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    if ($handoffs.Count -eq 0) {
+        Write-CliOutput "  $($C.d)(no handoffs defined)$($C.n)"
+    } else {
+        $n = 1
+        foreach ($h in $handoffs) {
+            Write-CliOutput "  $($C.c)$n.$($C.n) -> $($C.y)$($h.agent)$($C.n) $($C.d)$($h.label)$($C.n)"
+            $n++
+        }
+    }
+    Write-CliOutput ''
+}
+
+# ---------------------------------------------------------------------------
+# LOOP: Iterative refinement
+# ---------------------------------------------------------------------------
+
+function Invoke-LoopCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'status' }
+    # Shift subargs past the action for loop subcommands
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+    switch ($action) {
+        'start'    { Invoke-LoopStart }
+        'baseline' { Invoke-LoopBaseline }
+        'status'   { Invoke-LoopStatus }
+        'affected' { Invoke-LoopAffected }
+        'iterate'  { Invoke-LoopIterate }
+        'complete'  { Invoke-LoopComplete }
+        'cancel'    { Invoke-LoopCancel }
+        'rollback'  { Invoke-LoopRollback }
+        'gate'      { Invoke-LoopGateCheck }
+        default     { Write-CliOutput "Unknown loop action: $action" }
+    }
+}
+
+function Get-LoopStateLastTouchedUtc {
+    param($State)
+
+    if (-not $State) { return $null }
+
+    foreach ($propertyName in @('lastIterationAt', 'startedAt')) {
+        if (-not ($State.PSObject.Properties.Name -contains $propertyName)) { continue }
+        $rawValue = $State.$propertyName
+        if (-not $rawValue) { continue }
+
+        try {
+            # ConvertFrom-Json materializes ISO-8601 'Z' timestamps as [datetime] with
+            # Kind=Utc. Casting those back to [string] drops the UTC designator, and
+            # re-parsing an offset-less string reinterprets it as local time -- which
+            # inflates the computed age by the local UTC offset and permanently trips
+            # the stuck threshold east of UTC+1:30.
+            if ($rawValue -is [datetime]) {
+                $parsedDate = [datetime]$rawValue
+                if ($parsedDate.Kind -eq [System.DateTimeKind]::Unspecified) {
+                    $parsedDate = [datetime]::SpecifyKind($parsedDate, [System.DateTimeKind]::Utc)
+                }
+                return ([datetimeoffset]$parsedDate).ToUniversalTime()
+            }
+
+            return ([datetimeoffset]::Parse(
+                [string]$rawValue,
+                [cultureinfo]::InvariantCulture,
+                [System.Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime()
+        } catch {
+            continue
+        }
+    }
+
+    return $null
+}
+
+function Get-LoopStateStaleReason {
+    param(
+        $State,
+        [Nullable[int]]$ExpectedIssue = $null
+    )
+
+    if (-not $State) { return $null }
+
+    if ($ExpectedIssue -and ($State.PSObject.Properties.Name -contains 'issueNumber') -and $State.issueNumber) {
+        try {
+            if ([int]$State.issueNumber -ne [int]$ExpectedIssue) {
+                return "loop belongs to issue #$($State.issueNumber), not #$ExpectedIssue"
+            }
+        } catch {
+            return 'loop issue number is invalid'
+        }
+    }
+
+    $lastTouched = Get-LoopStateLastTouchedUtc $State
+    if (-not $lastTouched) {
+        return 'loop timestamp is missing or invalid'
+    }
+
+    $ageHours = ([datetimeoffset]::UtcNow - $lastTouched).TotalHours
+    if ($ageHours -ge $Script:LOOP_STALE_AFTER_HOURS) {
+        return ('loop last updated {0:N1} hours ago' -f $ageHours)
+    }
+
+    return $null
+}
+
+function Get-LoopTaskClass {
+    param($State)
+
+    if (-not $State) { return 'standard' }
+
+    $explicitTaskClass = ''
+    if ($State.PSObject.Properties.Name -contains 'taskClass' -and $State.taskClass) {
+        $explicitTaskClass = ([string]$State.taskClass).Trim().ToLowerInvariant()
+    }
+
+    if ($explicitTaskClass -eq 'high-risk')         { return 'high-risk' }
+
+    $fingerprint = @(
+        if ($State.PSObject.Properties.Name -contains 'taskType') { [string]$State.taskType } else { '' }
+        if ($State.PSObject.Properties.Name -contains 'prompt') { [string]$State.prompt } else { '' }
+        if ($State.PSObject.Properties.Name -contains 'completionCriteria') { [string]$State.completionCriteria } else { '' }
+    ) -join "`n"
+    $normalized = $fingerprint.ToLowerInvariant()
+
+    if ($normalized -match '\b(secur(?:ity|e|ed|ing)?|auth(?:entication|enticate(?:d|s)?|enticating|orization|orize(?:d|s)?|orizing)?|credential(?:s)?|password(?:s)?|passphrase(?:s)?|secret(?:s)?|jwt|oauth|oidc|api[- ]?key(?:s)?|cryptograph(?:y|ic|ically)?|encrypt(?:s|ed|ing|ion)?|decrypt(?:s|ed|ing|ion)?|cipher(?:s)?|payment(?:s)?|billing|financial|migrat(?:e|es|ed|ing|ion|ions)|database schema|production|releas(?:e|es|ed|ing)?|deploy(?:s|ed|ing|ment|ments)?|rollback(?:s)?|infrastructure|rbac|permission(?:s)?|compliance|privacy|pii|breaking change|hotfix(?:es)?)\b|\bsession[- ]?(handling|management|token|cookie|auth(?:entication|orization)?)\b') {
+        return 'high-risk'
+    }
+
+    if ($explicitTaskClass -eq 'complex-delivery') { return 'complex-delivery' }
+    if ($explicitTaskClass -eq 'standard')          { return 'standard' }
+    if ($explicitTaskClass -eq 'auto-fix-review')   { return 'auto-fix-review' }
+    if ($explicitTaskClass -eq 'agent-x')           { return 'agent-x' }
+
+    # Role field (set via --role on loop start) takes precedence over keyword
+    # detection so an explicit role always wins over text-matching heuristics.
+    if ($State.PSObject.Properties.Name -contains 'role' -and $State.role) {
+        switch -Regex (([string]$State.role).Trim().ToLowerInvariant()) {
+            '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
+            '^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$' { return 'agent-x' }
+            '^(engineer|implementation)$'                  { return 'complex-delivery' }
+        }
+    }
+
+    # Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
+    # like 'Review code and apply safe fixes' resolves to auto-fix-review, not standard.
+    if ($normalized -match '\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b') {
+        return 'auto-fix-review'
+    }
+
+    if ($normalized -match '\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b') {
+        return 'agent-x'
+    }
+
+    if ($normalized -match '\b(bug|hotfix|regression|prd|product requirement|tech spec|technical spec|specification|adr|architecture doc|review|brainstorm|clarification|docs|documentation)\b') {
+        return 'standard'
+    }
+
+    if ($normalized -match '\b(implement|implementation|build|create|ship|refactor|feature|endpoint|component|screen|prototype|wireframe|ux|ui|frontend|backend|model|training|data science|evaluation pipeline|notebook|agent|workflow|all_tests_passing|coverage)\b') {
+        return 'complex-delivery'
+    }
+
+    return 'standard'
+}
+
+
+
+
+function Get-LoopDefaultMinIterations {
+    param($State)
+
+    if (-not $State) { return 0 }
+    $defaultMin = switch (Get-LoopTaskClass $State) {
+        'high-risk'        { $Script:LOOP_HIGH_RISK_MIN_ITERATIONS }
+        'complex-delivery' { $Script:LOOP_COMPLEX_MIN_ITERATIONS  }
+        'auto-fix-review'  { $Script:LOOP_AUTO_FIX_MIN_ITERATIONS  }
+        'agent-x'          { $Script:LOOP_FRONTIER_MIN_ITERATIONS   }
+        default            { $Script:LOOP_STANDARD_MIN_ITERATIONS  }
+    }
+
+    return $defaultMin
+}
+
+function Get-LoopEffectiveMinIterations {
+    param($State)
+
+    if (-not $State) { return 0 }
+    $defaultMin = Get-LoopDefaultMinIterations $State
+    $storedMin = 0
+    if ($State.PSObject.Properties.Name -contains 'minIterations' -and $State.minIterations) {
+        try { $storedMin = [int]$State.minIterations } catch { $storedMin = 0 }
+    }
+    return [Math]::Max($storedMin, $defaultMin)
+}
+
+<#
+.SYNOPSIS
+  Return the structured reviewer record on a history entry, or $null.
+
+.DESCRIPTION
+  A reviewer pass recorded with --verdict carries machine-checkable evidence
+  (verdict plus HIGH/MEDIUM/LOW counts) rather than a free-text claim that the
+  review happened. A summary alone cannot prove a reviewer ever ran.
+#>
+function Get-LoopReviewRecord {
+    param($HistoryEntry)
+
+    if (-not $HistoryEntry) { return $null }
+    if (-not ($HistoryEntry.PSObject.Properties.Name -contains 'review')) { return $null }
+    $review = $HistoryEntry.review
+    if (-not $review) { return $null }
+    if (-not ($review.PSObject.Properties.Name -contains 'verdict')) { return $null }
+    if ([string]::IsNullOrWhiteSpace([string]$review.verdict)) { return $null }
+    return $review
+}
+
+<#
+.SYNOPSIS
+  True when a history entry is the record 'loop complete' appends, rather than a
+  work entry.
+
+.DESCRIPTION
+  Keyed on an explicit 'kind' marker, NOT on status: the agentic runner writes
+  status='complete' for genuine work, so a status-based test would silently skip
+  post-approval work and defeat the approval binding.
+#>
+function Test-LoopCompletionEntry {
+    param($HistoryEntry)
+
+    if (-not $HistoryEntry) { return $false }
+    if (-not ($HistoryEntry.PSObject.Properties.Name -contains 'kind')) { return $false }
+    return ([string]$HistoryEntry.kind -ceq 'completion')
+}
+
+<#
+.SYNOPSIS
+  Return the most recent history entry carrying a structured reviewer record.
+#>
+function Get-LoopLatestReviewEntry {
+    param($State)
+
+    if (-not $State -or -not ($State.PSObject.Properties.Name -contains 'history')) { return $null }
+    $latest = $null
+    foreach ($historyEntry in @($State.history)) {
+        if (Get-LoopReviewRecord $historyEntry) { $latest = $historyEntry }
+    }
+    return $latest
+}
+
+<#
+.SYNOPSIS
+  True when a structured reviewer record is present in loop history.
+
+.DESCRIPTION
+  There is no free-text fallback. An earlier design kept one for loops started
+  before the gate shipped, keyed on a `reviewGate` marker in loop-state.json --
+  but that file is workspace-writable, so deleting one property downgraded the
+  loop to the weaker contract and defeated all three implementations at once.
+  No marker stored beside the thing it protects can be trusted, so the weaker
+  contract was removed rather than guarded. A loop predating the gate simply
+  records one reviewer verdict before completing.
+#>
+function Test-LoopHasSubagentReviewIteration {
+    param($State)
+
+    if (-not $State -or -not ($State.PSObject.Properties.Name -contains 'history')) {
+        return $false
+    }
+
+    foreach ($historyEntry in @($State.history)) {
+        if (-not $historyEntry) { continue }
+        if (Get-LoopReviewRecord $historyEntry) { return $true }
+    }
+
+    return $false
+}
+
+function Get-LoopIterationGuidance {
+    # Returns an ordered array of [n, focus, gate] objects for a given task class.
+    # Used by 'loop start' (print the full table) and 'loop status' (show current-iteration focus).
+    param([string]$TaskClass)
+
+    switch ($TaskClass) {
+        'high-risk' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + focused failing tests turn green';     gate='Focused tests passing; feature functional' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface coverage';             gate='Changed-surface checks and coverage pass' }
+                [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets + dependencies + applicable threat checks'; gate='Zero high/critical findings' }
+                [PSCustomObject]@{ n=4; focus='Adversarial: applicable mutation/property/fuzz/negative checks';          gate='Risk-specific adversarial checks pass' }
+                [PSCustomObject]@{ n=5; focus='Independent Review + risk-scoped final evidence';                          gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+            )
+        }
+        'complex-delivery' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + focused failing tests turn green'; gate='Focused tests passing; feature functional' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface security checks';   gate='Changed-surface checks pass' }
+                [PSCustomObject]@{ n=3; focus='Independent Review + risk-scoped final evidence';                      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+            )
+        }
+        'auto-fix-review' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Review findings + apply safe fixes + run focused checks'; gate='Safe fixes pass changed-surface checks' }
+                [PSCustomObject]@{ n=2; focus='Independent decision + risk-scoped final evidence';      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+            )
+        }
+        'agent-x' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Classify + execute the bounded specialist phase';        gate='Scope and specialist deliverables addressed' }
+                [PSCustomObject]@{ n=2; focus='Validate role boundaries, handoffs, and changed surfaces'; gate='Required checks and alignments pass' }
+                [PSCustomObject]@{ n=3; focus='Independent Review + final evidence + Compound Capture';  gate='Zero HIGH/MEDIUM; completion evidence present' }
+            )
+        }
+        default {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Deliver + verify + independent review'; gate='Scope addressed; evidence present; zero HIGH/MEDIUM' }
+            )
+        }
+    }
+}
+
+function Get-LoopStateHealth {
+    param(
+        $State,
+        [Nullable[int]]$ExpectedIssue = $null
+    )
+
+    if (-not $State) {
+        return [PSCustomObject]@{ kind = 'healthy'; reason = $null }
+    }
+
+    $staleReason = Get-LoopStateStaleReason -State $State -ExpectedIssue $ExpectedIssue
+    if ($staleReason) {
+        return [PSCustomObject]@{ kind = 'stale'; reason = $staleReason }
+    }
+
+    $maxIterations = if ($State.PSObject.Properties.Name -contains 'maxIterations') { [int]$State.maxIterations } else { 0 }
+    $iteration = if ($State.PSObject.Properties.Name -contains 'iteration') { [int]$State.iteration } else { 0 }
+    if ($maxIterations -le 0 -or $iteration -lt 0) {
+        return [PSCustomObject]@{ kind = 'stuck'; reason = 'loop counters are missing or invalid' }
+    }
+
+    if ($State.active -and [string]$State.status -ne 'active') {
+        return [PSCustomObject]@{ kind = 'stuck'; reason = "active loop has unexpected status '$($State.status)'" }
+    }
+
+    $history = @($State.history)
+    if ($State.active -and $history.Count -eq 0) {
+        return [PSCustomObject]@{ kind = 'stuck'; reason = 'active loop has no iteration history' }
+    }
+
+    if ($history.Count -gt 0) {
+        $latest = $history[-1]
+        # A rollback intentionally resets the counter below prior history - not a STUCK state.
+        $isRolledBack = ($latest.PSObject.Properties.Name -contains 'status') -and ($latest.status -eq 'rollback')
+        if (-not $isRolledBack -and $latest.iteration -gt $iteration) {
+            return [PSCustomObject]@{ kind = 'stuck'; reason = "history iteration $($latest.iteration) is ahead of loop iteration $iteration" }
+        }
+    }
+
+    $lastTouched = Get-LoopStateLastTouchedUtc $State
+    if ($State.active -and $lastTouched) {
+        $ageMinutes = ([datetimeoffset]::UtcNow - $lastTouched).TotalMinutes
+        if ($ageMinutes -ge $Script:LOOP_STUCK_AFTER_MINUTES) {
+            return [PSCustomObject]@{ kind = 'stuck'; reason = ('loop last updated {0:N0} minutes ago' -f $ageMinutes) }
+        }
+    }
+
+    return [PSCustomObject]@{ kind = 'healthy'; reason = $null }
+}
+
+function Get-LoopStateDirectory {
+    return (Split-Path $Script:LOOP_STATE_FILE -Parent)
+}
+
+function Get-LoopBaselineFilePath {
+    return (Join-Path (Get-LoopStateDirectory) 'tests-baseline.json')
+}
+
+function Get-CodeQualityBaselineFilePath {
+    return (Join-Path (Get-LoopStateDirectory) 'code-quality-baseline.json')
+}
+
+function Invoke-LoopCheckProcess {
+    param(
+        [Parameter(Mandatory)][Diagnostics.ProcessStartInfo]$StartInfo,
+        [ValidateRange(1, 300000)][int]$TimeoutMilliseconds = 30000
+    )
+
+    $StartInfo.UseShellExecute = $false
+    $StartInfo.RedirectStandardInput = $true
+    $StartInfo.RedirectStandardOutput = $true
+    $StartInfo.RedirectStandardError = $true
+    $process = $null
+    try {
+        $process = [Diagnostics.Process]::Start($StartInfo)
+        $process.StandardInput.Close()
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        $timedOut = -not $process.WaitForExit($TimeoutMilliseconds)
+        if ($timedOut) {
+            $process.Kill($true)
+            if (-not $process.WaitForExit(10000)) {
+                return [PSCustomObject]@{ exitCode = 1; output = 'Checker timed out; process-tree termination unconfirmed.' }
+            }
+        }
+        if (-not [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout, $stderr), 5000)) {
+            return [PSCustomObject]@{ exitCode = 1; output = 'Checker output streams did not close; inspect remaining child processes.' }
+        }
+        $output = ($stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()).Trim()
+        if ($timedOut) {
+            return [PSCustomObject]@{ exitCode = 1; output = "Checker timed out after ${TimeoutMilliseconds}ms. Inspect the named checker and rerun it; evidence was not approved." }
+        }
+        return [PSCustomObject]@{ exitCode = $process.ExitCode; output = $output }
+    } catch {
+        return [PSCustomObject]@{ exitCode = 1; output = "Checker execution failed: $($_.Exception.Message)" }
+    } finally {
+        if ($process) { $process.Dispose() }
+    }
+}
+
+function Invoke-CodeQualityEvaluator {
+    param(
+        [ValidateSet('Snapshot', 'Scope', 'Validate')][string]$Mode,
+        [string]$ReportPath = '',
+        [string]$BaselineSha256 = '',
+        [switch]$IncludeExistingChanges
+    )
+
+    $scriptPath = $null
+    $candidateRoots = if ($Script:ROOT -ne $Script:INSTALL_ROOT) { @($Script:INSTALL_ROOT) } else { @($Script:ROOT) }
+    foreach ($basePath in $candidateRoots) {
+        $candidate = Join-Path $basePath 'scripts/score-code-quality.ps1'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { $scriptPath = $candidate; break }
+    }
+    if (-not $scriptPath) {
+        return [PSCustomObject]@{
+            available = $false
+            exitCode = 1
+            result = $null
+            output = @('Code-quality evaluator is missing from both workspace and installed runtime.')
+        }
+    }
+
+    $arguments = @(
+        '-NoProfile', '-NonInteractive', '-File', $scriptPath,
+        '-Mode', $Mode,
+        '-WorkspaceRoot', $Script:ROOT,
+        '-BaselinePath', (Get-CodeQualityBaselineFilePath),
+        '-Json'
+    )
+    if ($ReportPath) { $arguments += @('-ReportPath', $ReportPath) }
+    if ($BaselineSha256) { $arguments += @('-BaselineSha256', $BaselineSha256) }
+    if ($IncludeExistingChanges) { $arguments += '--IncludeExistingChanges' }
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('pwsh')
+    $startInfo.WorkingDirectory = $Script:ROOT
+    foreach ($argument in $arguments) { $startInfo.ArgumentList.Add([string]$argument) }
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo -TimeoutMilliseconds 90000
+    $output = @($execution.output -split "`r?`n")
+    $exitCode = $execution.exitCode
+    $result = $null
+    foreach ($line in @($output)) {
+        try {
+            $candidateResult = ([string]$line) | ConvertFrom-Json -Depth 20 -ErrorAction Stop
+            if ($candidateResult.PSObject.Properties.Name -contains 'status') { $result = $candidateResult }
+        } catch { continue }
+    }
+    $expectedStatuses = switch ($Mode) { 'Snapshot' { @('snapshotted') } 'Scope' { @('scoped') } default { @('passed', 'skipped') } }
+    if ($exitCode -eq 0 -and (-not $result -or [string]$result.status -notin $expectedStatuses)) {
+        $exitCode = 1
+        $output += 'Code-quality evaluator returned no valid structured result.'
+    }
+    if ($Mode -eq 'Snapshot' -and $exitCode -eq 0) {
+        $baselinePath = Get-CodeQualityBaselineFilePath
+        $actualHash = if (Test-Path -LiteralPath $baselinePath -PathType Leaf) {
+            (Get-FileHash -LiteralPath $baselinePath -Algorithm SHA256).Hash
+        } else { '' }
+        if (-not $actualHash -or [string]$result.baselineSha256 -cne $actualHash) {
+            $exitCode = 1
+            $output += 'Code-quality evaluator did not create the expected hashed baseline.'
+        }
+    }
+    return [PSCustomObject]@{ available = $true; exitCode = $exitCode; output = $output; result = $result }
+}
+
+function Get-LoopEvidenceRoot {
+    return (Join-Path (Get-LoopStateDirectory) 'loop-evidence')
+}
+
+<#
+.SYNOPSIS
+  Convert a loop-state timestamp to a UTC DateTimeOffset.
+
+.DESCRIPTION
+  ConvertFrom-Json returns Kind=Utc for the 'Z'-suffixed values Get-Timestamp
+  writes, but Kind=Local for offset-bearing values and Kind=Unspecified for
+  bare ones. Blanket SpecifyKind(Utc) is wrong for the Local case -- it
+  relabels 16:31+05:30 as 16:31Z, pushing the instant 5.5 hours into the
+  future and rejecting genuinely fresh artifacts. Only an Unspecified value
+  needs labelling; everything else converts.
+#>
+function ConvertTo-LoopUtcOffset([object]$Value) {
+    if ($null -eq $Value) { return $null }
+    try {
+        if ($Value -is [datetime]) {
+            if ($Value.Kind -eq [System.DateTimeKind]::Unspecified) {
+                return [datetimeoffset]::new([datetime]::SpecifyKind($Value, [System.DateTimeKind]::Utc))
+            }
+            return ([datetimeoffset]$Value).ToUniversalTime()
+        }
+        return [datetimeoffset]::Parse(
+            [string]$Value,
+            [cultureinfo]::InvariantCulture,
+            [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+    } catch {
+        return $null
+    }
+}
+
+<#
+.SYNOPSIS
+  Reject an evidence artifact written before the previous iteration.
+
+.DESCRIPTION
+  Complements the SHA-256 identity guard. Touching a stale file defeats the
+  hash check but not this one; regenerating byte-identical output defeats
+  this check but not the hash. Applied to BOTH 'loop iterate' and
+  'loop complete' -- omitting it from complete left the exact bypass of
+  generating a final gate log up front and submitting it at the end.
+
+.OUTPUTS
+  $true when the artifact is acceptable, $false when it is stale.
+#>
+function Test-LoopEvidenceFreshness {
+    param(
+        [Parameter(Mandatory)][string]$EvidencePath,
+        [object]$State,
+        [string]$ContextLabel = 'loop iterate'
+    )
+
+    $item = Get-Item -LiteralPath $EvidencePath -ErrorAction SilentlyContinue
+    if (-not $item) { return $true }
+    if (-not $State -or ($State.PSObject.Properties.Name -notcontains 'lastIterationAt')) { return $true }
+
+    $lastIterationAt = ConvertTo-LoopUtcOffset $State.lastIterationAt
+    if (-not $lastIterationAt) { return $true }
+
+    $writtenAt = ([datetimeoffset]$item.LastWriteTimeUtc).ToUniversalTime()
+    if ($writtenAt -lt $lastIterationAt) {
+        Write-CliOutput "$($C.r)  [FAIL] $ContextLabel evidence artifact is older than the previous iteration.$($C.n)"
+        Write-CliOutput "$($C.d)    Written:        $($writtenAt.ToString('o'))$($C.n)"
+        Write-CliOutput "$($C.d)    Last iteration: $($lastIterationAt.ToString('o'))$($C.n)"
+        Write-CliOutput "$($C.d)    Regenerate the artifact so it reflects the current state, then retry.$($C.n)"
+        return $false
+    }
+    return $true
+}
+
+function Read-LoopBaseline {
+    return (Read-JsonFile (Get-LoopBaselineFilePath))
+}
+
+function Reset-LoopEvidenceArtifacts {
+    $evidenceRoot = Get-LoopEvidenceRoot
+    if (Test-Path -LiteralPath $evidenceRoot) {
+        Remove-Item -LiteralPath $evidenceRoot -Recurse -Force
+    }
+}
+
+<#
+.SYNOPSIS
+  Prune long-abandoned ad-hoc directories under .frontier/state.
+
+.DESCRIPTION
+  Sessions accumulate one-off evidence folders (cursor-evidence,
+  ver-evidence, release-evidence, ...). Nothing removed them, so the directory
+  grew without bound and several sat empty for months.
+
+  AGE IS REQUIRED IN EVERY CASE. An earlier version deleted empty directories
+  immediately, with no time component, which destroyed a directory created
+  moments earlier for an operation that had not yet written its first file.
+  A directory is removed only when its own timestamp AND every file beneath it
+  are older than the retention window.
+
+  Deletions are unrecoverable -- .frontier/state is gitignored -- so the
+  protected list covers every directory the loop and review flows write to,
+  and any failure is swallowed rather than allowed to break the loop.
+#>
+function Remove-StaleStateDirectories {
+    param([int]$RetentionDays = 30)
+
+    # Every directory the loop, review, or release flows write to.
+    $protected = @(
+        'loop-evidence', 'loop-history', 'review-evidence',
+        'evidence', 'final-evidence', 'session-evidence', 'cursor-evidence'
+    )
+    $stateDir = Get-LoopStateDirectory
+    if (-not (Test-Path -LiteralPath $stateDir)) { return }
+
+    $cutoff = (Get-Date).AddDays(-$RetentionDays)
+    $removed = 0
+
+    foreach ($dir in @(Get-ChildItem -LiteralPath $stateDir -Directory -ErrorAction SilentlyContinue)) {
+        if ($dir.Name -in $protected) { continue }
+
+        try {
+            # The directory's own timestamp gates the empty case, so a freshly
+            # created placeholder is never a candidate.
+            if ($dir.LastWriteTime -ge $cutoff) { continue }
+
+            $files = @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -File -ErrorAction SilentlyContinue)
+            $newestFile = if ($files.Count -gt 0) { ($files | Measure-Object -Property LastWriteTime -Maximum).Maximum } else { $null }
+            if ($newestFile -and $newestFile -ge $cutoff) { continue }
+
+            Remove-Item -LiteralPath $dir.FullName -Recurse -Force -ErrorAction Stop
+            $removed++
+        } catch {
+            Write-Verbose "State cleanup skipped '$($dir.Name)': $_"
+        }
+    }
+
+    if ($removed -gt 0) {
+        Write-CliOutput "$($C.d)  Pruned $removed state director$(if ($removed -eq 1) { 'y' } else { 'ies' }) untouched for over $RetentionDays days.$($C.n)"
+    }
+}
+
+function ConvertFrom-LoopPassingValue([string]$Raw) {
+    # An integer is the legacy single baseline; 'suite=count[,suite=count]' reports only the suites that ran.
+    $value = $Raw.Trim()
+    $parsed = 0
+    if ($value -match '^[0-9]+$' -and [int]::TryParse($value, [ref]$parsed)) { return $parsed }
+
+    $suites = [ordered]@{}
+    foreach ($part in ($value -split ',')) {
+        $pair = [regex]::Match($part.Trim(), '^([A-Za-z0-9][A-Za-z0-9._/-]*)[ \t]*=[ \t]*([0-9]+)$')
+        if (-not $pair.Success -or -not [int]::TryParse($pair.Groups[2].Value, [ref]$parsed)) { return '__INVALID__' }
+        $suite = $pair.Groups[1].Value.ToLowerInvariant()
+        if ($suites.Contains($suite)) { return '__INVALID__' }
+        $suites[$suite] = $parsed
+    }
+    return $suites
+}
+
+function Get-LoopPassingCount([string]$contextLabel) {
+    $raw = Get-JoinedFlagValue @('--passing')
+    if (-not $raw) { return $null }
+
+    $parsed = ConvertFrom-LoopPassingValue $raw
+    if ($parsed -is [string]) {
+        Write-CliOutput "$($C.r)  [FAIL] $contextLabel requires --passing <non-negative-integer> or <suite>=<count>[,<suite>=<count>].$($C.n)"
+    }
+    return $parsed
+}
+
+function Test-LoopIntegerBaseline($Baseline) {
+    return [bool]($Baseline -and ($Baseline.PSObject.Properties.Name -contains 'passing') -and $null -ne $Baseline.passing -and "$($Baseline.passing)" -ne '')
+}
+
+function Test-LoopPassingBaseline {
+    param(
+        $Baseline,
+        $CurrentPassing,
+        [string]$ContextLabel
+    )
+
+    $hasCount = Test-LoopIntegerBaseline $Baseline
+    if ($hasCount -and $CurrentPassing -isnot [int]) {
+        Write-CliOutput "$($C.r)  [FAIL] $ContextLabel requires --passing <count> because tests-baseline.json is set to $($Baseline.passing).$($C.n)"
+        Write-CliOutput "$($C.d)    An integer baseline needs an integer count; per-suite counts apply only without one.$($C.n)"
+        return $false
+    }
+    if ($hasCount -and $CurrentPassing -lt [int]$Baseline.passing) {
+        Write-CliOutput "$($C.r)  [FAIL] $ContextLabel would regress passing tests: current=$CurrentPassing baseline=$($Baseline.passing).$($C.n)"
+        return $false
+    }
+
+    if ($CurrentPassing -is [System.Collections.IDictionary]) {
+        # Each suite is compared only with its own last count, so unaffected suites need no rerun.
+        $recordedSuites = if ($Baseline -and ($Baseline.PSObject.Properties.Name -contains 'suites')) { $Baseline.suites } else { $null }
+        foreach ($suite in @($CurrentPassing.Keys)) {
+            $last = if ($recordedSuites) { $recordedSuites.PSObject.Properties[$suite] } else { $null }
+            if ($last -and [int]$CurrentPassing[$suite] -lt [int]$last.Value) {
+                Write-CliOutput "$($C.r)  [FAIL] $ContextLabel would regress passing tests for ${suite}: current=$($CurrentPassing[$suite]) last=$($last.Value).$($C.n)"
+                return $false
+            }
+        }
+    } elseif (-not $hasCount) {
+        $note = if ($null -eq $CurrentPassing) { 'No test counts recorded.' } else { 'An integer count is compared only with an integer baseline (loop baseline -c <count>).' }
+        Write-CliOutput "$($C.d)  $note Add --passing <suite>=<count> for the suites this step ran.$($C.n)"
+    }
+
+    return $true
+}
+
+function Save-LoopSuiteCounts($Baseline, [System.Collections.IDictionary]$Counts) {
+    $suites = [ordered]@{}
+    if ($Baseline -and ($Baseline.PSObject.Properties.Name -contains 'suites') -and $Baseline.suites) {
+        foreach ($property in $Baseline.suites.PSObject.Properties) { $suites[$property.Name] = [int]$property.Value }
+    }
+    foreach ($suite in $Counts.Keys) { $suites[$suite] = [int]$Counts[$suite] }
+    $record = if ($Baseline) { $Baseline } else { [PSCustomObject]@{ capturedAt = Get-Timestamp; passing = $null } }
+    $record | Add-Member -NotePropertyName suites -NotePropertyValue ([PSCustomObject]$suites) -Force
+    Write-JsonFile (Get-LoopBaselineFilePath) $record
+}
+
+function Invoke-LoopBaseline {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) {
+        Write-CliOutput 'No loop state found. Run `frontier loop start` first.'
+        return
+    }
+
+    $countRaw = Get-JoinedFlagValue @('-c', '--count')
+    if (-not $countRaw) {
+        $baseline = Read-LoopBaseline
+        $hasCount = Test-LoopIntegerBaseline $baseline
+        $pairs = @(if ($baseline -and ($baseline.PSObject.Properties.Name -contains 'suites') -and $baseline.suites) {
+                $baseline.suites.PSObject.Properties | ForEach-Object { "$($_.Name)=$($_.Value)" }
+            })
+        if ($hasCount) { Write-CliOutput "$($C.c)  Loop baseline passing tests: $($baseline.passing)$($C.n)" }
+        if ($pairs.Count -gt 0) { Write-CliOutput "$($C.c)  Suite counts: $($pairs -join ', ')$($C.n)" }
+        if (-not $hasCount -and $pairs.Count -eq 0) { Write-CliOutput 'No tests baseline recorded.' }
+        return
+    }
+
+    $count = ConvertFrom-LoopPassingValue $countRaw
+    if ($count -is [string]) {
+        Write-CliOutput "$($C.r)  [FAIL] loop baseline requires --count <non-negative-integer> or <suite>=<count>[,<suite>=<count>].$($C.n)"
+        exit 1
+    }
+    if ($count -is [System.Collections.IDictionary]) {
+        $current = Read-LoopBaseline
+        if (Test-LoopIntegerBaseline $current) {
+            Write-CliOutput "$($C.r)  [FAIL] This loop has an integer baseline ($($current.passing)); per-suite baselines apply only without one. Start a new loop to switch.$($C.n)"
+            exit 1
+        }
+        # Explicit, so it may lower a suite's count after an intentional change such as removed tests.
+        Save-LoopSuiteCounts $current $count
+        Write-CliOutput "$($C.g)  [PASS] Suite baselines set: $(@($count.Keys | ForEach-Object { "$_=$($count[$_])" }) -join ', ').$($C.n)"
+        return
+    }
+
+    $baselineFile = Get-LoopBaselineFilePath
+    $baseline = [PSCustomObject]@{
+        capturedAt = Get-Timestamp
+        issue      = if ($state.PSObject.Properties.Name -contains 'issueNumber') { $state.issueNumber } else { $null }
+        passing    = $count
+        note       = 'Recorded via: frontier loop baseline -c <passing-count>. iterate/complete reject counts below baseline.'
+    }
+    Write-JsonFile $baselineFile $baseline
+    Write-CliOutput "$($C.g)  [PASS] Loop baseline set to $count passing tests.$($C.n)"
+}
+
+function Format-LoopPreview([string]$Text, [int]$Max = 160) {
+    $line = ($Text -replace '\s+', ' ').Trim()
+    if ($line.Length -le $Max) { return $line }
+    return $line.Substring(0, $Max - 3) + '...'
+}
+
+<#
+.SYNOPSIS
+  List the test files that reference implementation files changed since loop start.
+
+.DESCRIPTION
+  A test is affected when its text names a changed file by file name, path without
+  extension, or a distinctive stem (compound, camelCase or 8+ characters, so words
+  such as 'config' or 'API' do not match everything). The list is where an iteration's
+  checks start, not proof of coverage; changed files no test names are reported.
+#>
+function Invoke-LoopAffected {
+    $scope = Invoke-CodeQualityEvaluator -Mode Scope
+    if (-not $scope.available -or $scope.exitCode -ne 0) {
+        $scope.output | Select-Object -Last 5 | ForEach-Object { Write-CliOutput ([string]$_) }
+        Write-CliOutput "$($C.r)  [FAIL] Could not list the implementation files changed since loop start.$($C.n)"
+        exit 1
+    }
+    $changed = @($scope.result.files | ForEach-Object { [string]$_.path } | Where-Object { $_ })
+    $gitAvailable = [bool](Get-Command git -ErrorAction SilentlyContinue)
+    $listed = @(if ($gitAvailable) { & git -C $Script:ROOT ls-files --cached --others --exclude-standard 2>$null })
+    if (-not $gitAvailable -or $LASTEXITCODE -ne 0) {
+        Write-CliOutput "$($C.r)  [FAIL] loop affected needs a git workspace to find test files.$($C.n)"
+        exit 1
+    }
+    $testPattern = '(^|/)(__tests__|[Tt]ests?|specs?)/|[._-](test|spec)s?\.[A-Za-z0-9]+$|[a-z0-9]Tests?\.[A-Za-z0-9]+$|(^|/)test_[^/]+\.py$'
+    $codePattern = '\.(ps1|psm1|sh|bash|js|cjs|mjs|ts|tsx|jsx|py|cs|fs|go|rs|java|kt|rb|php|swift|c|cc|cpp)$'
+    # The index still lists tracked files deleted from the working tree.
+    $testFiles = @($listed | ForEach-Object { ([string]$_).Replace('\', '/') } |
+        Where-Object { $_ -cmatch $testPattern -and $_ -match $codePattern -and (Test-Path -LiteralPath (Join-Path $Script:ROOT $_) -PathType Leaf) } |
+        Sort-Object -Unique)
+
+    $matchers = @(foreach ($path in $changed) {
+        $tokens = @([IO.Path]::GetFileName($path))
+        $withoutExtension = $path -replace '\.[^./]+$', ''
+        if ($path.Contains('/')) { $tokens += $withoutExtension }
+        if ($path.EndsWith('.py') -and $path.Contains('/')) { $tokens += $withoutExtension.Replace('/', '.') }
+        $stem = [IO.Path]::GetFileNameWithoutExtension($path)
+        if ($stem.Length -ge 8 -or $stem -match '[-_]' -or $stem -cmatch '[a-z][A-Z]') { $tokens += $stem }
+        $alternation = @($tokens | Select-Object -Unique | Sort-Object Length -Descending | ForEach-Object { [regex]::Escape($_) }) -join '|'
+        [PSCustomObject]@{ path = $path; regex = [regex]::new("(?<![A-Za-z0-9_-])(?:$alternation)(?![A-Za-z0-9_-])", 'IgnoreCase') }
+    })
+    $affected = [System.Collections.Generic.List[object]]::new()
+    $skipped = 0
+    foreach ($testFile in $testFiles) {
+        $fullPath = Join-Path $Script:ROOT $testFile
+        $content = try {
+            if ((Get-Item -LiteralPath $fullPath -ErrorAction Stop).Length -le 2MB) { [IO.File]::ReadAllText($fullPath) }
+        } catch { $null }
+        if ($null -eq $content) { $skipped++; continue }
+        $covers = @($matchers | Where-Object { $_.regex.IsMatch($content) } | ForEach-Object { $_.path })
+        if ($covers.Count -gt 0) { $affected.Add([PSCustomObject]@{ path = $testFile; covers = $covers }) }
+    }
+
+    if ($Script:JsonOutput) {
+        [PSCustomObject]@{ changed = $changed; testFiles = $testFiles.Count; skipped = $skipped; affected = @($affected) } | ConvertTo-Json -Depth 5 -Compress
+        return
+    }
+    if ($changed.Count -eq 0) {
+        Write-CliOutput "$($C.d)  No implementation files changed since loop start; run only the tests you edited.$($C.n)"
+        return
+    }
+    Write-CliOutput "$($C.c)  Affected tests: $($affected.Count) of $($testFiles.Count) test files cover $($changed.Count) changed file(s).$($C.n)"
+    foreach ($entry in @($affected | Select-Object -First 25)) {
+        $more = if ($entry.covers.Count -gt 3) { ', ...' } else { '' }
+        Write-CliOutput "    $($entry.path)  <- $(@($entry.covers | Select-Object -First 3) -join ', ')$more"
+    }
+    if ($affected.Count -gt 25) { Write-CliOutput "    ... and $($affected.Count - 25) more" }
+    $untested = @($changed | Where-Object { $changedPath = $_; @($affected | Where-Object { $_.covers -contains $changedPath }).Count -eq 0 })
+    if ($untested.Count -gt 0) {
+        $more = if ($untested.Count -gt 5) { ', ...' } else { '' }
+        Write-CliOutput "$($C.y)  Not named by any test: $(@($untested | Select-Object -First 5) -join ', ')$more$($C.n)"
+    }
+    if ($skipped -gt 0) { Write-CliOutput "$($C.y)  Skipped $skipped test file(s) that are over 2 MB or unreadable.$($C.n)" }
+    Write-CliOutput "$($C.d)  Record each suite you run: --passing <suite>=<count>[,<suite>=<count>]$($C.n)"
+}
+
+function Invoke-LoopStart {
+    $prompt = Get-Flag @('-p', '--prompt')
+    if (-not $prompt) { Write-CliOutput 'Error: --prompt required'; exit 1 }
+    $max = [int](Get-Flag @('-m', '--max') '20')
+    $criteria = Get-Flag @('-c', '--criteria') 'TASK_COMPLETE'
+    $issue = [int](Get-Flag @('-i', '--issue') '0')
+    if (-not $issue) { $issue = $null }
+    $role = Get-Flag @('-r', '--role') ''
+    $includeExistingChanges = Test-Flag @('--include-existing-changes')
+    $taskClass = Get-LoopTaskClass ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; maxIterations = $max; role = $role })
+    $min = Get-LoopDefaultMinIterations ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; taskClass = $taskClass; maxIterations = $max })
+    if ($max -lt $min) {
+        Write-CliOutput "$($C.r)Error: --max must be at least $min for task class '$taskClass'.$($C.n)"
+        exit 1
+    }
+    $budgetRaw = Get-Flag @('-b', '--budget') ''
+    $budget = $null
+    if ($budgetRaw) {
+        $parsed = 0
+        if (-not [int]::TryParse($budgetRaw, [ref]$parsed) -or $parsed -le 0) {
+            Write-CliOutput "$($C.r)Error: --budget must be a positive integer (got '$budgetRaw').$($C.n)"
+            exit 1
+        }
+        $budget = $parsed
+    }
+
+    $existing = Read-JsonFile $Script:LOOP_STATE_FILE
+    $loopHealth = Get-LoopStateHealth -State $existing -ExpectedIssue $issue
+
+    # Any loop start is always a clean reset: counter back to 1, all old history
+    # archived, all old evidence cleared. A new `loop start` is the explicit signal
+    # that a new task is beginning, so prior iteration counts MUST NOT leak through.
+    # Agents reading loop status mid-task were getting confused by stale iteration
+    # numbers and history entries from earlier work.
+
+    if ($existing -and $existing.active) {
+        $resetReason = if ($loopHealth.kind -eq 'healthy') { 'new task started' } else { $loopHealth.reason }
+        $existing.active = $false
+        $existing.status = 'cancelled'
+        $existing.lastIterationAt = Get-Timestamp
+        $existing.history = @($existing.history) + @([PSCustomObject]@{
+                iteration = $existing.iteration
+                timestamp = Get-Timestamp
+                summary   = "Auto-reset prior loop before starting new task ($resetReason)"
+                status    = 'cancelled'
+                outcome   = 'fail'
+            })
+        # Archive the cancelled loop alongside evidence so audit history is preserved
+        try {
+            $archiveDir = Join-Path (Split-Path $Script:LOOP_STATE_FILE -Parent) 'loop-history'
+            if (-not (Test-Path $archiveDir)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+            $stamp = (Get-Date -Format 'yyyyMMddTHHmmss')
+            $archivePath = Join-Path $archiveDir "loop-$stamp.json"
+            Write-JsonFile $archivePath $existing
+        } catch { Write-Verbose "Loop archive failed: $_" }
+        Write-CliOutput "$($C.y)  Auto-reset prior loop (was iteration $($existing.iteration), $resetReason). Counter reset to 0.$($C.n)"
+    }
+
+    # Fresh loop means fresh evidence workspace: remove archived artifacts from the
+    # prior loop so a new task cannot accidentally reason over stale evidence.
+    try { Reset-LoopEvidenceArtifacts } catch { Write-Verbose "Loop evidence cleanup failed: $_" }
+    try { Remove-StaleStateDirectories } catch { Write-Verbose "State directory cleanup failed: $_" }
+
+    $codeQualitySnapshot = Invoke-CodeQualityEvaluator -Mode Snapshot -IncludeExistingChanges:$includeExistingChanges
+    if (-not $codeQualitySnapshot.available -or $codeQualitySnapshot.exitCode -ne 0) {
+        $codeQualitySnapshot.output | ForEach-Object { Write-CliOutput ([string]$_) }
+        Write-CliOutput "$($C.r)  [FAIL] Could not capture the implementation baseline for the code-quality gate.$($C.n)"
+        exit 1
+    }
+
+    $state = [PSCustomObject]@{
+        active             = $true
+        status             = 'active'
+        prompt             = $prompt
+        role               = $role
+        taskClass          = $taskClass
+        # Provenance only. No gate reads this: it was once the key for a free-text
+        # fallback, and keying enforcement on a field inside the file being
+        # enforced is what made that fallback trivially restorable.
+        reviewGate         = 'structured'
+        iteration          = 0
+        minIterations      = $min
+        maxIterations      = $max
+        completionCriteria = $criteria
+        issueNumber        = $issue
+        budgetMinutes      = $budget
+        startedAt          = Get-Timestamp
+        lastIterationAt    = Get-Timestamp
+        codeQualityBaselineSha256 = [string]$codeQualitySnapshot.result.baselineSha256
+        codeQualityScopeMode = if ($includeExistingChanges) { 'include-existing-changes' } else { 'new-changes-only' }
+        history            = @([PSCustomObject]@{ iteration = 0; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
+    }
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+
+    # Snapshot tests-passing baseline so iterations cannot regress passing tests.
+    # The baseline file is advisory: agents/CI write the actual count via
+    # `frontier loop baseline -c <count>` before iterating. Stored next to loop state.
+    $baselineFile = Get-LoopBaselineFilePath
+    $baseline = [PSCustomObject]@{
+        capturedAt = Get-Timestamp
+        issue      = $issue
+        passing    = $null
+        note       = 'Set via: frontier loop baseline -c <count> or <suite>=<count>. iterate/complete reject counts below the baseline; suite counts are kept per suite.'
+    }
+    try { Write-JsonFile $baselineFile $baseline } catch { Write-Verbose "Baseline write failed: $_" }
+
+    Write-CliOutput "`n$($C.c)  Iterative Loop Started$($C.n)"
+    Write-CliOutput "$($C.d)  Iteration: 0/$max  |  Minimum review iterations: $min  |  Criteria: $criteria$($C.n)"
+    if ($role)   { Write-CliOutput "$($C.d)  Role: $role  (task class: $taskClass)$($C.n)" }
+    if ($budget) { Write-CliOutput "$($C.d)  Budget: $budget minutes$($C.n)" }
+    if ($issue)  { Write-CliOutput "$($C.d)  Issue: #$issue$($C.n)" }
+    Write-CliOutput "`n$($C.w)  Prompt:$($C.n) $(Format-LoopPreview $prompt 200)`n"
+    $guidance = @(Get-LoopIterationGuidance $taskClass)
+    if ($guidance.Count -gt 0) {
+        Write-CliOutput "$($C.w)  Iteration Focuses:$($C.n)"
+        foreach ($g in $guidance) {
+            Write-CliOutput "$($C.c)    $($g.n).$($C.n) $($g.focus)"
+            Write-CliOutput "$($C.d)       Gate: $($g.gate)$($C.n)"
+        }
+        Write-CliOutput ''
+    }
+}
+
+function Invoke-LoopStatus {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) {
+        if ($Script:JsonOutput) { Write-CliOutput '{"active":false}' } else { Write-CliOutput '  No active loop.' }
+        return
+    }
+    $effectiveMinIterations = Get-LoopEffectiveMinIterations $state
+    $state | Add-Member -NotePropertyName minIterations -NotePropertyValue $effectiveMinIterations -Force
+    if ($Script:JsonOutput) { $state | ConvertTo-Json -Depth 5; return }
+
+    Write-CliOutput "`n$($C.c)  Iterative Loop Status$($C.n)"
+    Write-CliOutput "$($C.d)  Status: $($state.status)  |  Active: $($state.active)  |  Iteration: $($state.iteration)/$($state.maxIterations)  |  Minimum review iterations: $($state.minIterations)$($C.n)"
+    Write-CliOutput "$($C.d)  Criteria: $($state.completionCriteria)$($C.n)"
+
+    # Budget info
+    $hasBudget = ($state.PSObject.Properties.Name -contains 'budgetMinutes') -and $state.budgetMinutes
+    if ($hasBudget -and $state.startedAt) {
+        try {
+            $startTime = [datetimeoffset]::Parse($state.startedAt)
+            $elapsed = ([datetimeoffset]::UtcNow - $startTime).TotalMinutes
+            $remaining = [Math]::Ceiling($state.budgetMinutes - $elapsed)
+            if ($remaining -le 0) {
+                Write-CliOutput "$($C.r)  Budget: EXCEEDED (budget was $($state.budgetMinutes)m, elapsed $([Math]::Round($elapsed))m)$($C.n)"
+            } else {
+                Write-CliOutput "$($C.d)  Budget: ${remaining}m remaining of $($state.budgetMinutes)m$($C.n)"
+            }
+        } catch { Write-Verbose "Loop budget display failed: $_" }
+    }
+
+    # Score trend from history
+    $scored = @($state.history | Where-Object { $_.PSObject.Properties.Name -contains 'harnessScore' -and $null -ne $_.harnessScore })
+    if ($scored.Count -gt 0) {
+        $latest = $scored[-1].harnessScore
+        if ($scored.Count -ge 2) {
+            $prev = $scored[-2].harnessScore
+            $delta = $latest - $prev
+            $arrow = if ($delta -gt 0) { "+$delta" } elseif ($delta -lt 0) { "$delta" } else { "=$delta" }
+            Write-CliOutput "$($C.d)  Harness score: $latest ($arrow from prev)$($C.n)"
+        } else {
+            Write-CliOutput "$($C.d)  Harness score: $latest$($C.n)"
+        }
+    }
+
+    # Per-iteration focus hint (active loops only)
+    if ($state.active) {
+        $guidanceStatus = @(Get-LoopIterationGuidance (Get-LoopTaskClass $state))
+        if ($guidanceStatus.Count -gt 0) {
+            $iter = [int]$state.iteration
+            # After a rollback, state.iteration is set to target-1 so the next
+            # 'loop iterate' lands on the target.  Display the upcoming target
+            # iteration (iter+1) so the status output matches what rollback told
+            # the user ("Next iterate will be recorded as iteration <target>").
+            $lastEntry = if ($state.history -and @($state.history).Count -gt 0) { @($state.history)[-1] } else { $null }
+            $isRolledBack = $lastEntry `
+                -and ($lastEntry.PSObject.Properties.Name -contains 'status') `
+                -and ($lastEntry.status -eq 'rollback')
+            if ($isRolledBack -or $iter -eq 0) { $iter = $iter + 1 }
+            $currentFocus = $guidanceStatus | Where-Object { $_.n -eq $iter } | Select-Object -First 1
+            if (-not $currentFocus) { $currentFocus = $guidanceStatus[-1] }  # past last defined -> show final gate
+            Write-CliOutput "$($C.w)  Current focus (iteration $iter):$($C.n) $($currentFocus.focus)"
+            Write-CliOutput "$($C.d)  Gate: $($currentFocus.gate)$($C.n)"
+        }
+    }
+
+    $loopHealth = Get-LoopStateHealth $state
+    if ($loopHealth.kind -eq 'stale') {
+        Write-CliOutput "$($C.y)  Staleness: $($loopHealth.reason). Start a new loop for the current task.$($C.n)"
+    }
+    elseif ($loopHealth.kind -eq 'stuck') {
+        Write-CliOutput "$($C.y)  Health: STUCK. $($loopHealth.reason). Reset the loop before trusting it for handoff.$($C.n)"
+    }
+    if ($state.status -eq 'complete' -and $loopHealth.kind -eq 'stale') {
+        Write-CliOutput "$($C.y)  Completion gate: STALE. A previous completed loop does not satisfy the current task.$($C.n)"
+    }
+    elseif ($loopHealth.kind -eq 'stuck') {
+        Write-CliOutput "$($C.y)  Completion gate: BLOCKED. Loop data is stuck and must be reset before handoff.$($C.n)"
+    }
+    elseif ($state.status -eq 'complete') {
+        Write-CliOutput "$($C.g)  Completion gate: SATISFIED (loop already completed).$($C.n)"
+    }
+    elseif ($state.active -and ([int]$state.iteration -lt $effectiveMinIterations)) {
+        Write-CliOutput "$($C.y)  Completion gate: BLOCKED until minimum iterations are met ($($state.iteration)/$effectiveMinIterations).$($C.n)"
+    }
+    elseif ($state.active) {
+        Write-CliOutput "$($C.y)  Completion gate: Minimum iterations met. Run 'frontier loop complete -s <summary>' only after all quality gates pass.$($C.n)"
+    }
+    else {
+        Write-CliOutput "$($C.y)  Completion gate: NOT SATISFIED. Loop must reach status 'complete' before handoff.$($C.n)"
+    }
+    if ($state.history -and $state.history.Count -gt 0) {
+        Write-CliOutput "`n$($C.w)  History (last 5):$($C.n)"
+        $recent = $state.history | Select-Object -Last 5
+        foreach ($h in $recent) {
+            $outcomeVal = if ($h.PSObject.Properties.Name -contains 'outcome') { $h.outcome } else { $null }
+            $markStatus = if ($h.PSObject.Properties.Name -contains 'status') { $h.status } else { '' }
+            $mark = if ($markStatus -eq 'rollback') { '[BACK]' } elseif ($outcomeVal -eq 'pass') { '[PASS]' } elseif ($outcomeVal -eq 'fail') { '[FAIL]' } elseif ($markStatus -eq 'complete') { '[PASS]' } else { '[...]' }
+            $scorePart = if ($h.PSObject.Properties.Name -contains 'harnessScore' -and $null -ne $h.harnessScore) { " (score: $($h.harnessScore))" } else { '' }
+            Write-CliOutput "$($C.d)    $mark Iteration $($h.iteration): $(Format-LoopPreview ([string]$h.summary))$scorePart$($C.n)"
+        }
+    }
+    Write-CliOutput ''
+}
+
+<#
+.SYNOPSIS
+  Build a structured reviewer record from --verdict / --reviewer / severity flags.
+
+.OUTPUTS
+  $null when no reviewer flags were supplied, '__INVALID__' on a bad value, or
+  the reviewer record object to attach to the iteration.
+#>
+function Get-LoopReviewFlagRecord {
+    $verdictRaw = Get-Flag @('--verdict') ''
+    $reviewer = Get-Flag @('--reviewer') ''
+    # A trailing '--verdict' with no value would otherwise read as "no reviewer
+    # flags at all" and silently drop the review pass with exit code 0.
+    if ([string]::IsNullOrWhiteSpace($verdictRaw) -and ($Script:SubArgs -contains '--verdict')) {
+        Write-CliOutput "$($C.r)  [FAIL] --verdict requires a value: 'approved' or 'changes-requested'.$($C.n)"
+        return '__INVALID__'
+    }
+    $counts = @{}
+    $supplied = @{}
+    foreach ($severity in @('high', 'medium', 'low')) {
+        $raw = Get-Flag @("--$severity") ''
+        # Presence is decided on the STRING, not truthiness: a numeric 0 arriving
+        # from a launcher that coerced the argument would otherwise look omitted,
+        # and zero findings is exactly the value a clean review must record.
+        $rawText = [string]$raw
+        $supplied[$severity] = -not [string]::IsNullOrWhiteSpace($rawText)
+        if (-not $supplied[$severity]) { $counts[$severity] = 0; continue }
+        $parsed = 0
+        if (-not [int]::TryParse($rawText, [ref]$parsed) -or $parsed -lt 0) {
+            Write-CliOutput "$($C.r)  [FAIL] --$severity requires a non-negative integer.$($C.n)"
+            return '__INVALID__'
+        }
+        $counts[$severity] = $parsed
+    }
+
+    $hasFindings = @($counts.Values | Where-Object { $_ -gt 0 }).Count -gt 0
+    if (-not $verdictRaw) {
+        if ($reviewer -or $hasFindings) {
+            Write-CliOutput "$($C.r)  [FAIL] --verdict <approved|changes-requested> is required when recording reviewer findings.$($C.n)"
+            return '__INVALID__'
+        }
+        return $null
+    }
+
+    $verdict = switch ($verdictRaw.Trim().ToLowerInvariant()) {
+        'approved' { 'approved' }
+        'changes-requested' { 'changes-requested' }
+        'changes_requested' { 'changes-requested' }
+        default { '' }
+    }
+    if (-not $verdict) {
+        Write-CliOutput "$($C.r)  [FAIL] --verdict must be 'approved' or 'changes-requested'.$($C.n)"
+        return '__INVALID__'
+    }
+
+    # An omitted count would otherwise record a zero-findings claim the reviewer
+    # never made, so both blocking severities must be stated explicitly.
+    foreach ($severity in @('high', 'medium')) {
+        if (-not $supplied[$severity]) {
+            Write-CliOutput "$($C.r)  [FAIL] --$severity is required with --verdict so the finding count is stated, not assumed.$($C.n)"
+            return '__INVALID__'
+        }
+    }
+
+    # An attributable reviewer is part of the evidence: an anonymous verdict
+    # cannot be traced back to who or what produced it.
+    if ([string]::IsNullOrWhiteSpace($reviewer)) {
+        Write-CliOutput "$($C.r)  [FAIL] --reviewer <id> is required with --verdict so the review is attributable.$($C.n)"
+        return '__INVALID__'
+    }
+
+    return [PSCustomObject]@{
+        verdict = $verdict
+        reviewer = $reviewer.Trim()
+        high = $counts['high']
+        medium = $counts['medium']
+        low = $counts['low']
+        recordedAt = Get-Timestamp
+    }
+}
+
+function Invoke-LoopIterate {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) { Write-CliOutput 'No loop state found.'; exit 1 }
+    $consumed = ($state.PSObject.Properties.Name -contains 'loopConsumed') -and [bool]$state.loopConsumed
+    if ($consumed) {
+        Write-CliOutput "$($C.r)  [FAIL] Quality loop was consumed by a prior commit. Start a fresh loop before iterating.$($C.n)"
+        exit 1
+    }
+    if (-not $state.active) {
+        Write-CliOutput "$($C.r)  [FAIL] Quality loop is not active (status: $($state.status)). Start a fresh loop before iterating.$($C.n)"
+        exit 1
+    }
+    $baseline = Read-LoopBaseline
+
+    $next = $state.iteration + 1
+    if ($next -gt $state.maxIterations) {
+        $state.active = $false
+        $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = 'Max iterations reached'; status = 'stopped'; outcome = 'fail' })
+        Write-JsonFile $Script:LOOP_STATE_FILE $state
+        Write-CliOutput "$($C.r)  Max iterations ($($state.maxIterations)) reached. Loop stopped.$($C.n)"
+        exit 1
+    }
+
+    $summary = Get-Flag @('-s', '--summary') "Iteration $next"
+    $outcomeRaw = Get-Flag @('-o', '--outcome') 'partial'
+    $outcome = if ($outcomeRaw -in @('pass', 'fail', 'partial')) { $outcomeRaw } else { 'partial' }
+    $reviewRecord = Get-LoopReviewFlagRecord
+    # Exit non-zero: a caller that only checks $LASTEXITCODE would otherwise treat
+    # a rejected reviewer pass as recorded and discover the loss at loop complete.
+    if ($reviewRecord -is [string] -and $reviewRecord -eq '__INVALID__') { exit 1 }
+    $currentPassing = Get-LoopPassingCount 'loop iterate'
+    if ($currentPassing -is [string]) { exit 1 }
+    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop iterate')) { exit 1 }
+
+    # Evidence requirement: every iterate call must point to a real artifact
+    # (test report, coverage file, lint output, scan json, etc.). Bypass only via
+    # FRONTIER_SKIP_EVIDENCE_GATE=1 -- intended for legacy/manual flows.
+    $evidencePath = Get-Flag @('-e', '--evidence') ''
+    $evidenceOk = $false
+    $evidenceAbs = $null
+    if ($evidencePath) {
+        $evidenceAbs = if ([System.IO.Path]::IsPathRooted($evidencePath)) { $evidencePath } else { Join-Path (Get-Location) $evidencePath }
+        if (Test-Path -LiteralPath $evidenceAbs -PathType Leaf) { $evidenceOk = $true }
+    }
+    if (-not $evidenceOk) {
+        if ((Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
+            Write-CliOutput "$($C.r)  [FAIL] loop iterate requires --evidence <path-to-existing-file>$($C.n)"
+            Write-CliOutput "$($C.d)    Acceptable artifacts: test report (junit/trx), coverage xml, semgrep/gitleaks json, build log.$($C.n)"
+            Write-CliOutput "$($C.d)    Example: frontier loop iterate -s 'fixed null deref' -e .frontier/state/loop-evidence/iter-2/test-report.xml$($C.n)"
+            Write-CliOutput "$($C.d)    Bypass: `$env:FRONTIER_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
+            exit 1
+        } else {
+            Write-CliOutput "$($C.y)  [WARN] Evidence gate bypassed (FRONTIER_SKIP_EVIDENCE_GATE).$($C.n)"
+        }
+    }
+
+    # Archive the accepted artifact into a per-iteration folder. The artifact is
+    # COPIED, never moved: callers routinely pass a deliverable, source file, or
+    # build output that must survive the call.
+    #
+    # Two independent staleness checks, because neither is sufficient alone:
+    #   1. FRESHNESS  -- the file must have been written after the previous
+    #      iteration was recorded. Catches re-submitting an old report.
+    #   2. IDENTITY   -- the SHA-256 must not match an already-accepted
+    #      artifact. Catches regenerating a file whose contents did not change.
+    # Touching a stale file defeats (2) but not (1); regenerating identical
+    # output defeats (1) but not (2).
+    $archivedPath = $null
+    if ($evidenceOk) {
+        if (-not (Test-LoopEvidenceFreshness -EvidencePath $evidenceAbs -State $state -ContextLabel 'loop iterate')) { exit 1 }
+
+        $evidenceHash = $null
+        try { $evidenceHash = (Get-FileHash -LiteralPath $evidenceAbs -Algorithm SHA256).Hash } catch { $evidenceHash = $null }
+        if (-not $evidenceHash) {
+            # Fail closed: without a digest the reuse guard cannot function, so
+            # accepting the artifact would silently disable the control.
+            Write-CliOutput "$($C.r)  [FAIL] Could not hash the evidence artifact; refusing to accept it.$($C.n)"
+            exit 1
+        }
+
+        $acceptedHashes = @()
+        if (($state.PSObject.Properties.Name -contains 'acceptedEvidenceHashes') -and $state.acceptedEvidenceHashes) {
+            $acceptedHashes = @($state.acceptedEvidenceHashes)
+        }
+        if ($evidenceHash -and ($acceptedHashes -contains $evidenceHash)) {
+            Write-CliOutput "$($C.r)  [FAIL] This evidence artifact was already accepted in an earlier iteration (identical SHA-256).$($C.n)"
+            Write-CliOutput "$($C.d)    Regenerate the artifact so it reflects the current iteration, then retry.$($C.n)"
+            exit 1
+        }
+
+        $loopDir = Get-LoopStateDirectory
+        $archDir = Join-Path $loopDir "loop-evidence/iter-$next"
+        if (-not (Test-Path -LiteralPath $archDir)) { New-Item -ItemType Directory -Path $archDir -Force | Out-Null }
+        $stamp = (Get-Date -Format 'yyyyMMddTHHmmssfff')
+        $leaf = [System.IO.Path]::GetFileName($evidenceAbs)
+        $archivedPath = Join-Path $archDir "$stamp-$leaf"
+        try {
+            Copy-Item -LiteralPath $evidenceAbs -Destination $archivedPath -Force
+        } catch {
+            Write-CliOutput "$($C.r)  [FAIL] Could not archive evidence (copy): $_$($C.n)"
+            exit 1
+        }
+        if ($evidenceHash) {
+            $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($evidenceHash)) -Force
+        }
+    }
+
+    $state.iteration = $next
+    $state.lastIterationAt = Get-Timestamp
+    $entry = [PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = $summary; status = 'in-progress'; outcome = $outcome }
+    if ($reviewRecord) { $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord }
+    if ($archivedPath) {
+        $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
+        $entry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $evidenceAbs
+        $entry | Add-Member -NotePropertyName evidenceSha256 -NotePropertyValue $evidenceHash
+    }
+    if ($currentPassing -is [int]) { $entry | Add-Member -NotePropertyName passingTests -NotePropertyValue $currentPassing }
+    elseif ($currentPassing -is [System.Collections.IDictionary]) { $entry | Add-Member -NotePropertyName passingSuites -NotePropertyValue ([PSCustomObject]$currentPassing) }
+    $state.history = @($state.history) + @($entry)
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+    if ($currentPassing -is [System.Collections.IDictionary]) { Save-LoopSuiteCounts $baseline $currentPassing }
+
+    # Budget warning
+    $hasBudget = ($state.PSObject.Properties.Name -contains 'budgetMinutes') -and $state.budgetMinutes
+    if ($hasBudget -and $state.startedAt) {
+        try {
+            $startTime = [datetimeoffset]::Parse($state.startedAt)
+            $elapsed = ([datetimeoffset]::UtcNow - $startTime).TotalMinutes
+            if ($elapsed -ge $state.budgetMinutes) {
+                Write-CliOutput "$($C.r)  [WARN] Time budget of $($state.budgetMinutes)m exceeded (elapsed: $([Math]::Round($elapsed))m).$($C.n)"
+            }
+        } catch { Write-Verbose "Time budget check failed: $_" }
+    }
+
+    Write-CliOutput "`n$($C.c)  Iteration $next/$($state.maxIterations)$($C.n)"
+    Write-CliOutput "$($C.d)  Summary: $(Format-LoopPreview $summary)  |  Outcome: $outcome$($C.n)"
+    if ($reviewRecord) {
+        Write-CliOutput "$($C.d)  Review: verdict=$($reviewRecord.verdict) reviewer=$($reviewRecord.reviewer) high=$($reviewRecord.high) medium=$($reviewRecord.medium) low=$($reviewRecord.low)$($C.n)"
+    }
+    if ($archivedPath) { Write-CliOutput "$($C.d)  Evidence archived to: $archivedPath$($C.n)" }
+
+    # Rollback suggestion when outcome=fail at or past the final guidance iteration
+    if ($outcome -eq 'fail') {
+        $guidance = @(Get-LoopIterationGuidance (Get-LoopTaskClass $state))
+        if ($guidance.Count -gt 0 -and $next -ge ($guidance | Select-Object -Last 1).n) {
+            $lastGate = ($guidance | Select-Object -Last 1).gate
+            Write-CliOutput "$($C.y)  [WARN] Final/review iteration recorded as FAIL. Fix the findings then rollback:$($C.n)"
+            Write-CliOutput "$($C.d)    frontier loop rollback -n <target> -r '<finding category>'$($C.n)"
+            Write-CliOutput "$($C.d)    Gate: $lastGate$($C.n)"
+        }
+    }
+    Write-CliOutput ''
+}
+
+function Invoke-LoopRollback {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) { Write-CliOutput 'No loop state found.'; exit 1 }
+    if (-not $state.active) { Write-CliOutput "$($C.r)  No active loop to roll back.$($C.n)"; exit 1 }
+
+    $targetRaw = Get-Flag @('-n', '--to') ''
+    $reason    = Get-Flag @('-r', '--reason') ''
+
+    $target = 0
+    if ($targetRaw -notmatch '^\d+$' -or -not [int]::TryParse($targetRaw, [ref]$target)) {
+        Write-CliOutput "$($C.r)  [FAIL] loop rollback requires --to <iteration-number>.$($C.n)"
+        Write-CliOutput "$($C.d)    Example: frontier loop rollback -n 3 -r 'Security bug found in subagent review'$($C.n)"
+        Write-CliOutput "$($C.d)    Rollback resets the counter so the next 'loop iterate' lands on the target iteration.$($C.n)"
+        exit 1
+    }
+
+    $current = [int]$state.iteration
+
+    if ($target -lt 1 -or $target -gt $current) {
+        Write-CliOutput "$($C.r)  [FAIL] Target must be 1..$current (current iteration). Got: $target$($C.n)"
+        exit 1
+    }
+    if ($target -eq $current) {
+        Write-CliOutput "$($C.y)  [WARN] Already at iteration $current. Rollback to the same iteration is a no-op.$($C.n)"
+        return
+    }
+
+    $reasonText = if ($reason) { ": $reason" } else { '' }
+    # Set iteration to target-1 so the next 'loop iterate' records as target
+    $state.iteration = $target - 1
+    $state.lastIterationAt = Get-Timestamp
+    $entry = [PSCustomObject]@{
+        iteration = $target
+        timestamp = Get-Timestamp
+        summary   = "Rolled back from iteration $current to $target$reasonText"
+        status    = 'rollback'
+        outcome   = 'fail'
+    }
+    $state.history = @($state.history) + @($entry)
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+
+    Write-CliOutput "`n$($C.y)  Loop rolled back: iteration $current -> $target$($C.n)"
+    if ($reason) { Write-CliOutput "$($C.d)  Reason: $reason$($C.n)" }
+    Write-CliOutput "$($C.d)  Next 'frontier loop iterate' will be recorded as iteration $target.$($C.n)"
+
+    # Show the target iteration's focus/gate so the agent knows what to do next
+    $guidance = @(Get-LoopIterationGuidance (Get-LoopTaskClass $state))
+    if ($guidance.Count -gt 0) {
+        $focus = $guidance | Where-Object { $_.n -eq $target } | Select-Object -First 1
+        if ($focus) {
+            Write-CliOutput "$($C.w)  Resume focus (iteration $target):$($C.n) $($focus.focus)"
+            Write-CliOutput "$($C.d)  Gate: $($focus.gate)$($C.n)"
+        }
+    }
+    Write-CliOutput ''
+}
+
+function Invoke-LoopComplete {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; exit 1 }
+    $loopHealth = Get-LoopStateHealth -State $state
+    if ($loopHealth.kind -ne 'healthy') {
+        Write-CliOutput "$($C.r)  [FAIL] Quality loop is $($loopHealth.kind): $($loopHealth.reason). Start a fresh loop before completion.$($C.n)"
+        exit 1
+    }
+    $baseline = Read-LoopBaseline
+    $effectiveMinIterations = Get-LoopEffectiveMinIterations $state
+    $state | Add-Member -NotePropertyName minIterations -NotePropertyValue $effectiveMinIterations -Force
+    if ([int]$state.iteration -lt [int]$state.minIterations) {
+        Write-CliOutput "$($C.y)  Minimum review iterations not yet met: $($state.iteration)/$($state.minIterations). Use 'frontier loop iterate' before completing.$($C.n)"
+        exit 1
+    }
+    if (-not (Test-LoopHasSubagentReviewIteration $state)) {
+        Write-CliOutput "$($C.r)  [FAIL] loop complete requires a subagent review iteration before completion.$($C.n)"
+        Write-CliOutput "$($C.d)    Record the review pass with: frontier loop iterate -s 'Subagent Review: <findings>' -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0$($C.n)"
+        exit 1
+    }
+    # Enforce the documented "zero HIGH, zero MEDIUM" bar against the recorded
+    # verdict rather than the summary text.
+    $latestReviewEntry = Get-LoopLatestReviewEntry $state
+    $latestReview = if ($latestReviewEntry) { Get-LoopReviewRecord $latestReviewEntry } else { $null }
+    if ($latestReview) {
+        # Case-sensitive so the CLI, the extension runtime, and the bash hook all
+        # accept exactly the same token.
+        if ([string]$latestReview.verdict -cne 'approved') {
+            Write-CliOutput "$($C.r)  [FAIL] Latest reviewer verdict is '$($latestReview.verdict)'. Address the findings, then record an approved review.$($C.n)"
+            exit 1
+        }
+        # Fail CLOSED: a record whose counts are absent, null, or non-numeric is
+        # not a zero-findings review -- [int]$null would silently coerce to 0 --
+        # and an unattributable verdict is not evidence of who reviewed what.
+        $reviewHigh = 0
+        $reviewMedium = 0
+        $countsValid = $true
+        foreach ($severity in @('high', 'medium')) {
+            if ($latestReview.PSObject.Properties.Name -notcontains $severity) { $countsValid = $false; break }
+            $rawCount = $latestReview.$severity
+            # Reject strings as well as null: the runtime requires a JSON number
+            # and the hook's digit regex rejects a quoted count, so accepting
+            # "0" here would make the three implementations disagree.
+            if ($null -eq $rawCount -or $rawCount -is [string]) { $countsValid = $false; break }
+            $parsedCount = 0
+            if (-not [int]::TryParse([string]$rawCount, [ref]$parsedCount) -or $parsedCount -lt 0) {
+                $countsValid = $false
+                break
+            }
+            if ($severity -eq 'high') { $reviewHigh = $parsedCount } else { $reviewMedium = $parsedCount }
+        }
+        if ((-not $countsValid) -or
+            ($latestReview.PSObject.Properties.Name -notcontains 'reviewer') -or
+            [string]::IsNullOrWhiteSpace([string]$latestReview.reviewer)) {
+            Write-CliOutput "$($C.r)  [FAIL] Reviewer record is missing HIGH/MEDIUM counts or a reviewer id. Re-record with --verdict <v> --reviewer <id> --high <n> --medium <n>.$($C.n)"
+            exit 1
+        }
+        if ($reviewHigh -gt 0 -or $reviewMedium -gt 0) {
+            Write-CliOutput "$($C.r)  [FAIL] Reviewer recorded $reviewHigh HIGH and $reviewMedium MEDIUM finding(s); both must be zero before completion.$($C.n)"
+            exit 1
+        }
+        # An approval only covers what existed when it was given, so it must sit on
+        # the last recorded work entry. Position is used rather than the iteration
+        # NUMBER because 'loop rollback' deliberately re-uses numbers: rolling back
+        # and re-iterating would otherwise let a stale approval match the current
+        # iteration again. Trailing completion entries are ignored because
+        # 'loop complete' appends one after this check runs.
+        $historyEntries = @($state.history)
+        $lastWorkIndex = $historyEntries.Count - 1
+        while ($lastWorkIndex -ge 0 -and
+               (Test-LoopCompletionEntry $historyEntries[$lastWorkIndex]) -and
+               (-not (Get-LoopReviewRecord $historyEntries[$lastWorkIndex]))) {
+            $lastWorkIndex--
+        }
+        $reviewIndex = -1
+        for ($index = 0; $index -lt $historyEntries.Count; $index++) {
+            if ([object]::ReferenceEquals($historyEntries[$index], $latestReviewEntry)) { $reviewIndex = $index }
+        }
+        if ($reviewIndex -ne $lastWorkIndex) {
+            Write-CliOutput "$($C.r)  [FAIL] Work was recorded after the approved review. The approval must cover the final state; re-review before completing.$($C.n)"
+            exit 1
+        }
+    }
+
+    $baselineDigest = if ($state.PSObject.Properties.Name -contains 'codeQualityBaselineSha256') { [string]$state.codeQualityBaselineSha256 } else { '' }
+    $baselinePath = Get-CodeQualityBaselineFilePath
+    $actualBaselineDigest = if (Test-Path -LiteralPath $baselinePath -PathType Leaf) {
+        try { (Get-FileHash -LiteralPath $baselinePath -Algorithm SHA256).Hash } catch { '' }
+    } else { '' }
+    if (-not $baselineDigest -or $actualBaselineDigest -cne $baselineDigest) {
+        Write-CliOutput "$($C.r)  [FAIL] Code-quality baseline SHA-256 does not match the digest recorded at loop start. Start a fresh loop.$($C.n)"
+        exit 1
+    }
+
+    foreach ($historyEntry in @($state.history)) {
+        if (-not $historyEntry -or
+            $historyEntry.PSObject.Properties.Name -notcontains 'iteration' -or
+            [int]$historyEntry.iteration -lt 1 -or
+            $historyEntry.PSObject.Properties.Name -notcontains 'evidence' -or
+            -not $historyEntry.evidence) { continue }
+        $recordedHash = if ($historyEntry.PSObject.Properties.Name -contains 'evidenceSha256') { [string]$historyEntry.evidenceSha256 } else { '' }
+        $archivedHash = if (Test-Path -LiteralPath $historyEntry.evidence -PathType Leaf) {
+            try { (Get-FileHash -LiteralPath $historyEntry.evidence -Algorithm SHA256).Hash } catch { '' }
+        } else { '' }
+        if (-not $recordedHash -or $archivedHash -cne $recordedHash) {
+            Write-CliOutput "$($C.r)  [FAIL] Archived iteration $($historyEntry.iteration) evidence SHA-256 does not match its recorded digest. Re-run verification and review.$($C.n)"
+            exit 1
+        }
+    }
+
+    $reviewEvidencePath = ''
+    if ($latestReviewEntry) {
+        if (($latestReviewEntry.PSObject.Properties.Name -contains 'evidence') -and $latestReviewEntry.evidence) {
+            $reviewEvidencePath = [string]$latestReviewEntry.evidence
+        } elseif (($latestReviewEntry.PSObject.Properties.Name -contains 'evidenceOriginal') -and $latestReviewEntry.evidenceOriginal) {
+            $reviewEvidencePath = [string]$latestReviewEntry.evidenceOriginal
+        }
+    }
+    $expectedReviewHash = if ($latestReviewEntry -and
+        ($latestReviewEntry.PSObject.Properties.Name -contains 'evidenceSha256')) {
+        [string]$latestReviewEntry.evidenceSha256
+    } else { '' }
+    $actualReviewHash = ''
+    if ($reviewEvidencePath -and (Test-Path -LiteralPath $reviewEvidencePath -PathType Leaf)) {
+        try { $actualReviewHash = (Get-FileHash -LiteralPath $reviewEvidencePath -Algorithm SHA256).Hash } catch { $actualReviewHash = '' }
+    }
+    if (-not $expectedReviewHash -or $actualReviewHash -cne $expectedReviewHash) {
+        Write-CliOutput "$($C.r)  [FAIL] Archived review evidence SHA-256 does not match the digest recorded at approval. Re-run independent review.$($C.n)"
+        exit 1
+    }
+    $currentPassing = Get-LoopPassingCount 'loop complete'
+    if ($currentPassing -is [string]) { exit 1 }
+    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { exit 1 }
+
+    # Gate: every iteration entry after #1 must carry an evidence file path that still exists.
+    if ((Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
+        $stale = @()
+        foreach ($h in @($state.history)) {
+            if ($null -eq $h) { continue }
+            if ($h.PSObject.Properties.Name -notcontains 'iteration') { continue }
+            if ([int]$h.iteration -lt 1) { continue }
+            if ($h.PSObject.Properties.Name -notcontains 'status' -or $h.status -ne 'in-progress') { continue }
+            # Only fail if the iteration explicitly promised evidence but the file is now missing
+            # (stale path). Iterations without an 'evidence' field are pre-gate or legacy -- pass through.
+            $promisedEvidence = ($h.PSObject.Properties.Name -contains 'evidence') -and $h.evidence
+            if ($promisedEvidence -and -not (Test-Path -LiteralPath $h.evidence -PathType Leaf)) {
+                $stale += $h.iteration
+            }
+        }
+        if ($stale.Count -gt 0) {
+            Write-CliOutput "$($C.r)  [FAIL] Cannot complete loop: stale evidence paths for iterations: $($stale -join ', ').$($C.n)"
+            Write-CliOutput "$($C.d)    Re-run those iterations with: frontier loop iterate -s '<summary>' -e <evidence-file>$($C.n)"
+            exit 1
+        }
+    }
+
+    # Gate: loop complete itself must point to a final evidence artifact (e.g., quality-gate log).
+    $finalEvidence = Get-Flag @('-e', '--evidence') ''
+    $finalEvidenceAbs = $null
+    if ($finalEvidence) {
+        $finalEvidenceAbs = if ([System.IO.Path]::IsPathRooted($finalEvidence)) { $finalEvidence } else { Join-Path (Get-Location) $finalEvidence }
+        if (-not (Test-Path -LiteralPath $finalEvidenceAbs -PathType Leaf)) { $finalEvidenceAbs = $null }
+    }
+    if (-not $finalEvidenceAbs -and (Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
+        if ($finalEvidence) {
+            Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
+            Write-CliOutput "$($C.d)  Provide a fresh log of the final checks for the changed code (see: frontier loop affected):$($C.n)"
+            Write-CliOutput "$($C.d)    e.g.: pwsh tests/<affected-suite>.ps1 > .frontier/state/final-gate.log$($C.n)"
+            Write-CliOutput "$($C.d)    then: frontier loop complete -s '<summary>' -e .frontier/state/final-gate.log --passing <suite>=<count>$($C.n)"
+        } else {
+            Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., the log of the focused checks you ran last).$($C.n)"
+        }
+        Write-CliOutput "$($C.d)    Bypass: `$env:FRONTIER_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
+        exit 1
+    }
+
+    if ($finalEvidenceAbs -and -not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { exit 1 }
+    if (-not $Script:JsonOutput) { Write-CliOutput '  Checking code-quality evidence (90s limit)...' }
+    $codeQualityGate = Invoke-CodeQualityEvaluator -Mode Validate -ReportPath $reviewEvidencePath -BaselineSha256 $baselineDigest
+    $gateResult = $codeQualityGate.result
+    if ($gateResult -and ($gateResult.PSObject.Properties.Name -contains 'message')) {
+        # The full report repeats every dimension's evidence, and a failure message joins every failure;
+        # print the outcome and each blocking failure once.
+        $failures = @(if ($gateResult.PSObject.Properties.Name -contains 'failures') { $gateResult.failures })
+        if ($failures.Count -gt 0) {
+            Write-CliOutput "  Code-quality: $($gateResult.status) ($($failures.Count) issue(s))."
+            $failures | Select-Object -First 10 | ForEach-Object { Write-CliOutput "    - $_" }
+            if ($failures.Count -gt 10) { Write-CliOutput "    ... and $($failures.Count - 10) more" }
+        } else {
+            Write-CliOutput "  Code-quality: $($gateResult.status). $($gateResult.message)"
+        }
+    } else {
+        $codeQualityGate.output | Select-Object -Last 20 | ForEach-Object { Write-CliOutput ([string]$_) }
+    }
+    if (-not $codeQualityGate.available -or $codeQualityGate.exitCode -ne 0) {
+        Write-CliOutput "$($C.r)  [FAIL] Code-quality verification failed. For a checker timeout/startup error, inspect the checker and retry unchanged inputs. For stale hashes or review findings, rerun the affected checks and independent review.$($C.n)"
+        exit 1
+    }
+
+    # Archive the final evidence. Copied, never moved -- the caller's artifact must
+    # survive loop completion. The same SHA-256 reuse guard as 'loop iterate'
+    # applies here: 'loop complete' is the gate the pre-commit hook keys on, so
+    # recycling an already-accepted artifact must not satisfy it.
+    $finalArchivedPath = $null
+    if ($finalEvidenceAbs) {
+        # Same freshness bar as 'loop iterate'. Without it, a final gate log
+        # generated at session start could be held back and submitted here --
+        # the identity guard would pass because it was never submitted before.
+        $finalHash = $null
+        try { $finalHash = (Get-FileHash -LiteralPath $finalEvidenceAbs -Algorithm SHA256).Hash } catch { $finalHash = $null }
+        if (-not $finalHash) {
+            Write-CliOutput "$($C.r)  [FAIL] Could not hash the final evidence artifact; refusing to accept it.$($C.n)"
+            exit 1
+        }
+
+        $acceptedHashes = @()
+        if (($state.PSObject.Properties.Name -contains 'acceptedEvidenceHashes') -and $state.acceptedEvidenceHashes) {
+            $acceptedHashes = @($state.acceptedEvidenceHashes)
+        }
+        if ($acceptedHashes -contains $finalHash) {
+            Write-CliOutput "$($C.r)  [FAIL] This final artifact was already accepted in an earlier iteration (identical SHA-256).$($C.n)"
+            Write-CliOutput "$($C.d)    'loop complete' requires a FRESH final artifact -- regenerate it, then retry.$($C.n)"
+            exit 1
+        }
+
+        $loopDir = Get-LoopStateDirectory
+        $archDir = Join-Path $loopDir "loop-evidence/complete"
+        if (-not (Test-Path -LiteralPath $archDir)) { New-Item -ItemType Directory -Path $archDir -Force | Out-Null }
+        $stamp = (Get-Date -Format 'yyyyMMddTHHmmssfff')
+        $leaf = [System.IO.Path]::GetFileName($finalEvidenceAbs)
+        $finalArchivedPath = Join-Path $archDir "$stamp-$leaf"
+        try {
+            Copy-Item -LiteralPath $finalEvidenceAbs -Destination $finalArchivedPath -Force
+        } catch {
+            Write-CliOutput "$($C.r)  [FAIL] Could not archive final evidence (copy): $_$($C.n)"
+            exit 1
+        }
+        $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($finalHash)) -Force
+    }
+
+    $summary = Get-Flag @('-s', '--summary') 'Criteria met'
+    $state.active = $false; $state.status = 'complete'; $state.lastIterationAt = Get-Timestamp
+    # Explicitly mark as not yet consumed so the pre-commit gate can reliably
+    # detect the completed-but-not-consumed state without relying on field absence.
+    # The pre-commit hook (or post-commit hook as a fallback) will flip this to
+    # true when a code commit actually consumes the loop.
+    if ($state.PSObject.Properties.Name -contains 'loopConsumed') {
+        $state.loopConsumed = $false
+    } else {
+        $state | Add-Member -NotePropertyName loopConsumed -NotePropertyValue $false -Force
+    }
+    # 'kind' distinguishes this record from a WORK entry. The agentic runner also
+    # writes status='complete' entries for real work, so the approval-binding
+    # check below cannot use status to decide what is safe to skip.
+    $completionEntry = [PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete'; outcome = 'pass'; kind = 'completion' }
+    if ($finalArchivedPath) {
+        $completionEntry | Add-Member -NotePropertyName evidence -NotePropertyValue $finalArchivedPath
+        $completionEntry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $finalEvidenceAbs
+    }
+    if ($currentPassing -is [int]) { $completionEntry | Add-Member -NotePropertyName passingTests -NotePropertyValue $currentPassing }
+    elseif ($currentPassing -is [System.Collections.IDictionary]) { $completionEntry | Add-Member -NotePropertyName passingSuites -NotePropertyValue ([PSCustomObject]$currentPassing) }
+    $state.history = @($state.history) + @($completionEntry)
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+    Write-CliOutput "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)"
+    if ($finalArchivedPath) { Write-CliOutput "$($C.d)  Final evidence archived to: $finalArchivedPath$($C.n)" }
+    Write-CliOutput ''
+}
+
+<#
+.SYNOPSIS
+  Evaluate the commit-time loop gate and exit 0 (pass) or 1 (block).
+
+.DESCRIPTION
+  The pre-commit hook delegates here instead of parsing loop-state.json with
+  grep and sed. Text scanning cannot tell a review record inside a history entry
+  from one appended anywhere else in the file, and it depends on JSON key order;
+  both made the hook strictly weaker than the CLI and the extension runtime even
+  though all three are documented as equivalent. Evaluating the gate once, here,
+  removes that divergence by construction.
+#>
+function Invoke-LoopGateCheck {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) {
+        Write-CliOutput 'BLOCK: no quality loop found'
+        exit 1
+    }
+
+    $status = if ($state.PSObject.Properties.Name -contains 'status') { [string]$state.status } else { '' }
+    $consumed = ($state.PSObject.Properties.Name -contains 'loopConsumed') -and [bool]$state.loopConsumed
+    if ($status -cne 'complete') {
+        Write-CliOutput "BLOCK: quality loop status is '$status', not 'complete'"
+        exit 1
+    }
+    if ($consumed) {
+        Write-CliOutput 'BLOCK: quality loop was already consumed by a prior commit'
+        exit 1
+    }
+
+    $loopHealth = Get-LoopStateHealth -State $state
+    if ($loopHealth.kind -ne 'healthy') {
+        Write-CliOutput "BLOCK: quality loop is $($loopHealth.kind) ($($loopHealth.reason))"
+        exit 1
+    }
+
+    $minIterations = [int](Get-LoopEffectiveMinIterations $state)
+    $iteration = if ($state.PSObject.Properties.Name -contains 'iteration') { [int]$state.iteration } else { 0 }
+    if ($iteration -lt $minIterations) {
+        Write-CliOutput "BLOCK: quality loop completed below minimum iterations ($iteration/$minIterations)"
+        exit 1
+    }
+
+    if (-not (Test-LoopHasSubagentReviewIteration $state)) {
+        Write-CliOutput 'BLOCK: quality loop is missing a subagent reviewer pass'
+        exit 1
+    }
+
+    $latestReviewEntry = Get-LoopLatestReviewEntry $state
+    $latestReview = if ($latestReviewEntry) { Get-LoopReviewRecord $latestReviewEntry } else { $null }
+    if (-not $latestReview) {
+        Write-CliOutput 'BLOCK: quality loop is missing a subagent reviewer pass'
+        exit 1
+    }
+    if ([string]$latestReview.verdict -cne 'approved') {
+        Write-CliOutput "BLOCK: latest reviewer verdict is '$($latestReview.verdict)'"
+        exit 1
+    }
+
+    $reviewHigh = 0
+    $reviewMedium = 0
+    foreach ($severity in @('high', 'medium')) {
+        if ($latestReview.PSObject.Properties.Name -notcontains $severity) {
+            Write-CliOutput 'BLOCK: reviewer record is missing HIGH/MEDIUM counts'
+            exit 1
+        }
+        $rawCount = $latestReview.$severity
+        $parsedCount = 0
+        if ($null -eq $rawCount -or $rawCount -is [string] -or
+            -not [int]::TryParse([string]$rawCount, [ref]$parsedCount) -or $parsedCount -lt 0) {
+            Write-CliOutput 'BLOCK: reviewer record is missing HIGH/MEDIUM counts'
+            exit 1
+        }
+        if ($severity -eq 'high') { $reviewHigh = $parsedCount } else { $reviewMedium = $parsedCount }
+    }
+    if (($latestReview.PSObject.Properties.Name -notcontains 'reviewer') -or
+        [string]::IsNullOrWhiteSpace([string]$latestReview.reviewer)) {
+        Write-CliOutput 'BLOCK: reviewer record is missing a reviewer id'
+        exit 1
+    }
+    if ($reviewHigh -gt 0 -or $reviewMedium -gt 0) {
+        Write-CliOutput "BLOCK: reviewer recorded $reviewHigh HIGH and $reviewMedium MEDIUM finding(s)"
+        exit 1
+    }
+
+    $historyEntries = @($state.history)
+    $lastWorkIndex = $historyEntries.Count - 1
+    while ($lastWorkIndex -ge 0 -and
+           (Test-LoopCompletionEntry $historyEntries[$lastWorkIndex]) -and
+           (-not (Get-LoopReviewRecord $historyEntries[$lastWorkIndex]))) {
+        $lastWorkIndex--
+    }
+    $reviewIndex = -1
+    for ($index = 0; $index -lt $historyEntries.Count; $index++) {
+        if ([object]::ReferenceEquals($historyEntries[$index], $latestReviewEntry)) { $reviewIndex = $index }
+    }
+    if ($reviewIndex -ne $lastWorkIndex) {
+        Write-CliOutput 'BLOCK: work was recorded after the approved review'
+        exit 1
+    }
+
+    Write-CliOutput "PASS: quality loop complete, approved by $($latestReview.reviewer) with zero HIGH and MEDIUM findings"
+    exit 0
+}
+
+function Invoke-LoopCancel {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; return }
+    $state.active = $false; $state.status = 'cancelled'; $state.lastIterationAt = Get-Timestamp
+    $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = 'Cancelled'; status = 'cancelled'; outcome = 'fail' })
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+    Write-CliOutput "$($C.y)  Loop cancelled at iteration $($state.iteration).$($C.n)"
+}
+
+# ---------------------------------------------------------------------------
+# VALIDATE: Pre-handoff validation
+# ---------------------------------------------------------------------------
+
+function Get-StageGateEvaluatorPath {
+    # Handoff gates run the installed evaluator and catalog so a workspace copy cannot
+    # shadow them (same trust rule as the code-quality gate).
+    $candidateRoots = if ($Script:ROOT -ne $Script:INSTALL_ROOT) { @($Script:INSTALL_ROOT) } else { @($Script:ROOT) }
+    foreach ($basePath in $candidateRoots) {
+        $candidate = Join-Path $basePath 'scripts/score-stage-gate.ps1'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    return $null
+}
+
+function Get-StageGateMode {
+    $value = Get-ConfigValue (Get-FrontierConfig) 'stageGates' 'advisory'
+    if ($value -is [bool]) { return $(if ($value) { 'required' } else { 'off' }) }
+    $normalized = ([string]$value).Trim().ToLowerInvariant()
+    if ($normalized -in @('off', 'advisory', 'required')) { return $normalized }
+    # Fail closed: a typo must not silently weaken the gate.
+    Write-CliOutput "  $($C.y)[WARN]$($C.n) Unknown stageGates value '$value'; enforcing required (valid: advisory, required, off)."
+    return 'required'
+}
+
+function Invoke-StageGateEvaluator([string]$Mode, [string]$Stage, [string[]]$Paths, [string]$ReportPath = '') {
+    $scriptPath = Get-StageGateEvaluatorPath
+    if (-not $scriptPath) {
+        return [PSCustomObject]@{ available = $false; exitCode = 2; result = $null; output = 'scripts/score-stage-gate.ps1 is missing from the Frontier runtime.' }
+    }
+    $arguments = @('-NoProfile', '-NonInteractive', '-File', $scriptPath, $Mode, '-Stage', $Stage,
+        '-Path', ($Paths -join ','), '-WorkspaceRoot', $Script:ROOT, '-Json')
+    if ($ReportPath) { $arguments += @('-ReportPath', $ReportPath) }
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('pwsh')
+    $startInfo.WorkingDirectory = $Script:ROOT
+    foreach ($argument in $arguments) { $startInfo.ArgumentList.Add([string]$argument) }
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo -TimeoutMilliseconds 60000
+    $result = $null
+    foreach ($line in @($execution.output -split "`r?`n")) {
+        if (-not ([string]$line).TrimStart().StartsWith('{')) { continue }
+        try {
+            $candidate = ([string]$line) | ConvertFrom-Json -Depth 20 -ErrorAction Stop
+            if ($candidate.PSObject.Properties.Name -contains 'status') { $result = $candidate }
+        } catch { continue }
+    }
+    $exitCode = if ($execution.exitCode -eq 0 -and -not $result) { 1 } else { $execution.exitCode }
+    return [PSCustomObject]@{ available = $true; exitCode = $exitCode; result = $result; output = $execution.output }
+}
+
+function Invoke-StageGateCmd {
+    $scriptPath = Get-StageGateEvaluatorPath
+    if (-not $scriptPath) {
+        Write-CliOutput "$($C.r)  Error: scripts/score-stage-gate.ps1 not found in the Frontier runtime.$($C.n)"
+        exit 2
+    }
+    $arguments = @($Script:SubArgs | ForEach-Object { if ($_ -in @('--json', '-j')) { '-Json' } else { $_ } })
+    if ($arguments -notcontains '-WorkspaceRoot') { $arguments += @('-WorkspaceRoot', $Script:ROOT) }
+    & pwsh -NoProfile -File $scriptPath @arguments
+    exit $LASTEXITCODE
+}
+
+function Invoke-ValidateCmd {
+    $rawNum = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '0' }
+    $num = [int]$rawNum
+    $role = if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1] } else { '' }
+    if (-not $num -or -not $role) { Write-CliOutput 'Usage: frontier validate <issue-number> <role>'; exit 1 }
+
+    Write-CliOutput "`n$($C.c)  Handoff Validation: #$num [$role]$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    $script:validationPass = $true
+    function Test-Check([bool]$ok, [string]$msg) {
+        $mark = if ($ok) { "$($C.g)[PASS]" } else { "$($C.r)[FAIL]" }
+        Write-CliOutput "  $mark $msg$($C.n)"
+        if (-not $ok) { $script:validationPass = $false }
+    }
+
+    # Stage gate: deterministic checks warn (advisory) or block (required); an existing
+    # reviewer report must always pass. See evaluation/rubrics/stage-gates.md.
+    function Test-StageGate([string]$Stage, [string[]]$Paths) {
+        $mode = Get-StageGateMode
+        if ($mode -eq 'off') { return }
+        if (@($Paths | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Script:ROOT $_) -PathType Leaf) }).Count -gt 0) { return }
+        $plan = Invoke-StageGateEvaluator 'Plan' $Stage $Paths
+        if (-not $plan.available -or -not $plan.result -or $plan.exitCode -gt 1) {
+            $detail = if ($plan.result) { $plan.result.message } else { ([string]$plan.output).Trim() }
+            if ($mode -eq 'required') { Test-Check $false "Stage gate '$Stage' evaluator ran ($detail)" }
+            else { Write-CliOutput "  $($C.y)[WARN]$($C.n) Stage gate '$Stage' unavailable: $detail" }
+            return
+        }
+        $failedChecks = @($plan.result.checks | Where-Object { -not $_.passed })
+        foreach ($check in $failedChecks) {
+            if ($mode -eq 'required') { Test-Check $false "Stage gate: $($check.file): $($check.message)" }
+            else { Write-CliOutput "  $($C.y)[WARN]$($C.n) Stage gate: $($check.file): $($check.message)" }
+        }
+        if ($failedChecks.Count -eq 0) { Test-Check $true "Stage gate '$Stage' deterministic checks" }
+
+        $reportPath = "docs/artifacts/reviews/gates/GATE-$Stage-$num.json"
+        if (Test-Path -LiteralPath (Join-Path $Script:ROOT $reportPath) -PathType Leaf) {
+            $validation = Invoke-StageGateEvaluator 'Validate' $Stage $Paths $reportPath
+            $passed = $validation.exitCode -eq 0 -and $validation.result -and $validation.result.status -eq 'passed'
+            $score = if ($validation.result -and $validation.result.PSObject.Properties['score']) { " $($validation.result.score)/100" } else { '' }
+            Test-Check $passed "Stage gate '$Stage' review report$score ($reportPath)"
+            if (-not $passed -and $validation.result -and $validation.result.PSObject.Properties['failures']) {
+                foreach ($failure in @($validation.result.failures | Select-Object -First 8)) { Write-CliOutput "      - $failure" }
+            }
+        } elseif ($mode -eq 'required') {
+            Test-Check $false "Stage gate '$Stage' review report exists ($reportPath)"
+        } else {
+            Write-CliOutput "  $($C.d)[INFO] No stage-gate review at $reportPath; run 'frontier stage-gate plan -Stage $Stage -Path $($Paths -join ',')'.$($C.n)"
+        }
+    }
+
+    switch ($role) {
+        'pm' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/prd/PRD-$num.md")) "PRD-$num.md exists"
+            Test-StageGate 'requirements' @("docs/artifacts/prd/PRD-$num.md")
+        }
+        'ux' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT "docs/ux/UX-$num.md")) "UX-$num.md exists"
+            Test-StageGate 'ux' @("docs/ux/UX-$num.md")
+        }
+        'architect' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/adr/ADR-$num.md")) "ADR-$num.md exists"
+            Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/specs/SPEC-$num.md")) "SPEC-$num.md exists"
+            Test-StageGate 'architecture' @("docs/artifacts/adr/ADR-$num.md", "docs/artifacts/specs/SPEC-$num.md")
+        }
+        'engineer' {
+            $gitLog = & git log --oneline --grep="#$num" -1 2>$null
+            Test-Check ([bool]$gitLog) "Commits reference #$num"
+
+            # Quality loop check: loop must be status=complete (cancelled does NOT satisfy this).
+            $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
+            $loopActive = $loopState -and $loopState.active -eq $true
+            $loopComplete = $loopState -and $loopState.status -eq 'complete'
+            $loopStaleReason = Get-LoopStateStaleReason $loopState $num
+            Test-Check (-not $loopActive) "Quality loop not still running (finish it first)"
+            Test-Check $loopComplete "Quality loop is complete (cancelled does not satisfy this gate)"
+            Test-Check (-not $loopStaleReason) "Quality loop is current for issue #$num"
+        }
+        'reviewer' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/reviews/REVIEW-$num.md")) "REVIEW-$num.md exists"
+            Test-StageGate 'review' @("docs/artifacts/reviews/REVIEW-$num.md")
+        }
+        'devops' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT '.github/workflows')) 'Workflows directory exists'
+        }
+        'data-scientist' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/data-science')) 'Data science docs directory exists'
+        }
+        'fabric-engineer' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'fabric')) 'Fabric artifacts directory exists'
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/fabric')) 'Fabric documentation directory exists'
+        }
+        'power-platform-builder' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'solutions')) 'Power Platform solutions directory exists'
+        }
+        'tester' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'tests')) 'Tests directory exists'
+            # The Tester agent writes CERT-<issue>.md; TEST-<issue>.md is the legacy name.
+            $certification = @("docs/testing/CERT-$num.md", "docs/testing/TEST-$num.md") |
+                Where-Object { Test-Path -LiteralPath (Join-Path $Script:ROOT $_) -PathType Leaf } | Select-Object -First 1
+            Test-Check ([bool]$certification) "Certification report exists (docs/testing/CERT-$num.md)"
+            if ($certification) { Test-StageGate 'certification' @($certification) }
+        }
+        'consulting-research' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/coaching')) 'Coaching docs directory exists'
+        }
+        default {
+            Write-CliOutput "  Unknown role: $role"
+            $script:validationPass = $false
+        }
+    }
+
+    if ($script:validationPass) {
+        Write-CliOutput "`n$($C.g)  VALIDATION PASSED$($C.n)`n"
+    } else {
+        Write-CliOutput "`n$($C.r)  VALIDATION FAILED$($C.n)`n"
+        exit 1
+    }
+}
+
+# ---------------------------------------------------------------------------
+# HOOKS: Install git hooks
+# ---------------------------------------------------------------------------
+
+function Get-ActiveGitHooksDirectory {
+    $git = Get-Command git -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $git) { return $null }
+
+    $output = @(& $git.Source -C $Script:ROOT rev-parse --git-path hooks 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $output.Count -eq 0) { return $null }
+    $rawPath = ([string]$output[-1]).Trim()
+    if ([string]::IsNullOrWhiteSpace($rawPath)) { return $null }
+
+    if ([System.IO.Path]::IsPathRooted($rawPath)) {
+        return [System.IO.Path]::GetFullPath($rawPath)
+    }
+    return [System.IO.Path]::GetFullPath((Join-Path $Script:ROOT $rawPath))
+}
+
+function Get-FrontierHookSource([string]$HookName) {
+    foreach ($basePath in @($Script:ROOT, $Script:INSTALL_ROOT) | Select-Object -Unique) {
+        $candidate = Join-Path $basePath '.github' 'hooks' $HookName
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    return $null
+}
+
+function Invoke-HooksCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'install' }
+
+    if ($action -eq 'install') {
+        $gitHooksDir = Get-ActiveGitHooksDirectory
+        if (-not $gitHooksDir) {
+            Write-CliOutput "$($C.r)  [FAIL] Not a git repository or unable to resolve its active hooks path.$($C.n)"
+            exit 1
+        }
+
+        $hookSources = @{}
+        foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
+            $source = Get-FrontierHookSource -HookName $hook
+            if (-not $source) {
+                Write-CliOutput "$($C.r)  [FAIL] Required hook source is missing: $hook$($C.n)"
+                exit 1
+            }
+            $hookSources[$hook] = $source
+        }
+
+        New-Item -ItemType Directory -Path $gitHooksDir -Force | Out-Null
+        foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
+            $source = $hookSources[$hook]
+            $destination = Join-Path $gitHooksDir $hook
+            $sourceFullPath = [System.IO.Path]::GetFullPath($source)
+            $destinationFullPath = [System.IO.Path]::GetFullPath($destination)
+            $pathComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+            if (-not $sourceFullPath.Equals($destinationFullPath, $pathComparison)) {
+                Copy-Item -LiteralPath $source -Destination $destination -Force
+            }
+            if (-not (Test-Path -LiteralPath $destination -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash) {
+                Write-CliOutput "$($C.r)  [FAIL] Hook installation verification failed: $hook$($C.n)"
+                exit 1
+            }
+            if (-not $IsWindows) {
+                $executableMode = [System.IO.UnixFileMode]::UserRead -bor [System.IO.UnixFileMode]::UserWrite -bor [System.IO.UnixFileMode]::UserExecute -bor
+                    [System.IO.UnixFileMode]::GroupRead -bor [System.IO.UnixFileMode]::GroupExecute -bor
+                    [System.IO.UnixFileMode]::OtherRead -bor [System.IO.UnixFileMode]::OtherExecute
+                [System.IO.File]::SetUnixFileMode($destination, $executableMode)
+                $installedMode = [System.IO.File]::GetUnixFileMode($destination)
+                $executeMask = [System.IO.UnixFileMode]::UserExecute -bor [System.IO.UnixFileMode]::GroupExecute -bor [System.IO.UnixFileMode]::OtherExecute
+                if (($installedMode -band $executeMask) -ne $executeMask) {
+                    Write-CliOutput "$($C.r)  [FAIL] Hook is not executable after installation: $hook$($C.n)"
+                    exit 1
+                }
+            }
+            Write-CliOutput "$($C.g)  Installed: $hook -> $gitHooksDir$($C.n)"
+        }
+        Write-CliOutput "$($C.g)  Git hooks installed.$($C.n)"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# CONFIG: View and update configuration
+# ---------------------------------------------------------------------------
+
+function Invoke-ConfigCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'show' }
+
+    switch ($action) {
+        'show' {
+            $cfg = Get-FrontierConfig
+            $providerInfo = Get-FrontierProviderInfo
+            if ($Script:JsonOutput) {
+                $json = [PSCustomObject]@{
+                    config = $cfg
+                    activeProvider = $providerInfo.name
+                    providerSource = $providerInfo.source
+                    providerInferred = $providerInfo.inferred
+                    providerWarning = $providerInfo.warning
+                    configuredAdapters = @($providerInfo.adapters)
+                } | ConvertTo-Json -Depth 10
+                Write-CliOutput $json
+            } else {
+                Write-CliOutput "$($C.c)  Frontier Configuration$($C.n)"
+                Write-CliOutput "$($C.d)  -----------------------------------$($C.n)"
+                $cfgKeys = if ($cfg -is [hashtable]) { $cfg.Keys } else { $cfg.PSObject.Properties }
+                foreach ($key in $cfgKeys) {
+                    $k = if ($key -is [string]) { $key } else { $key.Name }
+                    $v = $cfg.$k
+                    Write-CliOutput "  $($C.w)$k$($C.n) = $v"
+                }
+                Write-CliOutput "  $($C.w)activeProvider$($C.n) = $($providerInfo.name)"
+                Write-CliOutput "  $($C.w)providerSource$($C.n) = $($providerInfo.source)"
+                Write-CliOutput "  $($C.w)configuredAdapters$($C.n) = $(@($providerInfo.adapters) -join ', ')"
+                if ($providerInfo.inferred) {
+                    Write-CliOutput "$($C.y)  [WARN] $($providerInfo.warning)$($C.n)"
+                }
+            }
+        }
+        'set' {
+            if ($Script:SubArgs.Count -lt 3) {
+                Write-CliOutput "Usage: frontier config set <key> <value>"
+                Write-CliOutput "Example: frontier config set enforceIssues true"
+                return
+            }
+            $key = $Script:SubArgs[1]
+            $rawValue = $Script:SubArgs[2]
+            # Parse boolean and numeric values
+            $value = switch -Regex ($rawValue) {
+                '^true$'  { $true }
+                '^false$' { $false }
+                '^\d+$'   { [int]$rawValue }
+                default   { $rawValue }
+            }
+            Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+                $cfg = Get-FrontierConfig
+                Set-ConfigValue $cfg $key $value
+                Write-JsonFile $Script:CONFIG_FILE $cfg
+            }
+            Write-CliOutput "$($C.g)  Set $key = $value$($C.n)"
+            if ($key -in @('provider', 'integration', 'mode', 'repo')) {
+                $repoSlug = Get-GitHubRepoSlug
+                if (-not [string]::IsNullOrWhiteSpace($repoSlug) -and (Get-FrontierProvider) -eq 'github' -and (Test-GitHubCliAuthenticated)) {
+                    Sync-LocalBacklogToGitHubIfNeeded -Repo $repoSlug -Reason "config '$key' changed"
+                }
+            }
+        }
+        'get' {
+            if ($Script:SubArgs.Count -lt 2) {
+                Write-CliOutput "Usage: frontier config get <key>"
+                return
+            }
+            $key = $Script:SubArgs[1]
+            $cfg = Get-FrontierConfig
+            $val = $cfg.$key
+            if ($null -ne $val) {
+                Write-CliOutput $val
+            } else {
+                Write-CliOutput "$($C.y)  Key '$key' not set$($C.n)"
+            }
+        }
+        default {
+            Write-CliOutput "Usage: frontier config [show|get|set]"
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------
+# AUDIT: Deterministic harness audit
+# ---------------------------------------------------------------------------
+
+
+
+
+function Get-HarnessMarkdownFiles([string]$dirPath, [string]$prefix) {
+    if (-not (Test-Path $dirPath)) { return @() }
+
+    return @(
+        Get-ChildItem -Path $dirPath -Filter '*.md' -File -ErrorAction SilentlyContinue |
+            Sort-Object Name |
+            ForEach-Object { "$prefix/$($_.Name)" }
+    )
+}
+
+function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = 'pwsh'
+    $startInfo.WorkingDirectory = $workspaceRoot
+    $startInfo.RedirectStandardInput = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-NonInteractive')
+    $startInfo.ArgumentList.Add('-File')
+    $startInfo.ArgumentList.Add((Join-Path $Script:INSTALL_RUNTIME_DIR 'frontier-cli.ps1'))
+    $startInfo.ArgumentList.Add('loop')
+    $startInfo.ArgumentList.Add('gate')
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $workspaceRoot
+    $startInfo.Environment['HVE_WORKSPACE_ROOT'] = $workspaceRoot
+    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $workspaceRoot
+
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo
+    $output = $execution.output
+
+    if ($execution.exitCode -eq 0) {
+        return [PSCustomObject]@{
+            passed = $true
+            attribution = 'clear'
+            summary = 'Quality loop completed successfully.'
+        }
+    }
+
+    $summary = if ($output -match 'BLOCK:\s*(.+)') { $Matches[1].Trim() } else { "Quality loop checker failed (exit $($execution.exitCode)): $output" }
+    return [PSCustomObject]@{
+        passed = $false
+        attribution = 'policy'
+        summary = $summary
+    }
+}
+
+function Invoke-HarnessComplianceReport([string]$baseRef = '') {
+    $scriptPath = Join-Path $Script:ROOT 'scripts' 'check-harness-compliance.ps1'
+    if (-not (Test-Path $scriptPath)) {
+        return [PSCustomObject]@{
+            available = $false
+            passed = $false
+            requiresPlan = $false
+            failureCount = 0
+            lines = @('Harness compliance script missing.')
+            summary = 'Harness compliance script missing.'
+        }
+    }
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = 'pwsh'
+    $startInfo.WorkingDirectory = $Script:ROOT
+    $startInfo.RedirectStandardInput = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-NonInteractive')
+    $startInfo.ArgumentList.Add('-File')
+    $startInfo.ArgumentList.Add($scriptPath)
+    if (-not [string]::IsNullOrWhiteSpace($baseRef)) {
+        $startInfo.ArgumentList.Add('-BaseRef')
+        $startInfo.ArgumentList.Add($baseRef)
+    }
+    $startInfo.ArgumentList.Add('-ReportOnly')
+
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo
+    $lines = @(($execution.output -split "`r?`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $failures = @($lines | Where-Object { $_ -match '^\[FAIL\]' })
+    $requiresPlan = @($lines | Where-Object { $_ -match 'Requires execution plan:\s+True' }).Count -gt 0
+    $summary = if ($execution.exitCode -ne 0) {
+        "Harness compliance checker failed (exit $($execution.exitCode)): $($execution.output)"
+    } elseif ($failures.Count -gt 0) {
+        ($failures[0] -replace '^\[FAIL\]\s*', '').Trim()
+    } elseif ($lines.Count -gt 0) {
+        $lastLine = ($lines | Select-Object -Last 1)
+        ($lastLine -replace '^\[[A-Z]+\]\s*', '').Trim()
+    } else {
+        'Harness compliance check completed.'
+    }
+
+    return [PSCustomObject]@{
+        available = $true
+        passed = ($execution.exitCode -eq 0 -and $failures.Count -eq 0)
+        requiresPlan = $requiresPlan
+        failureCount = $failures.Count
+        lines = $lines
+        summary = $summary
+    }
+}
+
+
+
+
+function Get-HarnessAuditChecks([string]$workspaceRoot, [string]$baseRef = '') {
+    $planFiles = @(Get-HarnessMarkdownFiles (Join-Path $workspaceRoot 'docs' 'execution' 'plans') 'docs/execution/plans')
+    $progressFiles = @(Get-HarnessMarkdownFiles (Join-Path $workspaceRoot 'docs' 'execution' 'progress') 'docs/execution/progress')
+    $harnessState = Read-JsonFile (Join-Path $Script:FRONTIER_STATE_DIR 'state' 'harness-state.json')
+    $threadCount = if ($harnessState -and $harnessState.threads) { @($harnessState.threads).Count } else { 0 }
+    $evidenceCount = if ($harnessState -and $harnessState.evidence) { @($harnessState.evidence).Count } else { 0 }
+    $loopCheck = Get-HarnessLoopAuditResult -workspaceRoot $workspaceRoot
+    $compliance = Invoke-HarnessComplianceReport -baseRef $baseRef
+
+    return @(
+        [PSCustomObject]@{
+            id = 'execution-plan-present'
+            pillar = 'planning'
+            label = 'Execution plan linked'
+            passed = $planFiles.Count -gt 0
+            score = if ($planFiles.Count -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($planFiles.Count -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($planFiles.Count -gt 0) { "$($planFiles.Count) plan file(s) discovered." } else { 'No execution plan found for the current workspace.' }
+        }
+        [PSCustomObject]@{
+            id = 'progress-log-present'
+            pillar = 'planning'
+            label = 'Progress log tracked'
+            passed = $progressFiles.Count -gt 0
+            score = if ($progressFiles.Count -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($progressFiles.Count -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($progressFiles.Count -gt 0) { "$($progressFiles.Count) progress log(s) discovered." } else { 'No progress log found under docs/execution/progress.' }
+        }
+        [PSCustomObject]@{
+            id = 'loop-complete'
+            pillar = 'execution'
+            label = 'Loop gate satisfied'
+            passed = [bool]$loopCheck.passed
+            score = if ($loopCheck.passed) { 20 } else { 0 }
+            maxScore = 20
+            attribution = [string]$loopCheck.attribution
+            summary = [string]$loopCheck.summary
+        }
+        [PSCustomObject]@{
+            id = 'harness-thread-recorded'
+            pillar = 'execution'
+            label = 'Harness thread captured'
+            passed = $threadCount -gt 0
+            score = if ($threadCount -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($threadCount -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($threadCount -gt 0) { "$threadCount thread(s) recorded in harness state." } else { 'Harness state has no recorded threads.' }
+        }
+        [PSCustomObject]@{
+            id = 'evidence-recorded'
+            pillar = 'evidence'
+            label = 'Evidence captured'
+            passed = $evidenceCount -gt 0
+            score = if ($evidenceCount -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($evidenceCount -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($evidenceCount -gt 0) { "$evidenceCount evidence item(s) recorded." } else { 'Harness state has no recorded evidence.' }
+        }
+        [PSCustomObject]@{
+            id = 'plan-compliance'
+            pillar = 'planning'
+            label = 'Plan compliance script'
+            passed = [bool]$compliance.passed
+            score = if ($compliance.passed) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($compliance.passed) { 'clear' } else { 'harness' }
+            summary = [string]$compliance.summary
+            metadata = [PSCustomObject]@{
+                requiresPlan = [bool]$compliance.requiresPlan
+                available = [bool]$compliance.available
+            }
+        }
+    )
+}
+
+function Test-HarnessCheckRequired([string]$checkProfile, [string]$checkId) {
+    switch ($checkProfile) {
+        'strict' { return $true }
+        'balanced' { return $checkId -in @('loop-complete', 'harness-thread-recorded', 'evidence-recorded', 'plan-compliance') }
+        default { return $false }
+    }
+}
+
+function Invoke-AuditCmd {
+    $auditTarget = if ($Script:SubArgs.Count -gt 0) { [string]$Script:SubArgs[0] } else { 'harness' }
+    if ($auditTarget -notin @('harness')) {
+        Write-CliOutput 'Usage: frontier audit harness [--profile strict|balanced|advisory|off] [--disable-check <id>] [--base-ref <branch>]'
+        return
+    }
+
+    $cfg = Get-FrontierConfig
+    $profileOverride = Get-Flag @('--profile') ''
+    $disableOverrides = @()
+    for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
+        if ($Script:SubArgs[$i] -eq '--disable-check' -and ($i + 1) -lt $Script:SubArgs.Count) {
+            $disableOverrides += @(ConvertTo-StringArray $Script:SubArgs[$i + 1])
+        }
+    }
+    $enforcementProfile = Get-HarnessEnforcementProfile -cfg $cfg -override $profileOverride
+    $disabledChecks = Get-HarnessDisabledChecks -cfg $cfg -overrides $disableOverrides
+    $baseRef = Get-Flag @('--base-ref') ''
+
+    $allChecks = @(Get-HarnessAuditChecks -workspaceRoot $Script:ROOT -baseRef $baseRef)
+    $enabledChecks = @($allChecks | Where-Object { $_.id -notin $disabledChecks })
+    $requiredChecks = @($enabledChecks | Where-Object { Test-HarnessCheckRequired -checkProfile $enforcementProfile -checkId ([string]$_.id) })
+    $failedRequiredChecks = @($requiredChecks | Where-Object { -not $_.passed })
+    $earned = ($enabledChecks | Measure-Object -Property score -Sum).Sum
+    $max = ($enabledChecks | Measure-Object -Property maxScore -Sum).Sum
+    $passedChecks = @($enabledChecks | Where-Object { $_.passed }).Count
+    $totalChecks = $enabledChecks.Count
+    $scorePercent = if ($max -gt 0) { [int][Math]::Round(($earned / $max) * 100) } else { 0 }
+    $allowed = $failedRequiredChecks.Count -eq 0
+
+    $result = [PSCustomObject]@{
+        target = 'harness'
+        profile = $enforcementProfile
+        allowed = $allowed
+        disabledChecks = @($disabledChecks)
+        requiredChecks = @($requiredChecks | ForEach-Object { $_.id })
+        failedRequiredChecks = @($failedRequiredChecks | ForEach-Object { $_.id })
+        score = [PSCustomObject]@{
+            earned = $earned
+            max = $max
+            percent = $scorePercent
+            passedChecks = $passedChecks
+            totalChecks = $totalChecks
+        }
+        checks = $enabledChecks
+    }
+
+    if ($Script:JsonOutput) {
+        $json = $result | ConvertTo-Json -Depth 12
+        Write-CliOutput $json
+    } else {
+        Write-CliOutput "$($C.c)  Frontier Harness Audit$($C.n)"
+        Write-CliOutput "$($C.d)  Profile: $enforcementProfile$($C.n)"
+        Write-CliOutput "$($C.d)  Disabled checks: $(if ($disabledChecks.Count -gt 0) { $disabledChecks -join ', ' } else { 'none' })$($C.n)"
+        Write-CliOutput "$($C.d)  Score: $scorePercent% ($passedChecks/$totalChecks checks)$($C.n)"
+        Write-CliOutput "$($C.d)  Gate: $(if ($allowed) { 'PASS' } else { 'FAIL' })$($C.n)"
+        foreach ($check in $enabledChecks) {
+            $mark = if ($check.passed) { '[PASS]' } else { '[FAIL]' }
+            $requiredMarker = if (Test-HarnessCheckRequired -checkProfile $enforcementProfile -checkId ([string]$check.id)) { 'required' } else { 'advisory' }
+            Write-CliOutput "  $mark $($check.label) [$requiredMarker]"
+            Write-CliOutput "      $($check.summary)"
+        }
+    }
+
+    if (-not $allowed -and $enforcementProfile -notin @('advisory', 'off')) {
+        exit 1
+    }
+}
+
+# ---------------------------------------------------------------------------
+# VERSION
+# ---------------------------------------------------------------------------
+
+function Invoke-VersionCmd {
+    $ver = Read-JsonFile $Script:VERSION_FILE
+    if (-not $ver) { Write-CliOutput 'Frontier version unknown.'; return }
+    if ($Script:JsonOutput) { $ver | ConvertTo-Json -Depth 5; return }
+    $installed = if ($ver.installedAt) { "$($ver.installedAt)".Substring(0, 10) } else { '?' }
+    $provider = Get-FrontierProvider
+    Write-CliOutput "`n$($C.c)  Frontier $($ver.version)$($C.n)"
+    Write-CliOutput "$($C.d)  Provider: $provider  |  Installed: $installed$($C.n)`n"
+}
+
+
+# ---------------------------------------------------------------------------
+# POLICY-HOOK: Copilot lifecycle policy bridge
+# ---------------------------------------------------------------------------
+
+function Get-HookInputValue($InputObject, [string]$Name) {
+    if (-not $InputObject) { return $null }
+    $property = $InputObject.PSObject.Properties[$Name]
+    if ($property) { return $property.Value }
+    return $null
+}
+
+function Write-HookResponse([string]$Message) {
+    $response = [ordered]@{
+        continue = $true
+        systemMessage = $Message
+    } | ConvertTo-Json -Compress
+    [Console]::Out.WriteLine($response)
+}
+
+function Stop-HookToolCall([string]$Message) {
+    [Console]::Error.WriteLine($Message)
+    exit 2
+}
+
+function Test-WildcardPathPrefixMatch([string]$Pattern, [string]$Target) {
+    $patternSegments = @(($Pattern.Replace('\', '/') -split '/') | Where-Object { $_ })
+    $targetSegments = @(($Target.Replace('\', '/') -split '/') | Where-Object { $_ })
+    if ($patternSegments.Count -gt $targetSegments.Count) { return $false }
+    for ($index = 0; $index -lt $patternSegments.Count; $index++) {
+        try {
+            $wildcard = [WildcardPattern]::new($patternSegments[$index], [Management.Automation.WildcardOptions]::IgnoreCase)
+        } catch {
+            return $true
+        }
+        if (-not $wildcard.IsMatch($targetSegments[$index])) { return $false }
+    }
+    return $true
+}
+
+function ConvertTo-HookPathCandidate([string]$Candidate) {
+    if (-not $Candidate) { return $null }
+    $normalized = $Candidate.Trim()
+    $normalized = [regex]::Replace($normalized, '`(.)', '$1')
+    $normalized = $normalized -replace '(?i)^(?:Microsoft\.PowerShell\.Core\\)?FileSystem::', ''
+    $canonicalRoot = [IO.Path]::GetFullPath($Script:ROOT).TrimEnd('\', '/')
+    foreach ($workspaceToken in @('${env:FRONTIER_WORKSPACE_ROOT}', '$env:FRONTIER_WORKSPACE_ROOT', '${env:HVE_WORKSPACE_ROOT}', '$env:HVE_WORKSPACE_ROOT', '${env:AGENTX_WORKSPACE_ROOT}', '$env:AGENTX_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
+        $normalized = $normalized.Replace($workspaceToken, $canonicalRoot, [StringComparison]::OrdinalIgnoreCase)
+    }
+    if ($normalized -match '\$' -and $normalized -match '(?i)(?:^|[\\/])\.frontier(?:[\\/]|$)') {
+        throw 'Protected-state path contains an unsupported dynamic expression.'
+    }
+    if ($normalized -match '\[' -and $normalized -notmatch '\]') {
+        if ($normalized -match '(?i)(?:^|[\\/])\.frontier(?:[\\/]|$)') {
+            throw 'Protected-state path contains an invalid wildcard expression.'
+        }
+    }
+    return $normalized
+}
+
+function Resolve-HookPathComponents([string]$Path) {
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    $pathRoot = [IO.Path]::GetPathRoot($fullPath)
+    $segments = @(($fullPath.Substring($pathRoot.Length) -split '[\\/]') | Where-Object { $_ })
+    $currentPath = $pathRoot
+    for ($index = 0; $index -lt $segments.Count; $index++) {
+        $segment = $segments[$index]
+        if ([WildcardPattern]::ContainsWildcardCharacters($segment)) {
+            for ($remaining = $index; $remaining -lt $segments.Count; $remaining++) {
+                $currentPath = Join-Path $currentPath $segments[$remaining]
+            }
+            return $currentPath
+        }
+        $nextPath = Join-Path $currentPath $segment
+        $item = Get-Item -LiteralPath $nextPath -Force -ErrorAction SilentlyContinue
+        if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            $target = $item.ResolveLinkTarget($true)
+            if (-not $target) { throw "Cannot resolve reparse point: $nextPath" }
+            $currentPath = $target.FullName
+        } else {
+            $currentPath = $nextPath
+        }
+    }
+    return $currentPath
+}
+
+function Get-StructuredHookPathCandidates($InputObject) {
+    $pathCandidates = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    if (-not $InputObject) { return @() }
+    $pendingValues = [Collections.Generic.Stack[object]]::new()
+    $pendingValues.Push($InputObject)
+    while ($pendingValues.Count -gt 0) {
+        $value = $pendingValues.Pop()
+        if ($null -eq $value -or $value -is [string]) { continue }
+        if ($value -is [Collections.IEnumerable] -and $value -isnot [Management.Automation.PSCustomObject]) {
+            foreach ($item in $value) { $pendingValues.Push($item) }
+            continue
+        }
+        foreach ($property in $value.PSObject.Properties) {
+            $propertyName = $property.Name.ToLowerInvariant()
+            if ($property.Value -is [string] -and $propertyName -in @('path', 'filepath', 'file_path', 'source', 'target', 'destination')) {
+                [void]$pathCandidates.Add([string]$property.Value)
+            } else {
+                $pendingValues.Push($property.Value)
+            }
+        }
+    }
+    return @($pathCandidates)
+}
+
+function ConvertFrom-HookPathExpression($Expression) {
+    if ($Expression -is [Management.Automation.Language.StringConstantExpressionAst]) {
+        return [PSCustomObject]@{ Safe = $true; Value = [string]$Expression.Value }
+    }
+    if ($Expression -is [Management.Automation.Language.ExpandableStringExpressionAst]) {
+        foreach ($nestedExpression in @($Expression.NestedExpressions)) {
+            if ($nestedExpression -isnot [Management.Automation.Language.VariableExpressionAst]) {
+                return [PSCustomObject]@{ Safe = $false; Value = $null }
+            }
+            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
+                return [PSCustomObject]@{ Safe = $false; Value = $null }
+            }
+        }
+        return [PSCustomObject]@{ Safe = $true; Value = (ConvertTo-HookPathCandidate $Expression.Extent.Text.Trim('"', "'")) }
+    }
+    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
+        return [PSCustomObject]@{ Safe = $true; Value = [IO.Path]::GetFullPath($Script:ROOT) }
+    }
+    return [PSCustomObject]@{ Safe = $false; Value = $null }
+}
+
+function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[string]]$PathCandidates) {
+    foreach ($element in @($CommandAst.CommandElements | Select-Object -Skip 1)) {
+        $unsupportedDynamic = @($element.FindAll({
+            param($node)
+            ($node -is [Management.Automation.Language.VariableExpressionAst] -and
+                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) -or
+            $node -is [Management.Automation.Language.SubExpressionAst]
+        }, $true)).Count -gt 0
+        if ($unsupportedDynamic) { return $false }
+
+        $resolved = ConvertFrom-HookPathExpression $element
+        $values = [Collections.Generic.List[string]]::new()
+        if ($resolved.Safe) {
+            $values.Add([string]$resolved.Value)
+        } elseif ($element -is [Management.Automation.Language.StringConstantExpressionAst]) {
+            $values.Add([string]$element.Value)
+        } else {
+            $values.Add([string]$element.Extent.Text)
+        }
+        foreach ($value in @($values)) {
+            if (-not $value) { continue }
+            $trimmed = $value.Trim().Trim('"', "'")
+            $optionValue = [regex]::Match($trimmed, '^(?:--?|/)[^:=\s]+[:=](.+)$')
+            if ($optionValue.Success) {
+                $PathCandidates.Add($optionValue.Groups[1].Value.Trim().Trim('"', "'"))
+            } elseif ($trimmed -and -not $trimmed.StartsWith('-')) {
+                $PathCandidates.Add($trimmed)
+            }
+            foreach ($match in [regex]::Matches($value, '["'']([^"'']+)["'']')) {
+                $PathCandidates.Add([string]$match.Groups[1].Value)
+            }
+        }
+    }
+    return $true
+}
+
+function Test-TrustedLoopStartCommand([string]$Command) {
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseInput($Command, [ref]$tokens, [ref]$parseErrors)
+    if (@($parseErrors).Count -gt 0) { return $false }
+    $commands = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true))
+    if ($commands.Count -ne 1 -or @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FileRedirectionAst] }, $true)).Count -gt 0) {
+        return $false
+    }
+    $commandAst = $commands[0]
+    if (@($commandAst.CommandElements | Where-Object {
+        @($_.FindAll({
+            param($node)
+            $node -is [Management.Automation.Language.VariableExpressionAst] -or
+            $node -is [Management.Automation.Language.SubExpressionAst]
+        }, $true)).Count -gt 0
+    }).Count -gt 0) { return $false }
+
+    $elements = @($commandAst.CommandElements | ForEach-Object {
+        if ($_ -is [Management.Automation.Language.StringConstantExpressionAst]) { [string]$_.Value }
+        else { [string]$_.Extent.Text.Trim('"', "'") }
+    })
+    $commandName = [string]$commandAst.GetCommandName()
+    $launcherIndex = 0
+    if (($commandName -split '\\')[-1] -match '(?i)^pwsh(?:\.exe)?$') {
+        $fileIndexes = @(for ($index = 1; $index -lt $elements.Count; $index++) {
+            if ($elements[$index] -match '(?i)^-File$') { $index }
+        })
+        if ($fileIndexes.Count -ne 1) { return $false }
+        $fileIndex = $fileIndexes[0]
+        if ($fileIndex -lt 0 -or $fileIndex + 3 -ge $elements.Count) { return $false }
+        $safeWrapperSwitches = @('-NoProfile', '-NonInteractive', '-NoLogo')
+        if ($fileIndex -gt 1 -and @($elements[1..($fileIndex - 1)] | Where-Object { $_ -notin $safeWrapperSwitches }).Count -gt 0) { return $false }
+        $launcherIndex = $fileIndex + 1
+    }
+    if ($launcherIndex + 2 -ge $elements.Count) { return $false }
+    try {
+        $launcher = if ([IO.Path]::IsPathRooted($elements[$launcherIndex])) {
+            [IO.Path]::GetFullPath($elements[$launcherIndex])
+        } else {
+            [IO.Path]::GetFullPath((Join-Path $Script:ROOT $elements[$launcherIndex]))
+        }
+        $trustedLaunchers = @(
+            [IO.Path]::GetFullPath((Join-Path $Script:ROOT '.frontier/runtime/frontier.ps1'))
+        )
+    } catch {
+        return $false
+    }
+    return @($trustedLaunchers | Where-Object { $launcher.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0 -and
+        $elements[$launcherIndex + 1] -ceq 'loop' -and
+        $elements[$launcherIndex + 2] -ceq 'start'
+}
+
+function Get-TerminalHookPathAnalysis([string]$Command) {
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseInput($Command, [ref]$tokens, [ref]$parseErrors)
+    if (@($parseErrors).Count -gt 0) { return [PSCustomObject]@{ Safe = $false; Candidates = @() } }
+    $commandAliases = @{
+        'cat' = 'Get-Content'; 'type' = 'Get-Content'; 'gc' = 'Get-Content'
+        'sc' = 'Set-Content'; 'ac' = 'Add-Content'; 'clc' = 'Clear-Content'
+        'rm' = 'Remove-Item'; 'del' = 'Remove-Item'; 'erase' = 'Remove-Item'; 'rd' = 'Remove-Item'; 'ri' = 'Remove-Item'; 'rmdir' = 'Remove-Item'
+        'cp' = 'Copy-Item'; 'copy' = 'Copy-Item'; 'cpi' = 'Copy-Item'
+        'mv' = 'Move-Item'; 'move' = 'Move-Item'; 'mi' = 'Move-Item'
+        'ren' = 'Rename-Item'; 'rni' = 'Rename-Item'; 'ni' = 'New-Item'
+    }
+    $trustedCommands = @('Get-Content', 'Set-Content', 'Add-Content', 'Clear-Content', 'Remove-Item', 'Out-File', 'Move-Item', 'Copy-Item', 'Rename-Item', 'New-Item')
+    $pathParameters = @('path', 'literalpath', 'filepath', 'destination')
+    $pathCandidates = [Collections.Generic.List[string]]::new()
+    foreach ($redirection in @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FileRedirectionAst] }, $true))) {
+        $resolved = ConvertFrom-HookPathExpression $redirection.Location
+        if (-not $resolved.Safe) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+        $pathCandidates.Add([string]$resolved.Value)
+    }
+    foreach ($commandAst in @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true))) {
+        $commandName = [string]$commandAst.GetCommandName()
+        if (-not $commandName) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+        if ($commandName -match '(?i)^cmd(?:\.exe)?/(?:c|k)') {
+            return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) }
+        }
+        $commandLeaf = ($commandName -split '[\\/]')[-1]
+        $canonicalName = if ($commandAliases.ContainsKey($commandLeaf.ToLowerInvariant())) { $commandAliases[$commandLeaf.ToLowerInvariant()] } else { $commandLeaf }
+        if ($canonicalName -notin $trustedCommands) {
+            $arguments = (@($commandAst.CommandElements | Select-Object -Skip 1 | ForEach-Object { $_.Extent.Text }) -join ' ')
+            $opaqueRuntimeExecution = switch -Regex ($commandLeaf.ToLowerInvariant()) {
+                '^(node|node\.exe|python|python3|py|python\.exe|python3\.exe|py\.exe)$' { $arguments -notmatch '^\s*--version\s*$'; break }
+                '^(pwsh|powershell|pwsh\.exe|powershell\.exe)$' { $arguments -notmatch '^\s*--version\s*$'; break }
+                '^(bash|sh)$' { $true; break }
+                '^cmd(?:\.exe)?$' { $arguments -match '(?i)(^|\s)/(?:c|k)'; break }
+                '^dotnet(?:\.exe)?$' { $arguments -notmatch '^\s*--version\s*$'; break }
+                default { $false }
+            }
+            if ($opaqueRuntimeExecution) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+            if (-not (Add-OpaqueHookPathCandidates $commandAst $pathCandidates)) {
+                return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) }
+            }
+            continue
+        }
+        $trustedCommand = Get-Command "Microsoft.PowerShell.Management\$canonicalName" -CommandType Cmdlet -ErrorAction SilentlyContinue
+        if (-not $trustedCommand) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+        $metadata = [Management.Automation.CommandMetadata]::new($trustedCommand)
+        $parameters = @($metadata.Parameters.Values)
+        $boundPathCount = 0
+        $elements = @($commandAst.CommandElements)
+        $positionalIndex = 0
+        for ($index = 1; $index -lt $elements.Count; $index++) {
+            $element = $elements[$index]
+            if ($element -is [Management.Automation.Language.CommandParameterAst]) {
+                $parameterToken = $element.ParameterName
+                $parameterMatches = @($parameters | Where-Object {
+                    $_.Name.StartsWith($parameterToken, [StringComparison]::OrdinalIgnoreCase) -or
+                    @($_.Aliases | Where-Object { $_.StartsWith($parameterToken, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+                } | Sort-Object Name -Unique)
+                if ($parameterMatches.Count -ne 1) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                $parameter = $parameterMatches[0]
+                $argument = $element.Argument
+                $isSwitch = $parameter.ParameterType -eq [Management.Automation.SwitchParameter]
+                if (-not $argument -and -not $isSwitch -and $index + 1 -lt $elements.Count -and $elements[$index + 1] -isnot [Management.Automation.Language.CommandParameterAst]) {
+                    $index++
+                    $argument = $elements[$index]
+                }
+                if ($parameter.Name.ToLowerInvariant() -in $pathParameters) {
+                    if (-not $argument) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                    $resolved = ConvertFrom-HookPathExpression $argument
+                    if (-not $resolved.Safe) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                    $pathCandidates.Add([string]$resolved.Value)
+                    $boundPathCount++
+                }
+                continue
+            }
+            $positionMatches = @($parameters | Where-Object {
+                @($_.Attributes | Where-Object { $_ -is [Management.Automation.ParameterAttribute] -and $_.Position -eq $positionalIndex }).Count -gt 0
+            } | Sort-Object Name -Unique)
+            if ($positionMatches.Count -ne 1) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+            $positionParameter = $positionMatches[0]
+            if ($positionParameter.Name.ToLowerInvariant() -in $pathParameters) {
+                $resolved = ConvertFrom-HookPathExpression $element
+                if (-not $resolved.Safe) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                $pathCandidates.Add([string]$resolved.Value)
+                $boundPathCount++
+            }
+            $positionalIndex++
+        }
+        if ($boundPathCount -eq 0) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+    }
+    return [PSCustomObject]@{ Safe = $true; Candidates = @($pathCandidates) }
+}
+
+function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) {
+    if (@($PathCandidates).Count -eq 0) { return $false }
+    $protectedRelativePaths = foreach ($fileName in @('loop-state.json', 'tests-baseline.json', 'code-quality-baseline.json')) {
+        ".frontier/state/$fileName"
+    }
+
+    foreach ($relativePath in $protectedRelativePaths) {
+        $protectedPath = Join-Path $Script:ROOT $relativePath
+
+        $aliases = @($protectedPath)
+        if ($IsWindows -and (Test-Path -LiteralPath $protectedPath -PathType Leaf)) {
+            $volume = Split-Path -Qualifier $protectedPath
+            foreach ($listedPath in @(& fsutil hardlink list $protectedPath 2>$null)) {
+                $aliasPath = [string]$listedPath
+                if ($aliasPath.StartsWith('\')) { $aliasPath = "$volume$aliasPath" }
+                $aliases += $aliasPath
+            }
+        }
+
+        foreach ($aliasPath in @($aliases | Select-Object -Unique)) {
+            if (-not $aliasPath) { continue }
+            $fullAlias = [IO.Path]::GetFullPath((Resolve-HookPathComponents ([string]$aliasPath)))
+            $normalizedAlias = $fullAlias.Replace('\', '/').ToLowerInvariant()
+            $workspaceAlias = $null
+            $rootPrefix = [IO.Path]::GetFullPath($Script:ROOT).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+            if ($fullAlias.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                $workspaceAlias = $fullAlias.Substring($rootPrefix.Length).Replace('\', '/').ToLowerInvariant()
+            }
+            foreach ($candidate in $PathCandidates) {
+                try {
+                    $normalizedCandidate = ConvertTo-HookPathCandidate $candidate
+                    if (-not $normalizedCandidate) { continue }
+                    $candidatePath = if ([IO.Path]::IsPathRooted($normalizedCandidate)) { $normalizedCandidate } else { Join-Path $Script:ROOT $normalizedCandidate }
+                    $resolvedCandidatePath = Resolve-HookPathComponents $candidatePath
+                    if ([WildcardPattern]::ContainsWildcardCharacters($resolvedCandidatePath)) {
+                        if ($workspaceAlias -and (Test-WildcardPathPrefixMatch $normalizedCandidate $workspaceAlias)) { return $true }
+                        $fullCandidatePattern = [IO.Path]::GetFullPath($resolvedCandidatePath).Replace('\', '/')
+                        if (Test-WildcardPathPrefixMatch $fullCandidatePattern $normalizedAlias) { return $true }
+                        continue
+                    }
+                    $fullCandidate = [IO.Path]::GetFullPath($resolvedCandidatePath)
+                    if ($fullCandidate.Equals($fullAlias, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                    $candidatePrefix = $fullCandidate.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+                    if ($fullAlias.StartsWith($candidatePrefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                    $candidateItem = Get-Item -LiteralPath $candidatePath -Force -ErrorAction SilentlyContinue
+                    if ($candidateItem -and $candidateItem.LinkType -eq 'SymbolicLink') {
+                        $resolvedTarget = $candidateItem.ResolveLinkTarget($true)
+                        if ($resolvedTarget) {
+                            $fullTarget = [IO.Path]::GetFullPath($resolvedTarget.FullName)
+                            if ($fullTarget.Equals($fullAlias, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                            $targetPrefix = $fullTarget.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+                            if ($fullAlias.StartsWith($targetPrefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                        }
+                    }
+                    if (-not $IsWindows -and $candidateItem) {
+                        $findCommand = Get-Command find -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+                        if ($findCommand -and @(& $findCommand.Source $candidatePath -samefile $protectedPath -print 2>$null).Count -gt 0) { return $true }
+                    }
+                } catch {
+                    if ($candidate -match '(?i)(?:^|[\\/])\.frontier(?:[\\/]|$)') { return $true }
+                    continue
+                }
+            }
+        }
+    }
+    return $false
+}
+
+function Invoke-PolicyHookCmd {
+    $rawInput = [Console]::In.ReadToEnd()
+    try {
+        $hookInput = $rawInput | ConvertFrom-Json -Depth 30 -ErrorAction Stop
+    } catch {
+        Stop-HookToolCall 'Frontier policy hook received malformed JSON input.'
+    }
+    $eventName = [string](Get-HookInputValue $hookInput 'hook_event_name')
+    if (-not $eventName) { Stop-HookToolCall 'Frontier policy hook input is missing hook_event_name.' }
+    $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
+    if ($eventName -eq 'PreToolUse') {
+        $toolName = [string](Get-HookInputValue $hookInput 'tool_name')
+        if (-not $toolName) { Stop-HookToolCall 'Frontier PreToolUse input is missing tool_name.' }
+        if ($toolName -match '(?i)(mcp_github|github).*(create_or_update_file|push_files|delete_file)$') {
+            Stop-HookToolCall 'Frontier local-files-first policy blocks direct remote file mutation. Edit local files and let the user review them before commit or push.'
+        }
+        $isFileMutation = $toolName -match '(?i)(^|[/._-])(apply_patch|create_file|replace_string_in_file|multi_replace_string_in_file|editfiles|edit_notebook_file|createfile)$'
+        $isTerminalTool = $toolName -match '(?i)(runcommands|run_in_terminal|terminal_exec)$'
+        $toolInput = Get-HookInputValue $hookInput 'tool_input'
+        if ($isFileMutation) {
+            if (Test-HookPathCandidatesTargetProtectedState @(Get-StructuredHookPathCandidates $toolInput)) {
+                Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use frontier loop commands instead.'
+            }
+        }
+        if ($isTerminalTool) {
+            $command = [string](Get-HookInputValue $toolInput 'command')
+            $isTrustedLoopStart = Test-TrustedLoopStartCommand $command
+            $pathAnalysis = Get-TerminalHookPathAnalysis $command
+            if ((-not $isTrustedLoopStart -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
+                Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use frontier loop commands instead.'
+            }
+            $readOnlyCommandPattern = '(?i)^\s*(Get-(Content|ChildItem|Item|Location|FileHash|Command)(\s+.*)?|Test-Path(\s+.*)?|Select-String(\s+.*)?|Resolve-Path(\s+.*)?|rg(\s+.*)?|cat(\s+.*)?|ls(\s+.*)?|head(\s+.*)?|tail(\s+.*)?|pwd\s*|stat(\s+.*)?|node\s+--version|npm\s+--version|python(?:3)?\s+--version|py\s+--version|dotnet\s+--version|pwsh\s+--version)\s*$'
+            $hasShellComposition = $command -match '[;&|<>`\r\n]' -or
+                $command -match '(\$\(|@\()' -or
+                $command -match '(?i)(^|\s)--output(?:=|\s)' -or
+                $command -match '(?i)(^|\s)--(?:pre|hostname-bin)(?:=|\s|$)' -or
+                $command -match '(?i)^\s*git\s+(?:diff|log|show)\b.*(?:^|\s)--(?:no-)?(?:ext|textc)[a-z-]*(?:=|\s|$)'
+            $isFileMutation = $hasShellComposition -or $command -notmatch $readOnlyCommandPattern
+        }
+        if (-not $isFileMutation) { return }
+        if (-not $loopState) {
+            if (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf) {
+                Stop-HookToolCall 'Frontier quality-loop state is missing or invalid. Run frontier loop start before editing files.'
+            }
+            Write-HookResponse 'Frontier local runtime is not initialized, so quality-loop enforcement is degraded. Run Frontier: Initialize Local Runtime before formal delivery work.'
+            return
+        }
+        $isActive = (Get-HookInputValue $loopState 'active') -eq $true
+        $status = [string](Get-HookInputValue $loopState 'status')
+        if (-not $isActive -or $status -ne 'active') {
+            if ($isTerminalTool -and $isTrustedLoopStart) { return }
+            Stop-HookToolCall "Frontier quality loop is not active (status: $status). Run frontier loop start for the current task before editing files."
+        }
+        return
+    }
+    if ($eventName -eq 'SessionStart') {
+        if ($loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
+            $issue = Get-HookInputValue $loopState 'issueNumber'
+            Write-HookResponse "Frontier resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
+        }
+        return
+    }
+    if ($eventName -eq 'Stop' -and $loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
+        Write-HookResponse 'Frontier quality loop is still active. Record evidence and complete or cancel it before claiming the task is done.'
+    }
+}
+
+
+
+
+
+# ---------------------------------------------------------------------------
+# HOOK: Agent lifecycle hooks (start/finish)
+# ---------------------------------------------------------------------------
+
+function Invoke-AgentHookCmd {
+    $phase = Get-Flag @('-p', '--phase', '-Phase')
+    if (-not $phase -and $Script:SubArgs.Count -gt 0) { $phase = $Script:SubArgs[0] }
+    $agent = Get-Flag @('-a', '--agent', '-Agent')
+    if (-not $agent -and $Script:SubArgs.Count -gt 1) { $agent = $Script:SubArgs[1] }
+    $issue = [int](Get-Flag @('-i', '--issue', '-Issue') '')
+    if (-not $issue -and $Script:SubArgs.Count -gt 2) { $issue = [int]$Script:SubArgs[2] }
+
+    if (-not $phase -or -not $agent) { Write-CliOutput 'Usage: frontier hook <start|finish> <agent> [issue]'; return }
+
+    $data = Read-JsonFile $Script:STATE_FILE
+    if (-not $data) { $data = [PSCustomObject]@{} }
+
+    if ($phase -eq 'start') {
+        $status = if ($agent -eq 'reviewer') { 'reviewing' } else { 'working' }
+        $entry = [PSCustomObject]@{ status = $status; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }
+        $data | Add-Member -NotePropertyName $agent -NotePropertyValue $entry -Force
+        Write-JsonFile $Script:STATE_FILE $data
+        $issueRef = if ($issue) { " (issue #$issue)" } else { '' }
+        Write-CliOutput "$($C.g)  [PASS] $agent -> $status$issueRef$($C.n)"
+    } elseif ($phase -eq 'finish') {
+        # -----------------------------------------------------------------
+        # QUALITY GATE: block finish unless quality loop is status=complete.
+        # active=true AND cancelled both block.
+        # Applies to: engineer, reviewer, auto-fix-reviewer, and all other
+        # roles that run the iterative quality loop.
+        # -----------------------------------------------------------------
+        $loopGatedRoles = @('engineer', 'reviewer', 'auto-fix-reviewer', 'architect', 'data-scientist', 'tester', 'devops-engineer', 'product-manager', 'ux-designer', 'consulting-research', 'fabric-engineer', 'power-platform-builder', 'powerbi-analyst', 'agile-coach')
+        if ($agent -in $loopGatedRoles) {
+            $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
+            if ($loopState -and $loopState.active -eq $true) {
+                Write-CliOutput "$($C.r)  [FAIL] QUALITY LOOP STILL ACTIVE -- cannot finish yet.$($C.n)"
+                Write-CliOutput "$($C.y)  Loop iteration $($loopState.iteration)/$($loopState.maxIterations) is in progress.$($C.n)"
+                Write-CliOutput "$($C.d)  Run: frontier loop iterate -s <summary>  (to record progress)$($C.n)"
+                Write-CliOutput "$($C.d)  Run: frontier loop complete -s <summary>  (when criteria met)$($C.n)`n"
+                exit 1
+            }
+            $staleReason = Get-LoopStateStaleReason $loopState $issue
+            if ($staleReason) {
+                Write-CliOutput "$($C.r)  [FAIL] Quality loop is stale ($staleReason).$($C.n)"
+                Write-CliOutput "$($C.y)  Start a new loop for the current task before handoff.$($C.n)`n"
+                exit 1
+            }
+            if (-not $loopState -or $loopState.status -ne 'complete') {
+                $reason = if (-not $loopState) { 'no loop was started' } else { "loop status is '$($loopState.status)'" }
+                Write-CliOutput "$($C.r)  [FAIL] Quality loop not completed ($reason).$($C.n)"
+                Write-CliOutput "$($C.y)  A completed loop ('frontier loop complete') is required before handoff.$($C.n)"
+                Write-CliOutput "$($C.d)  Cancelling a loop does not satisfy the quality gate.$($C.n)`n"
+                exit 1
+            }
+        }
+
+        $entry = [PSCustomObject]@{ status = 'done'; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }
+        $data | Add-Member -NotePropertyName $agent -NotePropertyValue $entry -Force
+        Write-JsonFile $Script:STATE_FILE $data
+        Write-CliOutput "$($C.g)  [PASS] $agent -> done$($C.n)"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# RUN: Agentic loop execution (LLM + tools via GitHub Models API)
+# ---------------------------------------------------------------------------
+
+function Invoke-RunCmd {
+    # Dot-source the agentic runner module
+    . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+
+    $agent = Get-Flag @('-a', '--agent')
+    $prompt = Get-Flag @('-p', '--prompt')
+    $model = Get-Flag @('-m', '--model')
+    $max = [int](Get-Flag @('--max', '-n') '30')
+    $issue = [int](Get-Flag @('-i', '--issue') '0')
+    $resumeSession = Get-Flag @('--resume-session')
+    $clarificationResponse = Get-Flag @('--clarification-response')
+
+    if (-not $agent -and $Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') {
+        $agent = $Script:SubArgs[0]
+    }
+    if (-not $prompt -and $Script:SubArgs.Count -gt 1 -and $Script:SubArgs[1] -notmatch '^-') {
+        # Collect remaining non-flag args as the prompt
+        $promptParts = @()
+        for ($i = 1; $i -lt $Script:SubArgs.Count; $i++) {
+            if ($Script:SubArgs[$i] -match '^-') { break }
+            $promptParts += $Script:SubArgs[$i]
+        }
+        if ($promptParts.Count -gt 0) { $prompt = $promptParts -join ' ' }
+    }
+
+    if (-not $agent -and -not $resumeSession) {
+        Write-CliOutput "`n$($C.c)  Frontier Run - Agentic Loop (LLM + Tools)$($C.n)"
+        Write-CliOutput "$($C.d)  Auto-detects GitHub-hosted providers by default; explicit llmProvider config can also target Claude Code readiness.$($C.n)"
+        Write-CliOutput "$($C.d)  For Claude/Gemini/o-series via GitHub, run: gh auth refresh -s copilot$($C.n)"
+        Write-CliOutput "$($C.d)  For Claude Code readiness, install Claude Code and run: claude auth login$($C.n)`n"
+        Write-CliOutput "$($C.w)  Usage:$($C.n)"
+        Write-CliOutput '  frontier run <agent> <prompt>'
+        Write-CliOutput '  frontier run -a engineer -p "Fix the failing tests"'
+        Write-CliOutput '  frontier run architect "Design the auth system" -i 42'
+        Write-CliOutput '  frontier run engineer "Implement login" --max 20 -m gpt-4.1'
+        Write-CliOutput '  frontier run --resume-session <session-id> --clarification-response "Use the existing auth flow"'
+        Write-CliOutput "`n$($C.w)  Available agents:$($C.n)"
+        foreach ($agentFilePath in (Get-AgentDefinitionFiles)) {
+            $f = Get-Item $agentFilePath
+                $name = $f.BaseName -replace '\.agent$', ''
+                Write-CliOutput "  $($C.c)$name$($C.n)"
+        }
+        Write-CliOutput ''
+        return
+    }
+
+    if ($resumeSession) {
+        $session = Read-Session -sessionId $resumeSession -root $Script:ROOT
+        if (-not $session) {
+            Write-CliOutput "$($C.r)  [FAIL] Session '$resumeSession' not found.$($C.n)"
+            $global:LASTEXITCODE = 1
+            return
+        }
+
+        if (-not $agent) {
+            $agent = [string]$session.meta.agentName
+        }
+
+        if (-not $clarificationResponse) {
+            Write-CliOutput "$($C.r)  [FAIL] Clarification response required. Use: frontier run --resume-session $resumeSession --clarification-response \"your guidance\"$($C.n)"
+            $global:LASTEXITCODE = 1
+            return
+        }
+    } elseif (-not $prompt) {
+        Write-CliOutput "$($C.r)  [FAIL] Prompt required. Use: frontier run $agent \"your prompt\"$($C.n)"
+        $global:LASTEXITCODE = 1
+        return
+    }
+
+    if ($resumeSession) {
+        Write-CliOutput "`n$($C.c)  Resuming agentic loop...$($C.n)`n"
+    } else {
+        Write-CliOutput "`n$($C.c)  Starting agentic loop...$($C.n)`n"
+    }
+
+    $params = @{
+        Agent = $agent
+        MaxIterations = $max
+        WorkspaceRoot = $Script:ROOT
+    }
+    if ($resumeSession) {
+        $params['ResumeSessionId'] = $resumeSession
+        $params['HumanClarificationResponse'] = $clarificationResponse
+    } else {
+        $params['Prompt'] = $prompt
+    }
+    if ($issue) { $params['IssueNumber'] = $issue }
+    if ($model) { $params['Model'] = $model }
+
+    $result = Invoke-AgenticLoop @params
+
+    if (Test-AgenticLoopResultSucceeded -Result $result) {
+        $global:LASTEXITCODE = 0
+    } elseif ($result -and ([string]$result.exitReason -ceq 'human_required')) {
+        $global:LASTEXITCODE = 2
+    } else {
+        $global:LASTEXITCODE = 1
+    }
+
+    if ($Script:JsonOutput -and $result) {
+        $result | ConvertTo-Json -Depth 5
+    }
+}
+
+# ---------------------------------------------------------------------------
+# LESSONS: Learning pipeline management
+# ---------------------------------------------------------------------------
+
+function Invoke-LessonsCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'list' }
+    # Shift subargs past the action for lesson subcommands
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+    
+    switch ($action) {
+        'list'    { Invoke-LessonsList }
+        'query'   { Invoke-LessonsQuery }
+        'show'    { Invoke-LessonsShow }
+        'promote' { Invoke-LessonsPromote }
+        'archive' { Invoke-LessonsArchive }
+        'stats'   { Invoke-LessonsStats }
+        'clean'   { Invoke-LessonsClean }
+        default   { Write-CliOutput "Unknown lessons action: $action"; Invoke-LessonsHelp }
+    }
+}
+
+function Invoke-LessonsList {
+    $globalLessonsDir = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)) '.frontier' 'lessons'
+    
+    $projectLessons = @()
+    $globalLessons = @()
+    
+    # Read project lessons
+    if (Test-Path $lessonsDir) {
+        foreach ($file in (Get-ChildItem $lessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $content = Get-Content $file.FullName -Encoding utf8
+                foreach ($line in $content) {
+                    if ($line.Trim()) {
+                        $lesson = $line | ConvertFrom-Json
+                        $lesson | Add-Member -NotePropertyName '__source' -NotePropertyValue 'project' -Force
+                        $projectLessons += $lesson
+                    }
+                }
+            } catch { Write-Verbose "Could not read project lesson file: $_" }
+        }
+    }
+
+    # Read global lessons (top 5 for overview)
+    if (Test-Path $globalLessonsDir) {
+        foreach ($file in (Get-ChildItem $globalLessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue | Select-Object -First 3)) {
+            try {
+                $content = Get-Content $file.FullName -Encoding utf8 | Select-Object -Last 5
+                foreach ($line in $content) {
+                    if ($line.Trim()) {
+                        $lesson = $line | ConvertFrom-Json
+                        $lesson | Add-Member -NotePropertyName '__source' -NotePropertyValue 'global' -Force
+                        $globalLessons += $lesson
+                    }
+                }
+            } catch { Write-Verbose "Could not read global lesson file: $_" }
+        }
+    }
+    
+    $allLessons = @($projectLessons) + @($globalLessons)
+    
+    if ($Script:JsonOutput) {
+        $allLessons | ConvertTo-Json -Depth 5
+        return
+    }
+    
+    if ($allLessons.Count -eq 0) {
+        Write-CliOutput "$($C.y)No lessons found. Lessons are extracted automatically from agent sessions.$($C.n)"
+        return
+    }
+    
+    Write-CliOutput "`n$($C.c)  Lessons Learned Overview$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-CliOutput "  Project lessons: $(@($projectLessons).Count)"
+    Write-CliOutput "  Global lessons:  $(@($globalLessons).Count) (showing sample)"
+    Write-CliOutput ""
+    
+    # Group by category and show recent
+    $byCategory = @{}
+    foreach ($lesson in ($allLessons | Sort-Object updatedAt -Descending | Select-Object -First 10)) {
+        if (-not $byCategory[$lesson.category]) {
+            $byCategory[$lesson.category] = @()
+        }
+        $byCategory[$lesson.category] += $lesson
+    }
+    
+    foreach ($category in $byCategory.Keys) {
+        $categoryLessons = @($byCategory[$category])
+        Write-CliOutput "$($C.w)  $($category.ToUpper()) ($($categoryLessons.Count)):$($C.n)"
+        foreach ($lesson in ($categoryLessons | Select-Object -First 3)) {
+            $source = if ($lesson.__source -eq 'project') { '' } else { ' (global)' }
+            $confidence = $lesson.confidence
+            $cc = switch ($confidence) { 'high' { $C.g } 'medium' { $C.y } 'low' { $C.d } }
+            Write-CliOutput "    $cc[$confidence]$($C.n) $($lesson.pattern)$source"
+        }
+        Write-CliOutput ""
+    }
+    
+    Write-CliOutput "$($C.d)Use 'frontier lessons query' for specific searches or 'frontier lessons show <id>' for details.$($C.n)"
+}
+
+# ---------------------------------------------------------------------------
+# Curated-learning retrieval helpers (pure; file-local to the CLI)
+# Source of truth: memories/conventions.md, decisions.md, pitfalls.md
+# Bullet format: '- YYYY-MM-DD: <text>' (date optional)
+# ---------------------------------------------------------------------------
+
+function Get-CliLearningStopWords {
+    return @(
+        'the','and','for','with','that','this','from','have','has','was','were','are',
+        'you','your','our','out','use','using','used','into','not','but','all','any',
+        'can','via','per','its','it','of','to','in','on','is','as','by','or','be','at','a','an'
+    )
+}
+
+function ConvertTo-CliLearningTokens {
+    param([string]$Text)
+    if ([string]::IsNullOrWhiteSpace($Text)) { return @() }
+    $stop = Get-CliLearningStopWords
+    $lower = $Text.ToLowerInvariant()
+    $parts = [regex]::Split($lower, '[^a-z0-9]+') | Where-Object { $_.Length -ge 3 -and ($stop -notcontains $_) }
+    return @($parts | Select-Object -Unique)
+}
+
+function Get-CliCuratedLearnings {
+    param([string]$Root)
+    $entries = New-Object 'System.Collections.Generic.List[object]'
+    $memDir = Join-Path $Root 'memories'
+    foreach ($name in @('conventions.md', 'decisions.md', 'pitfalls.md')) {
+        $path = Join-Path $memDir $name
+        if (-not (Test-Path $path)) { continue }
+        $category = [System.IO.Path]::GetFileNameWithoutExtension($name)
+        $lines = Get-Content $path -ErrorAction SilentlyContinue
+        foreach ($line in $lines) {
+            if ($line -match '^\s*-\s+(.+?)\s*$') {
+                $text = $Matches[1].Trim()
+                if ([string]::IsNullOrWhiteSpace($text)) { continue }
+                $date = ''
+                if ($text -match '^(\d{4}-\d{2}-\d{2})\s*:\s*(.+)$') {
+                    $date = $Matches[1]
+                    $text = $Matches[2].Trim()
+                }
+                $entries.Add([PSCustomObject]@{
+                    text     = $text
+                    category = $category
+                    date     = $date
+                    source   = "memories/$name"
+                }) | Out-Null
+            }
+        }
+    }
+    return $entries.ToArray()
+}
+
+function Select-CliRankedLearnings {
+    param(
+        [object[]]$Entries,
+        [string]$Query,
+        [int]$Limit = 10
+    )
+    if (-not $Entries -or $Entries.Count -eq 0) { return @() }
+    $queryTokens = @(ConvertTo-CliLearningTokens $Query)
+    $scored = foreach ($e in $Entries) {
+        $score = 0
+        if ($queryTokens.Count -gt 0) {
+            $tokens = @(ConvertTo-CliLearningTokens $e.text)
+            $lowerText = $e.text.ToLowerInvariant()
+            foreach ($qt in $queryTokens) {
+                if ($tokens -contains $qt) { $score += 2 }
+                elseif ($lowerText.Contains($qt)) { $score += 1 }
+            }
+        }
+        [PSCustomObject]@{
+            text = $e.text; category = $e.category; date = $e.date; source = $e.source; score = $score
+        }
+    }
+    if ($queryTokens.Count -eq 0) {
+        $ranked = $scored | Sort-Object -Property @{ Expression = { $_.date }; Descending = $true }
+    } else {
+        $ranked = $scored |
+            Where-Object { $_.score -gt 0 } |
+            Sort-Object -Property @{ Expression = { $_.score }; Descending = $true }, @{ Expression = { $_.date }; Descending = $true }
+    }
+    return @($ranked | Select-Object -First $Limit)
+}
+
+function Invoke-LessonsQuery {
+    $category = Get-Flag @('-c', '--category')
+    $pattern  = Get-Flag @('-p', '--pattern')
+    # Accepted for backward compatibility (advisory only in the curated-learning model)
+    $null = Get-Flag @('--confidence')
+    $null = Get-Flag @('-t', '--tag')
+    $limitRaw = Get-Flag @('-l', '--limit')
+    $limit = 10
+    if ($limitRaw) { [void][int]::TryParse($limitRaw, [ref]$limit) }
+    if ($limit -le 0) { $limit = 10 }
+
+    # Collect positional query terms (anything that is not a known flag or its value)
+    $valueFlags = @('-c', '--category', '-p', '--pattern', '-l', '--limit', '-t', '--tag', '--confidence')
+    $positional = New-Object 'System.Collections.Generic.List[string]'
+    for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
+        $tok = $Script:SubArgs[$i]
+        if ($tok -match '^-') {
+            if ($valueFlags -contains $tok) { $i++ }
+            continue
+        }
+        $positional.Add($tok) | Out-Null
+    }
+
+    $queryParts = New-Object 'System.Collections.Generic.List[string]'
+    if ($pattern) { $queryParts.Add($pattern) | Out-Null }
+    foreach ($p in $positional) { $queryParts.Add($p) | Out-Null }
+    $query = ($queryParts -join ' ').Trim()
+
+    if (-not $query -and -not $category) {
+        Write-CliOutput "`n$($C.c)  Query Curated Learnings$($C.n)"
+        Write-CliOutput "$($C.w)  Usage:$($C.n)"
+        Write-CliOutput "    frontier lessons query <terms>"
+        Write-CliOutput "    frontier lessons query -p 'loop gate' -l 5"
+        Write-CliOutput "    frontier lessons query timeout -c pitfalls"
+        Write-CliOutput "`n$($C.w)  Sources:$($C.n)"
+        Write-CliOutput "    memories/conventions.md, memories/decisions.md, memories/pitfalls.md"
+        Write-CliOutput "`n$($C.w)  Categories (-c):$($C.n)"
+        Write-CliOutput "    conventions, decisions, pitfalls"
+        Write-CliOutput ""
+        return
+    }
+
+    $entries = @(Get-CliCuratedLearnings -Root $Script:ROOT)
+    if ($category) {
+        $entries = @($entries | Where-Object { $_.category -ieq $category })
+    }
+    $results = @(Select-CliRankedLearnings -Entries $entries -Query $query -Limit $limit)
+
+    if ($Script:JsonOutput) {
+        $payload = [PSCustomObject]@{
+            query    = $query
+            category = $category
+            count    = $results.Count
+            results  = @($results)
+        }
+        Write-CliOutput ($payload | ConvertTo-Json -Depth 5)
+        return
+    }
+
+    if ($results.Count -eq 0) {
+        $label = if ($query) { "'$query'" } else { "category '$category'" }
+        Write-CliOutput "$($C.y)No curated learnings matched $label.$($C.n)"
+        Write-CliOutput "$($C.d)Sources scanned: memories/conventions.md, memories/decisions.md, memories/pitfalls.md$($C.n)"
+        return
+    }
+
+    $header = if ($query) { "query: $query" } else { "category: $category" }
+    Write-CliOutput "`n$($C.c)  Curated Learnings$($C.n) $($C.d)($header, top $($results.Count))$($C.n)"
+    foreach ($r in $results) {
+        $datePart = if ($r.date) { "$($C.d)$($r.date)$($C.n) " } else { '' }
+        $catTag = "$($C.b)[$($r.category)]$($C.n)"
+        Write-CliOutput "  $catTag $datePart$($r.text)"
+    }
+    Write-CliOutput ""
+}
+
+function Invoke-LessonsShow {
+    $id = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
+    if (-not $id) {
+        Write-CliOutput "Usage: frontier lessons show <lesson-id>"
+        return
+    }
+    
+    # Search for lesson by ID
+    Write-CliOutput "$($C.y)Show lesson by ID uses /memories/*.md files in v8.0.0.$($C.n)"
+    Write-CliOutput "$($C.d)Check /memories/ for cross-session decisions and pitfalls.$($C.n)"
+}
+
+function Invoke-LessonsPromote {
+    # Auto-promote LEARNING-*.md artifacts whose frontmatter shows
+    # confidence >= threshold and observations >= minObservations.
+    #
+    # Usage:
+    #   frontier lessons promote                    # scan + report; promote >= 0.8 with >= 3 obs
+    #   frontier lessons promote --dry-run          # report only
+    #   frontier lessons promote --threshold 0.7    # custom threshold
+    #   frontier lessons promote <id>               # promote a single LEARNING-<id> regardless of threshold
+
+    $singleId = if ($Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') { $Script:SubArgs[0] } else { $null }
+    $dryRun   = Test-Flag @('--dry-run','-d')
+    $thresh   = [double](Get-Flag @('--threshold') | ForEach-Object { if ($_) { $_ } else { '0.8' } } | Select-Object -First 1)
+    if (-not $thresh) { $thresh = 0.8 }
+    $minObs   = [int](Get-Flag @('--min-observations') | ForEach-Object { if ($_) { $_ } else { '3' } } | Select-Object -First 1)
+    if (-not $minObs) { $minObs = 3 }
+
+    $learningDir = Join-Path (Resolve-Path .).Path 'docs/artifacts/learnings'
+    if (-not (Test-Path $learningDir)) {
+        Write-CliOutput "$($C.y)No docs/artifacts/learnings directory found.$($C.n)"
+        return
+    }
+
+    $files = Get-ChildItem -Path $learningDir -Filter 'LEARNING-*.md' -ErrorAction SilentlyContinue
+    if ($singleId) {
+        $files = $files | Where-Object { $_.Name -match "LEARNING-$([regex]::Escape($singleId))\.md$" }
+        if (-not $files) {
+            Write-CliOutput "$($C.r)No file matches LEARNING-$singleId.md$($C.n)"
+            return
+        }
+    }
+
+    $conventionsFile = Join-Path (Resolve-Path .).Path 'memories/conventions.md'
+    $promoted = New-Object 'System.Collections.Generic.List[object]'
+    $skipped  = New-Object 'System.Collections.Generic.List[object]'
+
+    foreach ($f in $files) {
+        $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
+        if (-not $raw) { continue }
+        # Parse frontmatter
+        $fm = @{}
+        $frontmatterMatch = [regex]::Match($raw, '(?s)\A---[ \t]*\r?\n(?<yaml>.*?)\r?\n---[ \t]*(?:\r?\n|\z)')
+        if ($frontmatterMatch.Success) {
+            $block = $frontmatterMatch.Groups['yaml'].Value
+            $parser = Resolve-FrontierRuntimeScript 'scripts/parse-yaml.js'
+            if (-not $parser) { throw 'Learning promotion requires scripts/parse-yaml.js from the Frontier runtime.' }
+            $json = $block | & node $parser 2>&1 | Out-String
+            if ($LASTEXITCODE -ne 0) {
+                throw "Invalid learning frontmatter in $($f.Name): $json"
+            }
+            $fm = $json | ConvertFrom-Json -AsHashtable
+        }
+        $confidence = 0.0
+        $observations = 1
+        if ($fm.ContainsKey('confidence') -and
+            (-not [double]::TryParse([string]$fm['confidence'], [Globalization.NumberStyles]::Float,
+                [Globalization.CultureInfo]::InvariantCulture, [ref]$confidence) -or
+                -not [double]::IsFinite($confidence) -or $confidence -lt 0 -or $confidence -gt 1)) {
+            throw "Invalid learning confidence in $($f.Name). Expected a number between 0 and 1."
+        }
+        if ($fm.ContainsKey('observations') -and
+            (-not [int]::TryParse([string]$fm['observations'], [ref]$observations) -or $observations -lt 0)) {
+            throw "Invalid learning observations in $($f.Name). Expected a nonnegative integer."
+        }
+        $status      = if ($fm.ContainsKey('status'))      { $fm['status']               } else { 'draft' }
+        if ($status -isnot [string] -or [string]::IsNullOrWhiteSpace($status)) {
+            throw "Invalid learning status in $($f.Name). Expected a nonempty string."
+        }
+
+        $status = $status.Trim()
+        $eligible = $frontmatterMatch.Success -and $status -notin @('promoted', 'archived') -and
+            ($singleId -or ($confidence -ge $thresh -and $observations -ge $minObs))
+        if (-not $eligible) {
+            $skipped.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations; status=$status }) | Out-Null
+            continue
+        }
+
+        # Extract title (first H1)
+        $title = ($raw -split "`n" | Where-Object { $_ -match '^#\s+' } | Select-Object -First 1) -replace '^#\s+',''
+        $bullet = "- {0:yyyy-MM-dd}: {1} (LEARNING [{2}], conf={3:N2}, obs={4})" -f (Get-Date), $title, $f.BaseName, $confidence, $observations
+
+        if ($dryRun) {
+            Write-CliOutput "$($C.y)[dry-run] would promote $($f.Name) -> memories/conventions.md$($C.n)"
+            Write-CliOutput "  $bullet"
+            $promoted.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations }) | Out-Null
+            continue
+        }
+
+        $serialized = $block | & node $parser --promote 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) { throw "Cannot update learning frontmatter in $($f.Name): $serialized" }
+        $updated = "---`n$($serialized.TrimEnd())`n---`n" + $raw.Substring($frontmatterMatch.Length)
+
+        # Append to conventions.md (creating section if needed)
+        $convDir = Split-Path $conventionsFile -Parent
+        if (-not (Test-Path $convDir)) { New-Item -ItemType Directory -Path $convDir -Force | Out-Null }
+        if (-not (Test-Path $conventionsFile)) {
+            "# Conventions`n`nPromoted learnings (auto-graduated by frontier lessons promote).`n" | Set-Content -Encoding utf8 $conventionsFile
+        }
+        Add-Content -Path $conventionsFile -Value $bullet -Encoding utf8
+
+        Set-Content -LiteralPath $f.FullName -Value $updated -Encoding utf8 -NoNewline
+
+        Write-CliOutput "$($C.g)[promoted]$($C.n) $($f.Name) (conf=$confidence, obs=$observations) -> memories/conventions.md"
+        $promoted.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations }) | Out-Null
+    }
+
+    Write-CliOutput ""
+    Write-CliOutput "$($C.c)Summary:$($C.n) promoted=$($promoted.Count) skipped=$($skipped.Count) (threshold=$thresh, min-observations=$minObs)"
+    if ($skipped.Count -gt 0 -and $skipped.Count -le 10) {
+        foreach ($s in $skipped) { Write-CliOutput "  $($C.d)skip$($C.n) $($s.file) (conf=$($s.confidence), obs=$($s.observations), status=$($s.status))" }
+    }
+}
+
+function Invoke-LessonsArchive {
+    $id = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
+    if (-not $id) {
+        Write-CliOutput "Usage: frontier lessons archive <lesson-id>"
+        return
+    }
+    
+    Write-CliOutput "$($C.y)Archive functionality uses /memories/*.md files in v8.0.0.$($C.n)"
+    Write-CliOutput "$($C.d)Archive lessons by moving entries from /memories/ to /memories/session/.$($C.n)"
+}
+
+
+
+
+function Invoke-LessonsStats {
+    $globalLessonsDir = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)) '.frontier' 'lessons'
+    
+    $projectCount = 0
+    $globalCount = 0
+    
+    # Count project lessons
+    if (Test-Path $lessonsDir) {
+        foreach ($file in (Get-ChildItem $lessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $lines = @(Get-Content $file.FullName -Encoding utf8 | Where-Object { $_.Trim() })
+                $projectCount += $lines.Count
+            } catch { Write-Verbose "Could not read project lesson for count: $_" }
+        }
+    }
+
+    # Count global lessons
+    if (Test-Path $globalLessonsDir) {
+        foreach ($file in (Get-ChildItem $globalLessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $lines = @(Get-Content $file.FullName -Encoding utf8 | Where-Object { $_.Trim() })
+                $globalCount += $lines.Count
+            } catch { Write-Verbose "Could not read global lesson for count: $_" }
+        }
+    }
+
+    Write-CliOutput "`n$($C.c)  Learning Pipeline Statistics$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-CliOutput "  Project lessons:     $projectCount"
+    Write-CliOutput "  Global lessons:      $globalCount"
+    Write-CliOutput "  Total lessons:       $($projectCount + $globalCount)"
+    Write-CliOutput ""
+    
+    $configFile = Join-Path $Script:FRONTIER_STATE_DIR 'config.json'
+    $config = Read-JsonFile $configFile
+    $learningEnabled = if ($config -and $config.PSObject.Properties['learningEnabled']) { $config.learningEnabled } else { $true }
+    
+    Write-CliOutput "  Learning enabled:    $learningEnabled"
+    Write-CliOutput "  Storage mode:        JSONL (two-tier)"
+    Write-CliOutput ""
+    
+    if ($projectCount -eq 0 -and $globalCount -eq 0) {
+        Write-CliOutput "$($C.y)  No lessons found yet. Lessons are automatically extracted from agent sessions$($C.n)"
+        Write-CliOutput "$($C.d)  when context compaction occurs. Start using agents to build your lesson base.$($C.n)"
+    }
+    Write-CliOutput ""
+}
+
+function Invoke-LessonsClean {
+    $dryRun = Test-Flag @('--dry-run', '-d')
+    
+    if ($dryRun) {
+        Write-CliOutput "$($C.c)  Dry Run: Lesson Cleanup$($C.n)"
+        Write-CliOutput "$($C.d)  Would clean up archived and low-confidence lessons older than 90 days$($C.n)"
+    } else {
+        Write-CliOutput "$($C.y)Clean functionality uses /memories/*.md files in v8.0.0.$($C.n)"
+        Write-CliOutput "$($C.d)Manually review and prune /memories/ files as needed.$($C.n)"
+    }
+}
+
+function Invoke-LessonsHelp {
+    Write-CliOutput "`n$($C.c)  Lessons Commands$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-CliOutput "$($C.w)  Usage:$($C.n)"
+    Write-CliOutput "    frontier lessons list                Show lessons overview"
+    Write-CliOutput "    frontier lessons query [options]     Search lessons"
+    Write-CliOutput "    frontier lessons show <id>           Show lesson details"
+    Write-CliOutput "    frontier lessons promote <id>        Promote lesson to higher confidence"
+    Write-CliOutput "    frontier lessons archive <id>        Archive lesson"
+    Write-CliOutput "    frontier lessons stats               Show learning pipeline statistics"
+    Write-CliOutput "    frontier lessons clean [--dry-run]   Clean up old archived lessons"
+    Write-CliOutput ""
+    Write-CliOutput "$($C.w)  Query Options:$($C.n)"
+    Write-CliOutput "    -c, --category <name>     Filter by category (error-pattern, success-pattern, etc.)"
+    Write-CliOutput "    -t, --tag <tag>           Filter by tag"
+    Write-CliOutput "    -p, --pattern <text>      Search in lesson patterns and descriptions"
+    Write-CliOutput "    --confidence <level>      Filter by confidence (high, medium, low)"
+    Write-CliOutput "    -l, --limit <n>           Limit results (default: 10)"
+    Write-CliOutput ""
+    Write-CliOutput "$($C.d)  Note: Lessons are automatically extracted from agent sessions during context$($C.n)"
+    Write-CliOutput "$($C.d)  compaction. Full query/modify uses /memories/*.md files in v8.0.0.$($C.n)"
+    Write-CliOutput ""
+}
+
+# ---------------------------------------------------------------------------
+# TOKENS: Token budget management
+# ---------------------------------------------------------------------------
+
+function Invoke-TokensCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'check' }
+    $scriptPath = Resolve-FrontierRuntimeScript 'scripts/token-counter.ps1'
+    if (-not $scriptPath) {
+        Write-CliOutput "$($C.r)  Error: scripts/token-counter.ps1 not found in the workspace or Frontier runtime.$($C.n)"
+        exit 1
+    }
+    # Keep a lone extra flag an array: splatting a string passes one character per argument.
+    $extra = @($Script:SubArgs | Select-Object -Skip 1)
+    & pwsh -NoProfile -File $scriptPath -Action $action @extra
+    exit $LASTEXITCODE
+}
+
+# ---------------------------------------------------------------------------
+# SCORE: Agent output quality scoring
+# ---------------------------------------------------------------------------
+
+function Invoke-ScoreCmd {
+    $role = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
+    if (-not $role) { Write-CliOutput 'Usage: frontier score <engineer|architect|pm> [issue-number]'; exit 1 }
+    $issue = if ($Script:SubArgs.Count -gt 1) { [int]$Script:SubArgs[1] } else { 0 }
+    $scriptPath = Resolve-FrontierRuntimeScript 'scripts/score-output.ps1'
+    if (-not $scriptPath) {
+        Write-CliOutput "$($C.r)  Error: scripts/score-output.ps1 not found in the workspace or Frontier runtime.$($C.n)"
+        exit 1
+    }
+    $arguments = @('-NoProfile', '-File', $scriptPath, '-Role', $role)
+    if ($issue -gt 0) { $arguments += @('-IssueNumber', $issue) }
+    & pwsh @arguments
+    exit $LASTEXITCODE
+}
+
+# ---------------------------------------------------------------------------
+# DIAGNOSE: Aggregated workspace health checks
+# ---------------------------------------------------------------------------
+
+function Invoke-DiagnoseCmd {
+    # Aggregate the existing validate-* scripts and runtime invariants behind one
+    # entry point. Each check returns: { id, label, passed, summary, hint }.
+    # JSON output is supported via the global --json / -j flag.
+    $verbose = Test-Flag @('--verbose', '-v')
+    $checks = [System.Collections.Generic.List[object]]::new()
+
+    function Add-DiagnoseCheck {
+        param(
+            [Parameter(Mandatory)] $List,
+            [Parameter(Mandatory)] [string]$Id,
+            [Parameter(Mandatory)] [string]$Label,
+            [Parameter(Mandatory)] [bool]$Passed,
+            [Parameter(Mandatory)] [string]$Summary,
+            [string]$Hint = '',
+            [string]$VerboseTail = ''
+        )
+        $List.Add([PSCustomObject]@{
+            id          = $Id
+            label       = $Label
+            passed      = $Passed
+            summary     = $Summary
+            hint        = $Hint
+            verboseTail = $VerboseTail
+        })
+    }
+
+    # 1. Required workspace files
+    $required = @(
+        @{ path = (Join-Path $Script:FRONTIER_STATE_DIR 'config.json'); id = 'config'; label = 'Workspace config (.frontier/config.json)'; hint = 'Run: Frontier: Initialize Local Runtime' },
+        @{ path = (Join-Path $Script:ROOT '.github'); id = 'github-dir'; label = 'Frontier assets directory (.github/)'; hint = 'Create .github/ or run Frontier: Initialize CLI' }
+    )
+    foreach ($r in $required) {
+        $exists = Test-Path $r.path
+        Add-DiagnoseCheck -List $checks -Id $r.id -Label $r.label -Passed $exists `
+            -Summary $(if ($exists) { 'present' } else { 'missing' }) -Hint $r.hint
+    }
+    $workspaceCli = Join-Path $Script:FRONTIER_STATE_DIR 'runtime' 'frontier-cli.ps1'
+    $installedCli = Join-Path $Script:INSTALL_RUNTIME_DIR 'frontier-cli.ps1'
+    $cliPath = @($workspaceCli, $installedCli) | Where-Object {
+        Test-Path -LiteralPath $_ -PathType Leaf
+    } | Select-Object -First 1
+    Add-DiagnoseCheck -List $checks -Id 'cli' -Label 'CLI runtime' -Passed ($null -ne $cliPath) `
+        -Summary $(if ($cliPath) { "resolved: $cliPath" } else { 'workspace and bundled CLI missing' }) `
+        -Hint 'Reinstall the Frontier extension, then run Frontier: Initialize Local Runtime'
+
+    # 2. Git hooks installed
+    $gitDir = Join-Path $Script:ROOT '.git'
+    if (Test-Path $gitDir) {
+        $preCommit = Join-Path $gitDir 'hooks/pre-commit'
+        $hookOk = Test-Path $preCommit
+        Add-DiagnoseCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $hookOk `
+            -Summary $(if ($hookOk) { 'pre-commit hook present' } else { 'pre-commit hook missing' }) `
+            -Hint 'Run: frontier hooks install'
+    } else {
+        Add-DiagnoseCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $true -Summary 'no .git directory (skipped)'
+    }
+
+    # 3. Frontmatter validation
+    $workspaceFrontmatterScript = Join-Path $Script:ROOT 'scripts/validate-frontmatter.ps1'
+    $fmScript = Resolve-FrontierRuntimeScript 'scripts/validate-frontmatter.ps1'
+    if ($fmScript) {
+        $fmTargetRoot = if (Test-Path -LiteralPath $workspaceFrontmatterScript -PathType Leaf) {
+            $Script:ROOT
+        } else {
+            $Script:INSTALL_ROOT
+        }
+        $fmOutput = & pwsh -NoProfile -File $fmScript -Path $fmTargetRoot 2>&1
+        $fmExit = $LASTEXITCODE
+        $fmTailMatch = $fmOutput | Select-String -Pattern '^\s*Results:' | Select-Object -Last 1
+        $fmTail = if ($fmTailMatch) { $fmTailMatch.ToString().Trim() } else { 'no summary line' }
+        Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter (skills, agents, instructions, prompts)' `
+            -Passed ($fmExit -eq 0) -Summary $fmTail -Hint 'Run: pwsh scripts/validate-frontmatter.ps1'
+    } else {
+        Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter validator' -Passed $false `
+            -Summary 'scripts/validate-frontmatter.ps1 missing from workspace and Frontier runtime' `
+            -Hint 'Reinstall the Frontier extension'
+    }
+
+    # 4. Reference / link validation
+    $refScript = Resolve-FrontierRuntimeScript 'scripts/validate-references.ps1'
+    if ($refScript) {
+        $refOutput = & pwsh -NoProfile -File $refScript -Quiet 2>&1
+        $refExit = $LASTEXITCODE
+        $refSummary = if ($refExit -eq 0) { 'all internal links resolve' } else { 'broken links detected' }
+        $refTail = if ($refExit -ne 0) { ($refOutput | Select-Object -Last 5) -join "`n" } else { '' }
+        Add-DiagnoseCheck -List $checks -Id 'references' -Label 'Cross-reference link validity' `
+            -Passed ($refExit -eq 0) -Summary $refSummary -Hint 'Run: pwsh scripts/validate-references.ps1' `
+            -VerboseTail $refTail
+    } else {
+        Add-DiagnoseCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false `
+            -Summary 'scripts/validate-references.ps1 missing from workspace and Frontier runtime' `
+            -Hint 'Reinstall the Frontier extension'
+    }
+
+    # 5. Token budget check
+    $tokScript = Resolve-FrontierRuntimeScript 'scripts/token-counter.ps1'
+    if ($tokScript) {
+        $tokOutput = & pwsh -NoProfile -File $tokScript -Action check 2>&1
+        $tokExit = $LASTEXITCODE
+        $tokSummary = if ($tokExit -eq 0) { 'all files within token limits' } else { 'one or more files exceed token limits' }
+        $tokTail = if ($tokExit -ne 0) { ($tokOutput | Select-Object -Last 5) -join "`n" } else { '' }
+        Add-DiagnoseCheck -List $checks -Id 'tokens' -Label 'Token budget (skills, instructions)' `
+            -Passed ($tokExit -eq 0) -Summary $tokSummary -Hint 'Run: frontier tokens report' `
+            -VerboseTail $tokTail
+    } else {
+        Add-DiagnoseCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false `
+            -Summary 'scripts/token-counter.ps1 missing from workspace and Frontier runtime' `
+            -Hint 'Reinstall the Frontier extension'
+    }
+    if ($tokScript) {
+        $contextJson = & pwsh -NoProfile -File $tokScript -Action context -Json 2>$null | Out-String
+        $contextExit = $LASTEXITCODE
+        $context = try { $contextJson | ConvertFrom-Json -ErrorAction Stop } catch { $null }
+        $contextStatus = if ($context -and $context.PSObject.Properties['status']) { [string]$context.status } else { '' }
+        # Without any token policy the figure is informational. A policy that omits the
+        # alwaysOn budget, or an exceeded budget, fails.
+        $hasTokenPolicy = Test-Path -LiteralPath (Join-Path $Script:ROOT '.token-limits.json') -PathType Leaf
+        $contextPassed = $contextExit -eq 0 -and ($contextStatus -eq 'within' -or ($contextStatus -eq 'unconfigured' -and -not $hasTokenPolicy))
+        $contextSummary = if ($contextStatus) {
+            $note = if ($contextStatus -eq 'unconfigured' -and -not $hasTokenPolicy) { ' (no token policy; not a verified budget)' } else { '' }
+            "always-on ~$($context.alwaysOnTokens) tokens (limit: $($context.limits.maxTokens)); status: $contextStatus$note"
+        } else { 'context analysis returned no result' }
+        Add-DiagnoseCheck -List $checks -Id 'context-budget' -Label 'Always-on context budget (paid every request)' `
+            -Passed $contextPassed -Summary $contextSummary `
+            -Hint 'Run: frontier tokens context  (set alwaysOn in .token-limits.json; replace links in always-on files with plain paths)'
+    }
+
+    # 6. Loop state schema sanity
+    $loopOk = $true
+    $loopSummary = 'no active loop'
+    if (Test-Path $Script:LOOP_STATE_FILE) {
+        try {
+            $loopState = Get-Content $Script:LOOP_STATE_FILE -Raw -Encoding utf8 | ConvertFrom-Json
+            if ($null -eq $loopState) { throw 'empty loop state' }
+            $statusVal = if ($loopState.PSObject.Properties['status']) { $loopState.status } else { 'unknown' }
+            $loopSummary = "loop status: $statusVal"
+        } catch {
+            $loopOk = $false
+            $loopSummary = "loop-state.json unreadable: $($_.Exception.Message)"
+        }
+    }
+    Add-DiagnoseCheck -List $checks -Id 'loop-state' -Label 'Loop state file readable' -Passed $loopOk -Summary $loopSummary -Hint 'Run: frontier loop status'
+
+    # 7. Bundle sync (vscode-extension/.github/frontier) -- advisory only when present
+    # copy-assets.js intentionally rewrites internal markdown links in bundled
+    # files, so hash comparison would produce constant false positives. Drift
+    # in practice means files added/removed/renamed without re-running the
+    # bundle sync, so check by relative path existence instead.
+    $bundleDir = Join-Path $Script:ROOT 'vscode-extension/.github/frontier'
+    if (Test-Path $bundleDir) {
+        $srcSkillRoot = Join-Path $Script:ROOT '.github/skills'
+        $bndSkillRoot = Join-Path $bundleDir 'skills'
+        $srcFiles = @(Get-ChildItem -Path $srcSkillRoot -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue)
+        $bndFiles = @(Get-ChildItem -Path $bndSkillRoot -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue)
+        $srcSkills = $srcFiles.Count
+        $bndSkills = $bndFiles.Count
+
+        $drift = [System.Collections.Generic.List[string]]::new()
+        # Skill paths must round-trip in both directions.
+        foreach ($f in $srcFiles) {
+            $rel = ($f.FullName.Substring($srcSkillRoot.Length).TrimStart('\','/')) -replace '\\','/'
+            if (-not (Test-Path (Join-Path $bndSkillRoot $rel))) { $drift.Add("missing in bundle: skills/$rel") }
+        }
+        foreach ($f in $bndFiles) {
+            $rel = ($f.FullName.Substring($bndSkillRoot.Length).TrimStart('\','/')) -replace '\\','/'
+            if (-not (Test-Path (Join-Path $srcSkillRoot $rel))) { $drift.Add("orphaned in bundle: skills/$rel") }
+        }
+        # Critical non-skill files: existence-only.
+        $critical = @(
+            @{ src = 'Skills.md';        bnd = 'Skills.md' },
+            @{ src = 'AGENTS.md';        bnd = 'AGENTS.md' },
+            @{ src = '.github/copilot-instructions.md'; bnd = 'copilot-instructions.md' }
+        )
+        $instrDir = Join-Path $Script:ROOT '.github/instructions'
+        if (Test-Path $instrDir) {
+            foreach ($i in (Get-ChildItem -Path $instrDir -Filter '*.instructions.md' -ErrorAction SilentlyContinue)) {
+                $critical += @{ src = ".github/instructions/$($i.Name)"; bnd = "instructions/$($i.Name)" }
+            }
+        }
+        $agentsDir = Join-Path $Script:ROOT '.github/agents'
+        if (Test-Path $agentsDir) {
+            foreach ($a in (Get-ChildItem -Path $agentsDir -Recurse -Filter '*.agent.md' -ErrorAction SilentlyContinue)) {
+                $relA = (($a.FullName.Substring($agentsDir.Length).TrimStart('\','/')) -replace '\\','/')
+                $critical += @{ src = ".github/agents/$relA"; bnd = "agents/$relA" }
+            }
+        }
+        foreach ($pair in $critical) {
+            $srcPath = Join-Path $Script:ROOT $pair.src
+            $bndPath = Join-Path $bundleDir $pair.bnd
+            if (-not (Test-Path $srcPath)) { continue }
+            if (-not (Test-Path $bndPath)) { $drift.Add("missing in bundle: $($pair.src)") }
+        }
+
+        $synced = ($drift.Count -eq 0) -and ($srcSkills -gt 0)
+        $bndSummary = if ($synced) { "in sync (skills=$srcSkills)" } else { "$($drift.Count) drift(s) (skills src=$srcSkills bnd=$bndSkills)" }
+        $bndTail = if ($drift.Count -gt 0) { ($drift | Select-Object -First 5) -join "`n" } else { '' }
+        Add-DiagnoseCheck -List $checks -Id 'bundle-sync' -Label 'VS Code extension bundle in sync' `
+            -Passed $synced -Summary $bndSummary `
+            -Hint 'Run: node vscode-extension/scripts/copy-assets.js' `
+            -VerboseTail $bndTail
+    }
+
+    # 8. Skills index count drift
+    $skillsIndex = Join-Path $Script:ROOT 'Skills.md'
+    if (Test-Path $skillsIndex) {
+        $diskCount = @(Get-ChildItem -Path (Join-Path $Script:ROOT '.github/skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue).Count
+        $idxText = Get-Content $skillsIndex -Raw -Encoding utf8
+        # Match count claims like "82 skills" but not "3-4 skills" / "max N skills" guidance.
+        $countMatches = [regex]::Matches($idxText, '(?<![\d\-])(\d{2,})\s+skills')
+        $declared = @($countMatches | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique)
+        $idxOk = ($declared.Count -eq 1) -and ($declared[0] -eq $diskCount)
+        $idxSummary = if ($idxOk) {
+            "Skills.md declares $diskCount, disk has $diskCount"
+        } else {
+            "disk=$diskCount declared=[$([string]::Join(',', $declared))]"
+        }
+        Add-DiagnoseCheck -List $checks -Id 'skills-index' -Label 'Skills.md count matches disk' `
+            -Passed $idxOk -Summary $idxSummary `
+            -Hint 'Update count strings in Skills.md (description, anti-pattern, directory header, footer)'
+    }
+
+    # 9. Install manifest drift (advisory if absent)
+    $manifestScript = Join-Path $Script:ROOT 'scripts/install-manifest.ps1'
+    $manifestPath = Join-Path $Script:ROOT '.frontier/runtime/install-manifest.json'
+    if (Test-Path $manifestScript) {
+        if (Test-Path $manifestPath) {
+            $mfOutput = & pwsh -NoProfile -File $manifestScript -Action verify 2>&1
+            $mfExit = $LASTEXITCODE
+            $mfTail = ($mfOutput | Where-Object { $_ -match '^(\s*Missing|\s*User-modified|\s*Status)' } | Select-Object -First 5) -join "`n"
+            if ([string]::IsNullOrWhiteSpace($mfTail)) { $mfTail = ($mfOutput | Select-Object -Last 3) -join "`n" }
+            $mfSummary = if ($mfExit -eq 0) { 'manifest verified, no missing files' } else { 'install manifest drift detected' }
+            Add-DiagnoseCheck -List $checks -Id 'install-manifest' -Label 'Install manifest integrity' `
+                -Passed ($mfExit -eq 0) -Summary $mfSummary `
+                -Hint 'Run: pwsh scripts/install-manifest.ps1 -Action verify' `
+                -VerboseTail $mfTail
+        } else {
+            Add-DiagnoseCheck -List $checks -Id 'install-manifest' -Label 'Install manifest integrity' `
+                -Passed $true -Summary 'no manifest present (advisory)' `
+                -Hint 'Run: pwsh scripts/install-manifest.ps1 -Action generate'
+        }
+    }
+
+    # Render
+    $passedCount = @($checks | Where-Object { $_.passed }).Count
+    $failedCount = @($checks | Where-Object { -not $_.passed }).Count
+    $total = $checks.Count
+    $allOk = $failedCount -eq 0
+
+    $result = [PSCustomObject]@{
+        ok      = $allOk
+        total   = $total
+        passed  = $passedCount
+        failed  = $failedCount
+        checks  = @($checks)
+    }
+
+    if ($Script:JsonOutput) {
+        Write-CliOutput ($result | ConvertTo-Json -Depth 6)
+    } else {
+        Write-CliOutput "`n$($C.c)  Frontier Diagnose$($C.n)"
+        Write-CliOutput "$($C.d)  Workspace: $Script:ROOT$($C.n)"
+        Write-CliOutput "$($C.d)  Result: $passedCount/$total checks passed$($C.n)`n"
+        foreach ($chk in $checks) {
+            $mark = if ($chk.passed) { "$($C.g)[PASS]$($C.n)" } else { "$($C.r)[FAIL]$($C.n)" }
+            Write-CliOutput "  $mark $($chk.label)"
+            Write-CliOutput "      $($C.d)$($chk.summary)$($C.n)"
+            if (-not $chk.passed -and $chk.hint) {
+                Write-CliOutput "      $($C.y)hint: $($chk.hint)$($C.n)"
+            }
+            if ($verbose -and $chk.verboseTail) {
+                foreach ($line in ($chk.verboseTail -split "`n")) {
+                    Write-CliOutput "      $($C.d)$line$($C.n)"
+                }
+            }
+        }
+        Write-CliOutput ''
+        if ($allOk) {
+            Write-CliOutput "$($C.g)  All checks passed.$($C.n)`n"
+        } else {
+            Write-CliOutput "$($C.r)  $failedCount check(s) failed. See hints above.$($C.n)`n"
+        }
+    }
+
+    if (-not $allOk) { exit 1 }
+}
+# ---------------------------------------------------------------------------
+# HELP
+# ---------------------------------------------------------------------------
+
+function Invoke-HelpCmd {
+    Write-CliOutput @"
+
+$($C.c)  Frontier CLI$($C.n)
+$($C.d)  ---------------------------------------------$($C.n)
+
+$($C.w)  Commands:$($C.n)
+  ready                            Show unblocked work, sorted by priority
+  ship <issue>                     One-command pipeline: plan->work->review->scrub->test->compound
+  scrub [path] [-Fix] [-Production]  Presentation-layer scan for filler/comment-rot; -Fix applies safe deletions
+  deslop [path] [-Production]      Alias of scrub for production code hygiene gates
+  antislop [path] [-Production]    Alias of scrub for AI-slop release gates
+  research <action>                Metric-driven experimentation loop (start/attempt/end/status)
+  learn                            Capture observations from current session (alias of 'discover run')
+  promote                          Graduate stable patterns into skills (alias of 'graduate run')
+  patterns                         Inspect discovered patterns and graduation candidates
+  manifest <action>                Install manifest: generate | verify | list
+  state [-a agent -s status]       Show/update agent states
+  deps <issue>                     Check dependencies for an issue
+    audit harness                    Run deterministic harness audit checks
+  digest                           Generate weekly digest
+    workflow [agent-name]            List/show workflow steps for an agent
+  loop <start|status|affected|iterate|complete|cancel|rollback>  Iterative refinement; affected = tests naming changed code
+  run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
+  hire <name>                      Scaffold a new custom agent definition
+    watch [--execute] [--once]       Poll backlog; --once runs one deterministic cycle
+  validate <issue> <role>          Pre-handoff validation
+  hook <start|finish> <agent> [#]  Agent lifecycle hooks
+    hooks install                    Install and verify hooks at Git's active hooks path
+  config [show|get|set]            View/update configuration
+  issue <create|list|get|update|close|comment>  Issue management
+    bundle <create|list|get|resolve|promote>  Task bundle management
+    parallel <assess|start|list|get|reconcile>  Bounded parallel delivery
+    backlog-sync [github] [--force]  Force sync local backlog to GitHub on demand
+  lessons [list|query|show|stats|promote|archive|clean]  Learning pipeline management
+  tokens [count|check|report|context]  Token budgets; context = always-on cost paid every request
+  budget -File <request.json>     Offline context and token-cost preflight (no provider calls)
+  score <engineer|architect|pm> [issue]  Score agent output quality
+  stage-gate <plan|validate> -Stage <id> -Path <artifact> [-ReportPath <json>]  Stage-gate rubric evaluation
+  discover [run|status|reset]      Analyze signals + git history for patterns
+  graduate [run|list|preview]      Promote high-confidence patterns to skills
+  sprint "<task>" [-i issue]       Full pipeline: plan -> build -> review -> hygiene -> discover
+  git-sync [push|pull]             Push/pull data branch to/from remote
+  diagnose [--verbose] [--json]    Aggregate workspace health checks (alias: doctor)
+  version                          Show installed version
+  help                             Show this help
+
+$($C.w)  Config Commands:$($C.n)
+  config show                        Show all config values
+  config get <key>                   Get a config value
+  config set <key> <value>           Set a config value
+  config set enforceIssues true      Enable issue enforcement in local mode
+    config set harnessEnforcementProfile strict   Require every enabled harness check
+    config set harnessDisabledChecks loop-complete,evidence-recorded
+
+$($C.w)  Issue Commands:$($C.n)
+  issue create -t "Title" -l "type:story"
+  issue list
+  issue get -n 1
+  issue update -n 1 -s "In Progress"
+  issue close -n 1
+  issue comment -n 1 -c "Started"
+
+$($C.w)  Task Bundle Commands:$($C.n)
+    bundle create -t "Slice work" --issue 42
+    bundle list --all
+    bundle get --id bundle-20260313-010203000-abc123
+    bundle resolve --id <bundle> --state Archived --archive-reason "Merged into parent"
+    bundle promote --id <bundle> --target story
+
+$($C.w)  Bounded Parallel Commands:$($C.n)
+    parallel assess --issue 42 --scope-independence independent --dependency-coupling low --artifact-overlap low --review-complexity bounded --recovery-complexity recoverable
+    parallel start --id <parallel-id> --units-base64 <base64-json-array>
+    parallel reconcile --id <parallel-id> --overlap-review pass --conflict-review pass --acceptance-evidence pass --owner-approval approved
+
+$($C.w)  Audit Commands:$($C.n)
+    audit harness --profile balanced
+    audit harness --profile strict --disable-check progress-log-present
+
+$($C.w)  Flags:$($C.n)
+  --json / -j                      Output as JSON
+
+"@
+}
+
+# ---------------------------------------------------------------------------
+# HIRE: Scaffold a new custom agent definition
+# ---------------------------------------------------------------------------
+
+function Invoke-HireCmd {
+    $agentName = Get-Flag @('-n', '--name')
+    if (-not $agentName -and $Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') {
+        $agentName = $Script:SubArgs[0]
+    }
+    $description = Get-Flag @('-d', '--description')
+    $model = Get-Flag @('-m', '--model') 'gpt-4.1'
+    $role = Get-Flag @('-r', '--role') 'Engineer'
+
+    if (-not $agentName) {
+        Write-CliOutput "`n$($C.c)  Frontier Hire - Create a Custom Agent$($C.n)"
+        Write-CliOutput "$($C.d)  Scaffold a new agent definition in .github/agents/$($C.n)`n"
+
+        # Interactive prompts
+        Write-CliOutput "$($C.w)  Agent display name$($C.n) $($C.d)(e.g. Security Auditor)$($C.n): " -NoNewline
+        $agentName = (Read-Host).Trim()
+        if (-not $agentName) { Write-CliOutput "$($C.r)  Name is required. Aborting.$($C.n)"; return }
+
+        Write-CliOutput "$($C.w)  Description$($C.n) $($C.d)(optional, press Enter to skip)$($C.n): " -NoNewline
+        $inputDesc = (Read-Host).Trim()
+        if ($inputDesc) { $description = $inputDesc }
+
+        Write-CliOutput "$($C.w)  Role$($C.n) $($C.d)[Engineer / Architect / Researcher / Analyst / DevOps / Tester / Designer]$($C.n) $($C.d)(default: Engineer)$($C.n): " -NoNewline
+        $inputRole = (Read-Host).Trim()
+        if ($inputRole) { $role = $inputRole }
+
+        Write-CliOutput "$($C.w)  Model$($C.n) $($C.d)[gpt-4.1 / claude-opus-4.8 / o4-mini / gpt-4.1-mini]$($C.n) $($C.d)(default: gpt-4.1)$($C.n): " -NoNewline
+        $inputModel = (Read-Host).Trim()
+        if ($inputModel) { $model = $inputModel }
+
+        Write-CliOutput ''
+    }
+
+    $agentId = $agentName.ToLower() -replace '[^a-z0-9]+', '-' -replace '^-|-$', ''
+    if (-not $description) { $description = "$agentName agent for the $role role" }
+
+    $agentsDir = Join-Path $Script:ROOT '.github' 'agents'
+    if (-not (Test-Path $agentsDir)) { New-Item -ItemType Directory -Path $agentsDir -Force | Out-Null }
+
+    $fileName = "$agentId.agent.md"
+    $filePath = Join-Path $agentsDir $fileName
+
+    if (Test-Path $filePath) {
+        Write-CliOutput "$($C.y)  Agent '$agentId' already exists at $fileName.$($C.n)"
+        Write-CliOutput "$($C.d)  Use a different name or delete the existing file.$($C.n)"
+        $global:LASTEXITCODE = 1
+        return
+    }
+
+        $content = @"
+---
+name: $agentName
+description: "$description"
+model: "$model"
+tools:
+    - "any"
+constraints:
+    - "Follow workspace coding standards"
+    - "Validate all outputs before delivery"
+    - "Operate within the $role domain"
+---
+
+# $agentName
+
+**Role**: $role
+
+## Mission
+
+$description
+
+## Use When
+
+- Use this agent when the task clearly aligns to the $role role.
+- Use it when $description is the main requested outcome.
+- Use it when a dedicated workflow is needed instead of a generic agent response.
+
+## Responsibilities
+
+- Translate the request into a focused $role workflow.
+- Produce concrete outputs that match the stated mission and repository conventions.
+- Surface blockers, assumptions, and tradeoffs early.
+- Finish with verification before delivery.
+
+## Constraints
+
+- Follow workspace coding standards
+- Validate all outputs before delivery
+- Operate within the $role domain
+
+## Workflow
+
+1. Clarify the requested outcome and gather the minimum context required.
+2. Plan the work around the stated mission and role-specific boundaries.
+3. Execute the task with outputs that stay inside the described scope.
+4. Review the result for correctness, completeness, and safety before delivery.
+
+## Deliverables
+
+- Primary deliverables relevant to the $role role.
+- Supporting notes or evidence needed to explain decisions and validation.
+- Clear next steps when additional work remains outside the current scope.
+
+## Self-Review Checklist
+
+Before completing work, verify:
+
+- [ ] The output directly supports the stated mission.
+- [ ] The result stays inside the $role role boundaries.
+- [ ] Constraints and repository conventions were followed.
+- [ ] Risks, assumptions, and validation outcomes are clearly stated.
+"@
+
+    Set-Content $filePath -Value $content -Encoding utf8
+    Write-CliOutput "`n$($C.g)  [PASS] Agent '$agentName' hired!$($C.n)"
+    Write-CliOutput "$($C.d)  Definition: $fileName$($C.n)"
+    Write-CliOutput "$($C.d)  Model: $model  |  Role: $role$($C.n)"
+    Write-CliOutput "$($C.d)  Review the generated workflow sections and tailor them to your domain.$($C.n)`n"
+}
+
+# ---------------------------------------------------------------------------
+# WATCH: Background daemon - polls backlog and auto-routes work
+# ---------------------------------------------------------------------------
+
+function Invoke-WatchCmd {
+    $intervalMinutes = [int](Get-Flag @('--interval', '-i') '5')
+    $maxConcurrent = [int](Get-Flag @('--max-concurrent', '-c') '1')
+    $timeoutMinutes = [int](Get-Flag @('--timeout', '-t') '0')
+    $dryRun = Test-Flag @('--dry-run', '-n')
+    $execute = Test-Flag @('--execute', '-x')
+    $runOnce = Test-Flag @('--once')
+    $statusOnly = Test-Flag @('--status', '-s')
+
+    if ($statusOnly) {
+        $watchState = Read-JsonFile (Join-Path $FRONTIER_STATE_DIR 'state' 'watch-state.json')
+        if (-not $watchState) {
+            Write-CliOutput 'No watch session active.'
+            return
+        }
+        if ($Script:JsonOutput) { $watchState | ConvertTo-Json -Depth 5; return }
+        Write-CliOutput "`n$($C.c)  Watch Status$($C.n)"
+        Write-CliOutput "$($C.d)  Started: $($watchState.started)$($C.n)"
+        Write-CliOutput "$($C.d)  Cycles: $($watchState.cycles)$($C.n)"
+        Write-CliOutput "$($C.d)  Items routed: $($watchState.itemsRouted)$($C.n)"
+        Write-CliOutput "$($C.d)  Items executed: $($watchState.itemsExecuted)$($C.n)"
+        Write-CliOutput "$($C.d)  Last poll: $($watchState.lastPoll)$($C.n)`n"
+        return
+    }
+
+    Write-CliOutput "`n$($C.c)  Frontier Watch - Continuous Backlog Monitor$($C.n)"
+    Write-CliOutput "$($C.d)  Polls backlog every $intervalMinutes minutes for unblocked work.$($C.n)"
+    if ($dryRun) { Write-CliOutput "$($C.y)  DRY RUN: Will report but not execute.$($C.n)" }
+    if (-not $execute) {
+        Write-CliOutput "$($C.y)  REPORT MODE: Add --execute to auto-run agents on ready items.$($C.n)"
+    }
+    Write-CliOutput "$($C.d)  Max concurrent: $maxConcurrent  |  Timeout: $(if ($timeoutMinutes -gt 0) { "$timeoutMinutes min" } else { 'none' })$($C.n)"
+    Write-CliOutput "$($C.d)  Press Ctrl+C to stop.$($C.n)`n"
+
+    # Initialize watch state
+    $watchStateFile = Join-Path $FRONTIER_STATE_DIR 'state' 'watch-state.json'
+    $watchState = [PSCustomObject]@{
+        started       = Get-Timestamp
+        lastPoll      = $null
+        cycles        = 0
+        itemsRouted   = 0
+        itemsExecuted = 0
+        active        = $true
+    }
+    Write-JsonFile $watchStateFile $watchState
+
+    $startTime = [datetime]::UtcNow
+
+    try {
+        while ($true) {
+            $watchState.cycles++
+            $watchState.lastPoll = Get-Timestamp
+
+            # Poll for ready items
+            $all = Get-AllIssues
+            $providerInfo = Get-FrontierProviderInfo
+            $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
+            $open = if ($usesExplicitReadyState) {
+                @($all | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
+            } else {
+                @($all | Where-Object { $_.state -eq 'open' })
+            }
+
+            $ready = @($open | Where-Object {
+                $deps = Get-IssueDeps $_
+                $blocked = $false
+                foreach ($bid in $deps.blocked_by) {
+                    $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
+                    if ($b -and $b.state -eq 'open') { $blocked = $true }
+                }
+                -not $blocked
+            } | Sort-Object { Get-IssuePriority $_ })
+
+            if ($ready.Count -gt 0) {
+                Write-CliOutput "$($C.c)  [$((Get-Date).ToString('HH:mm:ss'))] Found $($ready.Count) ready item(s):$($C.n)"
+                foreach ($item in $ready) {
+                    $p = Get-IssuePriority $item
+                    $pLabel = if ($p -lt 9) { "P$p" } else { '  ' }
+                    $typ = Get-IssueType $item
+                    $agent = switch -Regex ($typ) {
+                        'epic'          { 'product-manager' }
+                        'bug'           { 'engineer' }
+                        'spike'         { 'architect' }
+                        'devops'        { 'devops' }
+                        'data-science'  { 'data-scientist' }
+                        'testing'       { 'tester' }
+                        'fabric'        { 'fabric-engineer' }
+                        'lowcode'       { 'power-platform-builder' }
+                        'powerbi'       { 'powerbi-analyst' }
+                        default         { 'engineer' }
+                    }
+                    Write-CliOutput "    [$pLabel] #$($item.number) ($typ) $($item.title) -> $agent"
+                    $watchState.itemsRouted++
+
+                    if ($execute -and -not $dryRun) {
+                        Write-CliOutput "$($C.y)    Spawning $agent for #$($item.number)...$($C.n)"
+                        try {
+                            . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+                            $params = @{
+                                Agent = $agent
+                                Prompt = "Work on issue #$($item.number): $($item.title)"
+                                MaxIterations = 10
+                                WorkspaceRoot = $Script:ROOT
+                                IssueNumber = [int]$item.number
+                            }
+                            $result = Invoke-AgenticLoop @params
+                            if (Test-AgenticLoopResultSucceeded -Result $result) {
+                                $watchState.itemsExecuted++
+                                Write-CliOutput "$($C.g)    [PASS] #$($item.number) completed ($($result.exitReason))$($C.n)"
+                            } else {
+                                $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
+                                Write-CliOutput "$($C.r)    [FAIL] #$($item.number) did not complete ($exitReason)$($C.n)"
+                            }
+                        } catch {
+                            Write-CliOutput "$($C.r)    [FAIL] #$($item.number) error: $($_.Exception.Message)$($C.n)"
+                        }
+                    }
+                }
+            } else {
+                Write-CliOutput "$($C.d)  [$((Get-Date).ToString('HH:mm:ss'))] No ready items. Sleeping $intervalMinutes min...$($C.n)"
+            }
+
+            Write-JsonFile $watchStateFile $watchState
+
+            if ($runOnce) { break }
+
+            if ($timeoutMinutes -gt 0) {
+                $elapsed = ([datetime]::UtcNow - $startTime).TotalMinutes
+                if ($elapsed -ge $timeoutMinutes) {
+                    Write-CliOutput "`n$($C.y)  Watch timeout ($timeoutMinutes min) reached. Stopping.$($C.n)"
+                    break
+                }
+            }
+
+            Start-Sleep -Seconds ($intervalMinutes * 60)
+        }
+    } finally {
+        $watchState.active = $false
+        Write-JsonFile $watchStateFile $watchState
+        Write-CliOutput "`n$($C.d)  Watch stopped. Cycles: $($watchState.cycles) | Routed: $($watchState.itemsRouted) | Executed: $($watchState.itemsExecuted)$($C.n)"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# DISCOVER: Analyze signals + git history to extract reusable patterns
+# ---------------------------------------------------------------------------
+
+function Invoke-DiscoverCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'run' }
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+
+    switch ($action) {
+        'run'     { Invoke-DiscoverRun }
+        'status'  { Invoke-DiscoverStatus }
+        'reset'   { Invoke-DiscoverReset }
+        default   { Invoke-DiscoverHelp }
+    }
+}
+
+function Invoke-DiscoverRun {
+    $patternsDir = Join-Path $Script:FRONTIER_STATE_DIR 'patterns'
+    $signalsDir = Join-Path $Script:FRONTIER_STATE_DIR 'signals'
+    $patternsFile = Join-Path $patternsDir 'discovered.yaml'
+
+    if (-not (Test-Path $patternsDir)) { New-Item -ItemType Directory -Path $patternsDir -Force | Out-Null }
+
+    Write-CliOutput "`n$($C.c)  Pattern Discovery$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    function Get-SignalFieldValue([string]$JsonLine, [string]$FieldName) {
+        try {
+            $pattern = '"' + [regex]::Escape($FieldName) + '"\s*:\s*"((?:\\.|[^"\\])*)"'
+            $match = [regex]::Match($JsonLine, $pattern)
+            if (-not $match.Success) { return $null }
+
+            return [regex]::Unescape($match.Groups[1].Value)
+        } catch {
+            return $null
+        }
+    }
+
+    # --- Evidence Source 1: Signal capture data ---
+    $signalCount = 0
+    $toolFrequency = @{}
+    $errorPatterns = @()
+    $signalsFile = Join-Path $signalsDir 'sessions.jsonl'
+
+    # Pre-read watermark from existing patterns file to avoid re-scoring already-processed signals
+    $lastWatermark = $null
+    $maxNewTimestamp = $null
+    if (Test-Path $patternsFile) {
+        foreach ($hLine in (Get-Content $patternsFile -Encoding utf8 | Select-Object -First 15)) {
+            if ($hLine -match '^#\s*last_signal_watermark:\s*(.+)$') {
+                $lastWatermark = $Matches[1].Trim()
+                break
+            }
+        }
+    }
+
+    if (Test-Path $signalsFile) {
+        $lines = @(Get-Content $signalsFile -Encoding utf8 | Where-Object { $_.Trim() })
+        foreach ($line in $lines) {
+            $toolName = $null
+            $errorMessage = $null
+            $sigTimestamp = $null
+            try {
+                $sig = $line | ConvertFrom-Json
+                $toolName = if ($sig.PSObject.Properties.Name -contains 'tool') { [string]$sig.tool } else { $null }
+                $errorMessage = if ($sig.PSObject.Properties.Name -contains 'error') { [string]$sig.error } else { $null }
+                $sigTimestamp = if ($sig.PSObject.Properties.Name -contains 'timestamp') { [string]$sig.timestamp } else { $null }
+            } catch {
+                $toolName = Get-SignalFieldValue $line 'tool'
+                $errorMessage = Get-SignalFieldValue $line 'error'
+                $sigTimestamp = Get-SignalFieldValue $line 'timestamp'
+            }
+
+            # Skip signals already processed in a previous run (DateTime comparison handles mixed formats)
+            if ($lastWatermark -and $sigTimestamp) {
+                [DateTime]$wmDate = [DateTime]::MinValue
+                [DateTime]$sigDate = [DateTime]::MinValue
+                $dateStyles = [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal
+                $wmParsed = [DateTime]::TryParse($lastWatermark, [System.Globalization.CultureInfo]::InvariantCulture, $dateStyles, [ref]$wmDate)
+                $sigParsed = [DateTime]::TryParse($sigTimestamp, [System.Globalization.CultureInfo]::InvariantCulture, $dateStyles, [ref]$sigDate)
+                if ($wmParsed -and $sigParsed) {
+                    if ($sigDate -le $wmDate) { continue }
+                } elseif ($sigTimestamp -le $lastWatermark) {
+                    # Fallback to string comparison when parsing fails
+                    continue
+                }
+            }
+
+            # Track the latest new timestamp seen for the watermark (string compare is safe for same-format timestamps within one run)
+            if ($sigTimestamp -and (-not $maxNewTimestamp -or $sigTimestamp -gt $maxNewTimestamp)) {
+                $maxNewTimestamp = $sigTimestamp
+            }
+
+            $signalCount++
+            if (-not [string]::IsNullOrWhiteSpace($toolName)) {
+                if (-not $toolFrequency.ContainsKey($toolName)) { $toolFrequency[$toolName] = 0 }
+                $toolFrequency[$toolName]++
+            }
+            if (-not [string]::IsNullOrWhiteSpace($errorMessage)) {
+                $errorPatterns += $errorMessage
+            }
+        }
+        $newLabel = if ($lastWatermark) { " ($signalCount new)" } else { '' }
+        Write-CliOutput "  Signals analyzed:    $($lines.Count)$newLabel"
+        Write-CliOutput "  Unique tools used:   $($toolFrequency.Count)"
+        Write-CliOutput "  Error signals:       $($errorPatterns.Count)"
+    } else {
+        Write-CliOutput "$($C.y)  No signal data found at $signalsFile$($C.n)"
+        Write-CliOutput "$($C.d)  Signal capture starts automatically via Copilot hooks.$($C.n)"
+    }
+
+    # --- Evidence Source 2: Git history ---
+    $gitPatterns = @{}
+    try {
+        $recentCommits = & git log --oneline -20 2>$null
+        $diffStat = & git diff HEAD~5..HEAD --stat 2>$null
+        if ($recentCommits) {
+            Write-CliOutput "  Recent commits:      $(($recentCommits | Measure-Object).Count)"
+        }
+
+        # Extract file change frequency from diff stat
+        if ($diffStat) {
+            foreach ($statLine in $diffStat) {
+                if ($statLine -match '^\s*([^\|]+)\|') {
+                    $filePath = $Matches[1].Trim()
+                    $ext = [System.IO.Path]::GetExtension($filePath)
+                    if ($ext) {
+                        if (-not $gitPatterns.ContainsKey($ext)) { $gitPatterns[$ext] = 0 }
+                        $gitPatterns[$ext]++
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-CliOutput "$($C.d)  Git history not available.$($C.n)"
+    }
+
+    # --- Evidence Source 3: Existing lessons ---
+    $lessonsDir = Join-Path $Script:FRONTIER_STATE_DIR 'lessons'
+    $lessonCount = 0
+    if (Test-Path $lessonsDir) {
+        foreach ($file in (Get-ChildItem $lessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $lc = @(Get-Content $file.FullName -Encoding utf8 | Where-Object { $_.Trim() })
+                $lessonCount += $lc.Count
+            } catch { continue }
+        }
+    }
+    if ($lessonCount -gt 0) {
+        Write-CliOutput "  Existing lessons:    $lessonCount"
+    }
+
+    # --- Read existing patterns ---
+    $existingPatterns = @()
+    if (Test-Path $patternsFile) {
+        $content = Get-Content $patternsFile -Raw -Encoding utf8
+        # Simple YAML parser for our known format
+        $currentPattern = $null
+        $inEvidence = $false
+        foreach ($yamlLine in ($content -split "`n")) {
+            if ($yamlLine -match '^\s*- id:\s*(.+)') {
+                if ($currentPattern) { $existingPatterns += $currentPattern }
+                $currentPattern = @{ id = $Matches[1].Trim(); confidence = 0.5; observations = 0; evidence = @() }
+                $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+confidence:\s*([\d.]+)') {
+                $currentPattern.confidence = [double]$Matches[1]; $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+observations:\s*(\d+)') {
+                $currentPattern.observations = [int]$Matches[1]; $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+trigger:\s*(.+)') {
+                $currentPattern.trigger = $Matches[1].Trim().Trim('"'); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+behavior:\s*(.+)') {
+                $currentPattern.behavior = $Matches[1].Trim().Trim('"'); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+domain:\s*(.+)') {
+                $currentPattern.domain = $Matches[1].Trim(); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+first_seen:\s*(.+)') {
+                $currentPattern.firstSeen = $Matches[1].Trim(); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+last_seen:\s*(.+)') {
+                $currentPattern.lastSeen = $Matches[1].Trim(); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+evidence:\s*$') {
+                $inEvidence = $true
+            } elseif ($currentPattern -and $inEvidence -and $yamlLine -match '^\s+-\s+"(.+)"\s*$') {
+                $currentPattern.evidence += $Matches[1] -replace '\\"', '"'
+            }
+        }
+        if ($currentPattern) { $existingPatterns += $currentPattern }
+    }
+
+    Write-CliOutput ""
+
+    # --- Discover new patterns from tool usage frequency ---
+    $newPatterns = @()
+    $updatedPatterns = @()
+    $now = (Get-Date).ToString('yyyy-MM-dd')
+
+    foreach ($entry in ($toolFrequency.GetEnumerator() | Sort-Object -Property Value -Descending | Select-Object -First 10)) {
+        $toolName = $entry.Key
+        $count = $entry.Value
+        if ($count -lt 2) { continue }
+
+        $patternId = "tool-preference-$($toolName -replace '[^a-zA-Z0-9]', '-')"
+        $existing = $existingPatterns | Where-Object { $_.id -eq $patternId }
+
+        if ($existing) {
+            # Update existing pattern confidence
+            $newObs = $existing.observations + $count
+            $newConf = [Math]::Min(0.95, $existing.confidence + ($count * 0.05))
+            $updatedPatterns += @{
+                id = $patternId
+                oldConfidence = $existing.confidence
+                newConfidence = $newConf
+                observations = $newObs
+            }
+            $existing.confidence = $newConf
+            $existing.observations = $newObs
+        } else {
+            $newPatterns += @{
+                id = $patternId
+                trigger = "when working with $toolName"
+                behavior = "prefer $toolName for this type of operation (used $count times)"
+                confidence = 0.50
+                domain = 'tooling'
+                observations = $count
+                firstSeen = $now
+                lastSeen = $now
+                evidence = @("Signal capture: $toolName used $count times in recent sessions")
+            }
+        }
+    }
+
+    # --- Discover patterns from error frequency ---
+    $errorGroups = @{}
+    foreach ($err in $errorPatterns) {
+        $key = if ($err.Length -gt 60) { $err.Substring(0, 60) } else { $err }
+        if (-not $errorGroups.ContainsKey($key)) { $errorGroups[$key] = 0 }
+        $errorGroups[$key]++
+    }
+
+    foreach ($entry in ($errorGroups.GetEnumerator() | Where-Object { $_.Value -ge 2 } | Sort-Object -Property Value -Descending | Select-Object -First 5)) {
+        $errKey = $entry.Key -replace '[^a-zA-Z0-9\s]', '' -replace '\s+', '-'
+        $patternId = "error-avoid-$($errKey.Substring(0, [Math]::Min(40, $errKey.Length)).ToLower())"
+        $existing = $existingPatterns | Where-Object { $_.id -eq $patternId }
+
+        if (-not $existing) {
+            $newPatterns += @{
+                id = $patternId
+                trigger = "when encountering: $($entry.Key)"
+                behavior = "avoid this error pattern (occurred $($entry.Value) times)"
+                confidence = 0.50
+                domain = 'error-handling'
+                observations = $entry.Value
+                firstSeen = $now
+                lastSeen = $now
+                evidence = @("Signal capture: error occurred $($entry.Value) times")
+            }
+        }
+    }
+
+    # --- Discover patterns from file extension frequency ---
+    # Only process git-derived patterns when new signals exist in this run. This keeps git
+    # activity tied to active Copilot work and preserves idempotency on signal-empty reruns.
+    if ($signalCount -gt 0) {
+        foreach ($entry in ($gitPatterns.GetEnumerator() | Where-Object { $_.Value -ge 3 } | Sort-Object -Property Value -Descending | Select-Object -First 5)) {
+            $ext = $entry.Key
+            $patternId = "primary-lang-$($ext.TrimStart('.').ToLower())"
+            $existing = $existingPatterns | Where-Object { $_.id -eq $patternId }
+
+            if ($existing) {
+                # Refresh existing git-derived pattern so it does not decay while still active.
+                # Observations are set (not accumulated) to reflect the current diff window rather than a running total.
+                $newObs = [Math]::Max($existing.observations, $entry.Value)
+                $newConf = [Math]::Min(0.95, $existing.confidence + 0.05)
+                $updatedPatterns += @{
+                    id = $patternId
+                    oldConfidence = $existing.confidence
+                    newConfidence = $newConf
+                    observations = $newObs
+                }
+                $existing.confidence = $newConf
+                $existing.observations = $newObs
+            } else {
+                $newPatterns += @{
+                    id = $patternId
+                    trigger = "when creating new files"
+                    behavior = "this project primarily uses $ext files ($($entry.Value) changed recently)"
+                    confidence = 0.50
+                    domain = 'code-style'
+                    observations = $entry.Value
+                    firstSeen = $now
+                    lastSeen = $now
+                    evidence = @("Git diff: $($entry.Value) $ext files changed in recent commits")
+                }
+            }
+        }
+    }
+
+    # --- Apply confidence decay to patterns not seen recently ---
+    # Only decay when new signals were processed; skips spurious decay on reruns with identical data
+    if ($signalCount -gt 0) {
+        foreach ($p in $existingPatterns) {
+            if ($p.id -notin ($updatedPatterns | ForEach-Object { $_.id })) {
+                # Decay by 0.05 for unexercised patterns
+                $newConf = [Math]::Max(0.10, $p.confidence - 0.05)
+                if ($newConf -ne $p.confidence) {
+                    $updatedPatterns += @{
+                        id = $p.id
+                        oldConfidence = $p.confidence
+                        newConfidence = $newConf
+                        observations = $p.observations
+                    }
+                    $p.confidence = $newConf
+                }
+            }
+        }
+    }
+
+    # --- Remove patterns below minimum confidence ---
+    $existingPatterns = @($existingPatterns | Where-Object { $_.confidence -ge 0.10 })
+
+    # --- Merge new patterns into existing ---
+    foreach ($np in $newPatterns) {
+        $existingPatterns += $np
+    }
+
+    # --- Write patterns file ---
+    $yaml = "# Frontier Discovered Patterns`n"
+    $yaml += "# Auto-generated by 'frontier discover' -- do not edit manually`n"
+    $yaml += "# Patterns with confidence > 0.80 can be graduated to skills via 'frontier graduate'`n"
+    $yaml += "# Last updated: $now`n"
+    $newWatermark = if ($maxNewTimestamp) { $maxNewTimestamp } elseif ($lastWatermark) { $lastWatermark } else { $null }
+    if ($newWatermark) { $yaml += "# last_signal_watermark: $newWatermark`n" }
+    $yaml += "`n"
+    $yaml += "patterns:`n"
+
+    # Cap at 50 patterns, sorted by confidence descending
+    $sorted = @($existingPatterns | Sort-Object { -($_.confidence) } | Select-Object -First 50)
+
+    foreach ($p in $sorted) {
+        $safeTrigger = $p.trigger -replace '\\', '\\' -replace '"', '\"'
+        $safeBehavior = $p.behavior -replace '\\', '\\' -replace '"', '\"'
+        $yaml += "  - id: $($p.id)`n"
+        $yaml += "    trigger: `"$safeTrigger`"`n"
+        $yaml += "    behavior: `"$safeBehavior`"`n"
+        $yaml += "    confidence: $([string]::Format('{0:F2}', $p.confidence))`n"
+        $yaml += "    domain: $($p.domain)`n"
+        $yaml += "    observations: $($p.observations)`n"
+        $yaml += "    first_seen: $(if ($p.firstSeen) { $p.firstSeen } else { $now })`n"
+        $yaml += "    last_seen: $now`n"
+        if ($p.evidence) {
+            $yaml += "    evidence:`n"
+            foreach ($ev in $p.evidence) {
+                $safeEv = $ev -replace '\\', '\\' -replace '"', '\"'
+                $yaml += "      - `"$safeEv`"`n"
+            }
+        }
+        $yaml += "`n"
+    }
+
+    Set-Content $patternsFile $yaml -Encoding utf8 -NoNewline
+
+    # --- Report ---
+    $readyCount = @($sorted | Where-Object { $_.confidence -ge 0.80 }).Count
+
+    if ($newPatterns.Count -gt 0) {
+        Write-CliOutput "$($C.g)  New patterns:$($C.n)"
+        foreach ($np in $newPatterns) {
+            Write-CliOutput "    + $($np.id) ($([string]::Format('{0:F2}', $np.confidence))) -- $($np.behavior)"
+        }
+    }
+
+    if ($updatedPatterns.Count -gt 0) {
+        Write-CliOutput "$($C.c)  Updated patterns:$($C.n)"
+        foreach ($up in $updatedPatterns) {
+            $arrow = if ($up.newConfidence -gt $up.oldConfidence) { '+' } else { '-' }
+            Write-CliOutput "    $arrow $($up.id) ($([string]::Format('{0:F2}', $up.oldConfidence)) -> $([string]::Format('{0:F2}', $up.newConfidence)))"
+        }
+    }
+
+    if ($readyCount -gt 0) {
+        Write-CliOutput "`n$($C.y)  Ready to graduate ($readyCount patterns with confidence > 0.80):$($C.n)"
+        foreach ($rp in ($sorted | Where-Object { $_.confidence -ge 0.80 })) {
+            Write-CliOutput "    [*] $($rp.id) ($([string]::Format('{0:F2}', $rp.confidence))) -- run 'frontier graduate' to promote"
+        }
+    }
+
+    $total = $sorted.Count
+    Write-CliOutput "`n  Total: $total patterns ($($newPatterns.Count) new, $($updatedPatterns.Count) updated)"
+    Write-CliOutput "  Patterns file: $patternsFile`n"
+
+    if ($Script:JsonOutput) {
+        [PSCustomObject]@{
+            total = $total
+            new = $newPatterns.Count
+            updated = $updatedPatterns.Count
+            readyToGraduate = $readyCount
+            patternsFile = $patternsFile
+        } | ConvertTo-Json -Depth 5
+    }
+}
+
+function Invoke-DiscoverStatus {
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
+    $signalsFile = Join-Path $Script:FRONTIER_STATE_DIR 'signals' 'sessions.jsonl'
+
+    Write-CliOutput "`n$($C.c)  Pattern Discovery Status$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    # Signal stats
+    if (Test-Path $signalsFile) {
+        $lines = @(Get-Content $signalsFile -Encoding utf8 | Where-Object { $_.Trim() })
+        $size = (Get-Item $signalsFile).Length
+        $sizeKB = [Math]::Round($size / 1024, 1)
+        Write-CliOutput "  Signal file:    $signalsFile"
+        Write-CliOutput "  Signal entries: $($lines.Count) ($sizeKB KB)"
+    } else {
+        Write-CliOutput "  Signal file:    (not yet created)"
+        Write-CliOutput "$($C.d)  Signals capture automatically via Copilot hooks.$($C.n)"
+    }
+
+    # Pattern stats
+    if (Test-Path $patternsFile) {
+        $content = Get-Content $patternsFile -Raw -Encoding utf8
+        $patternCount = ([regex]::Matches($content, '^\s*- id:', [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
+        $readyCount = ([regex]::Matches($content, 'confidence:\s*0\.(8\d|9\d)', [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
+        Write-CliOutput "  Patterns file:  $patternsFile"
+        Write-CliOutput "  Total patterns: $patternCount"
+        Write-CliOutput "  Ready to graduate: $readyCount (confidence > 0.80)"
+    } else {
+        Write-CliOutput "  Patterns file:  (not yet created)"
+        Write-CliOutput "$($C.d)  Run 'frontier discover' to analyze signals and git history.$($C.n)"
+    }
+    Write-CliOutput ""
+}
+
+function Invoke-DiscoverReset {
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
+    $archiveDir = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'archive'
+
+    if (-not (Test-Path $patternsFile)) {
+        Write-CliOutput "$($C.y)  No patterns file to reset.$($C.n)"
+        return
+    }
+
+    if (-not (Test-Path $archiveDir)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+    $ts = (Get-Date).ToString('yyyy-MM-dd-HHmmss')
+    $archivePath = Join-Path $archiveDir "discovered-$ts.yaml"
+    Copy-Item $patternsFile $archivePath -Force
+    Remove-Item $patternsFile -Force
+    Write-CliOutput "$($C.g)  Patterns archived to: $archivePath$($C.n)"
+    Write-CliOutput "  Run 'frontier discover' to start fresh.`n"
+}
+
+function Invoke-DiscoverHelp {
+    Write-CliOutput "`n$($C.c)  Discover Commands$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-CliOutput "    frontier discover               Analyze signals + git history for patterns"
+    Write-CliOutput "    frontier discover run           Same as above (default)"
+    Write-CliOutput "    frontier discover status        Show signal and pattern statistics"
+    Write-CliOutput "    frontier discover reset         Archive current patterns and start fresh"
+    Write-CliOutput ""
+}
+
+# ---------------------------------------------------------------------------
+# GRADUATE: Promote high-confidence patterns to permanent skills
+# ---------------------------------------------------------------------------
+
+function Invoke-GraduateCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'run' }
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+
+    switch ($action) {
+        'run'     { Invoke-GraduateRun }
+        'list'    { Invoke-GraduateList }
+        'preview' { Invoke-GraduateList }
+        default   { Invoke-GraduateHelp }
+    }
+}
+
+function Invoke-GraduateRun {
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
+    $skillsDir = Join-Path $Script:ROOT '.github' 'skills'
+    $archiveDir = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'archive'
+
+    if (-not (Test-Path $patternsFile)) {
+        Write-CliOutput "$($C.y)  No patterns found. Run 'frontier discover' first.$($C.n)"
+        return
+    }
+
+    # Parse patterns
+    $content = Get-Content $patternsFile -Raw -Encoding utf8
+    $patterns = @()
+    $currentPattern = $null
+    foreach ($yamlLine in ($content -split "`n")) {
+        if ($yamlLine -match '^\s*- id:\s*(.+)') {
+            if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+            $currentPattern = @{ id = $Matches[1].Trim(); confidence = 0.5; observations = 0; domain = 'general'; trigger = ''; behavior = ''; evidence = @() }
+        } elseif ($currentPattern -and $yamlLine -match '^\s+confidence:\s*([\d.]+)') {
+            $currentPattern.confidence = [double]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+observations:\s*(\d+)') {
+            $currentPattern.observations = [int]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+trigger:\s*"?(.+?)"?\s*$') {
+            $currentPattern.trigger = $Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+behavior:\s*"?(.+?)"?\s*$') {
+            $currentPattern.behavior = $Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+domain:\s*(.+)') {
+            $currentPattern.domain = $Matches[1].Trim()
+        } elseif ($currentPattern -and $yamlLine -match '^\s+- "(.+)"') {
+            $currentPattern.evidence += $Matches[1]
+        }
+    }
+    if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+
+    # Filter candidates: confidence > 0.80 and observations >= 5
+    $candidates = @($patterns | Where-Object { $_.confidence -ge 0.80 -and $_.observations -ge 5 })
+
+    if ($candidates.Count -eq 0) {
+        Write-CliOutput "$($C.y)  No patterns ready to graduate yet.$($C.n)"
+        Write-CliOutput "$($C.d)  Patterns need confidence > 0.80 and 5+ observations.$($C.n)"
+        Write-CliOutput "$($C.d)  Run 'frontier discover' to build pattern confidence.`n$($C.n)"
+        return
+    }
+
+    Write-CliOutput "`n$($C.c)  Pattern Graduation$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    # Group candidates by domain -> each domain cluster becomes one skill
+    $clusters = @{}
+    foreach ($candidate in $candidates) {
+        $domain = $candidate.domain
+        if (-not $clusters.ContainsKey($domain)) { $clusters[$domain] = @() }
+        $clusters[$domain] += $candidate
+    }
+
+    $generatedSkills = @()
+    $graduatedIds = @()
+    $now = (Get-Date).ToString('yyyy-MM-dd')
+
+    foreach ($entry in $clusters.GetEnumerator()) {
+        $domain = $entry.Key
+        $clusterPatterns = $entry.Value
+        $skillName = "graduated-$domain"
+        $skillDir = Join-Path $skillsDir "development" $skillName
+        $skillFile = Join-Path $skillDir 'SKILL.md'
+
+        if (-not (Test-Path $skillDir)) { New-Item -ItemType Directory -Path $skillDir -Force | Out-Null }
+
+        # Generate SKILL.md
+        $totalObs = ($clusterPatterns | Measure-Object -Property observations -Sum).Sum
+        $patternCount = $clusterPatterns.Count
+
+        $skillContent = "---`n"
+        $skillContent += "name: $skillName`n"
+        $skillContent += "description: `"[Auto-graduated] Project conventions for $domain domain from $totalObs observations across $patternCount patterns.`"`n"
+        $skillContent += "---`n`n"
+        $skillContent += "# Graduated Patterns: $($domain.Substring(0,1).ToUpper())$($domain.Substring(1))`n`n"
+        $skillContent += "These conventions were automatically graduated from observed patterns.`n"
+        $skillContent += "Each pattern reached high confidence (>0.80) through repeated observation in this project.`n`n"
+        $skillContent += "**Review these and adjust as needed -- they are a starting point from observed behavior.**`n`n"
+        $skillContent += "## Conventions`n`n"
+
+        $idx = 1
+        foreach ($p in $clusterPatterns) {
+            $skillContent += "### $idx. $($p.id)`n`n"
+            $skillContent += "- **When:** $($p.trigger)`n"
+            $skillContent += "- **Then:** $($p.behavior)`n"
+            $skillContent += "- **Confidence:** $([string]::Format('{0:F2}', $p.confidence)) ($($p.observations) observations)`n"
+            if ($p.evidence -and $p.evidence.Count -gt 0) {
+                $skillContent += "- **Evidence:**`n"
+                foreach ($ev in $p.evidence) {
+                    $skillContent += "  - $ev`n"
+                }
+            }
+            $skillContent += "`n"
+            $idx++
+            $graduatedIds += $p.id
+        }
+
+        $skillContent += "## Notes`n`n"
+        $skillContent += "- Generated on $now by ``frontier graduate```n"
+        $skillContent += "- Source: ``.frontier/patterns/discovered.yaml```n"
+        $skillContent += "- These skills are auto-discovered by Copilot in future sessions`n"
+        $skillContent += "- Delete this file if the conventions no longer apply -- patterns will re-accumulate if still valid`n"
+
+        Set-Content $skillFile $skillContent -Encoding utf8 -NoNewline
+        $generatedSkills += $skillFile
+
+        Write-CliOutput "  $($C.g)[PASS]$($C.n) Generated: $skillFile (from $patternCount patterns)"
+    }
+
+    # Archive graduated patterns
+    if (-not (Test-Path $archiveDir)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+    $archivePath = Join-Path $archiveDir "graduated-$now.yaml"
+    $archiveYaml = "# Graduated patterns - $now`n"
+    $archiveYaml += "# These patterns were promoted to skills under .github/skills/`n`n"
+    foreach ($candidate in $candidates) {
+        $archiveYaml += "- id: $($candidate.id)`n"
+        $archiveYaml += "  graduated_to: .github/skills/development/graduated-$($candidate.domain)/SKILL.md`n"
+        $archiveYaml += "  graduated_at: $now`n"
+        $archiveYaml += "  final_confidence: $([string]::Format('{0:F2}', $candidate.confidence))`n`n"
+    }
+    Set-Content $archivePath $archiveYaml -Encoding utf8 -NoNewline
+
+    # Remove graduated patterns from active file
+    $remainingPatterns = @($patterns | Where-Object { $_.id -notin $graduatedIds })
+    $remainingYaml = "# Frontier Discovered Patterns`n"
+    $remainingYaml += "# Auto-generated by 'frontier discover' -- do not edit manually`n"
+    $remainingYaml += "# Patterns with confidence > 0.80 can be graduated to skills via 'frontier graduate'`n"
+    $remainingYaml += "# Last updated: $now`n`n"
+    $remainingYaml += "patterns:`n"
+    foreach ($p in $remainingPatterns) {
+        $safeTrigger = $p.trigger -replace '\\', '\\' -replace '"', '\"'
+        $safeBehavior = $p.behavior -replace '\\', '\\' -replace '"', '\"'
+        $remainingYaml += "  - id: $($p.id)`n"
+        $remainingYaml += "    trigger: `"$safeTrigger`"`n"
+        $remainingYaml += "    behavior: `"$safeBehavior`"`n"
+        $remainingYaml += "    confidence: $([string]::Format('{0:F2}', $p.confidence))`n"
+        $remainingYaml += "    domain: $($p.domain)`n"
+        $remainingYaml += "    observations: $($p.observations)`n`n"
+    }
+    Set-Content $patternsFile $remainingYaml -Encoding utf8 -NoNewline
+
+    Write-CliOutput "`n  Graduated: $($graduatedIds.Count) patterns -> $($generatedSkills.Count) skills"
+    Write-CliOutput "  Archived:  $archivePath"
+    Write-CliOutput "  Remaining: $($remainingPatterns.Count) active patterns`n"
+
+    if ($Script:JsonOutput) {
+        [PSCustomObject]@{
+            graduated = $graduatedIds.Count
+            skills = $generatedSkills
+            remaining = $remainingPatterns.Count
+            archivePath = $archivePath
+        } | ConvertTo-Json -Depth 5
+    }
+}
+
+function Invoke-GraduateList {
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
+
+    if (-not (Test-Path $patternsFile)) {
+        Write-CliOutput "$($C.y)  No patterns found. Run 'frontier discover' first.$($C.n)"
+        return
+    }
+
+    $content = Get-Content $patternsFile -Raw -Encoding utf8
+    $patterns = @()
+    $currentPattern = $null
+    foreach ($yamlLine in ($content -split "`n")) {
+        if ($yamlLine -match '^\s*- id:\s*(.+)') {
+            if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+            $currentPattern = @{ id = $Matches[1].Trim(); confidence = 0.5; observations = 0; domain = 'general' }
+        } elseif ($currentPattern -and $yamlLine -match '^\s+confidence:\s*([\d.]+)') {
+            $currentPattern.confidence = [double]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+observations:\s*(\d+)') {
+            $currentPattern.observations = [int]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+domain:\s*(.+)') {
+            $currentPattern.domain = $Matches[1].Trim()
+        }
+    }
+    if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+
+    $candidates = @($patterns | Where-Object { $_.confidence -ge 0.80 -and $_.observations -ge 5 })
+    $building = @($patterns | Where-Object { $_.confidence -lt 0.80 -or $_.observations -lt 5 })
+
+    Write-CliOutput "`n$($C.c)  Graduation Candidates$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    if ($candidates.Count -gt 0) {
+        Write-CliOutput "$($C.g)  Ready to graduate:$($C.n)"
+        foreach ($candidate in $candidates) {
+            Write-CliOutput "    [*] $($candidate.id) (conf: $([string]::Format('{0:F2}', $candidate.confidence)), obs: $($candidate.observations), domain: $($candidate.domain))"
+        }
+    } else {
+        Write-CliOutput "$($C.y)  No patterns ready yet.$($C.n)"
+    }
+
+    if ($building.Count -gt 0) {
+        Write-CliOutput "`n$($C.d)  Building confidence:$($C.n)"
+        foreach ($b in ($building | Sort-Object { -($_.confidence) } | Select-Object -First 10)) {
+            Write-CliOutput "    $($C.d)  $($b.id) (conf: $([string]::Format('{0:F2}', $b.confidence)), obs: $($b.observations))$($C.n)"
+        }
+    }
+    Write-CliOutput ""
+}
+
+function Invoke-GraduateHelp {
+    Write-CliOutput "`n$($C.c)  Graduate Commands$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-CliOutput "    frontier graduate               Promote high-confidence patterns to skills"
+    Write-CliOutput "    frontier graduate run           Same as above (default)"
+    Write-CliOutput "    frontier graduate list          Preview candidates without promoting"
+    Write-CliOutput "    frontier graduate preview       Same as list"
+    Write-CliOutput ""
+    Write-CliOutput "$($C.d)  Patterns need confidence > 0.80 and 5+ observations to graduate.$($C.n)"
+    Write-CliOutput "$($C.d)  Generated skills land in .github/skills/development/graduated-<domain>/$($C.n)"
+    Write-CliOutput ""
+}
+
+# ---------------------------------------------------------------------------
+# SPRINT: One-shot full pipeline execution
+# ---------------------------------------------------------------------------
+
+function Invoke-SprintCmd {
+    $issueNumber = Get-Flag @('-i', '--issue')
+    $dryRun = Test-Flag @('--dry-run', '-d')
+    $skipHygiene = Test-Flag @('--skip-hygiene')
+    $normalizedArgs = @($Script:SubArgs | ForEach-Object { [string]$_ })
+    $descriptionParts = @()
+    $skipNextArg = $false
+    foreach ($arg in $normalizedArgs) {
+        if ($skipNextArg) {
+            $skipNextArg = $false
+            continue
+        }
+
+        if ($arg -in @('-i', '--issue')) {
+            $skipNextArg = $true
+            continue
+        }
+
+        if ($arg.StartsWith('-')) {
+            continue
+        }
+
+        $descriptionParts += $arg
+    }
+    $description = $descriptionParts -join ' '
+    $sprintScope = if ($issueNumber -and -not [string]::IsNullOrWhiteSpace($description)) {
+        "issue #${issueNumber}: $description"
+    } elseif ($issueNumber) {
+        "issue #${issueNumber}"
+    } else {
+        $description
+    }
+
+    if ([string]::IsNullOrWhiteSpace($description) -and [string]::IsNullOrWhiteSpace($issueNumber)) {
+        Write-CliOutput "`n$($C.c)  Sprint -- Full Pipeline Execution$($C.n)"
+        Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+        Write-CliOutput "$($C.w)  Usage:$($C.n)"
+        Write-CliOutput "    frontier sprint `"Add user authentication`""
+        Write-CliOutput "    frontier sprint -i 42"
+        Write-CliOutput "    frontier sprint `"Fix login bug`" --skip-hygiene"
+        Write-CliOutput "    frontier sprint `"Redesign dashboard`" --dry-run"
+        Write-CliOutput ""
+        Write-CliOutput "$($C.w)  Pipeline Stages:$($C.n)"
+        Write-CliOutput "    1. Plan     -- Create execution plan and validate scope"
+        Write-CliOutput "    2. Build    -- Implement changes with iterative quality loop"
+        Write-CliOutput "    3. Review   -- Self-review with structured findings"
+        Write-CliOutput "    4. Hygiene  -- Code hygiene sweep (skip with --skip-hygiene)"
+        Write-CliOutput "    5. Discover -- Extract patterns from this session"
+        Write-CliOutput ""
+        Write-CliOutput "$($C.w)  Flags:$($C.n)"
+        Write-CliOutput "    -i, --issue <number>   Work on existing issue"
+        Write-CliOutput "    --dry-run              Show pipeline plan without executing"
+        Write-CliOutput "    --skip-hygiene         Skip code hygiene pass"
+        Write-CliOutput ""
+        return
+    }
+
+    Write-CliOutput "`n$($C.c)  Sprint -- Full Pipeline$($C.n)"
+    Write-CliOutput "$($C.d)  =============================================$($C.n)"
+
+    $stages = @(
+        @{ name = 'Plan';     description = 'Create execution plan and validate scope' }
+        @{ name = 'Build';    description = 'Implement changes with iterative quality loop' }
+        @{ name = 'Review';   description = 'Self-review with structured findings' }
+    )
+    if (-not $skipHygiene) {
+        $stages += @{ name = 'Hygiene';  description = 'Code hygiene sweep on changed files' }
+    }
+    $stages += @{ name = 'Discover'; description = 'Extract patterns from this session' }
+
+    $stageNum = 1
+    foreach ($stage in $stages) {
+        Write-CliOutput "`n$($C.y)  [$stageNum/$($stages.Count)] $($stage.name)$($C.n) -- $($stage.description)"
+
+        if ($dryRun) {
+            Write-CliOutput "$($C.d)    (dry-run: would execute $($stage.name) stage)$($C.n)"
+            $stageNum++
+            continue
+        }
+
+        switch ($stage.name) {
+            'Plan' {
+                # Stage 1: Create or load plan
+                if ($issueNumber) {
+                    Write-CliOutput "    Loading issue #$issueNumber..."
+                    try {
+                        & "$PSScriptRoot/frontier.ps1" issue get -n $issueNumber 2>$null | Out-Null
+                        Write-CliOutput "    $($C.g)[PASS]$($C.n) Issue #$issueNumber loaded"
+                    } catch {
+                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Could not load issue #$issueNumber"
+                        return
+                    }
+                }
+                $prompt = if ($issueNumber) { "Plan work for $sprintScope" } else { "Plan: $description" }
+                Write-CliOutput "    $($C.g)[PASS]$($C.n) Plan scope: $prompt"
+            }
+            'Build' {
+                # Stage 2: Run agentic loop
+                Write-CliOutput "    Starting iterative build..."
+                try {
+                    . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+                    $buildPrompt = if ($issueNumber) {
+                        "Implement $sprintScope"
+                    } else {
+                        "Implement: $description"
+                    }
+                    $params = @{
+                        Agent = 'engineer'
+                        Prompt = $buildPrompt
+                        MaxIterations = 10
+                        WorkspaceRoot = $Script:ROOT
+                    }
+                    if ($issueNumber) { $params.IssueNumber = [int]$issueNumber }
+                    $result = Invoke-AgenticLoop @params
+                    if (Test-AgenticLoopResultSucceeded -Result $result) {
+                        Write-CliOutput "    $($C.g)[PASS]$($C.n) Build completed ($($result.exitReason))"
+                    } else {
+                        $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
+                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build did not complete ($exitReason)"
+                        $global:LASTEXITCODE = 1
+                        return
+                    }
+                } catch {
+                    Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build encountered error: $($_.Exception.Message)"
+                    $global:LASTEXITCODE = 1
+                    return
+                }
+            }
+            'Review' {
+                # Stage 3: Self-review
+                Write-CliOutput "    Running self-review..."
+                try {
+                    . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+                    $reviewParams = @{
+                        Agent = 'reviewer'
+                        Prompt = if ($issueNumber) { "Review changes for $sprintScope" } else { "Review changes for: $description" }
+                        MaxIterations = 5
+                        WorkspaceRoot = $Script:ROOT
+                    }
+                    if ($issueNumber) { $reviewParams.IssueNumber = [int]$issueNumber }
+                    $reviewResult = Invoke-AgenticLoop @reviewParams
+                    if (Test-AgenticLoopResultSucceeded -Result $reviewResult) {
+                        Write-CliOutput "    $($C.g)[PASS]$($C.n) Review completed ($($reviewResult.exitReason))"
+                    } else {
+                        $exitReason = if ($reviewResult) { [string]$reviewResult.exitReason } else { 'no-result' }
+                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Review did not complete ($exitReason)"
+                        $global:LASTEXITCODE = 1
+                        return
+                    }
+                } catch {
+                    Write-CliOutput "    $($C.r)[FAIL]$($C.n) Review encountered error: $($_.Exception.Message)"
+                    $global:LASTEXITCODE = 1
+                    return
+                }
+            }
+            'Hygiene' {
+                # Stage 4: Code hygiene sweep -- advisory. Identifies scope and points to the code-hygiene skill.
+                # Actual analysis is performed by an agent reading .github/skills/development/code-hygiene/SKILL.md.
+                Write-CliOutput "    Identifying code hygiene sweep scope..."
+                try {
+                    $changedFiles = @(& git diff --name-only HEAD 2>$null | Where-Object { $_.Trim() } | Select-Object -Unique)
+                    $fileCount = ($changedFiles | Measure-Object).Count
+                    if ($fileCount -gt 0) {
+                        Write-CliOutput "    $($C.c)[INFO]$($C.n) Hygiene scope: $fileCount file(s) changed -- run 'code-hygiene' skill for analysis"
+                    } else {
+                        Write-CliOutput "    $($C.c)[INFO]$($C.n) No uncommitted changes detected; hygiene sweep skipped"
+                    }
+                } catch {
+                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Could not determine changed files"
+                }
+            }
+            'Discover' {
+                # Stage 5: Pattern discovery
+                Write-CliOutput "    Extracting patterns from this session..."
+                try {
+                    Invoke-DiscoverRun
+                    Write-CliOutput "    $($C.g)[PASS]$($C.n) Pattern discovery complete"
+                } catch {
+                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Pattern discovery encountered error: $($_.Exception.Message)"
+                }
+            }
+        }
+
+        $stageNum++
+    }
+
+    Write-CliOutput "`n$($C.g)  Sprint complete!$($C.n)"
+    if ($issueNumber) {
+        Write-CliOutput "$($C.d)  Issue: #${issueNumber}$($C.n)"
+    }
+    Write-CliOutput "$($C.d)  Stages: $($stages.Count) executed$($C.n)`n"
+}
+
+# ---------------------------------------------------------------------------
+# Thin script wrappers (presentation, experimentation, orchestration)
+# ---------------------------------------------------------------------------
+
+function Invoke-ScriptWrapper {
+    param([string]$ScriptRelPath, [string]$Label)
+    # Prefer the workspace copy (repo dev / packs install). Fall back to the
+    # bundled extension runtime so these commands still work after an
+    # extension-only "Initialize Local Runtime", which does not seed scripts/
+    # into the workspace (zero-copy runtime).
+    $full = Join-Path $Script:ROOT $ScriptRelPath
+    if (-not (Test-Path $full)) {
+        $bundled = Join-Path $Script:INSTALL_ROOT $ScriptRelPath
+        if (Test-Path $bundled) { $full = $bundled }
+    }
+    if (-not (Test-Path $full)) {
+        Write-CliOutput "$($C.r)[FAIL]$($C.n) $Label script missing at $ScriptRelPath"
+        exit 1
+    }
+    $extra = @()
+    if ($Script:SubArgs -and $Script:SubArgs.Count -gt 0) { $extra = @($Script:SubArgs) }
+    & pwsh -NoProfile -File $full @extra
+    exit $LASTEXITCODE
+}
+
+function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scrub.ps1'             -Label 'scrub' }
+function Invoke-DreamCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/dream.ps1'             -Label 'dream' }
+function Invoke-ResearchCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/research.ps1'          -Label 'research' }
+function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
+function Invoke-TakeoffCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/takeoff.ps1'          -Label 'takeoff' }
+function Invoke-LandCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/land.ps1'             -Label 'land' }
+function Invoke-GhcpReviewResolveCmd { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ghcp-review-resolve.ps1' -Label 'ghcp-review-resolve' }
+function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/install-manifest.ps1' -Label 'install-manifest' }
+function Invoke-ScanCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scan.ps1'             -Label 'scan' }
+function Invoke-StocktakeCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/stocktake.ps1'        -Label 'stocktake' }
+function Invoke-RouteCmd         { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-route.ps1'      -Label 'route' }
+function Invoke-CouncilCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-council.ps1'    -Label 'council' }
+function Invoke-BudgetCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/budget.ps1'          -Label 'budget' }
+
+# ---------------------------------------------------------------------------
+# Main router
+# ---------------------------------------------------------------------------
+
+switch ($Script:Command) {
+    'ready'    { Invoke-ReadyCmd }
+    'state'    { Invoke-StateCmd }
+    'deps'     { Invoke-DepsCmd }
+    'audit'    { Invoke-AuditCmd }
+    'digest'   { Invoke-DigestCmd }
+    'workflow'  { Invoke-WorkflowCmd }
+    'loop'     { Invoke-LoopCmd }
+    'validate'  { Invoke-ValidateCmd }
+    'hook'     { Invoke-AgentHookCmd }
+    'hooks'    { Invoke-HooksCmd }
+    'policy-hook' { Invoke-PolicyHookCmd }
+    'config'   { Invoke-ConfigCmd }
+    'issue'    { Invoke-IssueCmd }
+    'bundle'   { Invoke-BundleCmd }
+    'parallel' { Invoke-ParallelCmd }
+    'backlog-sync' { Invoke-BacklogSyncCmd }
+    'lessons'  { Invoke-LessonsCmd }
+    'git-sync' { Invoke-GitSyncCmd }
+    'run'      { Invoke-RunCmd }
+    'hire'     { Invoke-HireCmd }
+    'watch'    { Invoke-WatchCmd }
+    'tokens'   { Invoke-TokensCmd }
+    'stage-gate' { Invoke-StageGateCmd }
+    'budget'   { Invoke-BudgetCmd }
+    'score'    { Invoke-ScoreCmd }
+    'discover' { Invoke-DiscoverCmd }
+    'graduate' { Invoke-GraduateCmd }
+    'sprint'   { Invoke-SprintCmd }
+    'scrub'    { Invoke-ScrubCmd }
+    'deslop'   { Invoke-ScrubCmd }
+    'antislop' { Invoke-ScrubCmd }
+    'dream'    { Invoke-DreamCmd }
+    'research' { Invoke-ResearchCmd }
+    'ship'     { Invoke-ShipCmd }
+    'takeoff'  { Invoke-TakeoffCmd }
+    'land'     { Invoke-LandCmd }
+    'ghcp-review-resolve' { Invoke-GhcpReviewResolveCmd }
+    'manifest' { Invoke-ManifestCmd }
+    'scan'        { Invoke-ScanCmd }
+    'stocktake'   { Invoke-StocktakeCmd }
+    'route'       { Invoke-RouteCmd }
+    'model-route' { Invoke-RouteCmd }
+    'council'        { Invoke-CouncilCmd }
+    'model-council'  { Invoke-CouncilCmd }
+    'learn'    { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
+    'promote'  { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-GraduateCmd }
+    'patterns' { $Script:SubArgs = @('status') + @($Script:SubArgs); Invoke-DiscoverCmd }
+    'diagnose' { Invoke-DiagnoseCmd }
+    'doctor'   { Invoke-DiagnoseCmd }  # deprecated alias
+    'version'  { Invoke-VersionCmd }
+    'help'     { Invoke-HelpCmd }
+    default {
+        Write-CliOutput "Unknown command: $($Script:Command). Run 'frontier help' for usage."
+        exit 1
+    }
+}

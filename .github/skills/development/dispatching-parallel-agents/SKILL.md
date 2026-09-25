@@ -77,8 +77,8 @@ Output contract: each subagent emits one JSON object on stdout. The dispatcher c
 Goal: ask 3 different models (or 3 different framings) to evaluate the same document, then synthesize.
 
 ```pwsh
-# Convene via the agentx CLI (scripts/model-council.ps1 is the canonical implementation)
-pwsh .agentx/frontier.ps1 council `
+# Convene via the Frontier CLI (scripts/model-council.ps1 is the canonical implementation)
+pwsh .frontier/runtime/frontier.ps1 council `
     -Topic "review-42" `
     -Question "What is the correct Approve / Request Changes decision?" `
     -Context "<diff + spec + test results>" `
@@ -117,7 +117,7 @@ Output contract: each slice writes to a named output file under `docs/execution/
 
 - `tests/bounded-parallel-behavior.ps1` exercises the bounded-parallel primitive used by Frontier runners; read it to understand the throttle and failure semantics.
 - `scripts/model-council.ps1` is the canonical council fan-out for review / ADR / eval phases; reuse it instead of rolling a bespoke parallel dispatcher.
-- `.agentx/agentic-runner.ps1` supports sequential subagent invocation; wrap it in `ForEach-Object -Parallel` only when the Safe / Unsafe rules above clear the work.
+- `.frontier/runtime/agentic-runner.ps1` supports sequential subagent invocation; wrap it in `ForEach-Object -Parallel` only when the Safe / Unsafe rules above clear the work.
 
 ## Done Criteria
 

@@ -32,8 +32,8 @@ PowerShell 7; they require no network connection or provider credentials.
 ## File budgets
 
 ```powershell
-pwsh .agentx/frontier.ps1 tokens report -Json
-pwsh .agentx/frontier.ps1 tokens check -Path .github/instructions
+pwsh .frontier/runtime/frontier.ps1 tokens report -Json
+pwsh .frontier/runtime/frontier.ps1 tokens check -Path .github/instructions
 pwsh scripts/token-counter.ps1 -Action count -Path .github/skills/development/token-optimizer -Json
 ```
 

@@ -1198,7 +1198,7 @@
         "frontier.rootPath": {
           "type": "string",
           "default": "",
-          "description": "Explicit path to the Frontier project root (folder containing AGENTS.md and .agentx/). Leave empty for auto-detection. Useful when Frontier is initialized in a subfolder or non-first workspace folder."
+          "description": "Explicit path to the Frontier project root (folder containing AGENTS.md and .frontier/). Leave empty for auto-detection. Useful when Frontier is initialized in a subfolder or non-first workspace folder."
         },
         "frontier.searchDepth": {
           "type": "number",

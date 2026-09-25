@@ -18,11 +18,10 @@ function Assert-True($condition, $message) {
 function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-sprint-discover-test-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.frontier\runtime') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root '.frontier\issues') -Force | Out-Null
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') (Join-Path $root '.frontier\runtime\frontier.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') (Join-Path $root '.frontier\runtime\frontier-cli.ps1') -Force
     '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.frontier\config.json') -Encoding utf8
     return $root
 }
@@ -42,7 +41,7 @@ function Invoke-Frontier([string]$root, [string[]]$arguments) {
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
     $startInfo.ArgumentList.Add('-File')
-    $startInfo.ArgumentList.Add((Join-Path $root '.agentx\agentx.ps1'))
+    $startInfo.ArgumentList.Add((Join-Path $root '.frontier\runtime\frontier.ps1'))
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
@@ -59,8 +58,8 @@ function Invoke-Frontier([string]$root, [string[]]$arguments) {
 }
 
 function Initialize-StubRunner([string]$root) {
-    $stubPath = Join-Path $root '.agentx\agentic-runner.ps1'
-    $recordPath = Join-Path $root '.agentx\runner-prompts.log'
+    $stubPath = Join-Path $root '.frontier\runtime\agentic-runner.ps1'
+    $recordPath = Join-Path $root '.frontier\runtime\runner-prompts.log'
     @"
     function Test-AgenticLoopResultSucceeded(`$Result) {
         return `$null -ne `$Result -and ([string]`$Result.exitReason -ceq 'text_response')
@@ -83,7 +82,7 @@ function Invoke-AgenticLoop {
 }
 
 function Initialize-FailedRunner([string]$root) {
-    $stubPath = Join-Path $root '.agentx\agentic-runner.ps1'
+    $stubPath = Join-Path $root '.frontier\runtime\agentic-runner.ps1'
     @'
 function Test-AgenticLoopResultSucceeded($Result) {
     return $null -ne $Result -and ([string]$Result.exitReason -ceq 'text_response')

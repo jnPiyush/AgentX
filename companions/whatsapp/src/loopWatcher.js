@@ -41,8 +41,8 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
   const targets = config.notifications.targets || [];
   if (!targets.length) return null;
 
-  const stateFiles = ['.frontier', '.hve', '.agentx'].map(directory => path.resolve(config.repoPath, directory, 'state', 'loop-state.json'));
-  const stateFile = () => stateFiles.find(file => fs.existsSync(file)) || stateFiles[stateFiles.length - 1];
+  const statePath = path.resolve(config.repoPath, '.frontier', 'state', 'loop-state.json');
+  const stateFile = () => statePath;
   const include = new Set(config.notifications.events);
   let last = readJsonSafe(stateFile());
   let stopped = false;

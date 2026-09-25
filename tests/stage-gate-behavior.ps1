@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $evaluatorPath = Join-Path $repoRoot 'scripts/score-stage-gate.ps1'
 $catalogPath = Join-Path $repoRoot 'evaluation/rubrics/stage-gates.json'
-$cliPath = Join-Path $repoRoot '.agentx/agentx-cli.ps1'
+$cliPath = Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1'
 $pwshPath = (Get-Process -Id $PID).Path
 $script:passCount = 0
 $script:failCount = 0
@@ -181,9 +181,9 @@ try {
     Assert-True ($r.ExitCode -eq 0 -and $r.Json.status -eq 'ready') 'Complete PRD passes deterministic checks (tokens in code are ignored)'
     Assert-True ($r.Json.files[0].sha256 -eq (Get-Sha $ws 'docs/artifacts/prd/PRD-7.md')) 'Plan binds the artifact SHA-256'
     Assert-True (@($r.Json.reportTemplate.dimensions).Count -eq 7 -and $r.Json.suggestedReportPath -eq 'docs/artifacts/reviews/gates/GATE-requirements-7.json') 'Plan emits a report template and the conventional report path'
-    $rootEnv = @{ FRONTIER_WORKSPACE_ROOT = ''; HVE_WORKSPACE_ROOT = $ws; AGENTX_WORKSPACE_ROOT = $runRoot }
+    $rootEnv = @{ FRONTIER_WORKSPACE_ROOT = $ws; HVE_WORKSPACE_ROOT = $runRoot }
     $r = Invoke-Process $evaluatorPath @('Plan', '-Stage', 'requirements', '-Path', 'docs/artifacts/prd/PRD-7.md', '-Json') $runRoot $rootEnv
-    Assert-True ($r.ExitCode -eq 0) 'HVE_WORKSPACE_ROOT is used before AGENTX_WORKSPACE_ROOT when -WorkspaceRoot is omitted'
+    Assert-True ($r.ExitCode -eq 0) 'FRONTIER_WORKSPACE_ROOT is used before HVE_WORKSPACE_ROOT when -WorkspaceRoot is omitted'
 
     Write-Text $ws 'docs/artifacts/prd/PRD-8.md' (($prd -replace '## 6. Out of Scope', '## 6. Later') + "`n`nOwner: {Name}`n")
     $r = Invoke-Gate $ws @('Plan', '-Stage', 'requirements', '-Path', 'docs/artifacts/prd/PRD-8.md')
@@ -417,10 +417,10 @@ try {
 
     # An installed runtime without the catalog degrades to a warning unless gates are required.
     $install = Join-Path $runRoot 'install'
-    New-Item -ItemType Directory -Path (Join-Path $install '.agentx'), (Join-Path $install 'scripts') -Force | Out-Null
-    Copy-Item -LiteralPath $cliPath -Destination (Join-Path $install '.agentx/agentx-cli.ps1')
+    New-Item -ItemType Directory -Path (Join-Path $install '.frontier/runtime'), (Join-Path $install 'scripts') -Force | Out-Null
+    Copy-Item -LiteralPath $cliPath -Destination (Join-Path $install '.frontier/runtime/frontier-cli.ps1')
     Copy-Item -LiteralPath $evaluatorPath -Destination (Join-Path $install 'scripts/score-stage-gate.ps1')
-    $installedCli = Join-Path $install '.agentx/agentx-cli.ps1'
+    $installedCli = Join-Path $install '.frontier/runtime/frontier-cli.ps1'
     Write-Text $cli '.frontier/config.json' '{ "provider": "local" }'
     $r = Invoke-Process $installedCli @('validate', '7', 'pm') $cli @{ FRONTIER_WORKSPACE_ROOT = $cli }
     Assert-True ($r.ExitCode -eq 0 -and $r.Output -match "\[WARN\] Stage gate 'requirements' unavailable") 'Advisory mode warns when the installed catalog is missing'

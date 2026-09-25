@@ -89,7 +89,7 @@ jobs:
           npm audit --omit=dev --audit-level=high
 
       - name: Validate MCP before release creation
-        working-directory: .agentx/mcp-server
+        working-directory: .frontier/runtime/mcp-server
         run: |
           npm ci
           npm test
@@ -168,7 +168,7 @@ jobs:
       - name: Stamp repo version across release surfaces
         run: |
           node scripts/stamp-version.js --set "${{ env.RELEASE_VERSION }}"
-          node scripts/stamp-package-version.js .agentx/mcp-server "${{ env.RELEASE_VERSION }}"
+          node scripts/stamp-package-version.js .frontier/runtime/mcp-server "${{ env.RELEASE_VERSION }}"
 
       - name: Validate extension quality gates
         working-directory: vscode-extension
@@ -177,7 +177,7 @@ jobs:
           npm audit --omit=dev --audit-level=high
 
       - name: Validate MCP runtime
-        working-directory: .agentx/mcp-server
+        working-directory: .frontier/runtime/mcp-server
         run: |
           npm ci
           npm test
@@ -191,7 +191,7 @@ jobs:
           mkdir -p release-evidence release-staging/vsix release-staging/mcp
           unzip -q "vscode-extension/agentx-${RELEASE_VERSION}.vsix" -d release-staging/vsix
           cp LICENSE NOTICE release-staging/mcp/
-          tar --exclude=node_modules -C .agentx/mcp-server -cf - . | tar -xf - -C release-staging/mcp
+          tar --exclude=node_modules -C .frontier/runtime/mcp-server -cf - . | tar -xf - -C release-staging/mcp
           tar -czf "release-evidence/agentx-${RELEASE_VERSION}-mcp.tar.gz" \
             -C release-staging/mcp .
 

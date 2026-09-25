@@ -329,11 +329,12 @@ export function getConfiguredShell(config: vscode.WorkspaceConfiguration): strin
 }
 
 export function buildCliCommand(extensionPath: string, shell: string): string {
+  const runtimeDir = path.join(extensionPath, '.github', 'frontier', '.frontier', 'runtime');
   if (shell === 'bash' || (shell === 'auto' && process.platform !== 'win32')) {
-    return path.join(extensionPath, '.github', 'frontier', '.agentx', 'frontier.sh');
+    return path.join(runtimeDir, 'frontier.sh');
   }
 
-  return path.join(extensionPath, '.github', 'frontier', '.agentx', 'frontier.ps1');
+  return path.join(runtimeDir, 'frontier.ps1');
 }
 
 function safeQuoteArg(arg: string, isPwsh: boolean): string {

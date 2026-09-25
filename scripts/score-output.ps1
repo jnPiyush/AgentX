@@ -104,7 +104,7 @@ function Get-ScoredCodeFiles {
     if ((Get-ItemCount $changedCodeFiles) -gt 0) { return $changedCodeFiles }
 
     $codeRoots = Get-ExistingPaths @(
-        (Join-Path $ROOT '.agentx'),
+        (Join-Path $ROOT '.frontier' 'runtime'),
         (Join-Path $ROOT 'scripts'),
         (Join-Path $ROOT 'tests'),
         (Join-Path $ROOT 'vscode-extension' 'src'),

@@ -10,7 +10,7 @@
 // to the original extension reader and deterministically testable.
 //
 // SOURCE OF TRUTH: this logic must stay parity-aligned with the loop gate in
-// `.agentx/agentx-cli.ps1` (Get-LoopTaskClass / quality gate). It is a faithful
+// `.frontier/runtime/frontier-cli.ps1` (Get-LoopTaskClass / quality gate). It is a faithful
 // extraction of `utils/loopStateChecker.ts` with no behavior change.
 // ---------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@
 // Types
 // ---------------------------------------------------------------------------
 
-/** Matches the JSON schema written by agentx-cli.ps1 Invoke-LoopStart. */
+/** Matches the JSON schema written by frontier-cli.ps1 Invoke-LoopStart. */
 export interface LoopState {
   readonly active: boolean;
   readonly status: 'active' | 'complete' | 'cancelled';
@@ -97,10 +97,10 @@ export interface LoopHealth {
 // ---------------------------------------------------------------------------
 
 /** Relative path from workspace root to the loop state file. */
-export const LOOP_STATE_REL = '.agentx/state/loop-state.json';
+export const LOOP_STATE_REL = '.frontier/state/loop-state.json';
 export const LOOP_STALE_AFTER_MS = 8 * 60 * 60 * 1000;
 export const LOOP_STUCK_AFTER_MS = 90 * 60 * 1000;
-// Per-task-class minimum iterations. Must mirror agentx-cli.ps1
+// Per-task-class minimum iterations. Must mirror frontier-cli.ps1
 // ($Script:LOOP_*_MIN_ITERATIONS).
 export const DEFAULT_STANDARD_MIN_ITERATIONS = 1;
 export const DEFAULT_AUTO_FIX_MIN_ITERATIONS = 2;
@@ -134,7 +134,7 @@ export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completion
 
   // Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
   // like 'Review code and apply safe fixes' resolves to auto-fix-review, not standard.
-  // Mirrors agentx-cli.ps1 Get-LoopTaskClass detection order.
+  // Mirrors frontier-cli.ps1 Get-LoopTaskClass detection order.
   if (/\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b/.test(fingerprint)) {
     return 'auto-fix-review';
   }
@@ -246,7 +246,7 @@ export function getLoopHealth(
 
   // A freshly started loop has iteration 0 (set at loop start) and is healthy.
   // Only a negative iteration is invalid. Mirrors Get-LoopStateHealth in
-  // agentx-cli.ps1 ($iteration -lt 0).
+  // frontier-cli.ps1 ($iteration -lt 0).
   if (state.maxIterations <= 0 || state.iteration < 0) {
     return {
       kind: 'stuck',
@@ -271,7 +271,7 @@ export function getLoopHealth(
   // Find the latest non-rollback history entry. Rollback entries record the
   // iteration that was rolled BACK FROM (so their iteration number is
   // legitimately ahead of state.iteration after a rollback) -- they are not a
-  // stuck signal. Mirrors Invoke-LoopRollback in agentx-cli.ps1.
+  // stuck signal. Mirrors Invoke-LoopRollback in frontier-cli.ps1.
   const latestForwardHistory = [...state.history]
     .reverse()
     .find((h) => h && h.status !== 'rollback');
@@ -360,7 +360,7 @@ function getScoreTrendSuffix(state: LoopState): string {
 /**
  * Evaluate the handoff gate for an already-parsed loop state.
  *
- * Gate rules (matches agentx-cli.ps1 quality gate):
+ * Gate rules (matches frontier-cli.ps1 quality gate):
  *  - Loop still active (active=true) -> BLOCKED
  *  - Loop never started (null state) -> BLOCKED
  *  - Loop cancelled (status=cancelled) -> BLOCKED
@@ -375,7 +375,7 @@ export function evaluateHandoffGate(
   if (!state) {
     return {
       allowed: false,
-      reason: 'No quality loop was started. Run `agentx loop start` before handing off to review.',
+      reason: 'No quality loop was started. Run `frontier loop start` before handing off to review.',
       state: null,
     };
   }
@@ -402,7 +402,7 @@ export function evaluateHandoffGate(
     return {
       allowed: false,
       reason: `Quality loop still active (iteration ${state.iteration}/${state.maxIterations}). `
-        + 'Complete the loop with `agentx loop complete` before handing off.',
+        + 'Complete the loop with `frontier loop complete` before handing off.',
       state,
     };
   }
@@ -438,7 +438,7 @@ export function evaluateHandoffGate(
       return {
         allowed: false,
         reason: `Quality loop completed too early (${state.iteration}/${minIterations} minimum review iterations). `
-          + 'Run additional `agentx loop iterate` passes and complete the loop again.',
+          + 'Run additional `frontier loop iterate` passes and complete the loop again.',
         state,
       };
     }
@@ -454,7 +454,7 @@ export function evaluateHandoffGate(
     if (!hasSubagentReviewIteration(state)) {
       return {
         allowed: false,
-        reason: 'Quality loop missing subagent reviewer pass. Record one with `agentx loop iterate --verdict approved` before handoff.',
+        reason: 'Quality loop missing subagent reviewer pass. Record one with `frontier loop iterate --verdict approved` before handoff.',
         state,
       };
     }

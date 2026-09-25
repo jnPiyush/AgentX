@@ -95,7 +95,7 @@ scripts/validate-handoff.ps1 -IssueNumber 42 -FromAgent pm -ToAgent architect -J
 
 The script:
 1. Checks deliverable files exist for the `fromAgent` role
-2. Reads loop state from `.frontier/state/loop-state.json` (legacy `.agentx/state` before migration)
+2. Reads loop state from `.frontier/state/loop-state.json`
 3. Generates a schema-compliant JSON message
 4. Validates against all schema rules
 5. Saves to `.frontier/handoffs/handoff-<n>-<from>-to-<to>.json`
@@ -149,7 +149,7 @@ Each arrow represents a validated handoff message.
 | Tool | Purpose |
 |------|---------|
 | `scripts/validate-handoff.ps1` | Generate + validate handoff JSON |
-| `.agentx/frontier.ps1 validate` | CLI deliverable validation |
+| `.frontier/runtime/frontier.ps1 validate` | CLI deliverable validation |
 | `.github/schemas/handoff-message.schema.json` | JSON Schema (draft-07) |
 | `.frontier/handoffs/` | Handoff message storage |
 | `quality-gates.yml` | CI validation of handoff artifacts |

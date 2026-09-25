@@ -106,7 +106,7 @@ This prepares the local Frontier runtime for the current workspace by:
 
 - creating local runtime folders and state files
 - preparing repo-local execution artifacts such as plans, progress, reviews, and learnings
-- writing stable `.agentx/*` workspace entrypoints that delegate into the bundled runtime
+- writing stable `.frontier/runtime/*` workspace entrypoints that delegate into the bundled runtime
 - keeping the executable runtime bundled while workspace state stays local to the repo
 
 Repeat this step for each workspace where you want Frontier to run.

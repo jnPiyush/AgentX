@@ -185,7 +185,7 @@ const ASSET_REFERENCE_PATTERN = /(?:\.github\/agents(?:\/internal)?\/[A-Za-z0-9.
  *
  * Resolution order matches resolveAssetPath:
  *   1. Workspace override at the canonical path -> leave unchanged.
- *   2. Workspace runtime mirror under .agentx/runtime/... -> rewrite to that
+ *   2. Workspace runtime mirror under .frontier/runtime/... -> rewrite to that
  *      workspace-relative path.
  *   3. Bundled extension copy under <ext>/.github/frontier/... -> rewrite to the
  *      absolute extension path.

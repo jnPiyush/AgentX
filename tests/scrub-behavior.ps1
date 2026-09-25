@@ -44,7 +44,7 @@ function Invoke-ScrubJson {
 function Invoke-FrontierScrubJson {
     param([string]$Command, [string]$Path, [switch]$Production)
 
-    $args = @('-NoProfile', '-File', (Join-Path $script:root '.agentx/agentx.ps1'), $Command, '-Path', $Path, '-Json')
+    $args = @('-NoProfile', '-File', (Join-Path $script:root '.frontier/runtime/frontier.ps1'), $Command, '-Path', $Path, '-Json')
     if ($Production) { $args += '-Production' }
     $stderrFile = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-scrub-stderr-" + [guid]::NewGuid().ToString('N') + '.txt')
     try {

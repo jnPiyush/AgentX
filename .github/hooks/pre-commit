@@ -45,7 +45,7 @@ fi
 # The loop and scrub decisions below execute through the workspace launcher.
 # Reject unstaged edits to any implementation in that call chain; otherwise an
 # unrelated staged change could be approved by permissive worktree-only code.
-UNSTAGED_VALIDATORS=$(git diff --name-only -- .agentx/frontier.ps1 .agentx/agentx.ps1 .agentx/agentx-cli.ps1 scripts/scrub.ps1)
+UNSTAGED_VALIDATORS=$(git diff --name-only -- .frontier/runtime/frontier.ps1 .frontier/runtime/frontier-cli.ps1 scripts/scrub.ps1)
 if [ -n "$UNSTAGED_VALIDATORS" ]; then
  echo -e "${RED}[FAIL] Quality-gate validators have unstaged changes${NC}"
  echo "$UNSTAGED_VALIDATORS" | sed 's/^/  /'
@@ -154,8 +154,6 @@ echo ""
 # - MANDATORY, NO SKIP: the loop iteration gate cannot be bypassed.
 # ---------------------------------------------------------------
 LOOP_STATE=".frontier/state/loop-state.json"
-[ -f "$LOOP_STATE" ] || LOOP_STATE=".hve/state/loop-state.json"
-[ -f "$LOOP_STATE" ] || LOOP_STATE=".agentx/state/loop-state.json"
 LOOP_ACTIVE=""
 LOOP_STATUS=""
 LOOP_CONSUMED=""
@@ -214,7 +212,7 @@ if { [ -n "$CODE_FILES_STAGED" ] || [ -n "$REVIEW_DOCS" ]; } && [ -z "$LOOP_ACTI
     # Pin the workspace root: the CLI must evaluate THIS repo's loop state, not
     # whatever root it would infer from the hook's working directory.
     LOOP_REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "$PWD")
-    LOOP_GATE_OUTPUT=$(FRONTIER_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File .agentx/frontier.ps1 loop gate 2>&1)
+    LOOP_GATE_OUTPUT=$(FRONTIER_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File "$LOOP_REPO_ROOT/.frontier/runtime/frontier.ps1" loop gate 2>&1)
     if [ $? -ne 0 ]; then
       LOOP_GATE_FAIL=1
       LOOP_GATE_MSG=$(printf '%s' "$LOOP_GATE_OUTPUT" | grep -oE 'BLOCK:.*' | head -1)
@@ -249,10 +247,10 @@ if [ -n "$REVIEW_DOCS" ]; then
   if [ $LOOP_GATE_FAIL -ne 0 ] || [ $LOOP_GATE_EVALUATED -eq 0 ]; then
     echo -e "${RED}[FAIL] Review document staged but the quality loop gate did not pass${NC}"
     echo "  Review agents MUST run the quality loop before committing:"
-    echo "    agentx loop start -p \"Reviewing: <description>\""
+    echo "    frontier loop start -p \"Reviewing: <description>\""
     echo "    ... (verify, self-review, iterate)"
-    echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0"
-    echo "    agentx loop complete -s \"All quality gates passed\""
+    echo "    frontier loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0"
+    echo "    frontier loop complete -s \"All quality gates passed\""
     FAILED=1
   else
     echo -e "${GREEN}[PASS] Review document has completed quality loop${NC}"
@@ -470,7 +468,7 @@ if [ -n "$SCRUB_TARGETS" ]; then
   SCRUB_OUTPUT=""
   while IFS= read -r SCRUB_FILE; do
    [ -f "$SCRUB_FILE" ] || continue
-  if ! pwsh -NoProfile -File .agentx/agentx.ps1 scrub -Path "$SCRUB_FILE" -Quiet >/dev/null 2>&1; then
+  if ! pwsh -NoProfile -File .frontier/runtime/frontier.ps1 scrub -Path "$SCRUB_FILE" -Quiet >/dev/null 2>&1; then
     SCRUB_FAIL=1
     SCRUB_OUTPUT="$SCRUB_OUTPUT
   $SCRUB_FILE"

@@ -221,7 +221,7 @@ describe('pluginsCommandInternals helpers', () => {
               version: '1.0.0',
               artifactUrl: 'https://example.test/1.0.0.zip',
               checksum: 'sha256:abc123',
-              pluginPath: '.agentx/plugins/convert-docs',
+              pluginPath: '.frontier/runtime/plugins/convert-docs',
               engines: { agentx: '^8.4.0' },
             },
           ],
@@ -233,7 +233,7 @@ describe('pluginsCommandInternals helpers', () => {
     assert.equal(picks[0].sourceKind, 'registry');
     assert.equal(picks[0].artifactUrl, 'https://example.test/1.0.0.zip');
     assert.equal(picks[0].checksum, 'sha256:abc123');
-    assert.equal(picks[0].pluginPath, '.agentx/plugins/convert-docs');
+    assert.equal(picks[0].pluginPath, '.frontier/runtime/plugins/convert-docs');
   });
 
   it('validates published plugin identity against the registry entry', () => {
@@ -290,7 +290,7 @@ describe('pluginsCommandInternals helpers', () => {
 
   it('resolves a plugin directory from an extracted artifact path hint', () => {
     const archiveRoot = path.join(tempRoot, 'Frontier-master');
-    const pluginDir = path.join(archiveRoot, '.agentx', 'plugins', 'convert-docs');
+    const pluginDir = path.join(archiveRoot, '.frontier', 'runtime', 'plugins', 'convert-docs');
     fs.mkdirSync(pluginDir, { recursive: true });
     fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({
       name: 'convert-docs',
@@ -300,7 +300,7 @@ describe('pluginsCommandInternals helpers', () => {
       entry: { pwsh: 'convert-docs.ps1' },
     }), 'utf-8');
 
-    const resolved = resolvePluginDirectoryFromArtifact(tempRoot, '.agentx/plugins/convert-docs');
+    const resolved = resolvePluginDirectoryFromArtifact(tempRoot, '.frontier/runtime/plugins/convert-docs');
     assert.equal(resolved, pluginDir);
   });
 
@@ -377,7 +377,7 @@ describe('pluginsCommandInternals helpers', () => {
       installedAt: '2026-03-19T03:00:00Z',
       installedByExtensionVersion: '8.4.5',
       hostVersion: '8.4.5',
-      installPath: path.join(tempRoot, '.agentx', 'plugins', 'convert-docs'),
+      installPath: path.join(tempRoot, '.frontier', 'plugins', 'convert-docs'),
       targetDirName: 'convert-docs',
       artifactUrl: 'https://example.test/convert-docs-1.0.0.zip',
       artifactChecksum: 'sha256:abc123',

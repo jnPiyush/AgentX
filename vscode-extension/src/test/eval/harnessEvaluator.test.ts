@@ -7,7 +7,7 @@ import { evaluateHarnessQuality } from '../../eval/harnessEvaluator';
 
 function createWorkspaceRoot(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-eval-'));
-  fs.mkdirSync(path.join(root, '.agentx', 'state'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.frontier', 'state'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs', 'execution', 'plans'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs', 'execution', 'progress'), { recursive: true });
   return root;
@@ -31,7 +31,7 @@ function createAgentxStub(root: string) {
         .map((name) => `docs/execution/plans/${name}`)
         .sort();
     },
-    getStatePath: (fileName: string) => path.join(root, '.agentx', 'state', fileName),
+    getStatePath: (fileName: string) => path.join(root, '.frontier', 'state', fileName),
   } as unknown as FrontierContext;
 }
 
@@ -41,7 +41,7 @@ describe('harness evaluator', () => {
     const recentTimestamp = createRecentTimestamp();
     fs.writeFileSync(path.join(root, 'docs', 'execution', 'plans', 'EXEC-PLAN-1.md'), '# Plan', 'utf-8');
     fs.writeFileSync(path.join(root, 'docs', 'execution', 'progress', 'EXEC-PLAN-1.md'), '# Progress', 'utf-8');
-    fs.writeFileSync(path.join(root, '.agentx', 'state', 'loop-state.json'), JSON.stringify({
+    fs.writeFileSync(path.join(root, '.frontier', 'state', 'loop-state.json'), JSON.stringify({
       active: false,
       status: 'complete',
       prompt: 'Ship evaluation',
@@ -52,7 +52,7 @@ describe('harness evaluator', () => {
       lastIterationAt: recentTimestamp,
       history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass', review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } }],
     }), 'utf-8');
-    fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
+    fs.writeFileSync(path.join(root, '.frontier', 'state', 'harness-state.json'), JSON.stringify({
       version: 1,
       threads: [{
         id: 'thread-1',
@@ -158,13 +158,13 @@ describe('harness evaluator', () => {
     assert.ok(report?.checks.some((check) => check.id === 'evidence-recorded' && check.attribution === 'harness'));
   });
 
-  it('should respect disabled checks from .agentx/config.json', () => {
+  it('should respect disabled checks from .frontier/config.json', () => {
     const root = createWorkspaceRoot();
     const recentTimestamp = createRecentTimestamp();
-    fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({
+    fs.writeFileSync(path.join(root, '.frontier', 'config.json'), JSON.stringify({
       harnessDisabledChecks: 'execution-plan-present,progress-log-present',
     }), 'utf-8');
-    fs.writeFileSync(path.join(root, '.agentx', 'state', 'loop-state.json'), JSON.stringify({
+    fs.writeFileSync(path.join(root, '.frontier', 'state', 'loop-state.json'), JSON.stringify({
       active: false,
       status: 'complete',
       prompt: 'Ship evaluation',
@@ -175,7 +175,7 @@ describe('harness evaluator', () => {
       lastIterationAt: recentTimestamp,
       history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass', review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } }],
     }), 'utf-8');
-    fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
+    fs.writeFileSync(path.join(root, '.frontier', 'state', 'harness-state.json'), JSON.stringify({
       version: 1,
       threads: [{
         id: 'thread-1',

@@ -155,7 +155,7 @@ describe('pluginCatalog - parsePluginRegistryIndex', () => {
             {
               version: '2.0.0',
               artifactUrl: 'https://example.test/2.0.0.zip',
-              pluginPath: '.agentx/plugins/convert-docs',
+              pluginPath: '.frontier/runtime/plugins/convert-docs',
               engines: { agentx: '>=8.4.0 <9.0.0' },
             },
           ],
@@ -170,7 +170,7 @@ describe('pluginCatalog - parsePluginRegistryIndex', () => {
     const release = getLatestCompatibleRelease(registry.plugins[0], '8.4.5');
     assert.ok(release);
     assert.equal(release.version, '2.0.0');
-    assert.equal(release.pluginPath, '.agentx/plugins/convert-docs');
+    assert.equal(release.pluginPath, '.frontier/runtime/plugins/convert-docs');
   });
 
   it('should reject registry payloads with no valid plugin entries', () => {

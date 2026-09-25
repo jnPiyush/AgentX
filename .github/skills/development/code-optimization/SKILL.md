@@ -7,7 +7,7 @@ metadata:
   created: "2026-07-08"
   updated: "2026-07-08"
 compatibility:
-  frameworks: ["agentx", "copilot", "claude-code"]
+  frameworks: ["frontier", "copilot", "claude-code"]
 ---
 
 # Code Optimization

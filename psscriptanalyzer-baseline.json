@@ -3,7 +3,7 @@
   "analyzerVersion": "1.25.0",
   "note": "Ratchet baseline. Regenerate with: pwsh scripts/run-psscriptanalyzer.ps1 -UpdateBaseline",
   "paths": [
-    ".agentx",
+    ".frontier/runtime",
     "scripts",
     "tests",
     ".github",

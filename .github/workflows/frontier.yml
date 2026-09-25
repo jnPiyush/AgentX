@@ -86,7 +86,7 @@ jobs:
                 const response = await github.rest.repos.getContent({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  path: '.agentx/config.json'
+                  path: '.frontier/config.json'
                 });
 
                 if (!('content' in response.data) || !response.data.content) {
@@ -96,7 +96,7 @@ jobs:
                 const raw = Buffer.from(response.data.content, response.data.encoding || 'base64').toString('utf8');
                 return JSON.parse(raw);
               } catch (error) {
-                console.log(`[INFO] Unable to load .agentx/config.json: ${error.message}`);
+                console.log(`[INFO] Unable to load .frontier/config.json: ${error.message}`);
                 return {};
               }
             };

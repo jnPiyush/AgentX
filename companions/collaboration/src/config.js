@@ -27,7 +27,7 @@ export function loadConfig(env = process.env) {
     const channels = list('FRONTIER_CHANNELS');
     if (channels.some(channel => !['teams', 'github'].includes(channel))) throw new Error('Unsupported FRONTIER_CHANNELS value.');
     const repoPath = fs.realpathSync(required('FRONTIER_WORKSPACE_ROOT'));
-    const cliRelativePath = env.FRONTIER_CLI_PATH || '.agentx/frontier.ps1';
+    const cliRelativePath = env.FRONTIER_CLI_PATH || '.frontier/runtime/frontier.ps1';
     const cliPath = fs.realpathSync(path.resolve(repoPath, cliRelativePath));
     const relative = path.relative(repoPath, cliPath);
     if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.statSync(cliPath).isFile()) throw new Error('CLI must be a file inside the workspace.');

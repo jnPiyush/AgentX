@@ -1,7 +1,7 @@
 {
   "allowedNumbers": ["14155550123"],
   "repoPath": "C:/path/to/Frontier",
-  "cliRelativePath": ".agentx/agentx.ps1",
+  "cliRelativePath": ".frontier/runtime/frontier.ps1",
   "defaultAgent": "engineer",
   "commandTimeoutMs": 600000,
   "maxOutputChars": 6000,

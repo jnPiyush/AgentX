@@ -8,7 +8,7 @@ metadata:
   created: "2026-05-02"
   updated: "2026-05-02"
 compatibility:
-  frameworks: ["agentx", "copilot", "claude-code"]
+  frameworks: ["frontier", "copilot", "claude-code"]
 ---
 
 # Scrub
@@ -65,10 +65,10 @@ Recent diff contains machine-generated text?
 
 ### 1. Scan
 
-Run the scanner over the directory or files that changed. Invoke it through the agentx CLI so it resolves the bundled scanner in zero-copy workspaces (a literal `scripts/scrub.ps1` path does not exist there):
+Run the scanner over the directory or files that changed. Invoke it through the Frontier CLI so it resolves the bundled scanner in zero-copy workspaces (a literal `scripts/scrub.ps1` path does not exist there):
 
 ```pwsh
-pwsh .agentx/agentx.ps1 scrub -Path src/components
+pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components
 ```
 
 For production-release readiness, use the stricter production gate. It keeps
@@ -76,14 +76,14 @@ normal scrub behavior advisory for MEDIUM/LOW findings, but blocks release on
 categories that commonly turn generated code into production maintenance risk:
 
 ```pwsh
-pwsh .agentx/agentx.ps1 deslop -Path src/components -Production
-pwsh .agentx/agentx.ps1 antislop -Path src/components -Production
+pwsh .frontier/runtime/frontier.ps1 deslop -Path src/components -Production
+pwsh .frontier/runtime/frontier.ps1 antislop -Path src/components -Production
 ```
 
 `deslop` and `antislop` are CLI aliases for the same scanner. Use `deslop` when
-the main concern is production code hygiene, and `antislop` when the1. **Scan** via the CLI so it resolves in zero-copy workspaces: `pwsh .agentx/frontier.ps1 scrub -Path src/components`. Production gate (blocks release): `pwsh .agentx/frontier.ps1 deslop -Path src/components -Production` (`antislop` is the same alias).
+the main concern is production code hygiene, and `antislop` when the1. **Scan** via the CLI so it resolves in zero-copy workspaces: `pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components`. Production gate (blocks release): `pwsh .frontier/runtime/frontier.ps1 deslop -Path src/components -Production` (`antislop` is the same alias).
 2. **Triage**: each finding has file/line, category, severity (HIGH auto-fixable, MEDIUM opinionated fix, LOW manual review), snippet, safe-fix flag, and for `duplicate-logic` the original location. `-Production` also blocks on `empty-catch`, `generic-gradient`, and `ai-filler`.
-3. **Fix safe categories**: `pwsh .agentx/frontier.ps1 scrub -Path src/components -Fix` applies comment rot, obvious restatement, stale headers, and dead code. Everything else stays flag-only, requiring manual judgment.
+3. **Fix safe categories**: `pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components -Fix` applies comment rot, obvious restatement, stale headers, and dead code. Everything else stays flag-only, requiring manual judgment.
  findings plus these
 production-blocking advisory categories:
 
@@ -99,7 +99,7 @@ production-blocking advisory categories:
 Only after reading the report, run with `-Fix` to apply the auto-safe categories:
 
 ```pwsh
-pwsh .agentx/agentx.ps1 scrub -Path src/components -Fix
+pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components -Fix
 ```
 
 Safe-fix categories (v1):

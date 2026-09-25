@@ -42,12 +42,10 @@ jobs:
           git --version
           command -v pwsh
           pwsh -NoProfile -Command 'if ($PSVersionTable.PSVersion -lt [version]"7.4") { throw "PowerShell 7.4+ required" }; $PSVersionTable.PSVersion.ToString()'
-          test -x .agentx/frontier.sh
-          test -x .agentx/agentx.sh
+          test -x .frontier/runtime/frontier.sh
           fixture="$(mktemp -d)"
           trap 'rm -r -- "$fixture"' EXIT
-          FRONTIER_WORKSPACE_ROOT="$fixture" ./.agentx/frontier.sh version
-          FRONTIER_WORKSPACE_ROOT="$fixture" ./.agentx/agentx.sh version
+          FRONTIER_WORKSPACE_ROOT="$fixture" ./.frontier/runtime/frontier.sh version
       - name: Install test dependencies
         run: npm ci --ignore-scripts --prefix vscode-extension
       - name: Compile and test shell and review wiring

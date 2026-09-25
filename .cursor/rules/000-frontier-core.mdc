@@ -20,22 +20,22 @@ retrieval-led reasoning -- read the canonical file before generating.
 ## Quality Loop (NON-SKIPPABLE)
 
 Before editing, creating, or deleting any file for a code or docs change, run
-`.agentx/frontier.ps1 loop start -p "<task>"` as the FIRST action. The loop is not
-done until `.agentx/frontier.ps1 loop complete -s "<summary>"` succeeds, with at
+`.frontier/runtime/frontier.ps1 loop start -p "<task>"` as the FIRST action. The loop
+is not done until `.frontier/runtime/frontier.ps1 loop complete -s "<summary>"` succeeds, with at
 least 5 iterations and a structured reviewer verdict recorded on the final work
 iteration:
 `loop iterate -s "Subagent Review: <outcome>" -e <evidence> --verdict approved
 --reviewer <id> --high 0 --medium 0`. A summary containing the word "review" no
 longer satisfies the gate. When the Frontier MCP server is registered
-(`.cursor/mcp.json`), use the `agentx_loop_*` tools instead of typing the CLI --
-`agentx_loop_iterate` accepts the same verdict, reviewer, high and medium fields.
+(`.cursor/mcp.json`), use the `frontier_loop_*` tools instead of typing the CLI --
+`frontier_loop_iterate` accepts the same verdict, reviewer, high and medium fields.
 The pre-commit hook blocks commits that violate the loop gate.
 
 ## Workflow Gates
 
 - Compound Capture, Model Council (ADR/PRD/eval), Execution Plan (>= 8 code
   files), and Brainstorm gates apply per `.github/AGENT-PROTOCOL.md`.
-- Scrub before handoff: `.agentx/frontier.ps1 scrub -Path <changed-area>`.
+- Scrub before handoff: `.frontier/runtime/frontier.ps1 scrub -Path <changed-area>`.
 - Karpathy guidelines apply to every change.
 
 ## Conventions

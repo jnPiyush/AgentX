@@ -17,7 +17,7 @@ function baseConfig(overrides = {}) {
   return {
     allowedNumbers: ['14155550123'],
     repoPath: path.resolve(__dirname, '..', '..', '..'),
-    cliRelativePath: '.agentx/agentx.ps1',
+    cliRelativePath: '.frontier/runtime/frontier.ps1',
     defaultAgent: 'engineer',
     commandTimeoutMs: 2000,
     maxOutputChars: 1000,
@@ -151,8 +151,8 @@ test('voice input cannot authorize mutations and read-only auto-execution is opt
 
 test('configuration fails closed for secret files, bad targets, bad capabilities, and traversal', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-config-'));
-  fs.mkdirSync(path.join(root, '.agentx'), { recursive: true });
-  fs.writeFileSync(path.join(root, '.agentx', 'agentx.ps1'), '', 'utf8');
+  fs.mkdirSync(path.join(root, '.frontier', 'runtime'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.frontier', 'runtime', 'frontier.ps1'), '', 'utf8');
   const configPath = path.join(root, 'config.json');
   const write = (value) => fs.writeFileSync(configPath, JSON.stringify(value), 'utf8');
   try {
@@ -467,7 +467,7 @@ test('voice transcription is rejected when transcript exceeds the input limit', 
 
 test('loop watcher preserves valid state across malformed writes', async () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-watch-'));
-  const stateDir = path.join(repo, '.agentx', 'state');
+  const stateDir = path.join(repo, '.frontier', 'state');
   const state = path.join(stateDir, 'loop-state.json');
   fs.mkdirSync(stateDir, { recursive: true });
   fs.writeFileSync(state, JSON.stringify({ status: 'idle', active: false, iteration: 0, maxIterations: 5, history: [] }));
@@ -489,8 +489,8 @@ test('loop watcher preserves valid state across malformed writes', async () => {
   assert.ok(messages.some((text) => text.includes('Iteration 1')));
 });
 
-test('loop watcher switches to canonical state and never falls through malformed canonical content', async (context) => {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-wa-precedence-'));
+test('loop watcher reads only canonical .frontier state and never reports legacy or malformed content', async (context) => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-wa-canonical-'));
   const legacy = path.join(repo, '.agentx', 'state', 'loop-state.json');
   const canonical = path.join(repo, '.frontier', 'state', 'loop-state.json');
   const transitional = path.join(repo, '.hve', 'state', 'loop-state.json');
@@ -509,26 +509,22 @@ test('loop watcher switches to canonical state and never falls through malformed
   const poll = async () => { context.mock.timers.tick(20); await new Promise(resolve => setImmediate(resolve)); };
   try {
     write(legacy, 1);
+    write(transitional, 1);
     await poll();
+    assert.equal(messages.length, 0, 'legacy .agentx and .hve state is never reported');
     write(canonical, 2);
-    write(legacy, 8);
     await poll();
+    write(canonical, 3);
+    await poll();
+    assert.equal(messages.length, 1);
+    assert.match(messages[0], /Iteration 3/);
     fs.writeFileSync(canonical, '{');
     write(legacy, 9);
     await poll();
-    assert.equal(messages.length, 2);
-    assert.match(messages[0], /Iteration 1/);
-    assert.match(messages[1], /Iteration 2/);
-    write(canonical, 3);
+    assert.equal(messages.length, 1, 'malformed canonical content is retried, not reported');
+    write(canonical, 4);
     await poll();
-    assert.match(messages[2], /Iteration 3/);
-    write(transitional, 4);
-    fs.unlinkSync(canonical);
-    await poll();
-    assert.match(messages[3], /Iteration 4/);
-    fs.unlinkSync(transitional);
-    await poll();
-    assert.match(messages[4], /Iteration 9/);
+    assert.match(messages[1], /Iteration 4/);
   } finally { await watcher.stop(); fs.rmSync(repo, { recursive: true, force: true }); }
 });
 

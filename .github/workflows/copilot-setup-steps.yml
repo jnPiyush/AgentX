@@ -46,10 +46,10 @@ jobs:
             Write-Host "[WARN] AGENTS.md not found -- Frontier may not be initialized"
           }
 
-          if (Test-Path ".agentx/agentx.ps1") {
+          if (Test-Path ".frontier/runtime/frontier.ps1") {
             Write-Host "[PASS] Frontier CLI found"
             # Show available commands
-            ./.agentx/agentx.ps1 version
+            ./.frontier/runtime/frontier.ps1 version
           } else {
             Write-Host "[WARN] Frontier CLI not found"
           }

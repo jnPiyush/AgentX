@@ -61,7 +61,7 @@ export async function runInitializeCliCommand(
   }
 
   const configuredMode = vscode.workspace
-    .getConfiguration('agentx')
+    .getConfiguration('frontier')
     .get<CliAssetMode>('cliAssetMode', 'copy');
 
   // Confirm mode -- gives the user a chance to switch from the default.

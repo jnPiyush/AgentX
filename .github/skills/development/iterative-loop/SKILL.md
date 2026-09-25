@@ -8,7 +8,7 @@ metadata:
   created: "2026-02-24"
   updated: "2026-02-24"
 compatibility:
-  frameworks: ["agentx", "copilot", "claude-code"]
+  frameworks: ["frontier", "copilot", "claude-code"]
 ---
 
 # Iterative Loop (Ralph Loop)
@@ -35,7 +35,7 @@ compatibility:
 
 ## Prerequisites
 
-- Frontier CLI installed (`.agentx/frontier.ps1` or `.agentx/frontier.sh`)
+- Frontier CLI installed (`.frontier/runtime/frontier.ps1` or `.frontier/runtime/frontier.sh`)
 - Clear completion criteria defined before starting
 - Test framework configured (for TDD loops)
 
@@ -93,7 +93,7 @@ The Engineer's quality loop is gated by the CLI, not by judgment:
 2. `loop iterate -e <path>` REQUIRES an existing evidence file (test report, coverage xml, scan json, mutation report). The CLI copies it to `.frontier/state/loop-evidence/iter-<N>/<timestamp>-<filename>`, keeps the source, and records `{ evidence, evidenceOriginal }` in loop history.
 3. Report the suites a step ran as `--passing <suite>=<count>[,<suite>=<count>]`. A suite may not drop below its own last count; unrun suites need no count; `loop baseline -c <suite>=<count>` records an intentional drop. A legacy integer baseline (`loop baseline -c <count>`) requires an integer `--passing` on every iterate and complete.
 4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact, and every iteration after #1 must still have its archived evidence file. The final artifact is copied to `.frontier/state/loop-evidence/complete/`.
-5. The commit-msg hook rejects `fix:` commits that change production code under `.agentx/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
+5. The commit-msg hook rejects `fix:` commits that change production code under `.frontier/runtime/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
 
 Practical consequence: **generate a fresh file per iteration**. The source remains available, but freshness and SHA-256 reuse guards reject an old or identical artifact on the next iteration.
 
@@ -161,7 +161,7 @@ Best for implementing features with test coverage.
 
 **Setup:**
 ```powershell
-.\.agentx\frontier.ps1 loop start `
+.\.frontier\runtime\frontier.ps1 loop start `
   -Prompt "Implement user authentication with JWT. Write tests first (TDD)." `
   -MaxIterations 20 `
   -CompletionCriteria "ALL_TESTS_PASSING" `
@@ -199,7 +199,7 @@ Best for achieving zero lint errors, clean builds, or code quality targets.
 
 **Setup:**
 ```powershell
-.\.agentx\frontier.ps1 loop start `
+.\.frontier\runtime\frontier.ps1 loop start `
   -Prompt "Fix all TypeScript strict mode errors in src/" `
   -MaxIterations 15 `
   -CompletionCriteria "ZERO_ERRORS"
@@ -272,7 +272,7 @@ Best for large features that can be broken into sequential phases.
 
 **Setup:**
 ```powershell
-.\.agentx\frontier.ps1 loop start `
+.\.frontier\runtime\frontier.ps1 loop start `
   -Prompt "Build e-commerce cart: Phase 1: Data model, Phase 2: API, Phase 3: Tests" `
   -MaxIterations 50 `
   -CompletionCriteria "ALL_PHASES_COMPLETE"
@@ -301,7 +301,7 @@ Best for iterative self-review and quality improvement.
 
 **Setup:**
 ```powershell
-.\.agentx\frontier.ps1 loop start `
+.\.frontier\runtime\frontier.ps1 loop start `
   -Prompt "Review and improve error handling in src/services/" `
   -MaxIterations 5 `
   -CompletionCriteria "NO_ISSUES_FOUND"
@@ -327,14 +327,14 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 
 ```powershell
 # PowerShell
-.\.agentx\frontier.ps1 loop start `
+.\.frontier\runtime\frontier.ps1 loop start `
   -Prompt "Your task description" `
   -MaxIterations 20 `
   -CompletionCriteria "DONE" `
   -IssueNumber 42
 
 # Bash
-./.agentx/frontier.sh loop start \
+./.frontier/runtime/frontier.sh loop start \
   "Your task description" \
   --max-iterations 20 \
   --completion-criteria "DONE" \
@@ -344,28 +344,28 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 ### Check Loop Status
 
 ```powershell
-.\.agentx\frontier.ps1 loop status
+.\.frontier\runtime\frontier.ps1 loop status
 # Output: Iteration 3/20 | Started: 10:00 | Last: 10:05 | Promise: DONE
 ```
 
 ### Record Iteration Progress
 
 ```powershell
-.\.agentx\frontier.ps1 loop iterate -Summary "Fixed 3 tests, 2 remaining"
+.\.frontier\runtime\frontier.ps1 loop iterate -Summary "Fixed 3 tests, 2 remaining"
 # Increments iteration counter and logs summary
 ```
 
 ### Complete a Loop
 
 ```powershell
-.\.agentx\frontier.ps1 loop complete -Summary "All tests passing, coverage at 85%"
+.\.frontier\runtime\frontier.ps1 loop complete -Summary "All tests passing, coverage at 85%"
 # Marks loop as complete, records final summary
 ```
 
 ### Cancel a Loop
 
 ```powershell
-.\.agentx\frontier.ps1 loop cancel
+.\.frontier\runtime\frontier.ps1 loop cancel
 # Removes active loop state, logs cancellation reason
 ```
 
@@ -432,7 +432,7 @@ ALWAYS set `--max-iterations` as a safety net:
 
 ```powershell
 # Recommended: Set reasonable limits based on task complexity
-.\.agentx\frontier.ps1 loop start -Prompt "..." -MaxIterations 20
+.\.frontier\runtime\frontier.ps1 loop start -Prompt "..." -MaxIterations 20
 ```
 
 | Task Complexity | Recommended Max |
@@ -453,7 +453,7 @@ If an agent makes no progress for 3+ iterations, it SHOULD:
 ### Emergency Cancel
 
 ```powershell
-.\.agentx\frontier.ps1 loop cancel
+.\.frontier\runtime\frontier.ps1 loop cancel
 ```
 
 ---

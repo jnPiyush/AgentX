@@ -69,7 +69,7 @@ function getFrontierConfiguration(): vscode.WorkspaceConfiguration {
  *
  * Integrations are additive (not modal). GitHub MCP and the ADO provider can be
  * active simultaneously. GitHub connectivity is detected from .vscode/mcp.json,
- * while ADO connectivity is detected from .agentx/config.json.
+ * while ADO connectivity is detected from .frontier/config.json.
  */
 export class FrontierContext {
  /** Cached workspace root path (invalidated on config / workspace change). */
@@ -402,7 +402,7 @@ export class FrontierContext {
   await this.extensionContext.workspaceState.update(PENDING_SETUP_KEY, undefined);
  }
 
- /** Resolve a file path under .agentx/state for the current workspace. */
+ /** Resolve a file path under .frontier/state for the current workspace. */
  getStatePath(fileName: string): string | undefined {
   const root = this.workspaceRoot;
   if (!root) { return undefined; }

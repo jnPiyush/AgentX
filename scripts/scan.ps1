@@ -136,10 +136,8 @@ $secretPatterns = @(
 
 $excludeDirs = @('.git','node_modules','out','dist','coverage','build','.vscode-test')
 $extensions  = @('.ts','.tsx','.js','.jsx','.ps1','.psm1','.sh','.py','.cs','.json','.yml','.yaml','.md','.env','.cfg','.config','.ini','.toml')
-$runtimeStateRoots = @(foreach ($stateNamespace in @('.frontier', '.hve', '.agentx')) {
-  foreach ($dataDirectory in @('state', 'issues', 'digests', 'sessions', 'memory', 'handoffs', 'signals', 'patterns', 'dreams')) {
-    Join-Path $ROOT $stateNamespace $dataDirectory
-  }
+$runtimeStateRoots = @(foreach ($dataDirectory in @('state', 'issues', 'digests', 'sessions', 'memory', 'handoffs', 'signals', 'patterns', 'dreams')) {
+  Join-Path $ROOT '.frontier' $dataDirectory
 })
 
 # Files that legitimately contain secret-shaped patterns (scanner regexes,

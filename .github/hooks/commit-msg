@@ -21,25 +21,28 @@ echo ""
 # ===================================================================
 # Mode detection: skip issue enforcement in local mode (opt-in via enforceIssues)
 # ===================================================================
-CONFIG_FILE=".agentx/config.json"
-AGENTX_MODE="local"
+CONFIG_FILE=".frontier/config.json"
+FRONTIER_PROVIDER="local"
 ENFORCE_ISSUES="false"
 
 if [ -f "$CONFIG_FILE" ]; then
- # Read mode from config (default: local)
- DETECTED_MODE=$(grep -o '"mode"\s*:\s*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*"mode"\s*:\s*"//' | sed 's/"//')
- if [ -n "$DETECTED_MODE" ]; then
-  AGENTX_MODE="$DETECTED_MODE"
- fi
+ # Resolve the provider in the CLI's order: provider, then integration, then mode.
+ for CONFIG_KEY in provider integration mode; do
+  DETECTED_PROVIDER=$(grep -o "\"$CONFIG_KEY\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*"//' | sed 's/"//')
+  if [ -n "$DETECTED_PROVIDER" ]; then
+   FRONTIER_PROVIDER="$DETECTED_PROVIDER"
+   break
+  fi
+ done
  # Read enforceIssues flag (default: false)
- DETECTED_ENFORCE=$(grep -o '"enforceIssues"\s*:\s*[a-z]*' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*:\s*//')
+ DETECTED_ENFORCE=$(grep -o '"enforceIssues"[[:space:]]*:[[:space:]]*[a-z]*' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*//')
  if [ "$DETECTED_ENFORCE" = "true" ]; then
   ENFORCE_ISSUES="true"
  fi
 fi
 
 # In local mode, skip issue enforcement unless explicitly opted in
-if [ "$AGENTX_MODE" = "local" ] && [ "$ENFORCE_ISSUES" != "true" ]; then
+if [ "$FRONTIER_PROVIDER" = "local" ] && [ "$ENFORCE_ISSUES" != "true" ]; then
  # Still validate commit format (warning only)
  if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|test|refactor|perf|chore|style|build|ci):'; then
   echo -e "${YELLOW}[WARN] Commit format should be: type: description${NC}"
@@ -99,12 +102,12 @@ fi
 # ===================================================================
 # STEP 3: fix: commits MUST add a regression test in the same diff
 # Deterministic rule: a bug fix without a test cannot enter the repo.
-# Bypass: AGENTX_SKIP_FIX_TEST_GATE=1 (use only when fix is provably untestable).
+# Bypass: FRONTIER_SKIP_FIX_TEST_GATE=1 (use only when fix is provably untestable).
 # ===================================================================
 if echo "$COMMIT_MSG" | grep -qE '^fix(\([^)]+\))?:'; then
  # Source files that look like production code under change
  PROD_CHANGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null \
-   | grep -E '^(\.agentx/|src/|lib/|app/|server/|services/|packages/|scripts/|vscode-extension/src/|install\.ps1$|install\.sh$)' \
+   | grep -E '^(\.frontier/runtime/|src/|lib/|app/|server/|services/|packages/|scripts/|vscode-extension/src/|install\.ps1$|install\.sh$)' \
    | grep -E '\.(ts|tsx|js|mjs|cjs|py|cs|go|rs|java|kt|rb|ps1|psm1)$' \
    | grep -vE '(\.test\.|\.spec\.|/tests?/|/__tests__/)' || true)
  if [ -n "$PROD_CHANGED" ]; then
@@ -116,15 +119,15 @@ if echo "$COMMIT_MSG" | grep -qE '^fix(\([^)]+\))?:'; then
      | grep -cE '^\+[^+].*((it|test|describe)\(|def test_|\[Fact\]|\[Theory\]|func Test|@Test)' || true)
   fi
   if [ -z "$TEST_CHANGED" ] || [ "$TEST_LINES_ADDED" -lt 1 ]; then
-   if [ -z "$AGENTX_SKIP_FIX_TEST_GATE" ]; then
+   if [ -z "$FRONTIER_SKIP_FIX_TEST_GATE" ]; then
     echo -e "${RED}[FAIL] fix: commit must include a new regression test in the same diff${NC}"
     echo "  Production files changed:"
     echo "$PROD_CHANGED" | sed 's/^/    /'
     echo "  Add a failing test that reproduces the bug, then fix."
-    echo "  Bypass (rare): AGENTX_SKIP_FIX_TEST_GATE=1 git commit ..."
+    echo "  Bypass (rare): FRONTIER_SKIP_FIX_TEST_GATE=1 git commit ..."
     exit 1
    else
-    echo -e "${YELLOW}[WARN] fix-test gate bypassed (AGENTX_SKIP_FIX_TEST_GATE)${NC}"
+    echo -e "${YELLOW}[WARN] fix-test gate bypassed (FRONTIER_SKIP_FIX_TEST_GATE)${NC}"
    fi
   else
    echo -e "${GREEN}[PASS] fix: commit includes test changes${NC}"

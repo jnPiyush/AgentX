@@ -16,9 +16,9 @@ if (-not (Test-Path -LiteralPath $SCRIPT_PATH)) {
  Write-Host "[FAIL] install.ps1 not found at $SCRIPT_PATH" -ForegroundColor Red
  exit 1
 }
-$TEST_BASE = "$env:TEMP\agentx-test-suite-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+$TEST_BASE = "$env:TEMP\frontier-test-suite-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $EXPECTED_VERSION = (Get-Content (Join-Path $SCRIPT_ROOT 'version.json') -Raw | ConvertFrom-Json).version
-$LOCAL_ARCHIVE = Join-Path $TEST_BASE 'agentx-local.zip'
+$LOCAL_ARCHIVE = Join-Path $TEST_BASE 'frontier-local.zip'
 
 # Tracking
 $global:TestResults = @()
@@ -39,8 +39,15 @@ function Initialize-LocalArchive {
 
  New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null
 
- foreach ($directory in @('.agentx', '.github', '.claude', '.vscode', 'scripts', 'packs', 'docs')) {
+ foreach ($directory in @('.github', '.claude', '.vscode', 'scripts', 'packs', 'docs')) {
   Copy-Item (Join-Path $SCRIPT_ROOT $directory) (Join-Path $archiveRoot $directory) -Recurse -Force
+ }
+ # Only tracked runtime files ship in a release archive; local .frontier state and
+ # untracked installs such as mcp-server/node_modules do not.
+ foreach ($relative in @(git -C $SCRIPT_ROOT ls-files -- '.frontier/runtime')) {
+  $destination = Join-Path $archiveRoot $relative
+  New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
+  Copy-Item -LiteralPath (Join-Path $SCRIPT_ROOT $relative) -Destination $destination -Force
  }
  foreach ($file in @('AGENTS.md', 'Skills.md', '.gitignore')) {
   Copy-Item (Join-Path $SCRIPT_ROOT $file) (Join-Path $archiveRoot $file) -Force
@@ -150,18 +157,20 @@ function Write-TestReport($testName, $results) {
 
 # -- EXPECTED ARTIFACTS --------------------------------------------------
 $CORE_FILES = @("AGENTS.md", "Skills.md", ".gitignore")
-$CORE_DIRS = @(".agentx", ".github", ".vscode", "scripts")
+$CORE_DIRS = @(".frontier/runtime", ".github", ".vscode", "scripts")
 $RUNTIME_DIRS = @(
- ".agentx/state", ".agentx/digests",
+ ".frontier/state", ".frontier/digests",
  "docs/artifacts/prd", "docs/artifacts/adr", "docs/artifacts/specs", "docs/ux", "docs/artifacts/reviews", "docs/execution/plans", "docs/execution/progress"
 )
 $RUNTIME_FILES = @(
- ".agentx/config.json",
- ".agentx/version.json",
- ".agentx/state/agent-status.json"
+ ".frontier/config.json",
+ ".frontier/version.json",
+ ".frontier/state/agent-status.json",
+ ".frontier/runtime/frontier.ps1",
+ ".frontier/runtime/frontier-cli.ps1"
 )
 $GIT_ARTIFACTS = @(".git", ".git/hooks/pre-commit", ".git/hooks/commit-msg")
-$TEMP_FILES = @(".agentx-install-tmp", ".agentx-install-raw", ".agentx-install.zip")
+$TEMP_FILES = @(".frontier-install-tmp", ".frontier-install-raw", ".frontier-install.zip")
 
 # ========================================================
 Write-Host ""
@@ -190,19 +199,24 @@ try {
  # Runtime dirs
  foreach ($d in $RUNTIME_DIRS) { $r += Assert-PathExists $d "runtime-dir: $d" }
  # Local-specific
- $r += Assert-PathExists ".agentx/issues" "local: .agentx/issues"
+ $r += Assert-PathExists ".frontier/issues" "local: .frontier/issues"
+ # No legacy layout
+ $r += Assert-PathNotExists ".agentx" "layout: no legacy .agentx folder"
+ $gitignoreText = Get-Content ".gitignore" -Raw
+ if ($gitignoreText -match '(?m)^\.frontier/\s*$' -and $gitignoreText -notmatch '(?m)^\.(agentx|hve)/') { $r += @{ Pass=$true; Label="gitignore: .frontier/ only" } }
+ else { $r += @{ Pass=$false; Label="gitignore: expected .frontier/ and no legacy entries" } }
  # Runtime files
  foreach ($f in $RUNTIME_FILES) { $r += Assert-PathExists $f "runtime: $f" }
  # Git artifacts
  foreach ($g in $GIT_ARTIFACTS) { $r += Assert-PathExists $g "git: $g" }
  # JSON content
- $r += Assert-JsonField ".agentx/config.json" "mode" "local" "config.mode=local"
- $r += Assert-JsonField ".agentx/config.json" "nextIssueNumber" "1" "config.nextIssueNumber=1"
-$r += Assert-JsonField ".agentx/version.json" "version" $EXPECTED_VERSION "version=$EXPECTED_VERSION"
- $r += Assert-JsonField ".agentx/version.json" "mode" "local" "version.mode=local"
+ $r += Assert-JsonField ".frontier/config.json" "mode" "local" "config.mode=local"
+ $r += Assert-JsonField ".frontier/config.json" "nextIssueNumber" "1" "config.nextIssueNumber=1"
+$r += Assert-JsonField ".frontier/version.json" "version" $EXPECTED_VERSION "version=$EXPECTED_VERSION"
+ $r += Assert-JsonField ".frontier/version.json" "mode" "local" "version.mode=local"
  # Agent status check
  try {
- $status = Get-Content ".agentx/state/agent-status.json" -Raw | ConvertFrom-Json
+ $status = Get-Content ".frontier/state/agent-status.json" -Raw | ConvertFrom-Json
  $agents = @("product-manager","ux-designer","architect","engineer","reviewer","devops-engineer")
  foreach ($a in $agents) {
  if ($status.$a.status -eq "idle") { $r += @{ Pass=$true; Label="agent $a = idle" } }
@@ -230,11 +244,11 @@ try {
  foreach ($f in $CORE_FILES) { $r += Assert-PathExists $f "core: $f" }
  foreach ($d in $CORE_DIRS) { $r += Assert-PathExists $d "core: $d" }
  foreach ($d in $RUNTIME_DIRS) { $r += Assert-PathExists $d "runtime-dir: $d" }
- $r += Assert-PathExists ".agentx/issues" "local: .agentx/issues"
+ $r += Assert-PathExists ".frontier/issues" "local: .frontier/issues"
  foreach ($f in $RUNTIME_FILES) { $r += Assert-PathExists $f "runtime: $f" }
  foreach ($g in $GIT_ARTIFACTS) { $r += Assert-PathExists $g "git: $g" }
- $r += Assert-JsonField ".agentx/config.json" "mode" "local" "config.mode=local"
-$r += Assert-JsonField ".agentx/version.json" "version" $EXPECTED_VERSION "version=$EXPECTED_VERSION"
+ $r += Assert-JsonField ".frontier/config.json" "mode" "local" "config.mode=local"
+$r += Assert-JsonField ".frontier/version.json" "version" $EXPECTED_VERSION "version=$EXPECTED_VERSION"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
 
  Write-TestReport "Local mode via direct file" $r
@@ -259,10 +273,10 @@ try {
  foreach ($d in $CORE_DIRS) { $r += Assert-PathExists $d "core: $d" }
  foreach ($d in $RUNTIME_DIRS) { $r += Assert-PathExists $d "runtime-dir: $d" }
  foreach ($f in $RUNTIME_FILES) { $r += Assert-PathExists $f "runtime: $f" }
- $r += Assert-JsonField ".agentx/config.json" "mode" "github" "config.mode=github"
- $r += Assert-JsonField ".agentx/version.json" "mode" "github" "version.mode=github"
+ $r += Assert-JsonField ".frontier/config.json" "mode" "github" "config.mode=github"
+ $r += Assert-JsonField ".frontier/version.json" "mode" "github" "version.mode=github"
  # GitHub mode should NOT have issues dir
- $r += Assert-PathNotExists ".agentx/issues" "github: no issues dir"
+ $r += Assert-PathNotExists ".frontier/issues" "github: no issues dir"
  # -NoSetup skips git init (expected)
  $r += Assert-PathNotExists ".git" "nosetup: no .git (expected)"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
@@ -286,7 +300,7 @@ try {
 
  $r = @()
  $r += Assert-PathExists ".git" "git: .git exists (pre-created)"
- $r += Assert-JsonField ".agentx/config.json" "mode" "github" "config.mode=github"
+ $r += Assert-JsonField ".frontier/config.json" "mode" "github" "config.mode=github"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
 
  Write-TestReport "GitHub mode with git init" $r
@@ -307,7 +321,7 @@ try {
  foreach ($f in $CORE_FILES) { $r += Assert-PathExists $f "core: $f" }
  foreach ($d in $CORE_DIRS) { $r += Assert-PathExists $d "core: $d" }
  foreach ($f in $RUNTIME_FILES) { $r += Assert-PathExists $f "runtime: $f" }
- $r += Assert-JsonField ".agentx/config.json" "mode" "github" "config.mode=github"
+ $r += Assert-JsonField ".frontier/config.json" "mode" "github" "config.mode=github"
  # NoSetup: no .git
  $r += Assert-PathNotExists ".git" "nosetup: no .git"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
@@ -326,14 +340,17 @@ Push-Location $dir
 try {
  # First install
  Invoke-InstallerFile -ArgumentList @('-NoSetup')
- # Modify a file to verify it gets overwritten
- "MODIFIED" | Set-Content ".agentx/config.json"
+ # -Force overwrites framework files but preserves user configuration.
+ "MODIFIED" | Set-Content "AGENTS.md"
+ '{"mode":"local","custom":"kept"}' | Set-Content ".frontier/config.json"
  # Force reinstall
  Invoke-InstallerFile -ArgumentList @('-Force', '-NoSetup')
 
  $r = @()
- $r += Assert-JsonField ".agentx/config.json" "mode" "local" "force: config.mode restored to local"
-$r += Assert-JsonField ".agentx/version.json" "version" $EXPECTED_VERSION "force: version restored"
+ if ((Get-Content "AGENTS.md" -Raw).Trim() -ne "MODIFIED") { $r += @{ Pass=$true; Label="force: framework file AGENTS.md overwritten" } }
+ else { $r += @{ Pass=$false; Label="force: framework file AGENTS.md was not overwritten" } }
+ $r += Assert-JsonField ".frontier/config.json" "custom" "kept" "force: user configuration preserved"
+$r += Assert-JsonField ".frontier/version.json" "version" $EXPECTED_VERSION "force: version restored"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
 
  Write-TestReport "Force reinstall" $r
@@ -365,7 +382,7 @@ try {
  }
  # Should NOT create any files
  $r += Assert-PathNotExists "AGENTS.md" "invalid: no AGENTS.md created"
- $r += Assert-PathNotExists ".agentx" "invalid: no .agentx created"
+ $r += Assert-PathNotExists ".frontier" "invalid: no .frontier created"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
 
  Write-TestReport "Invalid mode validation" $r
@@ -378,7 +395,7 @@ try {
  $r += @{ Pass=$false; Label="unexpected error: $($_.Exception.Message)" }
  }
  $r += Assert-PathNotExists "AGENTS.md" "invalid: no AGENTS.md created"
- $r += Assert-PathNotExists ".agentx" "invalid: no .agentx created"
+ $r += Assert-PathNotExists ".frontier" "invalid: no .frontier created"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
  Write-TestReport "Invalid mode validation" $r
 }
@@ -389,7 +406,7 @@ Write-Host "--- TEST 7: Failure cleanup (bad URL) ---" -ForegroundColor Cyan
 $dir = New-TestDir "t7-failure"
 Push-Location $dir
 try {
- try { Invoke-InstallerFile -ArchiveOverride (Join-Path $dir 'missing-agentx.zip') } catch { <# expected #> }
+ try { Invoke-InstallerFile -ArchiveOverride (Join-Path $dir 'missing-frontier.zip') } catch { <# expected #> }
 
  $r = @()
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "cleanup: $t" }
@@ -407,11 +424,11 @@ $dir = New-TestDir "t8-leftovers"
 Push-Location $dir
 try {
  # Create fake leftover temp files
- New-Item -ItemType Directory -Path ".agentx-install-tmp" -Force | Out-Null
- New-Item -ItemType Directory -Path ".agentx-install-raw" -Force | Out-Null
- "junk" | Set-Content ".agentx-install.zip"
- "junk" | Set-Content ".agentx-install-tmp/file.txt"
- "junk" | Set-Content ".agentx-install-raw/file.txt"
+ New-Item -ItemType Directory -Path ".frontier-install-tmp" -Force | Out-Null
+ New-Item -ItemType Directory -Path ".frontier-install-raw" -Force | Out-Null
+ "junk" | Set-Content ".frontier-install.zip"
+ "junk" | Set-Content ".frontier-install-tmp/file.txt"
+ "junk" | Set-Content ".frontier-install-raw/file.txt"
 
  $script = Get-Content $SCRIPT_PATH -Raw
  Invoke-InstallerExpression $script
@@ -419,7 +436,7 @@ try {
  $r = @()
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "cleanup: $t" }
  $r += Assert-PathExists "AGENTS.md" "install succeeded despite leftovers"
- $r += Assert-JsonField ".agentx/config.json" "mode" "local" "config correct"
+ $r += Assert-JsonField ".frontier/config.json" "mode" "local" "config correct"
 
  Write-TestReport "Leftover temp cleanup" $r
 } catch {

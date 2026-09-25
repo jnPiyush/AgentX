@@ -45,7 +45,7 @@ jobs:
                 const response = await github.rest.repos.getContent({
                   owner,
                   repo,
-                  path: '.agentx/config.json',
+                  path: '.frontier/config.json',
                 });
 
                 if (!('content' in response.data) || !response.data.content) {
@@ -55,7 +55,7 @@ jobs:
                 const raw = Buffer.from(response.data.content, response.data.encoding || 'base64').toString('utf8');
                 return JSON.parse(raw);
               } catch (error) {
-                console.log(`[INFO] Unable to load .agentx/config.json: ${error.message}`);
+                console.log(`[INFO] Unable to load .frontier/config.json: ${error.message}`);
                 return {};
               }
             };
@@ -157,7 +157,7 @@ jobs:
             const defaultBranch = context.payload.repository?.default_branch || 'main';
 
             if (projectNumber <= 0) {
-              console.log('[SKIP] No GitHub project configured in .agentx/config.json');
+              console.log('[SKIP] No GitHub project configured in .frontier/config.json');
               return;
             }
 

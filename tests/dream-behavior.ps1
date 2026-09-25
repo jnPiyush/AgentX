@@ -30,7 +30,7 @@ function Assert-Exit1 { param([int]$Code, [string]$Label) Assert-True ($Code -ne
 # ---------------------------------------------------------------------------
 $TestRoot  = Join-Path ([IO.Path]::GetTempPath()) "dream-test-$([guid]::NewGuid())"
 $MemDir    = Join-Path $TestRoot 'memories'
-$DreamsDir = Join-Path $TestRoot '.agentx' 'dreams'
+$DreamsDir = Join-Path $TestRoot '.frontier' 'dreams'
 
 New-Item -ItemType Directory -Path $MemDir -Force | Out-Null
 
@@ -51,10 +51,10 @@ $DreamScript = (Resolve-Path $DreamScript).Path
 
 function Invoke-Dream {
     param([string[]]$DreamArgs)
-    $env:AGENTX_WORKSPACE_ROOT = $TestRoot
+    $env:FRONTIER_WORKSPACE_ROOT = $TestRoot
     $out = & pwsh -NoProfile -File $DreamScript @DreamArgs 2>&1
     $code = $LASTEXITCODE
-    $env:AGENTX_WORKSPACE_ROOT = $null
+    $env:FRONTIER_WORKSPACE_ROOT = $null
     return [pscustomobject]@{ Output = ($out -join "`n"); ExitCode = $code }
 }
 
@@ -114,10 +114,8 @@ $pendingState = [pscustomobject]@{
     written      = @()
     error        = $null
 }
-$env:AGENTX_WORKSPACE_ROOT = $TestRoot
 if (-not (Test-Path $DreamsDir)) { New-Item -ItemType Directory -Path $DreamsDir -Force | Out-Null }
 $pendingState | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $DreamsDir "$pendingId.json") -Encoding utf8
-$env:AGENTX_WORKSPACE_ROOT = $null
 
 $r = Invoke-Dream @('cancel', '-Id', $pendingId)
 Assert-Exit0 $r.ExitCode "cancel pending -> canceled, exits 0"
@@ -154,9 +152,7 @@ $p2Id = "drm_PENDINGTEST2"
 $p2State = $pendingState.PSObject.Copy()
 $p2State.id     = $p2Id
 $p2State.status = 'pending'
-$env:AGENTX_WORKSPACE_ROOT = $TestRoot
 $p2State | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $DreamsDir "$p2Id.json") -Encoding utf8
-$env:AGENTX_WORKSPACE_ROOT = $null
 
 $r = Invoke-Dream @('archive', '-Id', $p2Id)
 Assert-Exit1 $r.ExitCode "archive pending job returns exit 1"

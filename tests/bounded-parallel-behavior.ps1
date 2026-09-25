@@ -18,12 +18,11 @@ function Assert-True($condition, $message) {
 function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-bounded-parallel-test-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.frontier\runtime') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'docs\execution\plans') -Force | Out-Null
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
-    Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
-    '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.agentx\config.json') -Encoding utf8
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') (Join-Path $root '.frontier\runtime\frontier.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') (Join-Path $root '.frontier\runtime\frontier-cli.ps1') -Force
+    '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.frontier\config.json') -Encoding utf8
     '# Demo plan' | Set-Content (Join-Path $root 'docs\execution\plans\PARALLEL.md') -Encoding utf8
     return $root
 }
@@ -42,11 +41,11 @@ function Invoke-Frontier([string]$root, [string[]]$arguments) {
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
     $startInfo.ArgumentList.Add('-File')
-    $startInfo.ArgumentList.Add((Join-Path $root '.agentx\agentx.ps1'))
+    $startInfo.ArgumentList.Add((Join-Path $root '.frontier\runtime\frontier.ps1'))
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $root
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $stdout = $process.StandardOutput.ReadToEnd()

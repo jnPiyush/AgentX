@@ -66,13 +66,13 @@ describe('versionChecker - readInstalledVersion', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('should return undefined when .agentx/version.json does not exist', () => {
+  it('should return undefined when .frontier/version.json does not exist', () => {
     const result = readInstalledVersion(tmpDir);
     assert.equal(result, undefined);
   });
 
   it('should return parsed version info when file exists', () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
       version: '6.5.0',
@@ -88,7 +88,7 @@ describe('versionChecker - readInstalledVersion', () => {
   });
 
   it('should return undefined when file contains invalid JSON', () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), 'not json!');
 
@@ -97,7 +97,7 @@ describe('versionChecker - readInstalledVersion', () => {
   });
 
   it('should return undefined when version field is missing', () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
       mode: 'local',
@@ -130,7 +130,7 @@ describe('versionChecker - checkVersionMismatch', () => {
   });
 
   it('should report update available when installed < extension', () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
       version: '6.5.3',
@@ -146,7 +146,7 @@ describe('versionChecker - checkVersionMismatch', () => {
   });
 
   it('should report no update when versions match', () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
       version: '6.6.0',
@@ -160,7 +160,7 @@ describe('versionChecker - checkVersionMismatch', () => {
   });
 
   it('should report no update when installed > extension', () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
       version: '7.0.0',
@@ -189,14 +189,14 @@ describe('versionChecker - silentVersionSync', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('should not error when no .agentx dir exists', async () => {
+  it('should not error when no .frontier dir exists', async () => {
     await silentVersionSync(tmpDir, '8.4.0', tmpDir);
-    // No .agentx/ dir = not initialized, should silently return
-    assert.ok(!fs.existsSync(path.join(tmpDir, '.agentx', 'version.json')));
+    // No .frontier/ dir = not initialized, should silently return
+    assert.ok(!fs.existsSync(path.join(tmpDir, '.frontier', 'version.json')));
   });
 
   it('should update version.json when extension is newer', async () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
       version: '8.1.0', mode: 'local',
@@ -211,7 +211,7 @@ describe('versionChecker - silentVersionSync', () => {
   });
 
   it('should not update when versions match', async () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     const original = JSON.stringify({
       version: '8.4.0', mode: 'local',
@@ -226,7 +226,7 @@ describe('versionChecker - silentVersionSync', () => {
   });
 
   it('should not update when installed is newer than extension', async () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
+    const agentxDir = path.join(tmpDir, '.frontier');
     fs.mkdirSync(agentxDir, { recursive: true });
     const original = JSON.stringify({
       version: '9.0.0', mode: 'local',

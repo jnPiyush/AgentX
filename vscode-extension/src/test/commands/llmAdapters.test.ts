@@ -46,9 +46,9 @@ describe('runAddLlmAdapterCommand', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-llm-adapter-'));
-    fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
+    fs.mkdirSync(path.join(tempRoot, '.frontier'), { recursive: true });
     fs.writeFileSync(
-      path.join(tempRoot, '.agentx', 'config.json'),
+      path.join(tempRoot, '.frontier', 'config.json'),
       JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
     );
 
@@ -64,8 +64,8 @@ describe('runAddLlmAdapterCommand', () => {
 
   it('keeps credentials and readiness scoped to selected root B while context uses A', async () => {
     const rootB = path.join(tempRoot, 'workspace-b');
-    fs.mkdirSync(path.join(rootB, '.agentx'), { recursive: true });
-    fs.writeFileSync(path.join(rootB, '.agentx', 'config.json'), '{}');
+    fs.mkdirSync(path.join(rootB, '.frontier'), { recursive: true });
+    fs.writeFileSync(path.join(rootB, '.frontier', 'config.json'), '{}');
     const key = (root: string, provider: string) =>
       `frontier.llm.${provider}:${provider}::${root.toLowerCase()}`;
     const secrets = new Map([
@@ -86,7 +86,7 @@ describe('runAddLlmAdapterCommand', () => {
     const setupWizard = await import('../../commands/setupWizard');
     const precheck = sandbox.stub(setupWizard, 'runCriticalPreCheck')
       .resolves({ passed: true, report: { healthy: true } as never });
-    const originalConfig = fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf8');
+    const originalConfig = fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf8');
 
     await applyLlmAdapterConfiguration(context, rootB, 'openai-api', { apiKey: 'root-b-new' });
 
@@ -95,7 +95,7 @@ describe('runAddLlmAdapterCommand', () => {
     assert.equal(secrets.get(key(tempRoot, 'claude-code')), 'root-a-claude');
     assert.equal(secrets.get(key(rootB, 'openai-api')), 'root-b-new');
     assert.equal(secrets.has(key(rootB, 'anthropic-api')), false);
-    assert.equal(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf8'), originalConfig);
+    assert.equal(fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf8'), originalConfig);
     assert.equal(precheck.firstCall.args[2], rootB);
   });
 
@@ -130,7 +130,7 @@ describe('runAddLlmAdapterCommand', () => {
 
     await runAddLlmAdapterCommand(fakeAgentx, 'openai-api');
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf-8'));
     assert.equal(config.llmProvider, 'openai-api');
     assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.5');
     assert.equal(config.llmProviders['openai-api'].baseUrl, 'https://api.openai.com/v1');
@@ -160,7 +160,7 @@ describe('runAddLlmAdapterCommand', () => {
 
     await runAddLlmAdapterCommand(fakeAgentx, 'claude-code');
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf-8'));
     assert.equal(config.llmProvider, 'claude-code');
     assert.equal(config.llmProviders['claude-code'].defaultModel, 'claude-opus-4.8');
   });
@@ -197,7 +197,7 @@ describe('runAddLlmAdapterCommand', () => {
 
     await runAddLlmAdapterCommand(fakeAgentx, 'claude-code-local');
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.frontier', 'config.json'), 'utf-8'));
     assert.equal(config.llmProvider, 'claude-code');
     assert.equal(config.llmProviders['claude-code'].profile, 'local-gateway');
     assert.equal(config.llmProviders['claude-code'].defaultModel, 'qwen2.5-coder:14b');

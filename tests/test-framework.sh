@@ -76,9 +76,9 @@ assert_file_exists "install.sh"  "install.sh"
 assert_file_exists "LICENSE"     "LICENSE"
 assert_file_contains "install.ps1" "templates/memories" "install.ps1 seeds starter memory templates"
 assert_file_contains "install.sh"  "templates/memories" "install.sh seeds starter memory templates"
-assert_file_exists ".agentx/templates/memories/conventions.md" "Starter memory: conventions"
-assert_file_exists ".agentx/templates/memories/pitfalls.md" "Starter memory: pitfalls"
-assert_file_exists ".agentx/templates/memories/decisions.md" "Starter memory: decisions"
+assert_file_exists ".frontier/runtime/templates/memories/conventions.md" "Starter memory: conventions"
+assert_file_exists ".frontier/runtime/templates/memories/pitfalls.md" "Starter memory: pitfalls"
+assert_file_exists ".frontier/runtime/templates/memories/decisions.md" "Starter memory: decisions"
 
 # --- 2. Agent Definitions --------------------------------------------------
 echo ""
@@ -111,18 +111,18 @@ done
 assert_file_contains ".github/agents/engineer.agent.md" 'description:' "engineer.agent.md has description"
 assert_file_contains ".github/agents/engineer.agent.md" 'model:'       "engineer.agent.md has model"
 
-# --- 5. CLI (agentx.sh + agentx-cli.ps1) -----------------------------------
+# --- 5. CLI (frontier.sh + frontier-cli.ps1) -------------------------------
 echo ""
 echo -e "  \033[1;37m5. CLI\033[0m"
 
-assert_file_exists ".agentx/agentx.sh" "Bash CLI launcher exists"
-assert_file_exists ".agentx/agentx.ps1" "PowerShell CLI launcher exists"
-assert_file_exists ".agentx/agentx-cli.ps1" "CLI implementation exists"
-assert_file_exists ".agentx/agentic-runner.ps1" "CLI agentic loop runner exists"
+assert_file_exists ".frontier/runtime/frontier.sh" "Bash CLI launcher exists"
+assert_file_exists ".frontier/runtime/frontier.ps1" "PowerShell CLI launcher exists"
+assert_file_exists ".frontier/runtime/frontier-cli.ps1" "CLI implementation exists"
+assert_file_exists ".frontier/runtime/agentic-runner.ps1" "CLI agentic loop runner exists"
 
 # Test CLI commands exist in the implementation
 for cmd in ready state deps digest workflow hook policy-hook version run loop validate config issue bundle parallel backlog-sync hire watch; do
-  assert_file_contains ".agentx/agentx-cli.ps1" "'$cmd'" "CLI supports: $cmd"
+  assert_file_contains ".frontier/runtime/frontier-cli.ps1" "'$cmd'" "CLI supports: $cmd"
 done
 
 # Self-check: a bare word must not satisfy its quoted form.
@@ -136,9 +136,9 @@ PROBE_LITERAL=false
 assert_true "$PROBE_LITERAL" "assert_file_contains matches quoted patterns literally"
 
 # Agentic runner checks
-assert_file_contains ".agentx/agentic-runner.ps1" "Invoke-AgenticLoop" "Agentic runner has main loop function"
-assert_file_contains ".agentx/agentic-runner.ps1" "file_read" "Agentic runner has file_read tool"
-assert_file_contains ".agentx/agentic-runner.ps1" "Copilot" "Agentic runner supports Copilot API"
+assert_file_contains ".frontier/runtime/agentic-runner.ps1" "Invoke-AgenticLoop" "Agentic runner has main loop function"
+assert_file_contains ".frontier/runtime/agentic-runner.ps1" "file_read" "Agentic runner has file_read tool"
+assert_file_contains ".frontier/runtime/agentic-runner.ps1" "Copilot" "Agentic runner supports Copilot API"
 
 # --- 6. Skills ---------------------------------------------------------------
 echo ""
@@ -206,26 +206,26 @@ echo -e "  \033[1;37m11. Bash CLI Functional Tests\033[0m"
 # "$?" is unescaped, so it expands to each command's status before assert_true
 # runs. The help text is matched here because assert_true evals its condition
 # and the text contains quotes.
-HELP_OUTPUT=$(bash "$ROOT/.agentx/agentx.sh" help 2>&1)
-assert_true "[[ $? -eq 0 ]]" "agentx.sh help exits cleanly"
+HELP_OUTPUT=$(bash "$ROOT/.frontier/runtime/frontier.sh" help 2>&1)
+assert_true "[[ $? -eq 0 ]]" "frontier.sh help exits cleanly"
 HELP_HAS_COMMANDS=false
 [[ "$HELP_OUTPUT" == *"Commands"* ]] && HELP_HAS_COMMANDS=true
-assert_true "$HELP_HAS_COMMANDS" "agentx.sh help shows Commands section"
+assert_true "$HELP_HAS_COMMANDS" "frontier.sh help shows Commands section"
 
-bash "$ROOT/.agentx/agentx.sh" version >/dev/null 2>&1
-assert_true "[[ $? -eq 0 ]]" "agentx.sh version exits cleanly"
+bash "$ROOT/.frontier/runtime/frontier.sh" version >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "frontier.sh version exits cleanly"
 
-bash "$ROOT/.agentx/agentx.sh" workflow >/dev/null 2>&1
-assert_true "[[ $? -eq 0 ]]" "agentx.sh workflow (list) exits cleanly"
+bash "$ROOT/.frontier/runtime/frontier.sh" workflow >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "frontier.sh workflow (list) exits cleanly"
 
-bash "$ROOT/.agentx/agentx.sh" workflow feature >/dev/null 2>&1
-assert_true "[[ $? -eq 0 ]]" "agentx.sh workflow feature exits cleanly"
+bash "$ROOT/.frontier/runtime/frontier.sh" workflow feature >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "frontier.sh workflow feature exits cleanly"
 
-bash "$ROOT/.agentx/agentx.sh" state >/dev/null 2>&1
-assert_true "[[ $? -eq 0 ]]" "agentx.sh state exits cleanly"
+bash "$ROOT/.frontier/runtime/frontier.sh" state >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "frontier.sh state exits cleanly"
 
-bash "$ROOT/.agentx/agentx.sh" ready >/dev/null 2>&1
-assert_true "[[ $? -eq 0 ]]" "agentx.sh ready exits cleanly"
+bash "$ROOT/.frontier/runtime/frontier.sh" ready >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "frontier.sh ready exits cleanly"
 
 # --- 12. VS Code Extension --------------------------------------------------
 echo ""

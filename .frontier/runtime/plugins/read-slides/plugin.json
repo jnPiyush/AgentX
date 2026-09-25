@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "name": "read-slides",
+  "id": "read-slides",
+  "publisher": "jnpiyush",
+  "displayName": "Read Slides",
+  "version": "1.0.0",
+  "description": "Convert Microsoft PowerPoint (.pptx) decks to Markdown using python-pptx.",
+  "author": "Frontier",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/jnPiyush/AgentX/tree/master/.frontier/runtime/plugins/read-slides",
+  "bugs": "https://github.com/jnPiyush/AgentX/issues",
+  "type": "tool",
+  "capabilities": ["tool"],
+  "entry": {
+    "pwsh": ".frontier/runtime/plugins/read-slides/read-slides.ps1",
+    "bash": ".frontier/runtime/plugins/read-slides/read-slides.sh"
+  },
+  "args": [
+    { "name": "Files",  "type": "string", "required": true,  "description": "Comma-separated paths to .pptx files" },
+    { "name": "Output", "type": "string", "required": false, "description": "Destination folder for generated .md files" }
+  ],
+  "requires": ["python"],
+  "pythonPackages": ["python-pptx"],
+  "tags": ["read", "ingest", "slides", "pptx", "powerpoint", "python-pptx", "markdown"],
+  "maturity": "stable",
+  "engines": { "agentx": "^8.4.0" },
+  "permissions": { "filesystem": "read-write", "process": "allowlist" },
+  "distribution": {
+    "artifactUrl": "https://github.com/jnPiyush/AgentX/raw/master/.frontier/runtime/plugins/read-slides/",
+    "checksum": "sha256:placeholder",
+    "signatureMode": "optional"
+  },
+  "source": "https://github.com/jnPiyush/AgentX/tree/master/.frontier/runtime/plugins/read-slides"
+}

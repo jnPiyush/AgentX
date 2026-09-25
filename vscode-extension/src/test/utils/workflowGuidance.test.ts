@@ -25,13 +25,13 @@ describe('workflow guidance utility', () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-workflow-guidance-'));
-    writeFile(tmpDir, '.agentx/issues/219.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/issues/219.json', JSON.stringify({
       number: 219,
       title: 'Create rollout scorecard',
       state: 'open',
       status: 'In Progress',
     }));
-    writeFile(tmpDir, '.agentx/state/harness-state.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/state/harness-state.json', JSON.stringify({
       version: 1,
       threads: [{
         id: 'thread-1',
@@ -47,7 +47,7 @@ describe('workflow guidance utility', () => {
       items: [],
       evidence: [],
     }));
-    writeFile(tmpDir, '.agentx/state/loop-state.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/state/loop-state.json', JSON.stringify({
       active: false,
       status: 'complete',
       prompt: 'done',
@@ -88,7 +88,7 @@ describe('workflow guidance utility', () => {
   });
 
   it('fails closed to plan guidance when no plan is linked', () => {
-    writeFile(tmpDir, '.agentx/state/harness-state.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/state/harness-state.json', JSON.stringify({
       version: 1,
       threads: [{
         id: 'thread-1',
@@ -105,7 +105,7 @@ describe('workflow guidance utility', () => {
     }));
     fs.rmSync(path.join(tmpDir, 'docs', 'execution', 'plans', 'ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md'), { force: true });
     fs.rmSync(path.join(tmpDir, 'docs', 'execution', 'progress', 'ROLLOUT-SCORECARD-IMPLEMENTATION-PROGRESS.md'), { force: true });
-    fs.rmSync(path.join(tmpDir, '.agentx', 'state', 'loop-state.json'), { force: true });
+    fs.rmSync(path.join(tmpDir, '.frontier', 'state', 'loop-state.json'), { force: true });
 
     const snapshot = evaluateWorkflowGuidance(tmpDir);
 
@@ -115,9 +115,9 @@ describe('workflow guidance utility', () => {
   });
 
   it('resolves brainstorm guidance when no issue or harness thread is linked', () => {
-    fs.rmSync(path.join(tmpDir, '.agentx', 'issues'), { recursive: true, force: true });
-    fs.rmSync(path.join(tmpDir, '.agentx', 'state', 'harness-state.json'), { force: true });
-    fs.rmSync(path.join(tmpDir, '.agentx', 'state', 'loop-state.json'), { force: true });
+    fs.rmSync(path.join(tmpDir, '.frontier', 'issues'), { recursive: true, force: true });
+    fs.rmSync(path.join(tmpDir, '.frontier', 'state', 'harness-state.json'), { force: true });
+    fs.rmSync(path.join(tmpDir, '.frontier', 'state', 'loop-state.json'), { force: true });
 
     const snapshot = evaluateWorkflowGuidance(tmpDir);
 
@@ -127,7 +127,7 @@ describe('workflow guidance utility', () => {
   });
 
   it('resolves compound capture when the issue is closed with review evidence but no learning capture', () => {
-    writeFile(tmpDir, '.agentx/issues/219.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/issues/219.json', JSON.stringify({
       number: 219,
       title: 'Create rollout scorecard',
       state: 'closed',
@@ -143,7 +143,7 @@ describe('workflow guidance utility', () => {
   });
 
   it('keeps the checkpoint in work when the completed loop state is stale', () => {
-    writeFile(tmpDir, '.agentx/state/loop-state.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/state/loop-state.json', JSON.stringify({
       active: false,
       status: 'complete',
       prompt: 'done',
@@ -180,7 +180,7 @@ describe('workflow guidance utility', () => {
   });
 
   it('includes active contract state and slice findings in workflow guidance', () => {
-    writeFile(tmpDir, '.agentx/state/harness-state.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/state/harness-state.json', JSON.stringify({
       version: 1,
       threads: [{
         id: 'thread-1',
@@ -226,13 +226,13 @@ describe('workflow guidance utility', () => {
         createdAt: '2026-03-28T10:05:00Z',
       }],
     }));
-    writeFile(tmpDir, '.agentx/issues/253.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/issues/253.json', JSON.stringify({
       number: 253,
       title: 'Add runtime support for contract lifecycle and evaluator findings',
       state: 'open',
       status: 'In Progress',
     }));
-    writeFile(tmpDir, '.agentx/state/loop-state.json', JSON.stringify({
+    writeFile(tmpDir, '.frontier/state/loop-state.json', JSON.stringify({
       active: true,
       status: 'active',
       prompt: 'runtime work',
@@ -262,14 +262,14 @@ describe('workflow guidance utility', () => {
 
   it('falls back to hidden runtime workflow guides when visible guides are absent', () => {
     fs.rmSync(path.join(tmpDir, 'docs', 'guides'), { recursive: true, force: true });
-    writeFile(tmpDir, '.agentx/runtime/docs/guides/WORKFLOW-ROLLOUT-SCORECARD.md', '# Scorecard\n');
-    writeFile(tmpDir, '.agentx/runtime/docs/guides/WORKFLOW-PILOT-ORDER.md', '# Pilot\n');
-    writeFile(tmpDir, '.agentx/runtime/docs/guides/WORKFLOW-OPERATOR-CHECKLIST.md', '# Checklist\n');
+    writeFile(tmpDir, '.frontier/runtime/docs/guides/WORKFLOW-ROLLOUT-SCORECARD.md', '# Scorecard\n');
+    writeFile(tmpDir, '.frontier/runtime/docs/guides/WORKFLOW-PILOT-ORDER.md', '# Pilot\n');
+    writeFile(tmpDir, '.frontier/runtime/docs/guides/WORKFLOW-OPERATOR-CHECKLIST.md', '# Checklist\n');
 
     const snapshot = evaluateWorkflowGuidance(tmpDir);
 
     assert.ok(snapshot);
     assert.equal(snapshot?.rolloutRows[0]?.state, 'pilot-ready');
-    assert.equal(snapshot?.rolloutScorecardPath, '.agentx/runtime/docs/guides/WORKFLOW-ROLLOUT-SCORECARD.md');
+    assert.equal(snapshot?.rolloutScorecardPath, '.frontier/runtime/docs/guides/WORKFLOW-ROLLOUT-SCORECARD.md');
   });
 });

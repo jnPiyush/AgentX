@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $script:pass = 0
 $script:fail = 0
 $script:repoRoot = Split-Path $PSScriptRoot -Parent
-$script:agentxCliPath = Join-Path $script:repoRoot '.agentx\agentx-cli.ps1'
+$script:agentxCliPath = Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1'
 
 function Assert-True($condition, [string]$message) {
     if ($condition) {

@@ -32,13 +32,13 @@ function disableWindowsInstallerMutex(vscodeExecutablePath) {
 async function main() {
   const extensionDevelopmentPath = path.resolve(__dirname, '..');
   const extensionTestsPath = path.resolve(extensionDevelopmentPath, 'out', 'e2e', 'suite', 'index');
-  const evidencePath = path.resolve(extensionDevelopmentPath, '..', '.agentx', 'state', 'evidence', 'extension-host-e2e.log');
-  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-e2e-'));
+  const evidencePath = path.resolve(extensionDevelopmentPath, '..', '.frontier', 'state', 'evidence', 'extension-host-e2e.log');
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-e2e-'));
   const resultPath = path.join(workspacePath, 'extension-host-result.json');
 
-  fs.mkdirSync(path.join(workspacePath, '.agentx'), { recursive: true });
+  fs.mkdirSync(path.join(workspacePath, '.frontier'), { recursive: true });
   fs.writeFileSync(
-    path.join(workspacePath, '.agentx', 'config.json'),
+    path.join(workspacePath, '.frontier', 'config.json'),
     `${JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', enforceIssues: false }, null, 2)}\n`,
   );
 

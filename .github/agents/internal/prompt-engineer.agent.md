@@ -9,17 +9,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   level: high
@@ -31,7 +31,7 @@ constraints:
   - "MUST version prompts with semantic naming (v1, v2) and track changes"
   - "MUST NOT fabricate evaluation scores or benchmark results"
   - "MUST NOT deploy prompts without passing quality gates"
-  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.agentx/frontier.ps1 loop complete -s <summary>' succeeds"
+  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.frontier/runtime/frontier.ps1 loop complete -s <summary>' succeeds"
   - "MUST verify agentic loop completion before declaring implementation complete"
 boundaries:
   can_modify:
@@ -178,9 +178,9 @@ Track changes in `.copilot-tracking/prompt-eval/{name}-changelog.md`:
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../../AGENT-PROTOCOL.md](../../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 

@@ -11,9 +11,9 @@ $script:fail = 0
 $script:repoRoot = Split-Path $PSScriptRoot -Parent
 $script:hookPath = Join-Path $script:repoRoot '.github\hooks\pre-commit'
 $script:postCommitHookPath = Join-Path $script:repoRoot '.github\hooks\post-commit'
-$script:agentxLauncherPath = Join-Path $script:repoRoot '.agentx\agentx.ps1'
-$script:frontierLauncherPath = Join-Path $script:repoRoot '.agentx\frontier.ps1'
-$script:agentxCliPath = Join-Path $script:repoRoot '.agentx\agentx-cli.ps1'
+$script:commitMsgHookPath = Join-Path $script:repoRoot '.github\hooks\commit-msg'
+$script:frontierLauncherPath = Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1'
+$script:frontierCliPath = Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1'
 $script:scrubPath = Join-Path $script:repoRoot 'scripts\scrub.ps1'
 
 <#
@@ -23,13 +23,12 @@ $script:scrubPath = Join-Path $script:repoRoot 'scripts\scrub.ps1'
 
 .DESCRIPTION
   Hand-built fixtures can only prove the hook agrees with the test author. This
-  produces the exact state shape 'agentx loop iterate --verdict ... && loop
+  produces the exact state shape 'frontier loop iterate --verdict ... && loop
   complete' writes, including the completion entry the CLI always appends after
   the reviewed iteration.
 #>
 function New-CliProducedLoopState {
-    $workspace = Join-Path ([IO.Path]::GetTempPath()) ("agentx-hook-cli-{0}" -f [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path (Join-Path $workspace '.agentx') -Force | Out-Null
+    $workspace = Join-Path ([IO.Path]::GetTempPath()) ("frontier-hook-cli-{0}" -f [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path (Join-Path $workspace '.frontier\state') -Force | Out-Null
     try {
         $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
@@ -45,7 +44,7 @@ function New-CliProducedLoopState {
             $psi.Environment['FRONTIER_WORKSPACE_ROOT'] = $workspace
             $psi.ArgumentList.Add('-NoProfile')
             $psi.ArgumentList.Add('-File')
-            $psi.ArgumentList.Add($script:agentxCliPath)
+            $psi.ArgumentList.Add($script:frontierCliPath)
             foreach ($argument in $Arguments) { $psi.ArgumentList.Add($argument) }
             $process = [System.Diagnostics.Process]::Start($psi)
             [void]$process.StandardOutput.ReadToEnd()
@@ -115,13 +114,13 @@ function Invoke-HookGate {
         [switch]$StageTrackedRename,
         [switch]$StageGateHookDelete,
         [switch]$StageUnstagedValidatorDrift,
-        [string]$ValidatorPath = '.agentx/agentx-cli.ps1',
+        [string]$ValidatorPath = '.frontier/runtime/frontier-cli.ps1',
         [switch]$RunPostCommit
     )
 
-    $repo = Join-Path ([IO.Path]::GetTempPath()) ("agentx-hook-gate-{0}" -f [guid]::NewGuid().ToString('N'))
+    $repo = Join-Path ([IO.Path]::GetTempPath()) ("frontier-hook-gate-{0}" -f [guid]::NewGuid().ToString('N'))
     try {
-        New-Item -ItemType Directory -Path (Join-Path $repo '.agentx') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $repo '.frontier\runtime') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $repo '.frontier\state') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $repo 'scripts') -Force | Out-Null
         Push-Location $repo
@@ -129,12 +128,11 @@ function Invoke-HookGate {
             git init --quiet 2>&1 | Out-Null
             git config user.email 'hook-test@example.com' 2>&1 | Out-Null
             git config user.name 'Hook Test' 2>&1 | Out-Null
-            Copy-Item -LiteralPath $script:agentxLauncherPath -Destination (Join-Path $repo '.agentx\agentx.ps1') -Force
-            Copy-Item -LiteralPath $script:frontierLauncherPath -Destination (Join-Path $repo '.agentx\frontier.ps1') -Force
-            Copy-Item -LiteralPath $script:agentxCliPath -Destination (Join-Path $repo '.agentx\agentx-cli.ps1') -Force
+            Copy-Item -LiteralPath $script:frontierLauncherPath -Destination (Join-Path $repo '.frontier\runtime\frontier.ps1') -Force
+            Copy-Item -LiteralPath $script:frontierCliPath -Destination (Join-Path $repo '.frontier\runtime\frontier-cli.ps1') -Force
             Copy-Item -LiteralPath $script:scrubPath -Destination (Join-Path $repo 'scripts\scrub.ps1') -Force
             if ($StageUnstagedValidatorDrift) {
-                git add .agentx/agentx.ps1 .agentx/frontier.ps1 .agentx/agentx-cli.ps1 scripts/scrub.ps1 2>&1 | Out-Null
+                git add .frontier/runtime/frontier.ps1 .frontier/runtime/frontier-cli.ps1 scripts/scrub.ps1 2>&1 | Out-Null
                 git commit --quiet -m 'test: add validator baseline'
                 Add-Content -LiteralPath (Join-Path $repo $ValidatorPath) -Value '# unstaged permissive validator drift'
             }
@@ -220,6 +218,53 @@ function Invoke-HookGate {
             Pop-Location
         }
     } finally {
+        Remove-Item -LiteralPath $repo -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+<#
+.SYNOPSIS
+  Run the commit-msg hook in a throwaway git repo against a message and the
+  supplied workspace config, returning its output and exit code.
+#>
+function Invoke-CommitMsgHook {
+    param(
+        [string]$BashPath,
+        [string]$Message,
+        [string]$FrontierConfig,
+        [string]$LegacyConfig
+    )
+
+    $repo = Join-Path ([IO.Path]::GetTempPath()) ("frontier-commit-msg-{0}" -f [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $repo -Force | Out-Null
+    Push-Location $repo
+    try {
+        git init --quiet 2>&1 | Out-Null
+        if ($FrontierConfig) {
+            New-Item -ItemType Directory -Path (Join-Path $repo '.frontier') -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $repo '.frontier\config.json') -Value $FrontierConfig -Encoding utf8
+        }
+        if ($LegacyConfig) {
+            New-Item -ItemType Directory -Path (Join-Path $repo '.agentx') -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $repo '.agentx\config.json') -Value $LegacyConfig -Encoding utf8
+        }
+        Set-Content -LiteralPath (Join-Path $repo 'COMMIT_MSG') -Value $Message -Encoding utf8
+        Copy-Item -LiteralPath $script:commitMsgHookPath -Destination (Join-Path $repo 'commit-msg') -Force
+        $outFile = Join-Path $repo 'hook-output.txt'
+        $previous = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & $BashPath './commit-msg' 'COMMIT_MSG' *> $outFile
+            $exitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previous
+        }
+        return [PSCustomObject]@{
+            Output = [string](Get-Content -LiteralPath $outFile -Raw)
+            ExitCode = $exitCode
+        }
+    } finally {
+        Pop-Location
         Remove-Item -LiteralPath $repo -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
@@ -311,7 +356,7 @@ if (-not $bashPath) {
     Assert-True ($validatorDrift.ExitCode -ne 0) 'unstaged quality-gate validator changes block staged code'
     Assert-True ($validatorDrift.Output -match 'validators have unstaged changes') 'validator drift rejection is actionable'
 
-    $launcherDrift = Invoke-HookGate -BashPath $bashPath -StageUnstagedValidatorDrift -ValidatorPath '.agentx/frontier.ps1' -LoopState (New-HookLoopState -History @(
+    $launcherDrift = Invoke-HookGate -BashPath $bashPath -StageUnstagedValidatorDrift -ValidatorPath '.frontier/runtime/frontier.ps1' -LoopState (New-HookLoopState -History @(
         (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
         $completionEntry
     ))
@@ -455,6 +500,34 @@ if (-not $bashPath) {
     ))
     Assert-True ($clean2.Output -match 'Running pre-commit checks') 'the hook executed and produced output for the clean fixture'
     Assert-True ($clean2.ExitCode -eq 0) 'second clean hook fixture exits zero'
+
+    Write-Host ''
+    Write-Host ' Commit-msg issue enforcement' -ForegroundColor White
+    Write-Host ' ================================================' -ForegroundColor DarkGray
+    $noIssue = 'feat: add login'
+    $providerOnly = Invoke-CommitMsgHook -BashPath $bashPath -Message $noIssue -FrontierConfig '{"provider":"github","enforceIssues":false}'
+    Assert-True ($providerOnly.Output -match 'Frontier Workflow Validation') 'the commit-msg hook executed and produced output'
+    Assert-True ($providerOnly.ExitCode -ne 0) 'a GitHub provider in .frontier/config.json enforces the issue reference'
+    Assert-True ($providerOnly.Output -match 'must reference a GitHub Issue') 'the missing-issue rejection is actionable'
+
+    $modeOnly = Invoke-CommitMsgHook -BashPath $bashPath -Message $noIssue -FrontierConfig '{"mode":"github"}'
+    Assert-True ($modeOnly.ExitCode -ne 0) 'a config that only records mode still resolves the GitHub provider'
+
+    $providerWins = Invoke-CommitMsgHook -BashPath $bashPath -Message $noIssue -FrontierConfig '{"provider":"local","mode":"github"}'
+    Assert-True ($providerWins.ExitCode -eq 0) 'provider takes precedence over the legacy mode key'
+
+    $localOptIn = Invoke-CommitMsgHook -BashPath $bashPath -Message $noIssue -FrontierConfig '{"provider":"local","enforceIssues":true}'
+    Assert-True ($localOptIn.ExitCode -ne 0) 'local mode enforces issues when enforceIssues is true'
+
+    $localDefault = Invoke-CommitMsgHook -BashPath $bashPath -Message $noIssue -FrontierConfig '{"provider":"local","enforceIssues":false}'
+    Assert-True ($localDefault.ExitCode -eq 0) 'local mode skips issue enforcement by default'
+    Assert-True ($localDefault.Output -match 'Local mode - issue enforcement skipped') 'local-mode skip is reported'
+
+    $legacyOnly = Invoke-CommitMsgHook -BashPath $bashPath -Message $noIssue -LegacyConfig '{"provider":"github","mode":"github"}'
+    Assert-True ($legacyOnly.ExitCode -eq 0) 'a leftover .agentx/config.json is ignored rather than read as a fallback'
+
+    $withIssue = Invoke-CommitMsgHook -BashPath $bashPath -Message 'feat: add login (#42)' -FrontierConfig '{"provider":"github"}'
+    Assert-True ($withIssue.ExitCode -eq 0) 'a GitHub-mode commit that references an issue passes'
 }
 
 Write-Host ''

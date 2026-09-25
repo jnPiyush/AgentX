@@ -2,7 +2,7 @@
 # Export Portable Skill - emit SkillOpt-compatible best_skill.md artifacts
 #
 # Strips host-specific coupling (Copilot model frontmatter, chat-participant
-# syntax, .agentx CLI gates, VS Code command references) from a SKILL.md or
+# syntax, Frontier CLI gates, VS Code command references) from a SKILL.md or
 # .agent.md so the natural-language guidance can be dropped into any frozen
 # LLM agent (the SkillOpt best_skill.md model). The source file is never
 # modified; portable copies are written to -OutDir.
@@ -50,12 +50,12 @@ function Convert-ToPortable([string]$content) {
     $kept = New-Object System.Collections.Generic.List[string]
     foreach ($line in $lines) {
         # 2. Drop lines that are purely an Frontier CLI gate or chat-participant call.
-        if ($line -match '^\s*[`>\-\*\d\.\)\s]*\.agentx[\\/]agentx\.(ps1|sh)\b') { continue }
+        if ($line -match '^\s*[`>\-\*\d\.\)\s]*\.frontier[\\/]runtime[\\/]frontier\.(ps1|sh)\b') { continue }
         if ($line -match '^\s*[`>\-\*\d\.\)\s]*@agentx\b') { continue }
         # 3. Neutralize inline host references that remain on otherwise-useful lines.
         $clean = $line
         $clean = $clean -replace '\s*\(copilot\)', ''
-        $clean = $clean -replace '\.agentx[\\/]agentx\.(ps1|sh)', 'your-agent-runner'
+        $clean = $clean -replace '\.frontier[\\/]runtime[\\/]frontier\.(ps1|sh)', 'your-agent-runner'
         $clean = $clean -replace '@agentx\b', 'your assistant'
         $clean = $clean -replace 'agentx\.initializeLocalRuntime', 'your runtime initializer'
         $clean = $clean -replace 'VS Code Copilot Chat', 'your chat client'

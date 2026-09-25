@@ -11,8 +11,8 @@ import runner from '../../whatsapp/src/frontierRunner.js';
 
 test('configuration fails closed and keeps credentials separate from runner configuration', () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-config-'));
-    fs.mkdirSync(path.join(directory, '.agentx'));
-    fs.writeFileSync(path.join(directory, '.agentx', 'frontier.ps1'), 'exit 0');
+    fs.mkdirSync(path.join(directory, '.frontier', 'runtime'), { recursive: true });
+    fs.writeFileSync(path.join(directory, '.frontier', 'runtime', 'frontier.ps1'), 'exit 0');
     const env = {
         FRONTIER_WORKSPACE_ROOT: directory, FRONTIER_CHANNELS: 'teams',
         FRONTIER_TEAMS_APP_ID: '00000000-0000-0000-0000-000000000001',
@@ -56,8 +56,8 @@ test('runtime uses argument arrays and publishes only recognized progress metada
 
 test('GitHub configuration validates installation, repository, numeric users and RSA credentials', () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-github-config-'));
-    fs.mkdirSync(path.join(directory, '.agentx'));
-    fs.writeFileSync(path.join(directory, '.agentx', 'frontier.ps1'), 'exit 0');
+    fs.mkdirSync(path.join(directory, '.frontier', 'runtime'), { recursive: true });
+    fs.writeFileSync(path.join(directory, '.frontier', 'runtime', 'frontier.ps1'), 'exit 0');
     const keys = generateKeyPairSync('rsa', { modulusLength: 2048 });
     const privateKeyFile = path.join(directory, 'app.pem');
     fs.writeFileSync(privateKeyFile, keys.privateKey.export({ type: 'pkcs8', format: 'pem' }));
@@ -79,10 +79,10 @@ test('GitHub configuration validates installation, repository, numeric users and
 
 test('mocked PowerShell child reports progress and returns a nonzero exit as failure', async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-runtime-'));
-    fs.mkdirSync(path.join(directory, '.agentx'));
-    fs.writeFileSync(path.join(directory, '.agentx', 'frontier.ps1'), '');
+    fs.mkdirSync(path.join(directory, '.frontier', 'runtime'), { recursive: true });
+    fs.writeFileSync(path.join(directory, '.frontier', 'runtime', 'frontier.ps1'), '');
     const phases = [];
-    const runtime = createRuntime({ repoPath: directory, cliRelativePath: '.agentx/frontier.ps1', maxOutputChars: 4000, commandTimeoutMs: 10000 }, {
+    const runtime = createRuntime({ repoPath: directory, cliRelativePath: '.frontier/runtime/frontier.ps1', maxOutputChars: 4000, commandTimeoutMs: 10000 }, {
         runFrontierProcess(args, config, hooks) {
             return runner.runFrontierProcess(args, config, { ...hooks, spawn: () => {
                 const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });

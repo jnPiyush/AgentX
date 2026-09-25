@@ -54,24 +54,24 @@ describe('shell - literal CLI arguments', function () {
     } finally { execute.restore(); }
   });
 
-  it('runs the compatibility launcher without requiring canonical executable permission', function () {
+  it('runs the Frontier launcher through bash without requiring executable permission', function () {
     const bash = process.platform === 'win32'
       ? path.join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Git', 'bin', 'bash.exe')
       : '/bin/bash';
     if (process.platform === 'win32' && !fs.existsSync(bash)) { this.skip(); }
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-launcher-'));
     try {
-      const source = path.resolve(__dirname, '../../../..', '.agentx');
-      for (const name of ['frontier.sh', 'agentx.sh']) {
-        fs.writeFileSync(path.join(root, name), fs.readFileSync(path.join(source, name), 'utf8')
-          .replace(/\r\n/g, '\n'), { mode: 0o644 });
-      }
+      const source = path.resolve(__dirname, '../../../..', '.frontier', 'runtime', 'frontier.sh');
+      const runtimeDir = path.join(root, '.frontier', 'runtime');
+      fs.mkdirSync(runtimeDir, { recursive: true });
+      const launcher = path.join(runtimeDir, 'frontier.sh');
+      fs.writeFileSync(launcher, fs.readFileSync(source, 'utf8').replace(/\r\n/g, '\n'), { mode: 0o644 });
       const command = 'pwsh() { printf \'%s\\0\' "$@"; }; export -f pwsh; bash "$1" loop status';
       const output = childProcess.execFileSync(bash,
-        ['--noprofile', '--norc', '-c', command, 'fixture', path.join(root, 'agentx.sh').replace(/\\/g, '/')],
+        ['--noprofile', '--norc', '-c', command, 'fixture', launcher.replace(/\\/g, '/')],
         { encoding: 'utf8', timeout: 10000, env: { ...process.env, FRONTIER_WORKSPACE_ROOT: root } });
       const actual = output.split('\0').slice(0, -1);
-      assert.match(actual[0], /agentx-cli\.ps1$/);
+      assert.match(actual[0], /frontier-cli\.ps1$/);
       assert.deepEqual(actual.slice(1), ['loop', 'status']);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });

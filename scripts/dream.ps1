@@ -66,15 +66,15 @@ Set-StrictMode -Off
 # ---------------------------------------------------------------------------
 # Resolve workspace root (same logic as other Frontier scripts)
 # ---------------------------------------------------------------------------
-$script:ROOT = if ($env:AGENTX_WORKSPACE_ROOT) {
+$script:ROOT = if ($env:FRONTIER_WORKSPACE_ROOT) {
+    $env:FRONTIER_WORKSPACE_ROOT
+} elseif ($env:AGENTX_WORKSPACE_ROOT) {
     $env:AGENTX_WORKSPACE_ROOT
 } else {
-    # Walk up from script location to find .agentx dir
-    $candidate = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-    $candidate
+    (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
 
-$script:DREAMS_DIR = Join-Path $script:ROOT '.agentx' 'dreams'
+$script:DREAMS_DIR = Join-Path $script:ROOT '.frontier' 'dreams'
 $script:exitCode   = 0
 
 # ---------------------------------------------------------------------------
@@ -141,13 +141,10 @@ function Resolve-Sessions {
         }
     }
 
-    # Also harvest observer signals (.frontier/signals/sessions.jsonl; a pre-migration
-    # workspace may only have .agentx). See .github/hooks/scripts/signal-capture.js for the writer.
-    $signalFile = @('.frontier', '.agentx') |
-        ForEach-Object { Join-Path $script:ROOT "$_/signals/sessions.jsonl" } |
-        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
-        Select-Object -First 1
-    if ($signalFile) {
+    # Also harvest observer signals (.frontier/signals/sessions.jsonl).
+    # See .github/hooks/scripts/signal-capture.js for the writer.
+    $signalFile = Join-Path $script:ROOT '.frontier/signals/sessions.jsonl'
+    if (Test-Path -LiteralPath $signalFile -PathType Leaf) {
         try {
             $lines = Get-Content $signalFile -Tail ([Math]::Max(50, $Max * 10)) -ErrorAction SilentlyContinue
             $bullets = New-Object 'System.Collections.Generic.List[string]'
@@ -411,9 +408,9 @@ Subcommands:
   help     Show this help.
 
 Examples:
-  .\.agentx\agentx.ps1 dream create
-  .\.agentx\agentx.ps1 dream status -Id drm_ABC123
-  .\.agentx\agentx.ps1 dream list
+  .\.frontier\runtime\frontier.ps1 dream create
+  .\.frontier\runtime\frontier.ps1 dream status -Id drm_ABC123
+  .\.frontier\runtime\frontier.ps1 dream list
 "@
     $script:exitCode = 0; return
 }
