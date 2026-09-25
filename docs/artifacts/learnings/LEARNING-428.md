@@ -69,7 +69,8 @@ auto-promoted to `memories/conventions.md` and may be referenced in
 
 ## Related
 
-- ADR(s): `docs/artifacts/adr/COUNCIL-428-frontier-corp-rebrand.md`
+- ADR(s): none; the issue 428 council record was retired with the other
+  historical execution records
 - Review(s): independent review and scored rubric report, archived to the
   git-ignored loop state under `.frontier/state/loop-evidence/`
 - Other LEARNING(s): none
