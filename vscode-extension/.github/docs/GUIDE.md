@@ -180,10 +180,13 @@ shell-argument, review-state, parity, rollback and code-quality tests on native
 Ubuntu and macOS runners. A configured job is not a passing result: inspect its
 run for the current commit before claiming native platform verification.
 
-Pass test counts per suite to `loop iterate` and `loop complete`:
-`--passing unit=12,api=40`. Each suite is compared only with its own last count,
-so a step reruns only the suites its change affects; `frontier loop affected`
-lists tests naming code changed since loop start. `loop baseline -c <suite>=<count>`
+`--passing` is optional. The default evidence for an iteration is a Spec/ADR/PRD
+acceptance-criteria compliance mapping plus the sub-agent review findings, so an
+iteration that ran no suite simply omits the flag. When a step did run suites,
+report their counts: `--passing unit=12,api=40`. Each suite is compared only with
+its own last count, so a step reruns only the suites its change affects;
+`frontier loop affected` lists tests naming code changed since loop start.
+`loop baseline -c <suite>=<count>`
 records an intentional drop. An integer baseline (`loop baseline -c <count>`) keeps
 the older rule: each later iterate and complete needs an integer count no lower.
 A count proves neither a test run nor review independence; evidence and an

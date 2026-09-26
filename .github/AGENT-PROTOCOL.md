@@ -79,17 +79,20 @@ simply records one reviewer verdict before completing.
 
 ### 1.4 Loop Steps
 
-1. **Run verification** -- select checks by changed behavior, direct callers and
-  risk; `frontier loop affected` lists the test files that name code changed
-  since loop start. Focused final checks suffice for bounded changes; expand for
-  shared contracts, broad impact and required CI/release gates. Record scope and
-  omitted checks with rationale. Never rerun the entire suite just to fill an
-  iteration. Report `--passing <suite>=<count>` for each suite run; a suite is
-  compared only with its own last count, so unaffected suites are not rerun.
-2. **Evaluate** -- on any failure, find the root cause.
-3. **Fix** -- address the failure.
-4. **Re-verify** -- confirm the fix.
-5. **Subagent review** -- once checks pass, spawn a same-role reviewer sub-agent
+1. **Spec compliance check** -- verify the change against the Spec, ADR and PRD
+  acceptance criteria. Map each in-scope criterion to the code or artifact that
+  satisfies it and name any criterion still unmet. This mapping, not a suite
+  run, is the default evidence for an iteration. Run executable checks only
+  where the change actually warrants them: `frontier loop affected` lists the
+  test files naming code changed since loop start. Prefer the narrowest check
+  that can fail for the right reason, and expand only for shared contracts,
+  broad impact or required CI/release gates. Record scope and omitted checks
+  with rationale. Never rerun the entire suite just to fill an iteration.
+2. **Evaluate results** -- on any failure, find the root cause before fixing.
+3. **Fix** -- address the failure with targeted, minimal changes.
+4. **Re-run verification** -- confirm the fix works and did not regress
+  anything the change touches.
+5. **Self-review** -- once all checks pass, spawn a same-role reviewer sub-agent
    that sees only the deliverable (diff / artifact / spec), not the author's
    rationale. It returns structured findings: HIGH / MEDIUM / LOW.
    - APPROVED = true only when zero HIGH and zero MEDIUM remain.
@@ -98,8 +101,14 @@ simply records one reviewer verdict before completing.
     Run `pwsh scripts/score-code-quality.ps1 -Mode Scope -Json` after the final
     code edit, score all ten dimensions, and use that JSON report as the
     final review iteration evidence.
-6. **Address findings** -- fix all HIGH/MEDIUM, then re-run from Step 1.
+6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from
+  Step 2.
 7. **Repeat** until APPROVED, all Done Criteria pass, and the risk-based minimum is met.
+
+Sub-agent review and evaluation carry the loop; executed suites are supporting
+evidence, not the price of an iteration. When a step did run suites, report them
+as `--passing <suite>=<count>`; the flag is optional, and a suite is compared
+only with its own last count, so unaffected suites are never rerun.
 
 The per-iteration focus table is printed by `loop start` and the current focus is
 shown by `loop status`. The canonical tiers are:

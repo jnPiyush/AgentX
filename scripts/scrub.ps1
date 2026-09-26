@@ -34,6 +34,13 @@
 .PARAMETER Path
   File or directory to scan. Defaults to the current directory.
 
+.PARAMETER PathsFrom
+  Path to a manifest file listing one scan target per line. Use this instead of
+  -Path to scan many explicit files in a single process, which is how the
+  pre-commit hook scans a whole staged changeset without paying one PowerShell
+  start-up per file. Blank lines are ignored; every other entry must exist and
+  be readable or the scan fails. Mutually exclusive with -Path.
+
 .PARAMETER Fix
   Apply safe-fix categories in place. Without this flag, scan only.
 
@@ -53,11 +60,18 @@
 
 .EXAMPLE
   pwsh scripts/scrub.ps1 -Path src/components -Fix
+
+.EXAMPLE
+  git diff --cached --name-only > staged.txt
+  pwsh scripts/scrub.ps1 -PathsFrom staged.txt -Quiet
 #>
 
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'Path')]
 param(
+    [Parameter(ParameterSetName = 'Path', Position = 0)]
     [string]$Path = '.',
+    [Parameter(ParameterSetName = 'PathsFrom', Mandatory = $true)]
+    [string]$PathsFrom,
     [switch]$Fix,
     [switch]$Json,
     [switch]$Production,
@@ -763,38 +777,84 @@ function Get-ScrubTargetFiles {
 }
 
 # --- main ---
-# The requested path is validated explicitly so a nonexistent or unreadable
-# scan target fails loudly (non-zero exit, clear stderr message) instead of
+# Fatal target/manifest problems print one plain stderr line and exit 2. This
+# writes to the console error stream rather than Write-Error so the message
+# reads the same whether it is raised at script scope or inside a helper;
+# Write-Error decorates the record with the calling frame, which turned a
+# one-line diagnostic into a stack excerpt once target resolution moved into a
+# function.
+function Write-ScrubFatal {
+    param([string]$Message)
+
+    [Console]::Error.WriteLine($Message)
+    exit 2
+}
+
+# Every scan target is validated explicitly so a nonexistent or unreadable
+# target fails loudly (non-zero exit, clear stderr message) instead of
 # silently reporting "0 findings" -- a crash and an empty result must never
-# look the same to a caller.
-if (-not (Test-Path -LiteralPath $Path -ErrorAction SilentlyContinue)) {
-    Write-Error "scrub: path not found: $Path" -ErrorAction Continue
-    exit 2
-}
+# look the same to a caller. Returns the FileInfo objects for one target.
+function Resolve-ScrubTarget {
+    param([string]$Target)
 
-try {
-    $root = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).Path
-} catch {
-    Write-Error "scrub: unable to resolve path '$Path': $($_.Exception.Message)" -ErrorAction Continue
-    exit 2
-}
-
-if (Test-Path -LiteralPath $root -PathType Container) {
-    try {
-        $files = Get-ScrubTargetFiles -RootPath $root
-    } catch {
-        Write-Error $_.Exception.Message -ErrorAction Continue
-        exit 2
+    if (-not (Test-Path -LiteralPath $Target -ErrorAction SilentlyContinue)) {
+        Write-ScrubFatal "scrub: path not found: $Target"
     }
-} else {
+
+    try {
+        $root = (Resolve-Path -LiteralPath $Target -ErrorAction Stop).Path
+    } catch {
+        Write-ScrubFatal "scrub: unable to resolve path '$Target': $($_.Exception.Message)"
+    }
+
+    if (Test-Path -LiteralPath $root -PathType Container) {
+        try {
+            return Get-ScrubTargetFiles -RootPath $root
+        } catch {
+            Write-ScrubFatal $_.Exception.Message
+        }
+    }
+
     try {
         $probe = [System.IO.File]::OpenRead($root)
         $probe.Dispose()
     } catch {
-        Write-Error "scrub: unable to read '$root': $($_.Exception.Message)" -ErrorAction Continue
-        exit 2
+        Write-ScrubFatal "scrub: unable to read '$root': $($_.Exception.Message)"
     }
-    $files = @(Get-Item -LiteralPath $root -ErrorAction Stop)
+    return @(Get-Item -LiteralPath $root -ErrorAction Stop)
+}
+
+if ($PSCmdlet.ParameterSetName -eq 'PathsFrom') {
+    if (-not (Test-Path -LiteralPath $PathsFrom -PathType Leaf -ErrorAction SilentlyContinue)) {
+        Write-ScrubFatal "scrub: manifest not found: $PathsFrom"
+    }
+
+    try {
+        $manifestLines = @(Get-Content -LiteralPath $PathsFrom -ErrorAction Stop)
+    } catch {
+        Write-ScrubFatal "scrub: unable to read manifest '$PathsFrom': $($_.Exception.Message)"
+    }
+
+    $targets = @($manifestLines | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    if ($targets.Count -eq 0) {
+        Write-ScrubFatal "scrub: manifest '$PathsFrom' lists no scan targets."
+    }
+
+    # One target can expand to many files and two targets can name the same
+    # file, so de-duplicate by full path. Without this a repeated entry would
+    # be scanned twice and report each finding twice.
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $collected = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
+    foreach ($target in $targets) {
+        foreach ($f in (Resolve-ScrubTarget -Target $target)) {
+            if ($seen.Add($f.FullName)) { $collected.Add($f) }
+        }
+    }
+    $files = $collected.ToArray()
+} else {
+    # @(...) keeps a single-file target a one-element array, so $files.Count and
+    # the [FileInfo[]] parameter below behave the same for one file as for many.
+    $files = @(Resolve-ScrubTarget -Target $Path)
 }
 
 try {

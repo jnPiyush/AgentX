@@ -57,7 +57,13 @@ Weights total exactly `100`.
   rather than "matches intent".
 - `logic-correctness`: when fixing a bug, include bug reproduction or a precise
   counterexample; include boundary or negative evidence when those paths changed.
-- `verification-tests`: list focused tests and commands. Mutation evidence is
+- `verification-tests`: state how the changed behavior was proven. A mapping
+  from each in-scope acceptance criterion to the code path that satisfies it,
+  plus the sub-agent review findings on that path, is sufficient evidence on its
+  own. Executed checks and commands strengthen it and are expected where a
+  suite already covers the changed surface, but a full suite run is not
+  required and an unrun suite is not a gap. Name the negative and contract
+  paths that changed and say how each was confirmed. Mutation evidence is
   valuable when the repository already uses it, but is not mandatory everywhere.
 - `security-privacy`: call out broad allow/default paths, privilege gaps, unsafe
   logging, or fabricated "security reviewed" claims.

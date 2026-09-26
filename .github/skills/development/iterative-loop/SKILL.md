@@ -49,7 +49,8 @@ The loop is the gate, not a suggestion. Push back against these common ways of s
 | "The first attempt looks correct, I'll mark complete." | LLMs systematically overrate their first attempts. Run the verification step at least once before claiming completion. |
 | "I hit the minimum iteration count, I'm done." | The minimum is a floor, not a ceiling. The loop is complete when the done criteria pass, not when the counter ticks over. |
 | "Self-review found nothing, no need for another pass." | Self-review with no findings on a non-trivial change usually means you reviewed too generously. Re-read against the spec, not against the code. |
-| "Tests pass, so the loop is complete." | Tests passing is necessary but not sufficient. The loop requires that the done criteria pass, evidence is fresh, and `loop complete` is recorded. |
+| "Tests pass, so the loop is complete." | Tests passing is neither necessary nor sufficient. The loop requires that the done criteria pass, the acceptance criteria are mapped, the sub-agent review is approved, evidence is fresh, and `loop complete` is recorded. |
+| "I need to run the suite to have something to attach as evidence." | No. The default evidence is the acceptance-criteria compliance mapping plus the sub-agent review findings. Run a suite when the change warrants it, not to fill an iteration. |
 | "I'll run `loop complete` now and add the verification later." | `loop complete` is the artifact that gates handoff. Backfilling evidence after the gate defeats the gate. Verify first, then close. |
 
 ## Decision Tree
@@ -90,8 +91,8 @@ Need iterative refinement?
 The Engineer's quality loop is gated by the CLI, not by judgment:
 
 1. `loop start` resets `.frontier/state/tests-baseline.json` and cleans the prior loop's evidence archive; `loop affected` lists tests naming code changed since then.
-2. `loop iterate -e <path>` REQUIRES an existing evidence file (test report, coverage xml, scan json, mutation report). The CLI copies it to `.frontier/state/loop-evidence/iter-<N>/<timestamp>-<filename>`, keeps the source, and records `{ evidence, evidenceOriginal }` in loop history.
-3. Report the suites a step ran as `--passing <suite>=<count>[,<suite>=<count>]`. A suite may not drop below its own last count; unrun suites need no count; `loop baseline -c <suite>=<count>` records an intentional drop. A legacy integer baseline (`loop baseline -c <count>`) requires an integer `--passing` on every iterate and complete.
+2. `loop iterate -e <path>` REQUIRES an existing evidence file. A Spec/ADR/PRD acceptance-criteria compliance mapping or a sub-agent review report is valid evidence on its own; a test report, coverage xml, scan json or mutation report is equally valid when the step actually ran one. The CLI copies it to `.frontier/state/loop-evidence/iter-<N>/<timestamp>-<filename>`, keeps the source, and records `{ evidence, evidenceOriginal }` in loop history.
+3. `--passing <suite>=<count>[,<suite>=<count>]` is OPTIONAL: report it only for suites a step actually ran. A suite may not drop below its own last count; unrun suites need no count and are never rerun for the flag's sake; `loop baseline -c <suite>=<count>` records an intentional drop. A legacy integer baseline (`loop baseline -c <count>`) requires an integer `--passing` on every iterate and complete.
 4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact, and every iteration after #1 must still have its archived evidence file. The final artifact is copied to `.frontier/state/loop-evidence/complete/`.
 5. The commit-msg hook rejects `fix:` commits that change production code under `.frontier/runtime/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
 

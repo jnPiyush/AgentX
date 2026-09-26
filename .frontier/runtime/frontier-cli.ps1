@@ -4297,8 +4297,8 @@ function Get-LoopIterationGuidance {
     switch ($TaskClass) {
         'high-risk' {
             return @(
-                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + focused failing tests turn green';     gate='Focused tests passing; feature functional' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface coverage';             gate='Changed-surface checks and coverage pass' }
+                [PSCustomObject]@{ n=1; focus='Make it Work: satisfy the in-scope Spec/ADR/PRD acceptance criteria';     gate='Every in-scope criterion maps to a code path; feature functional' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + the checks this change warrants';      gate='Changed-surface checks pass' }
                 [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets + dependencies + applicable threat checks'; gate='Zero high/critical findings' }
                 [PSCustomObject]@{ n=4; focus='Adversarial: applicable mutation/property/fuzz/negative checks';          gate='Risk-specific adversarial checks pass' }
                 [PSCustomObject]@{ n=5; focus='Independent Review + risk-scoped final evidence';                          gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
@@ -4306,14 +4306,14 @@ function Get-LoopIterationGuidance {
         }
         'complex-delivery' {
             return @(
-                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + focused failing tests turn green'; gate='Focused tests passing; feature functional' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface security checks';   gate='Changed-surface checks pass' }
+                [PSCustomObject]@{ n=1; focus='Make it Work: satisfy the in-scope Spec/ADR/PRD acceptance criteria'; gate='Every in-scope criterion maps to a code path; feature functional' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface security checks';  gate='Changed-surface checks pass' }
                 [PSCustomObject]@{ n=3; focus='Independent Review + risk-scoped final evidence';                      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
             )
         }
         'auto-fix-review' {
             return @(
-                [PSCustomObject]@{ n=1; focus='Review findings + apply safe fixes + run focused checks'; gate='Safe fixes pass changed-surface checks' }
+                [PSCustomObject]@{ n=1; focus='Review findings + apply safe fixes + verify the changed surface'; gate='Safe fixes hold on the changed surface' }
                 [PSCustomObject]@{ n=2; focus='Independent decision + risk-scoped final evidence';      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
             )
         }

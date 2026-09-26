@@ -464,16 +464,47 @@ SCRUB_TARGETS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts
 if [ -n "$SCRUB_TARGETS" ]; then
  echo -n "Running deslop scrub gate... "
  if command -v pwsh >/dev/null 2>&1; then
+  # Scan the whole staged changeset in ONE PowerShell process. The previous
+  # per-file loop paid a cold pwsh start-up per staged file, which dominated
+  # commit time on large changesets (116 staged files = 116 start-ups). The
+  # manifest lives under the git-ignored .frontier/state/ so its path stays
+  # repo-relative and resolves identically in this shell and in PowerShell.
+  mkdir -p .frontier/state
+  SCRUB_MANIFEST=".frontier/state/scrub-manifest.$$.txt"
+  trap 'rm -f "$SCRUB_MANIFEST"' EXIT
   SCRUB_FAIL=0
   SCRUB_OUTPUT=""
-  while IFS= read -r SCRUB_FILE; do
-   [ -f "$SCRUB_FILE" ] || continue
-  if ! pwsh -NoProfile -File .frontier/runtime/frontier.ps1 scrub -Path "$SCRUB_FILE" -Quiet >/dev/null 2>&1; then
-    SCRUB_FAIL=1
-    SCRUB_OUTPUT="$SCRUB_OUTPUT
+  # A manifest that cannot be written must fail the gate, not skip it: this
+  # check is mandatory, so an unwritable state directory has to be loud.
+  if ! : > "$SCRUB_MANIFEST" 2>/dev/null; then
+   SCRUB_FAIL=1
+   SCRUB_OUTPUT="
+  (could not write scrub manifest to $SCRUB_MANIFEST)"
+  else
+   while IFS= read -r SCRUB_FILE; do
+    [ -f "$SCRUB_FILE" ] || continue
+    printf '%s\n' "$SCRUB_FILE" >> "$SCRUB_MANIFEST"
+   done <<< "$SCRUB_TARGETS"
+
+   # An empty manifest means every staged target was filtered out or absent
+   # from the worktree, which the per-file loop also treated as a pass.
+   if [ -s "$SCRUB_MANIFEST" ]; then
+    if ! pwsh -NoProfile -File .frontier/runtime/frontier.ps1 scrub -PathsFrom "$SCRUB_MANIFEST" -Quiet >/dev/null 2>&1; then
+     SCRUB_FAIL=1
+     # Blocking findings are rare, so the slow per-file pass runs only on
+     # failure. It is what attributes findings back to individual files for
+     # the message below; the batched run reports only a combined result.
+     while IFS= read -r SCRUB_FILE; do
+      if ! pwsh -NoProfile -File .frontier/runtime/frontier.ps1 scrub -Path "$SCRUB_FILE" -Quiet >/dev/null 2>&1; then
+       SCRUB_OUTPUT="$SCRUB_OUTPUT
   $SCRUB_FILE"
+      fi
+     done < "$SCRUB_MANIFEST"
+    fi
    fi
-  done <<< "$SCRUB_TARGETS"
+  fi
+  rm -f "$SCRUB_MANIFEST"
+  trap - EXIT
   if [ $SCRUB_FAIL -eq 1 ]; then
    echo -e "${RED}[FAIL]${NC}"
    echo -e "${RED}[FAIL] Deslop scrub found HIGH-severity findings (mandatory, no skip):${NC}"
