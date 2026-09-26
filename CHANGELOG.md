@@ -77,6 +77,18 @@
   for every copied file. A Git Bash install on Windows took 199 s instead of
   609 s in a local measurement, back within the installer test's time limit.
 
+## [9.5.0](https://github.com/jnPiyush/AgentX/compare/v9.4.0...v9.5.0) (2026-09-26)
+
+
+### Features
+
+* add stage-gate rubric, tokenomics and affected-only loop checks (refs [#428](https://github.com/jnPiyush/AgentX/issues/428)) ([ff2190a](https://github.com/jnPiyush/AgentX/commit/ff2190a026c185066b184872a59ddd780cc14b74))
+
+
+### Performance Improvements
+
+* batch the pre-commit scrub gate and re-anchor loop evidence (refs [#428](https://github.com/jnPiyush/AgentX/issues/428)) ([e550030](https://github.com/jnPiyush/AgentX/commit/e550030b1c5b5a395d74365b19963521872dc164))
+
 ## 9.4.0
 
 ### Changed
