@@ -98,7 +98,7 @@ The page uses the Clawpilot theme contract required for standalone HTML artifact
 - [ ] Keyboard path covers skip link, menu, nav, CTAs, and footer links
 - [ ] axe-core reports zero serious or critical findings
 - [ ] No T1-T10 anti-slop finding or invented metric remains
-- [ ] Production Vercel URL serves Frontier 8.7.0 content
+- [ ] Production Vercel URL serves Frontier 9.5.0 content
 
 ## References
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 9.5.0 - 2026-09-26
+
+### Changed
+
+- Align the extension, MCP runtime, pack metadata, installers, current
+  documentation and generated distribution artifacts to version 9.5.0.
+- Refresh the install-manifest version and file hashes for the current source.
+- Preserve published 9.4.1 history, dependency versions and upgrade-test fixtures.
+  This version alignment introduces no additional runtime behavior changes.
+
 ## 9.4.1 - 2026-09-26
 
 ### Added

@@ -2,7 +2,7 @@
 
 **Frontier Corp's FDE fleet for Hypervelocity Engineering in VS Code**
 
-[![Version](https://img.shields.io/badge/Version-9.4.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.5.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 Frontier deploys specialized Forward Deployed Engineers (FDEs) into your
@@ -360,6 +360,13 @@ listed below and 11 hidden specialists that remain parent-invocable.
 ---
 
 ## Recent Changes
+
+### 9.5.0
+
+- Align current extension, runtime, pack and installer version references.
+- Regenerate the VSIX and associated release artifacts for version 9.5.0.
+- Preserve published release history and dependency versions; no additional
+  runtime behavior change is introduced by this version alignment.
 
 ### 9.4.1
 
