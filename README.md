@@ -3,7 +3,7 @@
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.4.0"><img src="https://img.shields.io/badge/Version-9.4.0-b11f4b?style=for-the-badge" alt="Version 9.4.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.4.1"><img src="https://img.shields.io/badge/Version-9.4.1-b11f4b?style=for-the-badge" alt="Version 9.4.1"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -304,16 +304,15 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.4.0
+## New In 9.4.1
 
-This release improves runtime boundaries and quality-loop completion:
+This release improves instruction loading and verification reliability:
 
-- evidence checkers drain output concurrently, enforce deadlines and reject failed checks
-- VS Code loop dialogs forward passing-test counts and preserve cancellation
-- Architect and UX Designer prefer GPT-6 Astra when the account supports it
-- final tests are selected by changed behavior and risk, with release gates retained
-- Mac launchers, selected-workspace credentials, reinstall retention and cancellation receive regression coverage
-- UX guidance distinguishes actual Impeccable and browser evidence from unavailable checks
+- four skills consolidate repeated guidance while retaining safeguards and examples
+- generated catalogues retain complete folded YAML descriptions
+- Engineer, Reviewer, testing and completion guidance share the same suite triggers
+- distribution tests use the installed runtime launcher and verify catalogue generation
+- release packaging retains the current agent, skill and runtime inventories
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

@@ -47,8 +47,16 @@ function Get-Frontmatter([string] $path) {
         if ($line -match "^([A-Za-z0-9_-]+):\s*(.*)$") {
             $key = $matches[1]
             $val = $matches[2].Trim()
-            # Strip surrounding quotes if present
-            if ($val.Length -ge 2 -and (($val.StartsWith("'") -and $val.EndsWith("'")) -or ($val.StartsWith('"') -and $val.EndsWith('"')))) {
+            if ($val -in @('>', '>-')) {
+                $parts = @()
+                while (($i + 1) -lt $lines.Count) {
+                    $nextLine = $lines[$i + 1]
+                    if ($nextLine -match '^\S') { break }
+                    $i++
+                    $parts += $nextLine.Trim()
+                }
+                $val = ($parts -join ' ').Trim()
+            } elseif ($val.Length -ge 2 -and (($val.StartsWith("'") -and $val.EndsWith("'")) -or ($val.StartsWith('"') -and $val.EndsWith('"')))) {
                 $val = $val.Substring(1, $val.Length - 2)
             }
             $fm[$key] = $val

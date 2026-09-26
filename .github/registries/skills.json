@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-09-05T13:57:37Z",
+  "generated": "2026-09-26T12:46:30Z",
   "source": ".github/skills/**/SKILL.md",
   "totalCount": 134,
   "countsByCategory": [
@@ -109,7 +109,7 @@
       "name": "azure-foundry",
       "category": "ai-systems",
       "path": ".github/skills/ai-systems/azure-foundry/SKILL.md",
-      "description": ">-"
+      "description": "Design and architect AI agents on Azure AI Foundry -- lifecycle planning, model selection strategy, evaluation frameworks, guardrail design, and deployment patterns. Use when designing agent architecture on Foundry, choosing models, planning evaluation strategy, or defining guardrails. For step-by-step operational workflows (create, deploy, invoke, trace, troubleshoot), install the Azure MCP Extension (ms-azuretools.vscode-azure-mcp-server), which also brings in the Azure Skills plugin and Foundry MCP support in VS Code."
     },
     {
       "id": "ai-systems/cognitive-architecture",
@@ -578,7 +578,7 @@
       "name": "karpathy-guidelines",
       "category": "development",
       "path": ".github/skills/development/karpathy-guidelines/SKILL.md",
-      "description": "Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria. Adapted from Andrej Karpathy's observations on LLM coding pitfalls."
+      "description": "Use when writing, reviewing, or refactoring code to avoid LLM coding mistakes. Apply Karpathy's principles to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria."
     },
     {
       "id": "development/logging-monitoring",
@@ -599,7 +599,7 @@
       "name": "scrub",
       "category": "development",
       "path": ".github/skills/development/scrub/SKILL.md",
-      "description": "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, duplicate logic, and design tells -- and optionally apply safe fixes. Use when reviewing a code-generation or refactor pass, before a commit, PR, or merge."
+      "description": "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
     },
     {
       "id": "development/skill-creator",
@@ -648,7 +648,7 @@
       "name": "verification-before-completion",
       "category": "development",
       "path": ".github/skills/development/verification-before-completion/SKILL.md",
-      "description": "Block false completion claims. Force the agent to identify the claim, run the exact verification command, read the actual output, compare against the claim, and only then report. Use whenever an agent is about to say \"done\", \"fixed\", \"tests pass\", \"deployed\", \"loop complete\", or close an issue."
+      "description": "Use before claiming \"done\", \"fixed\", \"tests pass\", \"deployed\", \"loop complete\", or closing an issue. Block false completion claims by requiring a specific claim, fresh verification, output inspection, comparison, and evidence-backed reporting."
     },
     {
       "id": "diagrams/diagram-as-code",

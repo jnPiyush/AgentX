@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 9.4.1 - 2026-09-26
 
 ### Added
 
@@ -20,6 +20,11 @@
 
 ### Changed
 
+- Consolidate repeated instructions in four skills without changing their
+  safeguards, examples, or required outputs. Keep the remaining agent/skill
+  cores unchanged by this cleanup.
+- Centralize the suite-selection triggers used by Engineer, Reviewer, testing,
+  and completion-verification guidance; preserve required CI and release gates.
 - Always-on routers (`AGENTS.md`, `CLAUDE.md`, Copilot instructions) name deeper
   documents as plain paths, so hosts no longer attach about 75,000 tokens of
   reference docs to every request. Agent openings drop all-caps banners, and the
@@ -42,6 +47,10 @@
 
 ### Fixed
 
+- Preserve folded YAML descriptions in the generated skill catalogue rather
+  than publishing the `>-` marker as discovery text.
+- Point the skill distribution regression test at the installed runtime
+  launcher and cover folded-description generation.
 - `validate <n> tester` accepts the `CERT-<n>.md` report the Tester writes.
 - `score`, bundled `score-output`, `stocktake`, `validate-handoff` and `takeoff`
   resolve the user's workspace from the extension runtime; `diagnose` checks the

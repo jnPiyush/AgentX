@@ -1,6 +1,6 @@
 ---
 name: karpathy-guidelines
-description: Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria. Adapted from Andrej Karpathy's observations on LLM coding pitfalls.
+description: Use when writing, reviewing, or refactoring code to avoid LLM coding mistakes. Apply Karpathy's principles to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria.
 user-invocable: false
 ---
 
@@ -30,13 +30,9 @@ Load this skill when:
 - Debugging when the cause is not obvious
 - Producing pipelines, IaC, or any artifact that ships to production
 
-Apply on every execution. The only exemption is a genuinely trivial change
-(single-line typo, obvious config rename) whose success criteria are
-self-evident.
-
 ## Rationalization Table
 
-LLMs systematically reach for these shortcuts. Push back against each.
+Reject these shortcuts.
 
 | Rationalization | Reality |
 |-----------------|---------|

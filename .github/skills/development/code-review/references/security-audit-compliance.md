@@ -81,7 +81,7 @@ foreach ($pattern in $patterns.GetEnumerator()) {
 - [ ] No hardcoded secrets
 
 **Testing & Quality**
-- [ ] Unit, integration, e2e tests passing (80%+ coverage)
+- [ ] The verification the change warranted is passing (80%+ coverage where coverage was measured)
 - [ ] Linters and formatters passing
 - [ ] No code duplication or dead code
 

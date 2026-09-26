@@ -35,7 +35,7 @@ constraints:
   - "MUST run adversarial checks only for applicable high-risk surfaces: property tests for changed pure logic, mutation tests for security/correctness-critical branches, fuzzing for changed parsers/deserializers, and negative tests for changed public endpoints"
   - "MUST run an independent reviewer on the final iteration with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset the loop"
   - "MUST evaluate every implementation change with evaluation/rubrics/code-quality.md; the final review evidence must pass scripts/score-code-quality.ps1 at 80 or higher before loop completion"
-  - "MUST make the default iteration evidence a Spec/ADR/PRD acceptance-criteria compliance mapping plus the sub-agent review findings; executed checks are supporting evidence, selected by changed behavior, callers and risk; MUST use focused final checks for bounded changes, expanding for shared contracts, cross-module impact or required CI/release gates; MUST NOT rerun the entire suite solely to satisfy an iteration count"
+  - "MUST make the default iteration evidence a Spec/ADR/PRD acceptance-criteria compliance mapping plus the sub-agent review findings; executed checks are supporting evidence, selected by changed behavior, callers and risk; MUST use focused final checks for bounded changes, expanding to a suite only for a complex or shared module per the canonical suite triggers in .github/AGENT-PROTOCOL.md section 1.4; MUST NOT rerun the entire suite solely to satisfy an iteration count"
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
@@ -294,10 +294,10 @@ direct callers. The default evidence for a loop iteration is the acceptance-crit
 compliance mapping plus the sub-agent review findings; executed checks support that
 mapping rather than replacing it. Record selected commands, covered acceptance
 criteria and omitted surfaces with rationale in the existing evidence. For a bounded
-bug or docs/config change, the compliance mapping and those focused checks can be
-final evidence. Expand to integration or full
-suites when shared contracts, broad callers, package/runtime changes or required
-CI/release gates justify it. Do not run the entire suite on every small edit or
+bug or docs/config change, the compliance mapping and those
+focused checks can be final evidence. Expand to integration or full
+suites only for a complex or shared module, per the canonical suite triggers in
+[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) section 1.4. Do not run the entire suite on every small edit or
 merely to fill loop iterations. Reuse unchanged evidence as context, not as a newly
 executed result; rerun invalidated checks after relevant edits.
 

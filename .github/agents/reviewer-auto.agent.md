@@ -23,7 +23,8 @@ hooks:
 reasoning:
   level: high
 constraints:
-  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document Changes -> Self-Review -> Decision; MUST NOT issue an approval or rejection before all phases complete; MUST revert any auto-fix that fails the test suite before advancing"
+  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document Changes -> Self-Review -> Decision; MUST NOT issue an approval or rejection before all phases complete; MUST revert any auto-fix that fails the verification it was checked against before advancing"
+  - "MUST treat suite execution as optional and risk-scoped: required only for a complex or shared module, meaning one of the canonical suite triggers in .github/AGENT-PROTOCOL.md section 1.4; otherwise MUST verify auto-fixes with the narrowest check that can fail for the right reason and record what was omitted"
   - "MUST run '.frontier/runtime/frontier.ps1 loop start -p <description>' as the ABSOLUTE FIRST action before any file edits or reviews"
   - "MUST read the Tech Spec and PRD before reviewing"
   - "MUST verify the Engineer's quality loop reached status=complete before reviewing"
@@ -32,7 +33,7 @@ constraints:
   - "MUST NOT merge without human approval"
   - "MUST NOT modify business logic without explicit approval"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
-  - "MUST revert auto-fixes if tests fail after applying them"
+  - "MUST revert auto-fixes if the verification they were checked against fails after applying them"
   - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.frontier/runtime/frontier.ps1 loop complete -s <summary>' succeeds"
   - "MUST run '.frontier/runtime/frontier.ps1 loop complete -s <summary>' before issuing approval/rejection decision"
   - "MUST verify agentic loop completion before declaring implementation complete"
@@ -114,8 +115,8 @@ Use the same review checklist as the standard Reviewer (spec conformance, code q
 
 For each safe finding:
 1. Apply the fix using the repo-approved edit workflow
-2. Run the test suite to verify no regressions
-3. If tests fail: **revert the fix immediately** and demote to "suggest only"
+2. Verify no regressions with the narrowest check that can fail for the right reason. Run a suite only for complex or shared modules -- see the trigger list in [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) section 1.4; for a bounded formatting, import, naming or docs fix the targeted check is enough. An auto-fix that alters runtime behavior -- a null check, a type annotation, anything that can change an execution path -- requires a check that actually executes the patched path; if no such check exists, do not apply it, demote it to suggest-only.
+3. If that verification fails: **revert the fix immediately** and demote to "suggest only"
 4. After any large block replacement, search for the old unique identifiers to confirm they are gone and search for the new declaration to confirm it exists
 5. Commit safe fixes: `git commit -m "review: auto-fix safe issues (#<issue>)"`
 
@@ -130,7 +131,7 @@ Create `docs/artifacts/reviews/REVIEW-{issue}.md` with:
 
 Before issuing the final decision, verify with fresh eyes:
 
-- [ ] All auto-fixes pass the full test suite (reverted if not)
+- [ ] All auto-fixes pass the verification they were checked against, scoped by risk (reverted if not)
 - [ ] Safe vs risky categorization is correct for every finding
 - [ ] No business logic was modified without explicit approval
 - [ ] Review document accurately lists all auto-applied changes
@@ -155,7 +156,7 @@ Before issuing the final decision, verify with fresh eyes:
 | Applies safe fixes | No | Yes |
 | Modifies source code | Never | Safe categories only |
 | Requires human merge approval | Yes | Yes |
-| Reverts on test failure | N/A | Yes |
+| Reverts on verification failure | N/A | Yes |
 
 ## Skills to Load
 
@@ -178,7 +179,7 @@ Before issuing the final decision, verify with fresh eyes:
 ### Exit (Approve)
 
 - PASS All Critical and Major findings resolved (auto-fixed or Engineer-fixed)
-- PASS Auto-fixes pass full test suite (reverted if not)
+- PASS Auto-fixes pass their risk-scoped verification (reverted if not)
 - PASS Review document created with change log
 - PASS Human approval obtained before merge
 

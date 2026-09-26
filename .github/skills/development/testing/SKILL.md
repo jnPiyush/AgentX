@@ -57,7 +57,7 @@ Writing or reviewing tests?
 | +- Pure logic, no I/O? -> Unit test (70% of total)
 | +- Database/API/file I/O? -> Integration test (20%)
 | - Full user workflow? -> E2E test (10%)
-- Coverage below 80%?
+- Coverage measured and below 80%?
  - Run: scripts/check-coverage.ps1 -> add tests for uncovered paths
 ```
 

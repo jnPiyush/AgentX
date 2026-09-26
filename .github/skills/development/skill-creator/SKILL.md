@@ -24,22 +24,17 @@ compatibility:
 
 ## Knowledge vs Execution Principle
 
-Every agent task is either a **knowledge problem** or an **execution problem**:
+Choose the implementation by the kind of work:
 
 | Problem Type | Solution | Example |
 |---|---|---|
-| **Knowledge** (know something) | Skill (Markdown) | Coding standards, triage workflows, deployment conventions |
-| **Execution** (do something) | MCP Server | Query a database, create a GitHub issue, send an email |
-| **Hybrid** (know how to do well) | Skill that references MCP tools | Skill encodes workflow + judgment; MCP provides API calls |
+| **Knowledge** (stable knowledge, changing weekly/monthly) | Skill (Markdown) | Coding standards, triage workflows, deployment conventions |
+| **Execution** (live API call at runtime) | MCP Server | Query a database, create a GitHub issue, send an email |
+| **Hybrid** (both) | Skill orchestrating subordinate MCP tools | Skill encodes workflow + judgment; MCP provides API calls |
 
 **Standalone Principle**: Every skill SHOULD produce useful output without MCP connections.
 If disconnecting all MCP servers makes the skill non-functional, the knowledge layer is
 not properly separated from the execution layer.
-
-When deciding whether to create a skill or an MCP server, ask:
-1. Is it stable knowledge (changes weekly/monthly)? -> Skill
-2. Does it require a live API call at runtime? -> MCP
-3. Both? -> Skill that orchestrates MCP tools as a subordinate layer
 
 ## Decision Tree
 
@@ -180,7 +175,7 @@ Every SKILL.md MUST include these sections:
 | Error Handling | What to do when things go wrong in this skill domain |
 | Checklist | Pre-handoff verification items |
 
-**Required for `development/` category**: skills under `.github/skills/development/` MUST also include a `## Rationalization Table` section between `## Prerequisites` (or `## When to Use`) and `## Decision Tree`. The table lists 5-8 common excuses an agent or human uses to skip the skill's discipline, paired with a one-line rebuttal. This is the highest-leverage section against LLM rationalization patterns. Format:
+Skills under `.github/skills/development/` MUST include `## Rationalization Table` between `## Prerequisites` (or `## When to Use`) and `## Decision Tree`: 5-8 common excuses for skipping the discipline, each paired with a one-line rebuttal. Format:
 
 ```markdown
 ## Rationalization Table

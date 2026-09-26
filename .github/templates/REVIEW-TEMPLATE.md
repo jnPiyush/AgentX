@@ -202,10 +202,15 @@ public async Task<User> GetUserAsync(string userId)
 ## 4. Testing
 
 ### Coverage Summary
-- **Total Coverage**: {XX.X}% (Target: 80%)
-- **Line Coverage**: {XX.X}%
-- **Branch Coverage**: {XX.X}%
-- **Files with <80% coverage**: {count}
+
+Fill these in only when a suite run under the Phase 5 risk triggers produced
+coverage data. Otherwise leave the `NOT MEASURED` default and point at the
+acceptance-criterion mapping in Section 2; an unrun suite is not a gap.
+
+- **Total Coverage**: NOT MEASURED; no suite run under the Phase 5 risk triggers (Target when measured: 80%)
+- **Line Coverage**: NOT MEASURED; {rationale}
+- **Branch Coverage**: NOT MEASURED; {rationale}
+- **Files with <80% coverage**: NOT MEASURED; {rationale}
 
 ### Test Breakdown
 | Test Type | Count | % of Total | Target |
@@ -601,7 +606,7 @@ Grade each category from 0 to 100. Multiply by the weight to get the weighted co
 |----------|-------:|-----------:|--------------:|---------:|
 | Correctness (does it work? regressions?) | 25 | 70 | | |
 | Security | 20 | 80 | | |
-| Testing (coverage + meaningfulness) | 15 | 70 | | |
+| Testing (verification adequacy; coverage only where measured) | 15 | 70 | | |
 | Architecture & Design fit | 10 | 60 | | |
 | Performance | 10 | 60 | | |
 | Documentation | 5 | 50 | | |
@@ -645,7 +650,7 @@ Gate rules:
 1. Address all Critical issues
 2. Address all High-priority issues
 3. Consider Medium and Low suggestions
-4. Re-run tests and verify coverage
+4. Re-run the verification the fix warrants (a full suite and coverage only for complex or shared modules)
 5. Update documentation if needed
 6. Comment on issue when ready for re-review
 
@@ -804,7 +809,7 @@ flowchart TB
 
 | Decision | Required state |
 |----------|----------------|
-| APPROVED | 0 blocking issues. Tests >= 80% coverage. CI green. Self-review checklist passed. |
+| APPROVED | 0 blocking issues. The verification the change warranted is recorded, with omissions and their rationale; a suite run and >= 80% coverage only where the Phase 5 risk triggers applied; required CI/release gates green where they apply. Self-review checklist passed. |
 | CHANGES REQUESTED | >=1 blocking issue, or >=2 non-blocking issue + suggestion combinations on the same area. |
 | BLOCKED | Cannot review (missing artifact, broken build, scope unclear). |
 

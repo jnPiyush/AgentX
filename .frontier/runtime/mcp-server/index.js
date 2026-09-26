@@ -457,7 +457,7 @@ const LEGACY_TOOL_BY_NAME = Object.fromEntries(
 
 function createServer(runner) {
 const server = new Server(
-  { name: 'frontier', version: '9.4.0' },
+  { name: 'frontier', version: '9.4.1' },
   { capabilities: { tools: {} } }
 );
 

@@ -22,11 +22,12 @@ hooks:
 reasoning:
   level: high
 constraints:
-  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Run Tests -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
+  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Verify (Risk-Scoped) -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
+  - "MUST treat suite execution as optional and risk-scoped: required only for a complex or shared module, meaning one of the canonical suite triggers in .github/AGENT-PROTOCOL.md section 1.4; MUST NOT run or demand a full suite for a bounded change whose Pass A mapping and focused checks already hold"
   - "MUST score code-bearing reviews against evaluation/rubrics/code-quality.md and validate the exact-scope report with scripts/score-code-quality.ps1; score below 80, a blocking-floor breach, or unresolved HIGH/MEDIUM finding requires CHANGES REQUESTED"
   - "MUST read the Tech Spec and PRD before reviewing code"
   - "MUST verify the Engineer's quality loop reached status=complete"
-  - "MUST check test coverage >= 80%"
+  - "MUST check test coverage >= 80% whenever a suite run under the Phase 5 risk triggers produced coverage data; when no suite was run, MUST instead confirm every in-scope acceptance criterion maps to a code path and MUST NOT report coverage as a gap"
   - "MUST verify no hardcoded secrets, SQL injection, or unvalidated inputs"
   - "MUST NOT modify source code -- request changes via review comments"
   - "MUST NOT approve code with active or cancelled quality loops"
@@ -176,7 +177,7 @@ and run `pwsh scripts/score-code-quality.ps1 -Mode Scope -Json`. Then evaluate:
 | Category | Check | Hard Threshold |
 |----------|-------|----------------|
 | **Code Quality** | Clean, readable, follows codebase patterns and naming | - |
-| **Testing** | Coverage >= 80%, test pyramid balanced, edge cases covered | Coverage < 80% = Major |
+| **Testing** | Changed behavior is provably covered: coverage >= 80% where measured, test pyramid balanced, edge cases covered | Coverage < 80% = Major when coverage was measured |
 | **Security** | No secrets, parameterized SQL, input validation, no SSRF | Any violation = Critical |
 | **Performance** | No N+1 queries, appropriate caching, no blocking I/O in hot paths | - |
 | **Error Handling** | Graceful failures, useful error messages, no swallowed exceptions | Bare catch = Major |
@@ -212,12 +213,28 @@ Failure or score <80 is `CHANGES REQUESTED`. Test/docs-only reviews skip it.
 | **RAG/Retrieval Contract** | Retrieval implementation matches spec Section 13.5: knowledge source, chunk strategy, relevance threshold, and fallback retrieval behavior |
 | **I/O Failure Modes** | Non-retryable errors fail fast; user-visible failure modes and error paths match spec Section 13.2 |
 
-### 5. Run Tests (Verify)
+### 5. Verify (Risk-Scoped)
+
+Choose the narrowest verification that can fail for the right reason. Executing a
+test suite is optional and is expected only for a complex or shared module, which
+means one of the canonical suite triggers in
+[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) section 1.4:
+
+- a shared contract, public interface or data model that other modules consume
+- cross-module impact, broad callers, or a change to cross-cutting behavior
+- package, dependency or runtime version changes
+- security, auth, payments, persistence or migrations
+- a required CI or release gate already runs that suite on this surface
 
 ```bash
-# Run the full test suite to confirm passing state
-npm test  # or equivalent for the project
+# Only when one of the triggers above applies, and prefer the affected scope
+.frontier/runtime/frontier.ps1 loop affected   # select the suites this diff touches
+npm test                                       # or the project equivalent
 ```
+
+Otherwise verification is the Pass A acceptance-criterion mapping plus the focused
+checks the change warrants, and an unrun suite is not a finding. Record what you
+ran and what you deliberately omitted, with the rationale, in the review document.
 
 ### 5.1 Pattern Advisory (Read-Only)
 
@@ -225,13 +242,13 @@ Before drafting the review, run `.frontier/runtime/frontier.ps1 patterns` to sur
 
 ### 5.5 Model Council Deliberation (MANDATORY for non-trivial reviews)
 
-Follow [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) after tests and a preliminary
+Follow [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) after verification and a preliminary
 verdict, before writing the review. Use `-Purpose code-review` for Critical/Major
 findings, close decisions, `needs:ai`, security/auth/payments/persistence/migrations,
 or `[Council]` work. Pure text changes and fully covered mechanical refactors may
 skip with a rationale in the review.
 
-Give the council the diff/spec scope, test and coverage evidence, preliminary verdict,
+Give the council the diff/spec scope, the verification evidence you gathered, preliminary verdict,
 and cited top findings. Require an evidence-based severity/ship decision, the opposite
 case, hidden risks, and likely false positives. Complete synthesis without user work.
 The review MUST cite the council and either reflect consensus/divergences or document
@@ -248,7 +265,7 @@ an explicit override rationale.
 | Level | Meaning | Blocks Approval? |
 |-------|---------|------------------|
 | Critical | Security flaw, data loss risk, spec violation | Yes |
-| Major | Missing tests, performance issue, poor error handling | Yes |
+| Major | Missing tests for changed behavior (an unexecuted suite is not this), performance issue, poor error handling | Yes |
 | Minor | Style inconsistency, naming, minor refactor opportunity | No |
 | Nit | Cosmetic, optional improvement | No |
 
@@ -362,7 +379,7 @@ Review evidence is complete; all findings are categorized HIGH/MEDIUM/LOW with f
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: decision; HIGH/MEDIUM/LOW finding counts and resolution status; test suite status; coverage status; security checklist status; and Frontier quality-loop state.
+Before handoff, report: decision; HIGH/MEDIUM/LOW finding counts and resolution status; the verification you ran and anything you deliberately omitted with its rationale (suite and coverage status only when the risk triggers in Phase 5 applied); security checklist status; and Frontier quality-loop state.
 
 ## Plugins (Optional Capabilities)
 

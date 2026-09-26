@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: Block false completion claims. Force the agent to identify the claim, run the exact verification command, read the actual output, compare against the claim, and only then report. Use whenever an agent is about to say "done", "fixed", "tests pass", "deployed", "loop complete", or close an issue.
+description: Use before claiming "done", "fixed", "tests pass", "deployed", "loop complete", or closing an issue. Block false completion claims by requiring a specific claim, fresh verification, output inspection, comparison, and evidence-backed reporting.
 user-invocable: false
 ---
 
@@ -31,16 +31,16 @@ Skip when:
 
 ## Rationalization Table
 
-The five most common ways agents skip verification. Push back against each.
+Reject these six verification shortcuts.
 
 | Rationalization | Reality |
 |-----------------|---------|
-| "The tests passed last time I ran them, the diff is small." | A small diff is the highest-risk place to skip verification because nobody scrutinizes it. Re-run. |
-| "The CI run on the previous commit was green." | Fresh commit, fresh run. The "previous commit was green" claim is the canonical false-completion pattern. |
-| "I can see by reading the code that it works." | Reading the code is necessary but not sufficient. The compiler, interpreter, and runtime have rejected obviously-correct-looking code before and will again. Run it. |
-| "The change is too small to break anything." | The change history of every codebase is full of one-line outages. Run the verification anyway. |
-| "Running the full suite is slow, I'll trust the targeted test." | Trust nothing. Run at least the targeted test on the current commit and record the output. Run the full suite if the change crosses module boundaries. |
-| "The loop iteration count is satisfied, I can mark complete." | The loop count is a floor. Completion requires the done criteria to actually pass on the current commit, not just the counter to advance. |
+| "The tests passed last time I ran them, the diff is small." | A small diff does not make old evidence current. Re-run. |
+| "The CI run on the previous commit was green." | Fresh commit, fresh run; a previous green run does not verify this commit. |
+| "I can see by reading the code that it works." | Code inspection is necessary but insufficient to detect compiler, interpreter, or runtime failures. Run it. |
+| "The change is too small to break anything." | Even a one-line change can break behavior. Run the verification. |
+| "Running the full suite is slow, I'll trust the targeted test." | Trusting an unrun targeted test is the problem, not the suite you skipped. Run the targeted check on the current commit and record its output. A full suite is required only for a complex or shared module -- one of the canonical suite triggers in `.github/AGENT-PROTOCOL.md` section 1.4 -- and for a bounded change the targeted check plus the acceptance-criterion mapping is sufficient. Record what you omitted and why. |
+| "The loop iteration count is satisfied, I can mark complete." | The count is a floor; the done criteria must pass on the current commit. |
 
 ## The Gate Function (5 Steps)
 

@@ -85,9 +85,10 @@ simply records one reviewer verdict before completing.
   run, is the default evidence for an iteration. Run executable checks only
   where the change actually warrants them: `frontier loop affected` lists the
   test files naming code changed since loop start. Prefer the narrowest check
-  that can fail for the right reason, and expand only for shared contracts,
-  broad impact or required CI/release gates. Record scope and omitted checks
-  with rationale. Never rerun the entire suite just to fill an iteration.
+  that can fail for the right reason, and expand to a suite only for a complex
+  or shared module, meaning any of the **suite triggers** below. Record scope
+  and omitted checks with rationale. Never rerun the entire suite just to fill
+  an iteration.
 2. **Evaluate results** -- on any failure, find the root cause before fixing.
 3. **Fix** -- address the failure with targeted, minimal changes.
 4. **Re-run verification** -- confirm the fix works and did not regress
@@ -109,6 +110,20 @@ Sub-agent review and evaluation carry the loop; executed suites are supporting
 evidence, not the price of an iteration. When a step did run suites, report them
 as `--passing <suite>=<count>`; the flag is optional, and a suite is compared
 only with its own last count, so unaffected suites are never rerun.
+
+**Suite triggers.** This is the single canonical list; every role that mentions
+"complex or shared module" means exactly these. Running a suite is REQUIRED when
+any one holds, and OPTIONAL otherwise:
+
+- a shared contract, public interface or data model that other modules consume
+- cross-module impact, broad callers, or a change to cross-cutting behavior
+- package, dependency or runtime version changes
+- security, auth, payments, persistence or migrations
+- a required CI or release gate already runs that suite on this surface
+
+When none holds, the acceptance-criterion mapping plus the focused checks the
+change warrants is sufficient evidence, and an unrun suite is not a finding.
+Record what you ran and what you deliberately omitted, with the rationale.
 
 The per-iteration focus table is printed by `loop start` and the current focus is
 shown by `loop status`. The canonical tiers are:

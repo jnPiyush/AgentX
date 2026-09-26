@@ -85,7 +85,7 @@ try {
         $installedPrototype = $installedPrototypeJson | ConvertFrom-Json -Depth 20
         Assert-True ($installedPrototypeExit -eq 0 -and @($installedPrototype.skills)[0].blockers.Count -eq 0) 'PowerShell pack installed scorer parses prototype-audit frontmatter'
         Assert-True (Test-Path 'scripts/validate-changed-skills.ps1') 'PowerShell pack installed changed-skill gate is available'
-        & pwsh -NoProfile -File '.frontier/frontier.ps1' loop start -p 'Validate installed rubric runtime' -m 1 *> $null
+        & pwsh -NoProfile -File (Join-Path '.frontier' 'runtime' 'frontier.ps1') loop start -p 'Validate installed rubric runtime' -m 1 *> $null
         Assert-True ($LASTEXITCODE -eq 0 -and (Test-Path '.frontier/state/code-quality-baseline.json')) 'PowerShell pack installed CLI starts with its trusted rubric runtime'
     }
     finally {
@@ -94,6 +94,30 @@ try {
 }
 finally {
     Remove-Item -LiteralPath $installTarget -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+$registryFixture = Join-Path ([IO.Path]::GetTempPath()) "frontier-registry-$([guid]::NewGuid().ToString('N'))"
+try {
+    $fixtureSkill = Join-Path $registryFixture '.github/skills/development/folded-description'
+    New-Item -ItemType Directory -Path $fixtureSkill, (Join-Path $registryFixture '.github/templates') -Force | Out-Null
+    @'
+---
+name: folded-description
+description: >-
+  Use when validating generated skill metadata
+  without losing folded description content.
+---
+'@ | Set-Content -LiteralPath (Join-Path $fixtureSkill 'SKILL.md') -Encoding utf8
+    & pwsh -NoProfile -File (Join-Path $repoRoot 'scripts/generate-registries.ps1') -RepoRoot $registryFixture -Quiet
+    $registryExit = $LASTEXITCODE
+    Assert-True ($registryExit -eq 0) 'registry generator accepts folded-description frontmatter'
+    if ($registryExit -eq 0) {
+        $fixtureRegistry = Get-Content (Join-Path $registryFixture '.github/registries/skills.json') -Raw | ConvertFrom-Json
+        Assert-True (@($fixtureRegistry.skills)[0].description -ceq 'Use when validating generated skill metadata without losing folded description content.') 'registry generator preserves the complete folded description'
+    }
+}
+finally {
+    Remove-Item -LiteralPath $registryFixture -Recurse -Force
 }
 
 $currentDocs = @(

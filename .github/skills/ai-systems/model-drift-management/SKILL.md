@@ -188,8 +188,6 @@ Model version change detected (planned or provider-initiated)?
 
 ## Traditional ML Drift
 
-## Traditional ML Drift
-
 The following sections cover classical drift detection for traditional ML models with feature vectors, labels, and statistical metrics.
 
 ## Types of Model Drift
