@@ -1272,7 +1272,7 @@
     "eslint": "^8.56.0",
     "mocha": "^11.3.0",
     "sinon": "^21.0.1",
-    "typescript": "^5.3.0"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "diff": "8.0.3",
