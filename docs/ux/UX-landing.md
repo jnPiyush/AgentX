@@ -2,6 +2,16 @@
 
 > Prototype: [docs/ux/prototypes/landing/index.html](prototypes/landing/index.html)
 
+## Icon Update
+
+The 2026-09-27 user request authorizes replacing the previous X/robot branding
+with the supplied Frontier AI Coding Harness icon across active surfaces.
+The header and favicon use the coloured master described in
+[the brand contract](../BRAND.md#brand-icon). The build creates the shared logo
+copies and resolves the prototype's image paths for the published site.
+Existing theme tokens, typography, navigation, spacing, and interactions remain
+unchanged. The header image is decorative beside the accessible Frontier home label.
+
 ## Product Posture
 
 - **Primary posture:** workflow-led
@@ -98,7 +108,7 @@ The page uses the Clawpilot theme contract required for standalone HTML artifact
 - [ ] Keyboard path covers skip link, menu, nav, CTAs, and footer links
 - [ ] axe-core reports zero serious or critical findings
 - [ ] No T1-T10 anti-slop finding or invented metric remains
-- [ ] Production Vercel URL serves Frontier 9.5.0 content
+- [ ] Production Vercel URL serves Frontier 9.6.0 content
 
 ## References
 

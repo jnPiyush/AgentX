@@ -47,7 +47,7 @@ button, a { transition: color 160ms ease, background 160ms ease, border-color 16
 .site-header { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--cp-border); background: var(--cp-panel-strong); }
 .nav { min-height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.7rem; color: var(--cp-text); font-weight: 700; text-decoration: none; }
-.brand-mark { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 0.5rem; background: var(--cp-accent); color: var(--cp-accent-fg); }
+.brand-mark { display: block; width: 2rem; height: 2rem; flex-shrink: 0; object-fit: contain; }
 .nav-links { display: flex; align-items: center; gap: 1.25rem; }
 .nav-links a { color: var(--cp-text-muted); font-size: 0.92rem; text-decoration: none; }
 .nav-links a:hover { color: var(--cp-text); }

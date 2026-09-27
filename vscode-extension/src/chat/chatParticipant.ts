@@ -62,7 +62,7 @@ export function registerChatParticipant(
 
   const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handler);
   participant.iconPath = vscode.Uri.file(
-    path.join(context.extensionPath, 'resources', 'icon.png')
+    path.join(context.extensionPath, 'resources', 'frontier-ai-coding-harness.png')
   );
   participant.followupProvider = {
     provideFollowups: async () => getFrontierChatFollowups(agentx),

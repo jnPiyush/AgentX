@@ -1,8 +1,10 @@
 # Frontier for VS Code
 
+<img src="resources/frontier-ai-coding-harness.png" width="128" height="128" alt="Frontier">
+
 **Frontier Corp's FDE fleet for Hypervelocity Engineering in VS Code**
 
-[![Version](https://img.shields.io/badge/Version-9.5.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.6.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 Frontier deploys specialized Forward Deployed Engineers (FDEs) into your
@@ -360,6 +362,14 @@ listed below and 11 hidden specialists that remain parent-invocable.
 ---
 
 ## Recent Changes
+
+### 9.6.0
+
+- Use the new Frontier icon for the Marketplace listing and chat avatar.
+- Use matching monochrome SVG artwork for the theme-coloured Activity Bar.
+- Align README, website/favicon, and generated Teams icons with the same mark.
+- Preserve functional icons, layout, and theme tokens; add focused icon-wiring
+  and packaging regression checks.
 
 ### 9.5.0
 

@@ -51,20 +51,22 @@ try {
         validDomains = @($WebsiteUrl.Host)
     }
     $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $working 'manifest.json') -Encoding utf8
-    $source = [Drawing.Image]::FromFile((Join-Path $PSScriptRoot '../../../vscode-extension/resources/icon.png'))
+    $source = [Drawing.Image]::FromFile((Join-Path $PSScriptRoot '../../../vscode-extension/resources/frontier-ai-coding-harness.png'))
     try {
         $color = [Drawing.Bitmap]::new($source, 192, 192)
         try { $color.Save((Join-Path $working 'color.png'), [Drawing.Imaging.ImageFormat]::Png) }
         finally { $color.Dispose() }
+        $outline = [Drawing.Bitmap]::new($source, 32, 32)
+        try {
+            for ($y = 0; $y -lt $outline.Height; $y++) {
+                for ($x = 0; $x -lt $outline.Width; $x++) {
+                    $alpha = $outline.GetPixel($x, $y).A
+                    $outline.SetPixel($x, $y, [Drawing.Color]::FromArgb($alpha, 255, 255, 255))
+                }
+            }
+            $outline.Save((Join-Path $working 'outline.png'), [Drawing.Imaging.ImageFormat]::Png)
+        } finally { $outline.Dispose() }
     } finally { $source.Dispose() }
-    $outline = [Drawing.Bitmap]::new(32, 32)
-    $graphics = [Drawing.Graphics]::FromImage($outline)
-    $font = [Drawing.Font]::new('Segoe UI', 24, [Drawing.FontStyle]::Bold, [Drawing.GraphicsUnit]::Pixel)
-    try {
-        $graphics.Clear([Drawing.Color]::Transparent)
-        $graphics.DrawString('F', $font, [Drawing.Brushes]::White, 5, 1)
-        $outline.Save((Join-Path $working 'outline.png'), [Drawing.Imaging.ImageFormat]::Png)
-    } finally { $font.Dispose(); $graphics.Dispose(); $outline.Dispose() }
     New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
     [IO.Compression.ZipFile]::CreateFromDirectory($working, $destination)
     Write-Output "Teams package created: $destination"

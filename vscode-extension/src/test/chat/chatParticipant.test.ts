@@ -10,6 +10,7 @@ import { createMockResponseStream } from '../mocks/vscode';
 import {
   getFrontierChatFollowups,
   handleFrontierChatRequest,
+  registerChatParticipant,
   resetChatParticipantStateForTests,
 } from '../../chat/chatParticipant';
 
@@ -143,6 +144,27 @@ describe('chatParticipant', () => {
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('uses the shared coloured brand icon for the chat participant', () => {
+    const createParticipant = sinon.spy(vscode.chat, 'createChatParticipant');
+    const context: Pick<vscode.ExtensionContext, 'extensionPath' | 'subscriptions'> = {
+      extensionPath: tmpDir,
+      subscriptions: [],
+    };
+    try {
+      registerChatParticipant(context as vscode.ExtensionContext, {} as FrontierContext);
+      sinon.assert.calledOnce(createParticipant);
+      const participant = createParticipant.returnValues[0];
+      assert.ok(participant.iconPath instanceof vscode.Uri);
+      assert.equal(
+        participant.iconPath.fsPath,
+        path.join(tmpDir, 'resources', 'frontier-ai-coding-harness.png'),
+      );
+      assert.ok(context.subscriptions.includes(participant));
+    } finally {
+      createParticipant.restore();
+    }
   });
 
   it('streams live CLI status lines into chat progress', async () => {

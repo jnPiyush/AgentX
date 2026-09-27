@@ -1,5 +1,23 @@
 # Changelog
 
+## 9.6.0 - 2026-09-27
+
+### Changed
+
+- Use the Frontier AI Coding Harness artwork for the Marketplace listing, chat
+  avatar, themed Activity Bar, repository and extension READMEs, and landing
+  header/favicon.
+- Generate the website logo copies and Teams colour/white-outline icons from
+  the same canonical artwork. Retire the obsolete robot icon resources.
+- Align current release metadata, installer URLs, pack manifests and artifacts
+  to 9.6.0 while preserving published history and dependency versions.
+
+### Tested
+
+- Add focused icon-path, SVG/PNG, website-copy and chat-registration checks.
+- Verify Teams icon dimensions and the canonical silhouette's transparent alpha
+  mask and white outline pixels.
+
 ## 9.5.0 - 2026-09-26
 
 ### Changed

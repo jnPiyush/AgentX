@@ -1,3 +1,4 @@
+- 2026-09-27: Canonical Frontier icon wiring: docs/artifacts/learnings/LEARNING-frontier-icon.md
 - 2026-09-26: Version alignment: docs/artifacts/learnings/LEARNING-436.md
 - 2026-09-26: Applied skill edits: docs/artifacts/learnings/LEARNING-20260926-approved-skill-cleanup.md
 - 2026-09-05: Research-backed harness changes passed independent review at 95/100 with no HIGH/MEDIUM findings: offline tokenomics, accurate nested file budgets, risk-aware advisory routing, cross-file clone detection, strict review evidence and compact skills. Seven core files reduced 36.8% by LF-normalized characters/4; 101 inherited overages remain visible with no new/growing debt. Final report is `.agentx/state/harness-final-review.json`; plan is `docs/execution/plans/EXEC-PLAN-20260905-harness-quality.md`. No production billing savings or model benchmark claimed.

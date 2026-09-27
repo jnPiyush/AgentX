@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="docs/assets/frontier-logo.svg" width="240" alt="Frontier Corp">
+  <img src="docs/assets/frontier-logo.svg" width="128" height="128" alt="Frontier Corp">
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.5.0"><img src="https://img.shields.io/badge/Version-9.5.0-b11f4b?style=for-the-badge" alt="Version 9.5.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.6.0"><img src="https://img.shields.io/badge/Version-9.6.0-b11f4b?style=for-the-badge" alt="Version 9.6.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -304,14 +304,15 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.5.0
+## New In 9.6.0
 
-This release aligns current project versions and generated artifacts to 9.5.0:
+This release uses the new Frontier AI Coding Harness icon across active branding:
 
-- extension, MCP runtime, pack metadata and installer URLs use the same version
-- current documentation and regenerated bundles reference 9.5.0
-- the install manifest is refreshed against the current source
-- published release history, dependency versions and runtime behavior are preserved
+- Marketplace and chat use the transparent 256x256 PNG
+- the VS Code Activity Bar uses the matching monochrome SVG
+- documentation, the website header/favicon, and Teams icons share the same artwork
+- current release versions and generated artifacts are aligned to 9.6.0
+- functional icons, theme tokens, published history, and dependency versions are preserved
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

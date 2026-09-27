@@ -2,7 +2,7 @@
 title: Frontier Corp Brand
 description: Canonical identity, positioning, terminology, voice, and compatibility rules for Frontier Corp and its Forward Deployed Engineer fleet.
 author: Frontier Corp
-ms.date: 2026-09-10
+ms.date: 2026-09-27
 ms.topic: reference
 ---
 
@@ -91,6 +91,32 @@ checksums remain factual until those external resources are migrated. Their old
 names do not define the active brand. Current migration surfaces include one
 clear signpost: `Frontier, formerly AgentX`. Do not expose HVE as an intermediate
 product name.
+
+## Brand Icon
+
+The user-selected AI coding harness mark replaces the robot and standalone X
+marks. This icon-only update does not change the product name, colour tokens,
+typography, layout, or functional command/status icons.
+
+The maintained artwork is in `vscode-extension/resources/`:
+
+| Asset | Use |
+|-------|-----|
+| `frontier-ai-coding-harness.svg` | Coloured vector master for website and repository branding |
+| `frontier-ai-coding-harness.png` | Transparent 256x256 export for the Marketplace icon, chat avatar, extension README, and Teams colour-icon generation |
+| `frontier-ai-coding-harness-vscode.svg` | Matching monochrome `currentColor` artwork for the theme-coloured VS Code Activity Bar |
+
+The landing build generates `docs/assets/frontier-logo.svg` and
+`public/assets/frontier-logo.svg` from the coloured master. Do not maintain these
+copies independently. When the artwork changes, regenerate the PNG and update
+the matching monochrome paths together. The source prototype and built site both use that mark for
+the home link and favicon; the adjacent Frontier label supplies the home-link name.
+Teams packaging derives the 192x192 colour icon and 32x32 white transparent
+outline from the same PNG rather than drawing a different letterform.
+
+Keep SVG out of the Marketplace package-icon field and regular Marketplace
+README images; use the PNG there. Published release artifacts remain unchanged
+until a separately requested versioned release.
 
 ## Voice
 
