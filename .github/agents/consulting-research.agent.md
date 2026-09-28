@@ -57,8 +57,8 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Architecture FDE
-  - Frontier AI Systems FDE
+  - Frontier Architect
+  - Frontier Data Scientist
   - Frontier GitHub Ops FDE
 ---
 

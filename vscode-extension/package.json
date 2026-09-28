@@ -568,82 +568,108 @@
     ],
     "chatAgents": [
       {
-        "path": "./.github/frontier/agents/agile-coach.agent.md"
+        "path": "./.github/frontier/agents/agile-coach.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/architect.agent.md"
+        "path": "./.github/frontier/agents/architect.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/consulting-research.agent.md"
+        "path": "./.github/frontier/agents/consulting-research.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/data-scientist.agent.md"
+        "path": "./.github/frontier/agents/data-scientist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/devops.agent.md"
+        "path": "./.github/frontier/agents/devops.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/engineer.agent.md"
+        "path": "./.github/frontier/agents/engineer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/fabric-engineer.agent.md"
+        "path": "./.github/frontier/agents/fabric-engineer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/frontier.agent.md"
+        "path": "./.github/frontier/agents/frontier.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/ado-ops.agent.md"
+        "path": "./.github/frontier/agents/internal/ado-ops.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/ado-prd-to-wit.agent.md"
+        "path": "./.github/frontier/agents/internal/ado-prd-to-wit.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/architecture-reviewer.agent.md"
+        "path": "./.github/frontier/agents/internal/architecture-reviewer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/diagram-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/diagram-specialist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/eval-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/eval-specialist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/functional-reviewer.agent.md"
+        "path": "./.github/frontier/agents/internal/functional-reviewer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/github-ops.agent.md"
+        "path": "./.github/frontier/agents/internal/github-ops.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/ops-monitor.agent.md"
+        "path": "./.github/frontier/agents/internal/ops-monitor.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/prompt-engineer.agent.md"
+        "path": "./.github/frontier/agents/internal/prompt-engineer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/prototype-auditor.agent.md"
+        "path": "./.github/frontier/agents/internal/prototype-auditor.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/rag-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/rag-specialist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/power-platform-builder.agent.md"
+        "path": "./.github/frontier/agents/power-platform-builder.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/powerbi-analyst.agent.md"
+        "path": "./.github/frontier/agents/powerbi-analyst.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/product-manager.agent.md"
+        "path": "./.github/frontier/agents/product-manager.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/reviewer-auto.agent.md"
+        "path": "./.github/frontier/agents/reviewer-auto.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/reviewer.agent.md"
+        "path": "./.github/frontier/agents/reviewer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/tester.agent.md"
+        "path": "./.github/frontier/agents/tester.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/ux-designer.agent.md"
+        "path": "./.github/frontier/agents/ux-designer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       }
     ],
     "chatInstructions": [
@@ -1224,6 +1250,12 @@
           },
           "default": [],
           "description": "List of companion extension IDs for which the install prompt has been permanently dismissed."
+        },
+        "frontier.useBundledAgents": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Expose the extension's bundled agents in the agent picker. Disable for a workspace that provides its own Frontier agents in .github/agents to avoid duplicate roles. Skills, instructions, prompts, commands, and sidebars remain available. Reload the window or start a new agent session after changing the source."
         },
         "frontier.seedRepoLocalAssets": {
           "type": "boolean",

@@ -64,11 +64,11 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Architecture FDE
-  - Frontier AI Systems FDE
-  - Frontier Power BI FDE
-  - Frontier DevOps FDE
-  - Frontier Review FDE
+  - Frontier Architect
+  - Frontier Data Scientist
+  - Frontier Power BI Analyst
+  - Frontier DevOps
+  - Frontier Reviewer
   - Frontier GitHub Ops FDE
 ---
 

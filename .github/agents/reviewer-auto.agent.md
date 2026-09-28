@@ -60,7 +60,7 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Engineering FDE
+  - Frontier Engineer
   - Frontier GitHub Ops FDE
 ---
 

@@ -113,6 +113,33 @@ This prepares the local Frontier runtime for the current workspace by:
 
 Repeat this step for each workspace where you want Frontier to run.
 
+### Duplicate Agents in the Picker
+
+If a workspace contains Frontier definitions in `.github/agents` while the
+extension also contributes its bundled definitions, both sources can appear.
+Renamed workspace agents and older bundled names are distinct picker entries,
+not two installed copies of the extension.
+
+Choose one agent source per workspace:
+
+- Keep `frontier.useBundledAgents` enabled (the default) in projects without
+  their own Frontier definitions.
+- Set `frontier.useBundledAgents` to `false` in workspace settings when using
+  local Frontier definitions. Keep `.github/agents` enabled in
+  `chat.agentFilesLocations` for hosts that honor that setting.
+
+Reload the VS Code window and start a new agent session after switching sources.
+Existing sessions can retain their earlier customization snapshot. Disabling
+bundled agents does not disable Frontier's skills, instructions, prompts,
+commands, sidebars, or runtime. No agent file needs to be deleted.
+
+This source repository selects local definitions; an installed release retains
+the default bundled behavior in other workspaces.
+
+When renaming a local agent, update the exact name used by its collaborators,
+handoff targets, and prompt-file `agent:` fields too. The display name is also
+the lookup identity for those references.
+
 ### Optional Remote Integration
 
 If you want GitHub or Azure DevOps issue and workflow operations, run:

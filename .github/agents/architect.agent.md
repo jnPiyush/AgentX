@@ -66,14 +66,14 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Product FDE
-  - Frontier AI Systems FDE
-  - Frontier Experience FDE
+  - Frontier TPM
+  - Frontier Data Scientist
+  - Frontier UX Designer
   - Frontier Diagram FDE
   - Frontier GitHub Ops FDE
 handoffs:
   - label: Continue to Implementation
-    agent: Frontier Engineering FDE
+    agent: Frontier Engineer
     prompt: Implement this issue from the approved PRD, ADR, technical specification, UX, and AI artifacts.
     send: false
 ---

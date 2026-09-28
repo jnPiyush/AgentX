@@ -63,7 +63,7 @@ tools:
   - web
   - agent
 agents:
-  - Frontier Orchestration FDE
+  - Frontier E2E SDLC
   - Frontier ADO Planning FDE
 ---
 

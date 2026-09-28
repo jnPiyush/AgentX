@@ -1,6 +1,6 @@
 ---
 name: "Refactoring"
-agent: "Frontier Engineering FDE"
+agent: "Frontier Engineer"
 description: Code refactoring prompt for improving code quality
 inputs:
  issue_number:

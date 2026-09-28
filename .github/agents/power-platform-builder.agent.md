@@ -65,10 +65,10 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Product FDE
-  - Frontier Architecture FDE
-  - Frontier DevOps FDE
-  - Frontier Review FDE
+  - Frontier TPM
+  - Frontier Architect
+  - Frontier DevOps
+  - Frontier Reviewer
   - Frontier GitHub Ops FDE
 ---
 

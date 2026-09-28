@@ -62,21 +62,21 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Architecture FDE
+  - Frontier Architect
   - Frontier GitHub Ops FDE
   - Frontier ADO Ops FDE
   - Frontier Diagram FDE
 handoffs:
   - label: Continue to Architecture
-    agent: Frontier Architecture FDE
+    agent: Frontier Architect
     prompt: Review the completed PRD and produce the required architecture artifacts for this issue.
     send: false
   - label: Continue to UX
-    agent: Frontier Experience FDE
+    agent: Frontier UX Designer
     prompt: Review the completed PRD and produce the required UX specification and prototype for this issue.
     send: false
   - label: Continue to AI Design
-    agent: Frontier AI Systems FDE
+    agent: Frontier Data Scientist
     prompt: Review the completed PRD and define the AI implementation and evaluation contracts for this issue.
     send: false
 ---

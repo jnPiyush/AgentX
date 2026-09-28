@@ -68,8 +68,8 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Architecture FDE
-  - Frontier Product FDE
+  - Frontier Architect
+  - Frontier TPM
   - Frontier Prompt FDE
   - Frontier Evaluation FDE
   - Frontier Observability FDE
@@ -78,7 +78,7 @@ agents:
   - Frontier GitHub Ops FDE
 handoffs:
   - label: Continue to Implementation
-    agent: Frontier Engineering FDE
+    agent: Frontier Engineer
     prompt: Implement this issue using the approved architecture and the completed AI contracts, evaluation plan, and model card.
     send: false
 ---

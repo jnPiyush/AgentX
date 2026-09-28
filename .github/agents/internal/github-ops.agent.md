@@ -59,7 +59,7 @@ tools:
   - github/*
   - agent
 agents:
-  - Frontier Orchestration FDE
+  - Frontier E2E SDLC
 ---
 
 # GitHub Operations Agent

@@ -62,10 +62,10 @@ tools:
   - think
   - agent
 agents:
-  - Frontier AI Systems FDE
-  - Frontier Engineering FDE
+  - Frontier Data Scientist
+  - Frontier Engineer
   - Frontier GitHub Ops FDE
-  - Frontier Product FDE
+  - Frontier TPM
 ---
 
 # Power BI Analyst Agent

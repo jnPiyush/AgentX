@@ -57,22 +57,22 @@ tools:
   - github/*
   - agent
 agents:
-  - Frontier Product FDE
-  - Frontier Architecture FDE
-  - Frontier Experience FDE
-  - Frontier AI Systems FDE
-  - Frontier Engineering FDE
-  - Frontier Review FDE
-  - Frontier Auto-Fix FDE
-  - Frontier DevOps FDE
-  - Frontier Test FDE
-  - Frontier Fabric FDE
-  - Frontier Power Platform FDE
-  - Frontier Power BI FDE
-  - Frontier Research FDE
+  - Frontier TPM
+  - Frontier Architect
+  - Frontier UX Designer
+  - Frontier Data Scientist
+  - Frontier Engineer
+  - Frontier Reviewer
+  - Frontier Auto-Fix Reviewer
+  - Frontier DevOps
+  - Frontier Tester
+  - Frontier Fabric Engineer
+  - Frontier Power Platform Engineer
+  - Frontier Power BI Analyst
+  - Frontier Researcher
   - Frontier GitHub Ops FDE
   - Frontier ADO Ops FDE
-  - Frontier Agile FDE
+  - Frontier Agile Coach
 ---
 
 # Frontier Orchestration FDE - Autonomous Orchestrator

@@ -1,3 +1,4 @@
+- 2026-09-27: Agent discovery source selection: docs/artifacts/learnings/LEARNING-agent-discovery.md
 - 2026-09-27: Canonical Frontier icon wiring: docs/artifacts/learnings/LEARNING-frontier-icon.md
 - 2026-09-26: Version alignment: docs/artifacts/learnings/LEARNING-436.md
 - 2026-09-26: Applied skill edits: docs/artifacts/learnings/LEARNING-20260926-approved-skill-cleanup.md

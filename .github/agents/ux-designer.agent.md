@@ -71,13 +71,13 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Product FDE
+  - Frontier TPM
   - Frontier Diagram FDE
   - Frontier GitHub Ops FDE
   - Frontier Prototype Audit FDE
 handoffs:
   - label: Continue to Implementation
-    agent: Frontier Engineering FDE
+    agent: Frontier Engineer
     prompt: Implement this issue using the approved PRD, architecture, UX specification, and validated prototype evidence.
     send: false
 ---

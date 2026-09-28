@@ -1,6 +1,6 @@
 ---
 name: "Security Review"
-agent: "Frontier Review FDE"
+agent: "Frontier Reviewer"
 description: Perform comprehensive security review of code changes
 inputs:
  issue_number:

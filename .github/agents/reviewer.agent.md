@@ -57,8 +57,8 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Engineering FDE
-  - Frontier Auto-Fix FDE
+  - Frontier Engineer
+  - Frontier Auto-Fix Reviewer
   - Frontier Functional Review FDE
   - Frontier Architecture Review FDE
   - Frontier Evaluation FDE
@@ -66,11 +66,11 @@ agents:
   - Frontier ADO Ops FDE
 handoffs:
   - label: Continue to Validation
-    agent: Frontier Test FDE
+    agent: Frontier Tester
     prompt: Validate the approved implementation for this issue and produce the required test certification evidence.
     send: false
   - label: Continue to Delivery
-    agent: Frontier DevOps FDE
+    agent: Frontier DevOps
     prompt: Validate the approved implementation's pipeline and delivery readiness for this issue.
     send: false
 ---

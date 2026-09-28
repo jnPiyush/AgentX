@@ -1,6 +1,6 @@
 ---
 name: "Architecture Design"
-agent: "Frontier Architecture FDE"
+agent: "Frontier Architect"
 description: Generate Architecture Decision Record and Technical Specification
 inputs:
  issue_number:

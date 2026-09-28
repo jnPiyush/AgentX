@@ -69,18 +69,18 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Architecture FDE
-  - Frontier Experience FDE
-  - Frontier AI Systems FDE
-  - Frontier Product FDE
+  - Frontier Architect
+  - Frontier UX Designer
+  - Frontier Data Scientist
+  - Frontier TPM
   - Frontier Prompt FDE
   - Frontier RAG FDE
-  - Frontier Review FDE
+  - Frontier Reviewer
   - Frontier Diagram FDE
   - Frontier GitHub Ops FDE
 handoffs:
   - label: Start Review
-    agent: Frontier Review FDE
+    agent: Frontier Reviewer
     prompt: Review the completed implementation for this issue against its artifacts, tests, and quality-loop evidence.
     send: false
 ---
