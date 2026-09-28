@@ -24,7 +24,7 @@ suite('Frontier Extension Host smoke', () => {
       'all sidebar providers should be registered during activation',
     );
 
-    await vscode.commands.executeCommand('workbench.view.extension.agentx-sidebar');
+    await vscode.commands.executeCommand('workbench.view.extension.frontier-sidebar');
     await vscode.commands.executeCommand('workbench.action.openView', 'frontier-work');
     const loopStatusSucceeded = await vscode.commands.executeCommand<boolean>('frontier.loopStatus');
     assert.equal(loopStatusSucceeded, true, 'loop-status command should complete through the CLI bridge');
