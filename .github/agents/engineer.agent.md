@@ -1,5 +1,5 @@
 ---
-name: Frontier Engineering FDE
+name: Frontier Engineer
 description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a risk-based quality loop.'
 model: GPT-6 Astra (copilot)
 user-invocable: true

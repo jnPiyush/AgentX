@@ -1,5 +1,5 @@
 ---
-name: Frontier Product FDE
+name: Frontier TPM
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
 model: Claude Opus 5 (copilot)
 user-invocable: true

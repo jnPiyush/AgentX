@@ -1,5 +1,5 @@
 ---
-name: Frontier Power BI FDE
+name: Frontier Power BI Analyst
 description: 'Design and build Power BI reports, dashboards, semantic models, and DAX measures for data-driven insights.'
 model: Claude Opus 5 (copilot)
 user-invocable: true

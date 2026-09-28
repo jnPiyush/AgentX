@@ -1,5 +1,5 @@
 ---
-name: Frontier Power Platform FDE
+name: Frontier Power Platform Engineer
 description: 'Build unpacked Microsoft Power Platform solution source for Dataverse, Power Apps, Power Automate, Power Pages, PCF, plugins, security, environment variables, and Copilot Studio. Use for type:lowcode work and Power Platform solution delivery. Generates and validates local source but never authenticates to, imports into, publishes to, exports from, or deletes from a tenant.'
 model: Claude Opus 5 (copilot)
 user-invocable: true

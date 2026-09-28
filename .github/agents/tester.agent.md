@@ -1,5 +1,5 @@
 ---
-name: Frontier Test FDE
+name: Frontier Tester
 description: 'Validate software quality through automated testing, performance testing, security testing, and production readiness certification.'
 model: GPT-5.6 Sol (copilot)
 user-invocable: true

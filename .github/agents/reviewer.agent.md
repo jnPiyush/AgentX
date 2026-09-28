@@ -1,5 +1,5 @@
 ---
-name: Frontier Review FDE
+name: Frontier Reviewer
 description: 'Review code quality, test coverage, security, performance, and architectural conformance. Approve or request changes.'
 model: GPT-5.6 Sol (copilot)
 user-invocable: true

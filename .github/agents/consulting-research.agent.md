@@ -1,5 +1,5 @@
 ---
-name: Frontier Research FDE
+name: Frontier Researcher
 description: 'Research, analyze, and create domain-expert materials for consulting topics. Synthesize domain knowledge from specialized skills (Oil & Gas, Financial Services, Audit, Tax, Legal) for client engagements, including presentation storylines with slide-ready visuals and diagrams.'
 model: Claude Opus 5 (copilot)
 user-invocable: true

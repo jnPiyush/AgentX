@@ -1,5 +1,5 @@
 ---
-name: Frontier Agile FDE
+name: Frontier Agile Coach
 description: 'Conversational story creation and refinement coach. Guides users through writing well-structured user stories with quality acceptance criteria.'
 model: Claude Opus 5 (copilot)
 user-invocable: true

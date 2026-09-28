@@ -1,5 +1,5 @@
 ---
-name: Frontier AI Systems FDE
+name: Frontier Data Scientist
 description: 'Design and implement GenAI pipelines, LLM-as-judge evaluations, drift monitoring, RAG systems, agent orchestration, and fine-tuning workflows.'
 model: Claude Opus 5 (copilot)
 user-invocable: true

@@ -1,5 +1,5 @@
 ---
-name: Frontier DevOps FDE
+name: Frontier DevOps
 description: 'Create and manage CI/CD pipelines, GitHub Actions workflows, deployment automation, and release pipelines.'
 model: Claude Sonnet 5 (copilot)
 user-invocable: true

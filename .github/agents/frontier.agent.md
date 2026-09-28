@@ -1,5 +1,5 @@
 ---
-name: Frontier Orchestration FDE
+name: Frontier E2E SDLC
 description: 'Frontier Corp orchestration FDE for end-to-end Hypervelocity Engineering. Coordinates specialized product, architecture, experience, AI, engineering, review, operations, and test FDE phases.'
 model: Claude Opus 5 (copilot)
 user-invocable: true

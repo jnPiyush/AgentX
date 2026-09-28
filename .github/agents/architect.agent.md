@@ -1,5 +1,5 @@
 ---
-name: Frontier Architecture FDE
+name: Frontier Architect
 description: 'AI-first system architecture -- evaluate GenAI/Agentic AI solutions as the default lens, create ADRs with 3+ evaluated options, and technical specifications with diagrams -- NO CODE EXAMPLES.'
 model: GPT-6 Astra (copilot)
 user-invocable: true

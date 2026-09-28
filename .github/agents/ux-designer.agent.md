@@ -1,5 +1,5 @@
 ---
-name: Frontier Experience FDE
+name: Frontier UX Designer
 description: 'Create user research, wireframes, interactive HTML/CSS prototypes, and design specifications following WCAG 2.1 AA standards.'
 model: GPT-6 Astra (copilot)
 user-invocable: true
