@@ -5,6 +5,8 @@ description: Avoid duplicate workspace and extension agents without deleting def
 
 ## Root cause and correction
 
+- Release tracking: #438. The local discovery fix is promoted in version 9.6.1;
+  keep prior published packages immutable.
 - A renamed workspace agent and the installed extension's older display name
   are separate identities. Loading both sources creates paired picker entries.
   This does not prove that two extension versions are active.

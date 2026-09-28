@@ -13,12 +13,12 @@ describe('agentRunner integration helpers', () => {
 
   it('parses multiline tools and agents arrays from agent frontmatter', () => {
     const agents = loadAgentDefinitions(agentsDir);
-    const productManager = agents.find((agent) => agent.name === 'Frontier Product FDE');
+    const productManager = agents.find((agent) => agent.name === 'Frontier TPM');
 
-    assert.ok(productManager, 'expected Frontier Product FDE definition');
+    assert.ok(productManager, 'expected Frontier TPM definition');
     assert.ok(productManager!.tools.includes('runCommands'));
     assert.ok(productManager!.tools.includes('usages'));
-    assert.ok(productManager!.agents.includes('Frontier Architecture FDE'));
+    assert.ok(productManager!.agents.includes('Frontier Architect'));
     assert.ok(productManager!.agents.includes('Frontier GitHub Ops FDE'));
   });
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Frontier v9.6.0 Installer - Download, copy, configure.
+# Frontier v9.6.1 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -11,7 +11,7 @@
 # ./install.sh --azure # Force Azure Skills companion install
 #
 # # One-liner install (local mode, no prompts, pinned to a release tag)
-# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.1/install.sh | bash
 #
 # # One-liner for GitHub mode
 # MODE=github curl -fsSL ... | bash
@@ -32,7 +32,7 @@ FORCE="${FORCE:-false}"
 NO_SETUP="${NO_SETUP:-false}"
 INSTALL_PATH="${AGENTX_PATH:-}"
 AZURE="${AGENTX_AZURE:-false}"
-BRANCH="v9.6.0"
+BRANCH="v9.6.1"
 TMP=".frontier-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.tar.gz"
@@ -132,8 +132,8 @@ INSTALLED_VERSION=""
 if [ -f .frontier/version.json ]; then
  INSTALLED_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .frontier/version.json | head -1)
 fi
-if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != '9.6.0' ] && [ "$FORCE" != true ]; then
- echo "Frontier v$INSTALLED_VERSION is already installed. Re-run with --force to replace managed files with v9.6.0; no files were changed."
+if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != '9.6.1' ] && [ "$FORCE" != true ]; then
+ echo "Frontier v$INSTALLED_VERSION is already installed. Re-run with --force to replace managed files with v9.6.1; no files were changed."
  exit 1
 fi
 
@@ -204,7 +204,7 @@ ensure_dependency() {
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| Frontier v9.6.0 - AI Agent Orchestration |${N}"
+echo -e "${C}| Frontier v9.6.1 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -235,8 +235,8 @@ ensure_dependency pwsh powershell "PowerShell 7.4+ (pwsh)" || { echo "PowerShell
 # -- Upgrade detection --
 PREVIOUS_VERSION="$INSTALLED_VERSION"
 
-if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.6.0" ]; then
- echo -e "${Y}[!] Detected Frontier v$PREVIOUS_VERSION - upgrading to v9.6.0...${N}"
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.6.1" ]; then
+ echo -e "${Y}[!] Detected Frontier v$PREVIOUS_VERSION - upgrading to v9.6.1...${N}"
  echo -e "${D}  Existing runtime data and files absent from the release are retained.${N}"
 fi
 
@@ -338,8 +338,8 @@ fi
 
 # Version tracking
 VERSION_FILE=".frontier/version.json"
-echo "{ \"version\": \"9.6.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 9.6.0 recorded"
+echo "{ \"version\": \"9.6.1\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 9.6.1 recorded"
 
 # Merge Frontier entries into user's .gitignore
 MARKER_START="# --- Frontier (auto-generated, do not edit this block) ---"
@@ -589,7 +589,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} Frontier v9.6.0 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} Frontier v9.6.1 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.frontier/runtime/frontier.sh help"

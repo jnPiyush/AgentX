@@ -1,5 +1,22 @@
 # Changelog
 
+## 9.6.1 - 2026-09-27
+
+### Fixed
+
+- Add the workspace-scoped `frontier.useBundledAgents` preference to prevent
+  duplicate local and extension-provided Frontier agents. Bundled discovery
+  stays enabled by default; this source repository selects its local agents.
+- Preserve skills, instructions, prompts, commands and sidebars when bundled
+  agents are disabled.
+- Align collaborator, handoff and prompt targets with the current agent display
+  names while preserving instruction bodies, tools, models and boundaries.
+
+### Tested
+
+- Add generator/source-selection regression checks and validate the setting
+  against real VS Code extension contribution filtering.
+
 ## 9.6.0 - 2026-09-27
 
 ### Changed
