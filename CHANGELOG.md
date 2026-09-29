@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Route the Engineer, Architect and UX Designer to GPT-6 Astra (Copilot only)
+  and every other agent to Claude Opus 5.5. These preferences apply to separately
+  invoked roles; CLI automatic self-review retains the author's model and effort.
+  Recalibrate Opus 5.5 authoring agents to `medium` effort.
+- Add frontier-model execution rules (precedence, clarify-or-proceed, turn
+  endings, no reasoning transcripts, untrusted content) to `AGENTS.md` and
+  `AGENT-PROTOCOL.md`; remove wall-clock timeouts and the contradictory
+  "absolute first tool call" pre-edit wording from agents.
+- Refresh reasoning, prompt, Claude and tool-use skills for Opus 5.5 effort,
+  always-on thinking and GPT-6 Astra Responses requirements.
+
+### Fixed
+
+- Register `claude-opus-5.5` (Copilot) and `claude-opus-5-5` (Anthropic API,
+  Claude Code) in the runner, force adaptive thinking, send its effort on the
+  Anthropic API path, use a 16384-token default when no output cap is supplied,
+  preserve explicit caller caps,
+  replay signed thinking blocks before tool results, and omit the non-default
+  `temperature` that Opus 5.5 rejects. The Opus 5.5 label downgrades to
+  `gpt-4.1` on GitHub Models and `gpt-5.6-sol` on the OpenAI API.
+- Tag persisted replay blocks by transport. When a resumed session switches
+  transports, convert normalized text and tool calls rather than forwarding
+  foreign opaque blocks. Existing untagged histories remain supported.
+
 ## 9.6.2 - 2026-09-28
 
 ### Changed

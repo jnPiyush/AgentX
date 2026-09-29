@@ -1,7 +1,7 @@
 ---
 name: Frontier DevOps
 description: 'Create and manage CI/CD pipelines, GitHub Actions workflows, deployment automation, and release pipelines.'
-model: Claude Sonnet 5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: true
 hooks:
   PreToolUse:
@@ -209,7 +209,7 @@ If infrastructure decisions are unclear, build requirements are missing, or depl
 1. **Clarify first**: Use the clarification loop to request context from Architect or Engineer
 2. **Post blocker**: Add `needs:help` label and comment describing the infrastructure question
 3. **Never hardcode secrets**: If credentials are needed, ask for Key Vault or secret configuration guidance
-4. **Timeout rule**: If no response within 15 minutes, document assumptions and flag for review
+4. **Timeout rule**: If the clarification returns no answer, document assumptions and flag for review
 
 > **Shared Protocols**: Follow [WORKFLOW.md](../../docs/WORKFLOW.md#handoff-flow) for handoff workflow, progress logs, memory compaction, and agent communication.
 > **Local Mode**: See [GUIDE.md](../../docs/GUIDE.md#local-mode-no-github) for local issue management.
@@ -222,7 +222,7 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

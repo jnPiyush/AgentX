@@ -249,10 +249,12 @@ artifact freshness before the expensive evaluator.
   review; suite execution still needs the separate post-loop decision.
 - Complete the loop before committing; an active loop is rejected by the commit hook.
 
-Architect and UX Designer request `GPT-6 Astra (copilot)`. Copilot API catalog
-metadata verified `gpt-6-astra` with Responses transport; other providers are not
-silently substituted. Catalog availability is not a measured architecture or UX
-quality comparison, and each end user's account must expose the selected model.
+Engineer, Architect and UX Designer request GPT-6 Astra; every other agent
+requests Claude Opus 5.5. Cross-family review requires a separately invoked
+reviewer and host-confirmed model selection. The CLI's automatic self-review
+reuses the author's model and effort. Astra resolves only on Copilot without
+silent substitution. Opus 5.5 uses adaptive thinking without sampling parameters;
+each account must expose the selected model.
 
 The lifecycle signal hook records event, session and tool metadata only. It does
 not persist prompts, tool arguments, tool results or error payloads. This change

@@ -23,7 +23,7 @@ description: 'Build production-ready AI agents with Microsoft Foundry and Agent 
 ```
 Need an AI agent?
 +-- Simple request-response? -> Single agent with tools
-+-- Multi-step reasoning? -> Chain-of-thought agent with planner
++-- Multi-step reasoning? -> Reasoning model (tuned effort) with planner
 +-- Multiple specialized domains? -> Multi-agent orchestration
 +-- Human approval needed? -> Human-in-the-loop workflow
 +-- High reliability required? -> Reflection + self-correction loop

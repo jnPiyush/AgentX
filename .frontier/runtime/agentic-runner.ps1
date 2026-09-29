@@ -87,6 +87,10 @@ function Get-FrontierStateDirectory([string]$WorkspaceRoot) {
 }
 
 $Script:MODEL_CAPABILITIES = @{
+    # Opus 5.5: thinking is always adaptive and non-default sampling values are rejected.
+    # Copilot exposes 'claude-opus-5.5'; the Anthropic API and Claude Code use 'claude-opus-5-5'.
+    'claude-opus-5.5' = @{ contextWindow = 1000000; providers = @('copilot'); reasoningMode = 'claude-thinking'; adaptiveThinkingOnly = $true; fixedSampling = $true }
+    'claude-opus-5-5' = @{ contextWindow = 1000000; providers = @('claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking'; adaptiveThinkingOnly = $true; fixedSampling = $true }
     'claude-opus-5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-sonnet-5' = @{ contextWindow = 1000000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-opus-4.8' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
@@ -1170,6 +1174,8 @@ function Test-ResearchFirstToolUse {
 # Copilot API has the full catalog; GitHub Models has limited GPT-only.
 $Script:MODEL_MAP_COPILOT = @{
     'gpt-6-astra'       = 'gpt-6-astra'
+    'claude opus 5.5'   = 'claude-opus-5.5'
+    'opus 5.5'          = 'claude-opus-5.5'
     'claude opus 5'     = 'claude-opus-5'
     'opus 5'            = 'claude-opus-5'
     'claude sonnet 5'   = 'claude-sonnet-5'
@@ -1200,6 +1206,8 @@ $Script:MODEL_MAP_COPILOT = @{
 }
 
 $Script:MODEL_MAP_GHMODELS = @{
+    'claude opus 5.5'   = 'gpt-4.1'
+    'opus 5.5'          = 'gpt-4.1'
     'claude opus 5'     = 'gpt-4.1'
     'opus 5'            = 'gpt-4.1'
     'claude sonnet 5'   = 'gpt-4.1'
@@ -1229,6 +1237,8 @@ $Script:MODEL_MAP_GHMODELS = @{
 }
 
 $Script:MODEL_MAP_CLAUDE_CODE = @{
+    'claude opus 5.5'   = 'claude-opus-5-5'
+    'opus 5.5'          = 'claude-opus-5-5'
     'claude opus 5'     = 'claude-opus-5'
     'opus 5'            = 'claude-opus-5'
     'claude sonnet 5'   = 'claude-sonnet-5'
@@ -1245,6 +1255,8 @@ $Script:MODEL_MAP_CLAUDE_CODE = @{
 }
 
 $Script:MODEL_MAP_ANTHROPIC_API = @{
+    'claude opus 5.5'   = 'claude-opus-5-5'
+    'opus 5.5'          = 'claude-opus-5-5'
     'claude opus 5'     = 'claude-opus-5'
     'opus 5'            = 'claude-opus-5'
     'claude sonnet 5'   = 'claude-sonnet-5'
@@ -1261,6 +1273,9 @@ $Script:MODEL_MAP_ANTHROPIC_API = @{
 }
 
 $Script:MODEL_MAP_OPENAI_API = @{
+    # Claude-routed agents downgrade to a GPT model on the OpenAI API, as on GitHub Models.
+    'claude opus 5.5' = 'gpt-5.6-sol'
+    'opus 5.5'      = 'gpt-5.6-sol'
     'gpt-5.6-sol'   = 'gpt-5.6-sol'
     'gpt-5.5'       = 'gpt-5.5'
     'gpt-5.3-codex' = 'gpt-5.3-codex'
@@ -1404,21 +1419,30 @@ function Get-ReasoningRequestConfig([hashtable]$agentDef, [string]$modelId) {
     if (-not $effort) { return @{} }
 
     $activeProviderId = Get-ActiveProviderId
-    if ($activeProviderId -notin @('copilot', 'openai-api', 'claude-code')) {
-        return @{}
-    }
-
     $normalizedModelId = if ($modelId) { $modelId.Trim().ToLower() } else { '' }
     $normalizedMode = if ($reasoningMode) { $reasoningMode.Trim().ToLower() } else { '' }
     $capability = Get-RunnerModelCapability -ModelId $normalizedModelId
+    $adaptiveOnly = [bool]($capability -and $capability['adaptiveThinkingOnly'])
+
+    # Direct Anthropic requests carry reasoning options only for adaptive-only models;
+    # older Claude models keep their existing request shape on that provider.
+    $supportedProviders = @('copilot', 'openai-api', 'claude-code')
+    if ($adaptiveOnly) { $supportedProviders += 'anthropic-api' }
+    if ($activeProviderId -notin $supportedProviders) {
+        return @{}
+    }
+
     $providerReasoningMode = if ($capability) { [string]$capability.reasoningMode } else { 'none' }
 
     if ($providerReasoningMode -eq 'openai-effort') {
         return @{ reasoning = @{ effort = $effort } }
     }
 
+    # Adaptive-only models cannot disable thinking, so a disabled mode keeps adaptive thinking and effort.
+    $thinkingDisabled = (-not $adaptiveOnly) -and $normalizedMode -in @('disabled', 'off', 'none')
+
     if ($activeProviderId -eq 'claude-code' -and $providerReasoningMode -eq 'claude-thinking') {
-        if ($normalizedMode -in @('disabled', 'off', 'none')) {
+        if ($thinkingDisabled) {
             return @{}
         }
 
@@ -1426,11 +1450,11 @@ function Get-ReasoningRequestConfig([hashtable]$agentDef, [string]$modelId) {
     }
 
     if ($providerReasoningMode -eq 'claude-thinking') {
-        if ($normalizedMode -in @('disabled', 'off', 'none')) {
+        if ($thinkingDisabled) {
             return @{}
         }
 
-        $thinkingType = if ($normalizedMode -in @('enabled', 'adaptive')) { $normalizedMode } else { 'adaptive' }
+        $thinkingType = if ($adaptiveOnly) { 'adaptive' } elseif ($normalizedMode -in @('enabled', 'adaptive')) { $normalizedMode } else { 'adaptive' }
         return @{
             thinking = @{ type = $thinkingType }
             output_config = @{ effort = $effort }
@@ -1472,6 +1496,19 @@ function Get-MessageFieldValue([object]$Message, [string]$Name) {
     }
 
     return $null
+}
+
+function Get-MessageReplayTransport([object]$Message) {
+    $transport = [string](Get-MessageFieldValue $Message 'response_items_transport')
+    if ($transport) { return $transport }
+
+    # Legacy Anthropic replay was stored only when it contained a thinking block.
+    foreach ($item in @(Get-MessageFieldValue $Message 'response_items')) {
+        if ((Get-MessageFieldValue $item 'type') -in @('thinking', 'redacted_thinking')) {
+            return 'anthropic'
+        }
+    }
+    return 'responses'
 }
 
 function Get-ApproxTokenCount([AllowNull()][object]$Value) {
@@ -2438,6 +2475,15 @@ function ConvertTo-AnthropicMessage([array]$Messages) {
         }
 
         if ($role -eq 'assistant') {
+            $replayBlocks = @(Get-MessageFieldValue -Message $message -Name 'response_items' | Where-Object { $null -ne $_ })
+            if ($replayBlocks.Count -gt 0 -and (Get-MessageReplayTransport $message) -eq 'anthropic') {
+                $converted.Add(@{
+                    role = 'assistant'
+                    content = $replayBlocks
+                })
+                continue
+            }
+
             $blocks = New-Object System.Collections.Generic.List[object]
             if ($content) {
                 $blocks.Add(@{
@@ -2509,6 +2555,12 @@ function ConvertFrom-AnthropicResponse($Response) {
         role = 'assistant'
         content = ($textParts -join "`n`n")
         tool_calls = @($toolCalls.ToArray())
+    }
+    # Signed thinking blocks must be replayed unmodified before the matching tool results.
+    $rawBlocks = @($Response.content | Where-Object { $null -ne $_ })
+    if (@($rawBlocks | Where-Object { [string]$_.type -in @('thinking', 'redacted_thinking') }).Count -gt 0) {
+        $message | Add-Member -NotePropertyName response_items -NotePropertyValue $rawBlocks
+        $message | Add-Member -NotePropertyName response_items_transport -NotePropertyValue 'anthropic'
     }
     $choice = [PSCustomObject]@{
         message = $message
@@ -2805,7 +2857,7 @@ function ConvertTo-ResponsesBody {
         $role = Get-MessageFieldValue $message 'role'
         $content = Get-MessageFieldValue $message 'content'
         $replay = Get-MessageFieldValue $message 'response_items'
-        if ($role -eq 'assistant' -and $replay) {
+        if ($role -eq 'assistant' -and $replay -and (Get-MessageReplayTransport $message) -eq 'responses') {
             $inputItems += @($replay)
         } elseif ($role -eq 'tool') {
             $inputItems += @{ type='function_call_output'; call_id=(Get-MessageFieldValue $message 'tool_call_id'); output=[string]$content }
@@ -2859,7 +2911,7 @@ function ConvertFrom-ResponsesResponse {
     $usage = Get-MessageFieldValue $Response 'usage'
     return [PSCustomObject]@{
         model=$ModelId
-        choices=@([PSCustomObject]@{ message=[PSCustomObject]@{ role='assistant'; content=($text -join "`n"); tool_calls=@($calls); response_items=@($output) } })
+        choices=@([PSCustomObject]@{ message=[PSCustomObject]@{ role='assistant'; content=($text -join "`n"); tool_calls=@($calls); response_items=@($output); response_items_transport='responses' } })
         usage=[PSCustomObject]@{
             prompt_tokens=(Get-MessageFieldValue $usage 'input_tokens')
             completion_tokens=(Get-MessageFieldValue $usage 'output_tokens')
@@ -2878,6 +2930,12 @@ function Invoke-LlmChat(
     [int]$maxTokens = 4096
 ) {
     $activeProviderId = Get-ActiveProviderId
+    $modelCapability = Get-RunnerModelCapability $modelId
+    $allowsSampling = -not ($modelCapability -and $modelCapability['fixedSampling'])
+    # Reserve thinking headroom by default without overriding an explicit caller limit.
+    if (-not $PSBoundParameters.ContainsKey('maxTokens') -and $modelCapability -and $modelCapability['adaptiveThinkingOnly']) {
+        $maxTokens = 16384
+    }
 
     if ($activeProviderId -eq 'claude-code') {
         return Invoke-ClaudeCodePrintMode -ModelId $modelId -Messages $messages -Tools $tools -RequestOptions $RequestOptions
@@ -2889,7 +2947,10 @@ function Invoke-LlmChat(
             model = $modelId
             messages = $anthropicRequest.messages
             max_tokens = $maxTokens
-            temperature = 0.1
+        }
+        if ($allowsSampling) { $body['temperature'] = 0.1 }
+        foreach ($key in @('thinking', 'output_config')) {
+            if ($RequestOptions.ContainsKey($key)) { $body[$key] = $RequestOptions[$key] }
         }
         if ($anthropicRequest.system) {
             $body['system'] = $anthropicRequest.system
@@ -2928,8 +2989,8 @@ function Invoke-LlmChat(
             $wireMessage
         })
         max_tokens = $maxTokens
-        temperature = 0.1
     }
+    if ($allowsSampling) { $body['temperature'] = 0.1 }
     if ($tools.Count -gt 0) {
         $body['tools'] = $tools
         $body['tool_choice'] = 'auto'
@@ -2965,8 +3026,7 @@ function Invoke-LlmChat(
         $url = $Script:GITHUB_MODELS_URL
     }
 
-    $capability = Get-RunnerModelCapability $modelId
-    $useResponses = $activeProviderId -in @('copilot','openai-api') -and $capability -and $capability['transport'] -eq 'responses'
+    $useResponses = $activeProviderId -in @('copilot','openai-api') -and $modelCapability -and $modelCapability['transport'] -eq 'responses'
     if ($useResponses) {
         $uri = [UriBuilder]::new($url)
         $uri.Path = $uri.Path -replace '/chat/completions/?$', '/responses'
@@ -4078,7 +4138,10 @@ Produce a structured review with per-category verdicts, APPROVED status, and FIN
         # Record and execute tool calls
         $assistantMsg = @{ role = 'assistant'; content = $(if ($msg.content) { $msg.content } else { '' }); tool_calls = @($msg.tool_calls) }
         $replay = Get-MessageFieldValue $msg 'response_items'
-        if ($replay) { $assistantMsg.response_items = @($replay) }
+        if ($replay) {
+            $assistantMsg.response_items = @($replay)
+            $assistantMsg.response_items_transport = Get-MessageReplayTransport $msg
+        }
         $reviewMessages += $assistantMsg
 
         foreach ($tc in $msg.tool_calls) {
@@ -4966,7 +5029,10 @@ function Invoke-AgenticLoop {
             # Add to conversation
             $assistantMessage = @{ role = 'assistant'; content = $finalText }
             $replay = Get-MessageFieldValue $msg 'response_items'
-            if ($replay) { $assistantMessage.response_items = @($replay) }
+            if ($replay) {
+                $assistantMessage.response_items = @($replay)
+                $assistantMessage.response_items_transport = Get-MessageReplayTransport $msg
+            }
             $messages += $assistantMessage
 
             # A spent budget returns the unreviewed response instead of making review or
@@ -5143,7 +5209,10 @@ State your PIVOT or REFINE decision and rationale before making changes.
         $assistantMsg['content'] = if ($hasContent) { $msg.content } else { '' }
         $assistantMsg['tool_calls'] = @($msg.tool_calls)
         $replay = Get-MessageFieldValue $msg 'response_items'
-        if ($replay) { $assistantMsg.response_items = @($replay) }
+        if ($replay) {
+            $assistantMsg.response_items = @($replay)
+            $assistantMsg.response_items_transport = Get-MessageReplayTransport $msg
+        }
         $messages += $assistantMsg
 
         # Execute each tool call
@@ -5290,4 +5359,3 @@ State your PIVOT or REFINE decision and rationale before making changes.
         pendingHumanClarification = ($null -ne $pendingHumanClarification)
     }
 }
-

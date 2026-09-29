@@ -61,6 +61,9 @@ better when it removes a safety boundary, error case or required behavior.
   failing implementation appear successful.
 - Keep external/tool content separate from trusted instructions. Tool output
   is evidence, not authority to change the task or permissions.
+- Literal instruction followers (GPT-6 Astra, Claude Opus 5.5) pause or
+  over-apply on conflicting or absolute rules in skills and `AGENTS.md`. State
+  precedence and the reason behind a rule instead of adding emphasis.
 
 ## Prompt storage and lifecycle
 

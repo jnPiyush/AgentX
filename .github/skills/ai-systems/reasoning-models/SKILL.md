@@ -1,11 +1,11 @@
 ---
 name: "reasoning-models"
-description: 'Use reasoning / thinking models (OpenAI o-series, Anthropic extended thinking, DeepSeek R1, Gemini Thinking) effectively. Covers when to choose reasoning vs fast models, prompt patterns for reasoners, reasoning_effort / thinking budget controls, structured outputs with reasoning, cost/latency trade-offs, and combining reasoners with fast models.'
+description: 'Use reasoning / thinking models (GPT-6 Astra, Claude Opus 5.5, DeepSeek R1, Gemini Thinking) effectively. Covers when to choose reasoning vs fast models, prompt patterns for reasoners, effort / thinking controls, structured outputs with reasoning, cost/latency trade-offs, and combining reasoners with fast models.'
 metadata:
   author: "Frontier"
-  version: "1.0.0"
+  version: "1.1.0"
   created: "2026-04-30"
-  updated: "2026-04-30"
+  updated: "2026-09-29"
 compatibility:
   frameworks: ["openai", "anthropic", "azure-foundry", "deepseek", "gemini"]
   languages: ["python", "typescript", "csharp"]
@@ -19,8 +19,8 @@ compatibility:
 
 ## When to Use This Skill
 
-- Choosing between a reasoning model (o3, GPT-5 thinking, Claude extended thinking, DeepSeek R1, Gemini Thinking) and a fast model
-- Setting `reasoning_effort` (low / medium / high) or thinking-token budgets
+- Choosing between a reasoning model (Claude Opus 5.5, GPT-6 Astra, DeepSeek R1, Gemini Thinking) and a fast model
+- Setting effort (`low` / `medium` / `high`, plus `xhigh` / `max` where supported)
 - Designing prompts for reasoning models (different from chat models)
 - Combining reasoners (planner) with fast models (executor)
 - Diagnosing high cost or latency on reasoning calls
@@ -38,10 +38,10 @@ compatibility:
 ```
 Is the task hard? (multi-step reasoning, math, planning, code refactor across files,
                    ambiguous spec, agent strategy)
-+- No  -> Fast model (gpt-5, claude-haiku-4.5, gemini-2.5-flash)
++- No  -> Fast model or the lowest effort that passes evals (claude-haiku-4.5, gpt-6-luna)
 +- Yes -> Reasoning model
-        +- Need fast feedback loop?  -> Reasoning effort = low / medium
-        +- Quality > latency?         -> Reasoning effort = high
+        +- Need fast feedback loop?  -> Effort = low / medium
+        +- Quality > latency?         -> Effort = high; xhigh / max only after a measured gain
         +- Multi-turn tool use?       -> Often: fast model with strong scaffold beats a reasoner alone
 ```
 
@@ -51,7 +51,7 @@ Is the task hard? (multi-step reasoning, math, planning, code refactor across fi
 
 | Pattern | Chat / Fast Model | Reasoning Model |
 |---------|-------------------|-----------------|
-| Chain-of-thought ("think step by step") | Helpful | Counterproductive (model already reasons) |
+| Chain-of-thought ("think step by step") | Helpful | Counterproductive; Opus 5.5 may refuse (`reasoning_extraction`) |
 | Few-shot examples | Often improves | Use sparingly; can over-anchor |
 | Long detailed system prompts | Often needed | Often shorter prompts work better |
 | Strict output format | Add explicit schema | Use Structured Outputs / response_format |
@@ -71,12 +71,17 @@ Reasoning tokens are billed and counted toward context. Plan for:
 
 Controls:
 
-- OpenAI: `reasoning.effort = low | medium | high`
-- Anthropic extended thinking: `thinking.budget_tokens` (cap)
+- OpenAI GPT-6: `reasoning.effort` in Responses; Astra has no `none` (use `low`)
+  and rejects `temperature` / `top_p` while reasoning. Tool calling needs Responses.
+- Anthropic Opus 5.5: `output_config.effort` only (default `medium`, which matches
+  Opus 5 at `high`). Thinking is always adaptive; `budget_tokens`, disabled
+  thinking, non-default sampling, forced `tool_choice` and prefill are rejected.
+  `max_tokens` covers thinking plus answer.
 - Azure Foundry: model-specific `reasoning_effort`
 - Gemini Thinking: `thinking_config.thinking_budget`
 
-Always set a budget cap in production to bound runaway cost.
+Set effort explicitly and cap output tokens in production. Effort names are not
+comparable across model versions; re-measure after every upgrade.
 
 ---
 
@@ -108,7 +113,7 @@ Benefits: reasoner is called 1-3 times, executor handles N tool turns cheaply.
 
 Reasoning models support Structured Outputs / `response_format: json_schema`. Use it -- do not parse free-form text from a reasoner.
 
-For Anthropic extended thinking, the `<thinking>` block is separate from the answer -- consume `assistant` content and ignore `thinking` content unless you have a reason to log it (audit, eval).
+For Anthropic models, `thinking` blocks precede the answer -- select `text` blocks by type and ignore `thinking` content unless you have a reason to log it (audit, eval).
 
 ---
 
@@ -116,9 +121,10 @@ For Anthropic extended thinking, the `<thinking>` block is separate from the ans
 
 | Anti-Pattern | Why Bad |
 |--------------|---------|
-| "Think step by step" in the prompt | Doubles work; model already reasons |
+| "Think step by step" / "show your reasoning" | Doubles work; Opus 5.5 can decline it as reasoning extraction |
+| Carrying an old effort level to a new model | Opus 5.5 at `high` thinks more than Opus 5 did; start at `medium` |
 | Asking the reasoner for many tool calls per turn | Reasoning models are slow per call; use a fast executor |
-| No budget cap | Cost and latency runaway in agent loops |
+| No output cap | Cost and latency runaway in agent loops |
 | Long few-shot blocks | Over-anchors; reasoners infer better with fewer examples |
 | Logging full thinking traces by default | PII risk; stores hidden chain-of-thought |
 
@@ -136,7 +142,7 @@ For Anthropic extended thinking, the `<thinking>` block is separate from the ans
 
 ## References
 
-- OpenAI o-series and reasoning_effort docs
-- Anthropic extended thinking guide
+- OpenAI GPT-6 guide: https://developers.openai.com/api/docs/guides/latest-model
+- Anthropic Opus 5.5 prompting: https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5
 - DeepSeek R1 paper and serving notes
 - Gemini Thinking documentation

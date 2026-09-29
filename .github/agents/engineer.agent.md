@@ -25,7 +25,7 @@ reasoning:
 constraints:
   - "MUST follow Compound Engineering: complete each phase gate before advancing to the next phase"
   - "MUST read ALL available artifacts before writing any code: PRD, ADR, Tech Spec, UX Spec, and any Data Science artifacts"
-  - "MUST seek inter-agent clarification for ANY spec, ADR, or UX ambiguity BEFORE writing code that depends on the ambiguous requirement"
+  - "MUST seek inter-agent clarification BEFORE writing dependent code when a spec, ADR, or UX ambiguity would change behavior, contracts, acceptance criteria, or security; record lower-impact assumptions in the plan and continue"
   - "MUST perform a design-alignment checkpoint with Architect before coding when the implementation crosses architecture boundaries, introduces a new pattern outside the ADR/Spec, or requires a meaningful design deviation"
   - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
@@ -148,7 +148,7 @@ more callers use one shared unit; per-feature duplication requires documented in
 
 ### 1.3 Research Phase Gate -- Ambiguity Survey
 
-Survey every artifact before advancing. For each ambiguity found, follow the Inter-Agent Clarification Protocol below BEFORE coding.
+Survey every artifact before advancing. For each ambiguity that would change behavior, contracts, acceptance criteria or security, follow the Inter-Agent Clarification Protocol below BEFORE coding; record lower-impact assumptions and continue.
 
 Clarify undefined API schemas/errors, data types/nullability/validation, user-flow
 triggers/outcomes, security controls, measurable performance targets, and AI I/O
@@ -415,7 +415,7 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 **Protocol limits**:
 - Max 3 exchanges per topic
-- If unresolved after 3 exchanges: document assumption with `// ASSUMPTION: <what> -- flagged via #<issue> <date>`, add `needs:help` label, continue
+- If unresolved after 3 exchanges: add `needs:help`. For high-impact ambiguity (behavior, contracts, acceptance, security), escalate to the user and keep dependent work paused; otherwise document the assumption with `// ASSUMPTION: <what> -- flagged via #<issue> <date>` and continue
 
 > **Shared Protocols**: Follow [WORKFLOW.md](../../docs/WORKFLOW.md#handoff-flow) for handoff workflow and agent communication.
 > **Local Mode**: See [GUIDE.md](../../docs/GUIDE.md#local-mode-no-github) for local issue management.
@@ -455,13 +455,13 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 2. **Architecture gap**: Escalate to Frontier Architecture FDE rather than deciding the design yourself.
 3. **Missing dependency**: Add `needs:help`, document what is missing, and wait.
 4. **Scope exceeds estimate**: Ask Frontier to split or re-route the story.
-5. **No response in 15 minutes**: Document the assumption, add `needs:help`, and continue.
+5. **No clarification answer**: Add `needs:help`. For ambiguity that changes behavior, contracts, acceptance or security, escalate to the user and keep the dependent work paused while continuing independent work; otherwise document the assumption and continue.
 
 ---
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 
@@ -476,7 +476,7 @@ After loop completion, the user receives the test-suite offer.
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: tests passed/failed; coverage; lint/type-check status; HIGH/MEDIUM findings; output scorer tier when run; acceptance criteria covered; and Frontier quality-loop state.
+Before handoff, report: tests actually run with pass/fail counts, or `not run - awaiting user decision`; coverage only when measured; lint/type-check status; HIGH/MEDIUM findings; output scorer tier when run; acceptance criteria covered; and Frontier quality-loop state.
 
 ## Plugins (Optional Capabilities)
 

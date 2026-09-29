@@ -1,7 +1,7 @@
 ---
 name: Frontier E2E SDLC
 description: 'Frontier Corp orchestration FDE for end-to-end Hypervelocity Engineering. Coordinates specialized product, architecture, experience, AI, engineering, review, operations, and test FDE phases.'
-model: Claude Opus 5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: true
 hooks:
   PreToolUse:
@@ -21,7 +21,7 @@ hooks:
       timeout: 10
 reasoning:
   mode: adaptive
-  level: high
+  level: medium
 constraints:
   - "MUST follow specialist workflow phases IN SEQUENCE: Classify -> Route -> Execute specialist phases -> Validate handoffs; MUST apply each specialist agent's phase gates internally when executing autonomously; MUST NOT advance to the next specialist phase before the current phase gate passes"
   - "MUST complete work autonomously in the current session whenever feasible; manual agent switching is a fallback, not the default."
@@ -284,9 +284,9 @@ Before completing any routing decision, verify:
 
 | Error | Detection | Recovery |
 |-------|-----------|----------|
-| Timeout | Status unchanged >15 min | Add `needs:help`, notify |
+| Stalled | Specialist returns no progress or an unanswered clarification | Add `needs:help`, notify |
 | Missing artifacts | Status changed without files | Reset status, retry |
-| Blocked >30 min | Prerequisites unmet | Add `needs:resolution`, escalate |
+| Blocked | Prerequisites unmet after a dependency check | Add `needs:resolution`, escalate |
 | Test failure | CI fails | Add `needs:fixes`, return to In Progress |
 
 ## Handoff Summary
@@ -315,7 +315,7 @@ If execution is ambiguous, context is missing, or a specialist phase is blocked:
 1. Clarify first: use the clarification loop to request missing info from the originating agent.
 2. Escalate with label: add `needs:help` and post a comment describing the blocker.
 3. Never guess: do not continue implementation without sufficient context; ask the upstream phase for clarification.
-4. Timeout rule: if no response within 15 minutes, escalate to a human with `needs:resolution`.
+4. Timeout rule: if the clarification returns no answer, escalate to a human with `needs:resolution`.
 
 Local Mode: see [GUIDE.md](../../docs/GUIDE.md#local-mode-no-github) for local issue management.
 Shared Protocols: all agents follow [WORKFLOW.md](../../docs/WORKFLOW.md#handoff-flow) for handoff, memory compaction, and communication protocols.
@@ -328,7 +328,7 @@ Use the shared guide for the artifact-first clarification flow, internal special
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

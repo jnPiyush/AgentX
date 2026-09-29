@@ -264,7 +264,7 @@ $validCandidates = @(Get-ModelCandidateList 'GPT-5.6 Sol (copilot)' 'unknown-fal
 Assert-Equal $validCandidates[0] 'gpt-5.6-sol' 'An invalid fallback does not discard a valid primary model'
 $Script:ActiveProvider = $null
 
-# Opus 5 is the declared frontmatter label for 9 agents. Without an explicit alias
+# Opus 5 remains a selectable label for custom agents. Without an explicit alias
 # key it would fall through to the provider default, so pin the resolution per
 # provider and assert the older Opus aliases still win their own longest match.
 $opus5Capability = Get-RunnerModelCapability 'claude-opus-5'
@@ -281,7 +281,79 @@ $Script:ActiveProvider = [PSCustomObject]@{ id = 'github-models' }
 Assert-Equal (Resolve-ModelId 'Claude Opus 5 (copilot)') 'gpt-4.1' 'GitHub Models downgrades the Opus 5 label to a supported GPT model'
 $Script:ActiveProvider = $null
 
-# Sonnet 5 is the declared frontmatter label for 7 agents. Pin its provider
+# Opus 5.5 uses different IDs per provider, keeps thinking adaptive, and rejects
+# non-default sampling values, so pin resolution and request shaping.
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'claude-opus-5.5' 'Resolve-ModelId maps the Opus 5.5 label for copilot'
+Assert-Equal (Resolve-ModelId 'Claude Opus 5 (copilot)') 'claude-opus-5' 'Opus 5.5 aliases do not shadow the Opus 5 label'
+Assert-True (Test-RunnerModelSupportedByProvider 'copilot' 'claude-opus-5.5') 'Copilot supports the Opus 5.5 catalog ID'
+$opus55Reasoning = Get-ReasoningRequestConfig @{ reasoningMode = 'enabled'; reasoningLevel = 'medium' } 'claude-opus-5.5'
+Assert-Equal $opus55Reasoning.thinking.type 'adaptive' 'Opus 5.5 never receives the rejected enabled thinking type'
+Assert-Equal $opus55Reasoning.output_config.effort 'medium' 'Opus 5.5 receives the requested effort level'
+$opus55Disabled = Get-ReasoningRequestConfig @{ reasoningMode = 'disabled'; reasoningLevel = 'low' } 'claude-opus-5.5'
+Assert-Equal $opus55Disabled.thinking.type 'adaptive' 'Opus 5.5 keeps adaptive thinking when a disabled mode is requested'
+Assert-Equal $opus55Disabled.output_config.effort 'low' 'Opus 5.5 keeps the requested effort when a disabled mode is requested'
+$opus5Disabled = Get-ReasoningRequestConfig @{ reasoningMode = 'disabled'; reasoningLevel = 'low' } 'claude-opus-5'
+Assert-Equal $opus5Disabled.Count 0 'Opus 5 still honors a disabled thinking mode'
+Assert-True ((Get-RunnerModelCapability 'claude-opus-5.5')['fixedSampling']) 'Opus 5.5 capability marks sampling parameters as fixed'
+Assert-True (-not (Get-RunnerModelCapability 'claude-opus-5')['fixedSampling']) 'Opus 5 keeps configurable sampling'
+foreach ($providerId in @('anthropic-api', 'claude-code')) {
+    $Script:ActiveProvider = [PSCustomObject]@{ id = $providerId }
+    Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'claude-opus-5-5' "Resolve-ModelId maps the Opus 5.5 label for $providerId"
+    Assert-True (Test-RunnerModelSupportedByProvider $providerId 'claude-opus-5-5') "$providerId supports the Anthropic Opus 5.5 ID"
+}
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'anthropic-api' }
+$anthropicOpus55Reasoning = Get-ReasoningRequestConfig @{ reasoningLevel = 'high' } 'claude-opus-5-5'
+Assert-Equal $anthropicOpus55Reasoning.output_config.effort 'high' 'Anthropic API Opus 5.5 receives the requested effort'
+Assert-Equal (Get-ReasoningRequestConfig @{ reasoningLevel = 'high' } 'claude-opus-4.8').Count 0 'Anthropic API keeps the existing request shape for older Claude models'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'github-models' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'gpt-4.1' 'GitHub Models downgrades the Opus 5.5 label to a supported GPT model'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'openai-api' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'gpt-5.6-sol' 'OpenAI API downgrades the Opus 5.5 label to a supported GPT model'
+
+$script:capturedRequestBodies = @{}
+function Invoke-RestMethod {
+    param($Uri, $Method, $Headers, $Body, $TimeoutSec, $ErrorAction)
+    $parsed = $Body | ConvertFrom-Json -AsHashtable
+    $script:capturedRequestBodies["$($Script:ActiveProvider.id)/$($parsed.model)"] = $parsed
+    return [PSCustomObject]@{
+        content = @([PSCustomObject]@{ type = 'text'; text = 'Fixture response' })
+        stop_reason = 'end_turn'
+        choices = @([PSCustomObject]@{ message = [PSCustomObject]@{ role = 'assistant'; content = 'Fixture response'; tool_calls = @() } })
+    }
+}
+$opusRequestCases = @(@('anthropic-api', 'claude-opus-5-5'), @('anthropic-api', 'claude-opus-5'), @('copilot', 'claude-opus-5.5'))
+try {
+    foreach ($request in $opusRequestCases) {
+        $Script:ActiveProvider = [PSCustomObject]@{ id = $request[0] }
+        $requestOptions = Get-ReasoningRequestConfig @{ reasoningLevel = 'medium' } $request[1]
+        $null = Invoke-LlmChat -token 'test' -modelId $request[1] -messages @(@{ role = 'user'; content = 'hi' }) -tools @() -RequestOptions $requestOptions
+    }
+    $anthropicOpus55Body = $script:capturedRequestBodies['anthropic-api/claude-opus-5-5']
+    $anthropicOpus5Body = $script:capturedRequestBodies['anthropic-api/claude-opus-5']
+    $copilotOpus55Body = $script:capturedRequestBodies['copilot/claude-opus-5.5']
+    Assert-True ($anthropicOpus55Body -and -not $anthropicOpus55Body.ContainsKey('temperature')) 'Anthropic Opus 5.5 requests omit the rejected temperature value'
+    Assert-True ($anthropicOpus55Body -and $anthropicOpus55Body['thinking'] -and $anthropicOpus55Body['thinking']['type'] -eq 'adaptive' -and $anthropicOpus55Body['output_config'] -and $anthropicOpus55Body['output_config']['effort'] -eq 'medium') 'Anthropic Opus 5.5 requests carry adaptive thinking and effort'
+    Assert-True ($anthropicOpus5Body -and $anthropicOpus5Body.temperature -eq 0.1 -and -not $anthropicOpus5Body.ContainsKey('thinking')) 'Anthropic Opus 5 requests keep their existing shape'
+    Assert-Equal $anthropicOpus55Body['max_tokens'] 16384 'Anthropic Opus 5.5 uses a larger default when maxTokens is omitted'
+    Assert-Equal $copilotOpus55Body['max_tokens'] 16384 'Copilot Opus 5.5 uses a larger default when maxTokens is omitted'
+    Assert-Equal $anthropicOpus5Body['max_tokens'] 4096 'Opus 5 retains its previous default output limit'
+    Assert-True ($copilotOpus55Body -and -not $copilotOpus55Body.ContainsKey('temperature')) 'Copilot Opus 5.5 requests omit the rejected temperature value'
+    foreach ($request in $opusRequestCases) {
+        $Script:ActiveProvider = [PSCustomObject]@{ id = $request[0] }
+        $requestOptions = Get-ReasoningRequestConfig @{ reasoningLevel = 'medium' } $request[1]
+        foreach ($limit in @(512, 700, 4096, 32768)) {
+            $null = Invoke-LlmChat -token 'test' -modelId $request[1] -messages @(@{ role = 'user'; content = 'hi' }) -tools @() -RequestOptions $requestOptions -maxTokens $limit
+            $body = $script:capturedRequestBodies["$($request[0])/$($request[1])"]
+            Assert-Equal $body['max_tokens'] $limit "$($request[0])/$($request[1]) preserves the explicit $limit-token cap"
+        }
+    }
+} finally {
+    Remove-Item Function:Invoke-RestMethod -ErrorAction SilentlyContinue
+}
+$Script:ActiveProvider = $null
+
+# Sonnet 5 remains a selectable custom-agent label. Pin its provider
 # resolution and ensure the generic Sonnet alias cannot shadow it.
 $sonnet5Capability = Get-RunnerModelCapability 'claude-sonnet-5'
 Assert-True ($null -ne $sonnet5Capability) 'Get-RunnerModelCapability exposes claude-sonnet-5'
@@ -322,6 +394,27 @@ $anthropicResponse = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
 })
 Assert-Equal $anthropicResponse.choices[0].message.content 'Need to inspect the workspace.' 'ConvertFrom-AnthropicResponse preserves text content'
 Assert-Equal $anthropicResponse.choices[0].message.tool_calls[0].function.name 'list_dir' 'ConvertFrom-AnthropicResponse normalizes Anthropic tool use blocks'
+Assert-True ($null -eq (Get-MessageFieldValue $anthropicResponse.choices[0].message 'response_items')) 'Responses without thinking keep the existing normalized message shape'
+
+# Opus 5.5 always thinks; signed thinking blocks must be replayed unmodified before tool results.
+$thinkingResponse = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
+    stop_reason = 'tool_use'
+    content = @(
+        [PSCustomObject]@{ type = 'thinking'; thinking = ''; signature = 'sig-abc' },
+        [PSCustomObject]@{ type = 'tool_use'; id = 'toolu_456'; name = 'list_dir'; input = @{ dirPath = 'src' } }
+    )
+})
+$thinkingMessage = $thinkingResponse.choices[0].message
+Assert-Equal $thinkingMessage.response_items_transport 'anthropic' 'Anthropic replay is explicitly tagged with its transport'
+$replayHistory = ConvertTo-AnthropicMessage -Messages @(
+    @{ role = 'user'; content = 'inspect src' },
+    @{ role = 'assistant'; content = ''; tool_calls = @($thinkingMessage.tool_calls); response_items = @(Get-MessageFieldValue $thinkingMessage 'response_items') },
+    @{ role = 'tool'; tool_call_id = 'toolu_456'; content = 'README.md' }
+)
+$replayedBlocks = @($replayHistory.messages[1].content)
+Assert-Equal ((@($replayedBlocks | ForEach-Object { $_.type })) -join ',') 'thinking,tool_use' 'ConvertTo-AnthropicMessage replays thinking and tool_use blocks in order'
+Assert-Equal $replayedBlocks[0].signature 'sig-abc' 'ConvertTo-AnthropicMessage preserves the thinking signature'
+Assert-Equal $replayHistory.messages[2].content[0].tool_use_id 'toolu_456' 'Tool results still follow the replayed assistant turn'
 
 Assert-Equal (ConvertTo-ClaudeCodeModelId 'claude-opus-4.8') 'claude-opus-4-8' 'ConvertTo-ClaudeCodeModelId normalizes dot-version Claude model ids for CLI usage'
 
@@ -1325,6 +1418,7 @@ $responseFixture = [PSCustomObject]@{
     usage=[PSCustomObject]@{input_tokens=10;output_tokens=20;total_tokens=30}
 }
 $translated = ConvertFrom-ResponsesResponse -Response $responseFixture -ModelId 'gpt-5.6-sol'
+Assert-Equal $translated.choices[0].message.response_items_transport 'responses' 'Responses replay is explicitly tagged with its transport'
 Assert-Equal $translated.choices[0].message.tool_calls[0].id 'call_fixture' 'Responses call IDs map to runner tool calls'
 Assert-Equal $translated.choices[0].message.content 'Inspecting files' 'Responses text is normalized'
 Assert-Equal $translated.usage.prompt_tokens 10 'Responses token accounting is preserved'
@@ -1342,6 +1436,72 @@ Assert-Equal $responseBody.input[-1].type 'function_call_output' 'Tool results u
 Assert-Equal $responseBody.tools[0].name 'list_dir' 'Responses function schema is flattened'
 Assert-Equal $responseBody.reasoning.effort 'high' 'Role-specific reasoning effort is preserved'
 Assert-Equal $responseBody.store $false 'Responses storage is disabled'
+
+$transportRoot = Join-Path ([IO.Path]::GetTempPath()) ('frontier-replay-transport-' + [guid]::NewGuid().ToString('N'))
+try {
+    foreach ($thinkingType in @('thinking', 'redacted_thinking')) {
+        $thinkingBlock = if ($thinkingType -eq 'thinking') {
+            [PSCustomObject]@{ type = 'thinking'; thinking = ''; signature = 'opaque-signature' }
+        } else {
+            [PSCustomObject]@{ type = 'redacted_thinking'; data = 'opaque-redacted' }
+        }
+        $anthropicFixture = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
+            stop_reason = 'tool_use'
+            content = @(
+                $thinkingBlock,
+                [PSCustomObject]@{ type = 'text'; text = 'Inspecting source' },
+                [PSCustomObject]@{ type = 'tool_use'; id = 'call_native'; name = 'list_dir'; input = @{ dirPath = 'src' } }
+            )
+        })
+        foreach ($tagged in @($true, $false)) {
+            $assistant = $anthropicFixture.choices[0].message | ConvertTo-Json -Depth 15 | ConvertFrom-Json -Depth 20
+            if (-not $tagged) { $assistant.PSObject.Properties.Remove('response_items_transport') }
+            $originalBlocks = ConvertTo-Json -InputObject @($assistant.response_items) -Depth 15 -Compress
+            $history = @(
+                @{ role = 'user'; content = 'Inspect source' },
+                $assistant,
+                @{ role = 'tool'; tool_call_id = 'call_native'; content = 'source.txt' }
+            )
+            Save-Session -sessionId 'anthropic-replay' -messages $history -meta @{} -root $transportRoot
+            $restored = Read-Session -sessionId 'anthropic-replay' -root $transportRoot
+            $native = ConvertTo-AnthropicMessage -Messages @($restored.messages)
+            $nativeBlocks = ConvertTo-Json -InputObject @($native.messages[1].content) -Depth 15 -Compress
+            Assert-Equal $nativeBlocks $originalBlocks "$thinkingType replay survives session storage unchanged (tagged=$tagged)"
+            Assert-Equal $native.messages[2].content[0].tool_use_id 'call_native' 'Anthropic tool-result correlation survives replay'
+
+            $foreign = ConvertTo-ResponsesBody -Messages @($restored.messages) -ModelId 'gpt-5.6-sol' -Tools @() -RequestOptions @{} -MaxTokens 4096
+            Assert-Equal $foreign.input.Count 4 'An Anthropic history becomes two messages, a function call and its result on Responses'
+            Assert-Equal $foreign.input[1].content 'Inspecting source' 'Provider switches preserve normalized assistant text'
+            Assert-Equal $foreign.input[2].type 'function_call' 'Anthropic tool_use is translated to a Responses function call'
+            Assert-Equal $foreign.input[2].name 'list_dir' 'Provider switches preserve the tool name'
+            Assert-Equal ($foreign.input[2].arguments | ConvertFrom-Json).dirPath 'src' 'Provider switches preserve tool arguments'
+            Assert-Equal $foreign.input[2].call_id 'call_native' 'Provider switches preserve the tool-call ID'
+            Assert-Equal $foreign.input[3].type 'function_call_output' 'Provider switches translate tool results to the target transport'
+            Assert-Equal $foreign.input[3].call_id 'call_native' 'Translated tool results still match their tool call'
+            Assert-Equal $foreign.input[3].output 'source.txt' 'Provider switches preserve the tool output'
+            Assert-True (($foreign | ConvertTo-Json -Depth 20) -notmatch 'opaque-signature|opaque-redacted|redacted_thinking|tool_use') 'Responses excludes foreign opaque replay blocks'
+            Assert-Equal (ConvertTo-Json -InputObject @($restored.messages[1].response_items) -Depth 15 -Compress) $originalBlocks 'Transport conversion does not mutate stored Anthropic replay'
+        }
+    }
+    foreach ($tagged in @($true, $false)) {
+        $history = $conversation | ConvertTo-Json -Depth 15 | ConvertFrom-Json -Depth 20
+        if (-not $tagged) { $history[2].PSObject.Properties.Remove('response_items_transport') }
+        Save-Session -sessionId 'responses-replay' -messages @($history) -meta @{} -root $transportRoot
+        $restored = Read-Session -sessionId 'responses-replay' -root $transportRoot
+        $native = ConvertTo-ResponsesBody -Messages @($restored.messages) -ModelId 'gpt-5.6-sol' -Tools @() -RequestOptions @{} -MaxTokens 4096
+        Assert-Equal $native.input[2].encrypted_content 'opaque-fixture' "Responses reasoning survives session storage (tagged=$tagged)"
+        Assert-Equal $native.input[3].phase 'commentary' 'Responses assistant phase survives session storage'
+        $foreign = ConvertTo-AnthropicMessage -Messages @($restored.messages)
+        Assert-Equal $foreign.messages[1].content[0].text 'Inspecting files' 'Responses-to-Anthropic conversion preserves assistant text'
+        Assert-Equal $foreign.messages[1].content[1].type 'tool_use' 'Responses-to-Anthropic conversion translates tool calls'
+        Assert-Equal $foreign.messages[1].content[1].id 'call_fixture' 'Responses-to-Anthropic conversion preserves tool-call IDs'
+        Assert-Equal $foreign.messages[2].content[0].tool_use_id 'call_fixture' 'Responses-to-Anthropic conversion preserves result correlation'
+        Assert-True (($foreign | ConvertTo-Json -Depth 20) -notmatch 'opaque-fixture|encrypted_content|response_items_transport') 'Anthropic excludes foreign replay blocks and internal metadata'
+    }
+} finally {
+    if (Test-Path -LiteralPath $transportRoot) { Remove-Item -LiteralPath $transportRoot -Recurse -Force }
+}
+
 foreach ($status in @('failed','incomplete','cancelled','queued')) {
     $responseFixture.status = $status
     $rejected = $false

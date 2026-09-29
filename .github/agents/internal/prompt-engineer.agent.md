@@ -2,7 +2,7 @@
 name: Frontier Prompt FDE
 description: 'Design, evaluate, test, and iterate prompts across the full prompt lifecycle. Invisible sub-agent spawned by Data Scientist and Engineer.'
 visibility: internal
-model: GPT-5.5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: false
 disable-model-invocation: false
 hooks:
@@ -22,7 +22,7 @@ hooks:
         pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
-  level: high
+  level: medium
 constraints:
   - "MUST read existing prompts in prompts/ before creating new ones"
   - "MUST test prompts across at least 2 models (primary + fallback)"
@@ -89,7 +89,7 @@ For new prompts or redesigns:
 | Structure | Role + Context + Task + Constraints (4-part pattern) |
 | Variables | Template variables for dynamic content (`${variable}`) |
 | Few-shot | 2-3 input/output examples for format-sensitive tasks |
-| Chain-of-thought | "Think step by step" for multi-step reasoning tasks |
+| Reasoning | Set provider effort (`reasoning.level`) for multi-step tasks; never ask the model to write out step-by-step reasoning. Request conclusions, evidence and a short rationale |
 | Guardrails | Explicit constraints on what the model must NOT do |
 | Token budget | Keep system prompts under 4K tokens; use progressive disclosure for longer context |
 | Output format | JSON Schema, structured markdown, or typed response format |
@@ -114,8 +114,8 @@ Evaluation uses a DIFFERENT model than the one being tested (avoid self-evaluati
 Every prompt MUST be tested against at least 2 models:
 
 ```
-Primary Model (e.g., Claude Opus 5) -> Evaluate all dimensions
-Fallback Model (e.g., GPT-4.1)        -> Evaluate all dimensions
+Primary Model (e.g., Claude Opus 5.5)   -> Evaluate all dimensions
+Second Model (e.g., GPT-6 Astra)        -> Evaluate all dimensions
                                         -> Compare scores
                                         -> Flag regressions
 ```
@@ -178,7 +178,7 @@ Track changes in `.copilot-tracking/prompt-eval/{name}-changelog.md`:
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

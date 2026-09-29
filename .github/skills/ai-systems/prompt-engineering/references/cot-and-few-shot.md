@@ -1,30 +1,24 @@
-# Chain-of-Thought & Few-Shot Patterns
+# Reasoning Guidance & Few-Shot Patterns
 
-## Chain-of-Thought (CoT)
+## Reasoning Guidance
 
-Use when the AI needs to reason through a problem step by step.
+Current reasoning models (Claude Opus 5.5, GPT-6 Astra) think internally. Control
+depth with the provider effort setting, not with prompt phrases. Do not ask them
+to "think step by step" or to write out their reasoning: it adds tokens, and
+Opus 5.5 can decline it as reasoning extraction. Give the goal, the constraints,
+the evidence to check and the output you need.
 
-### Trigger Phrases
-
-```text
-Think step by step:
-1. First, identify the input types
-2. Then, check for edge cases
-3. Finally, write the implementation
-```
+Classic chain-of-thought phrasing ("Think step by step") is only for models
+without built-in reasoning; confirm the benefit with an eval before keeping it.
 
 ### Example: Debugging
 
 ```text
 A test is failing with NullReferenceException at UserService.cs:42.
 
-Think step by step:
-1. What is on line 42?
-2. What variables could be null?
-3. What inputs cause this path?
-4. What is the minimal fix?
-
-Show your reasoning, then provide the fix.
+Identify which variable can be null on that line, the input that reaches that
+path, and the minimal fix. Return: root cause (one sentence), evidence (file and
+line references), and the patch.
 ```
 
 ### Example: Architecture Decision
@@ -32,13 +26,9 @@ Show your reasoning, then provide the fix.
 ```text
 We need a caching strategy for our product catalog API.
 
-Think through these tradeoffs:
-1. What data changes frequently vs. rarely?
-2. What is the acceptable staleness (TTL)?
-3. Cache invalidation: time-based vs. event-based?
-4. Redis vs. in-memory vs. CDN?
-
-Recommend one approach with justification.
+Weigh data volatility, acceptable staleness (TTL), time- vs event-based
+invalidation, and Redis vs in-memory vs CDN. Recommend one approach with a short
+justification and the main trade-off you accepted.
 ```
 
 ---

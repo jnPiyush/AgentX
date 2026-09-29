@@ -1,7 +1,7 @@
 ---
 name: Frontier Power Platform Engineer
 description: 'Build unpacked Microsoft Power Platform solution source for Dataverse, Power Apps, Power Automate, Power Pages, PCF, plugins, security, environment variables, and Copilot Studio. Use for type:lowcode work and Power Platform solution delivery. Generates and validates local source but never authenticates to, imports into, publishes to, exports from, or deletes from a tenant.'
-model: Claude Opus 5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: true
 hooks:
   PreToolUse:
@@ -207,7 +207,7 @@ Power Platform product surfaces remain skills inside this workflow. Do not split
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as the absolute first tool call before editing. Reading the active task and required artifacts is allowed; mutating files before loop start succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: Before answering whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state. Never claim completion unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in the current session.
 
