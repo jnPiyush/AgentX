@@ -23,15 +23,18 @@ duplicate-agent correction.
 - [x] Validation scope and protected-approval boundary established.
 - [x] Latest 9.6.2 package built, with all 200 contributions and both consent policies.
 - [x] Build, 635 schema checks, 307-entry manifest and dependency thresholds checked.
-- [ ] Final package/source review and Git transport completed.
+- [x] Final package/source review and Git transport completed at `82618fa4`.
+- [x] Draft candidate created and its three uploaded files downloaded/hash-verified.
+- [ ] Remaining required CI and code-owner approval completed.
 
 GitHub PR/release state and the delivery commit are authoritative for transport
 and publication status; a checked-in plan is not proof of a successful push.
 
 ## Surprises & Discoveries
 
-- PR #439 is still open with `REVIEW_REQUIRED`. The currently successful checks
-  belong to its older head, not these pending changes.
+- PR #439 is still open with `REVIEW_REQUIRED`. The pushed source at `82618fa4`
+  passed both platform quality-loop jobs, but its aggregate checks found a
+  missing plan evidence marker and one new PowerShell lint occurrence.
 - New README diagram URLs remain unavailable on `master` until reviewed source
   is merged. A package containing images does not publish their GitHub URLs.
 - A canonical draft `v9.6.2` could collide with the existing automatic release
@@ -84,8 +87,8 @@ exact package/checksum and clearly disclose remaining publication gates.
 | --- | --- | --- | --- |
 | Release notes and version consistency | DevOps | Complete | Current first-party metadata and notes say 9.6.2 |
 | Local build and package inspection | DevOps | Complete | Identity, 200 contributions, 160 cores and 127 compiled files verified |
-| Independent review and loop completion | Reviewer / owner | Pending | Current approval and honest unrun-suite status |
-| Commit and push | DevOps | Pending | Hooks pass; remote branch matches commit |
+| Independent review and loop completion | Reviewer / owner | Complete | Current aggregate review passed; local suites unrun |
+| Commit and push | DevOps | Complete | Existing hooks passed; `82618fa4` pushed normally |
 | Candidate and protected publication | DevOps / code owner | Blocked for public release | Draft assets available; canonical release waits for approval and CI |
 
 ## Concrete Steps
@@ -102,15 +105,15 @@ Use `gh pr edit 439` and `gh release create ... --draft --prerelease --target
 | --- | --- | --- |
 | Required review on PR #439 | No protected merge or canonical public release | Obtain legitimate code-owner approval |
 | Source images not yet on master | Marketplace README images would remain broken | Merge reviewed assets before Marketplace upload |
-| No current CI for the new commit yet | No release certification claim | Observe the checks triggered by the normal push |
+| PowerShell lint ratchet on the new commit | Separate CI remains blocked | Request approval for the narrow test-helper variable rename; do not change the baseline |
 
 ## Validation and Acceptance
 
 - [x] New VSIX identifies `jnPiyush.agentx@9.6.2` and matches the reviewed worktree.
 - [x] Previous local candidate remains preserved.
 - [x] No local suite execution or cosmetic cleanup during preparation.
-- [ ] Commit and remote head agree.
-- [ ] Draft candidate has the verified VSIX/checksum and accurate limitations.
+- [x] Commit and remote head agree at `82618fa4`.
+- [x] Draft candidate has the verified VSIX/checksum and accurate limitations.
 - [ ] Public release waits for required approval and CI.
 
 ## Idempotence and Recovery
@@ -131,6 +134,19 @@ The local output is `dist/vsix/agentx-9.6.2.vsix` with a checksum and publishing
 handoff. Detailed command logs, source hashes and review reports are retained in
 the session's `publish-9.6.2` evidence directory. Existing learning captures cover
 minimal initialization, README rendering, test consent and lint cleanup consent.
+
+Evidence: [pushed source commit](https://github.com/jnPiyush/AgentX/commit/82618fa41531e5ba14d406b20426b391be3c9a7e),
+[draft candidate](https://github.com/jnPiyush/AgentX/releases/tag/untagged-0c31bd2f0967e64cbb2d),
+and [CI quality-gate run](https://github.com/jnPiyush/AgentX/actions/runs/36501836146).
+The draft VSIX download matches SHA-256
+`CE23C0C972B91CBF099A7852DCF89A31D7F645557731B7610888D9CD3A9C3C5C`.
+The linked CI run records both passing platform jobs and the failed aggregate
+plan check; it is not represented as an all-green run.
+
+The [PowerShell analysis run](https://github.com/jnPiyush/AgentX/actions/runs/36501836184)
+reports `PSAvoidAssignmentToAutomaticVariable` in the scrub test helper. The
+owner was asked about the narrow rename; no affirmative answer was received.
+The finding is left unchanged, and the separate CI gate is not waived.
 
 ## Outcomes & Retrospective
 
