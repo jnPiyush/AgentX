@@ -138,7 +138,9 @@ export const RUNTIME_DIRS = [
   'memories/session',
 ];
 
-export async function promptWorkspaceRoot(title: string): Promise<string | undefined> {
+export async function promptWorkspaceFolder(
+  title: string,
+): Promise<vscode.WorkspaceFolder | undefined> {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) {
     vscode.window.showErrorMessage('Frontier: Open a workspace folder first.');
@@ -146,7 +148,7 @@ export async function promptWorkspaceRoot(title: string): Promise<string | undef
   }
 
   if (folders.length === 1) {
-    return folders[0].uri.fsPath;
+    return folders[0];
   }
 
   const pick = await vscode.window.showQuickPick(
@@ -154,7 +156,11 @@ export async function promptWorkspaceRoot(title: string): Promise<string | undef
     { placeHolder: 'Select workspace folder', title },
   );
 
-  return pick?.folder.uri.fsPath;
+  return pick?.folder;
+}
+
+export async function promptWorkspaceRoot(title: string): Promise<string | undefined> {
+  return (await promptWorkspaceFolder(title))?.uri.fsPath;
 }
 
 export function readJsonWithComments<T>(filePath: string): T | undefined {

@@ -1,5 +1,52 @@
 # Changelog
 
+## 9.6.2 - 2026-09-28
+
+### Changed
+
+- Treat cosmetic lint/style findings as LOW advisories in local loops/reviews.
+  Require explicit cleanup approval and add a read-only scrub `-Advisory` mode;
+  preserve strict CI/commit/production gates and genuine defect severity.
+- Remove automatic test-suite execution from quality-loop and review guidance.
+  Keep non-test verification, independent review and evidence gates; ask the
+  user after loop completion before a separate test run.
+- Offer the configured VS Code test task only after successful completion and
+  explicit approval. Decline/dismissal runs nothing; CLI/MCP output carries the
+  post-loop question.
+- Remove editor passing-count prompts. Legacy baselines permit omitted counts
+  without inventing a pass; explicit malformed or regressed counts still fail.
+  CI/release test gates remain unchanged.
+
+### Added
+
+- Add opt-in `frontier.initializationMode: minimal` to create workspace state
+  and terminal launchers without starter memory files or empty output folders.
+  Standard initialization remains the default; existing files are never deleted.
+- Document how Frontier's terminal CLI uses the installed runtime without
+  workspace asset seeding, and distinguish it from Copilot CLI plugin discovery.
+
+### Fixed
+
+- Preserve the selected workspace folder URI when resolving initialization
+  settings, including remote and multi-root workspaces.
+- Reject invalid initialization modes and conflicting minimal-plus-seeding
+  settings before writing files. Preserve existing GitHub MCP auto-configuration.
+- Correct extension README image and content URL bases for the repository's
+  extension subdirectory. Use the canonical Frontier PNG in both READMEs.
+- Display three workflow diagrams as portable PNGs while retaining editable
+  Mermaid sources, source links, and compact layouts.
+
+### Verification Scope
+
+- Author filesystem-footprint, preservation, invalid-setting, remote-folder,
+  GitHub adapter, and lazy-output regressions, plus a native Extension Host
+  setting check.
+- Author branding, vsce URL-rewriting, diagram-source/export, and workflow-edge
+  checks. Inspect packaged README assets and local light/dark browser previews.
+- Test- and lint-consent changes received non-test checks and independent source
+  review. Their new behavioral cases are not reported as executed; suite
+  execution is offered after the loop and CI remains independently required.
+
 ## 9.6.1 - 2026-09-27
 
 ### Fixed

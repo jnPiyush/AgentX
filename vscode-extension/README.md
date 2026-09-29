@@ -4,7 +4,7 @@
 
 **Frontier Corp's FDE fleet for Hypervelocity Engineering in VS Code**
 
-[![Version](https://img.shields.io/badge/Version-9.6.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.6.2-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 Frontier deploys specialized Forward Deployed Engineers (FDEs) into your
@@ -42,16 +42,10 @@ while preserving the repository as the system of record.
 
 ## Architecture Flow
 
-```mermaid
-flowchart LR
-    Chat["Copilot Chat"] --> Context["Frontier Context"] --> Engine["Execution Engine"]
+<img src="resources/diagrams/architecture-flow.png" width="640" alt="Copilot Chat passes through Frontier Context to the execution engine, which connects sidebar state to the VS Code UI and repository assets to local files.">
 
-    Engine --> View["Sidebar and Live State"]
-    Engine --> File["Repo-Defined Assets"]
-
-    View -.->|"Queues and Workflows"| UI["VS Code UI"]
-    File -.->|"Skills and Templates"| Workspace["Local Files"]
-```
+[Editable Mermaid source](resources/diagrams/architecture-flow.mmd).
+Solid arrows show execution flow; dashed arrows show surfaced outputs.
 
 * **Inputs:** VS Code Chat drives intent into the orchestrator.
 * **Control:** The IDE tracks progress and state live via dedicated UI extensions.
@@ -107,11 +101,50 @@ You can also start the same flow in chat with:
 This prepares the local Frontier runtime for the current workspace by:
 
 - creating local runtime folders and state files
-- preparing repo-local execution artifacts such as plans, progress, reviews, and learnings
+- creating empty output directories for plans, progress, reviews, and learnings in standard mode
 - writing stable `.frontier/runtime/*` workspace entrypoints that delegate into the bundled runtime
 - keeping the executable runtime bundled while workspace state stays local to the repo
 
 Repeat this step for each workspace where you want Frontier to run.
+
+### Minimal Workspace Setup
+
+To avoid starter memories and empty output directories, set these preferences
+before running `Frontier: Initialize Local Runtime`:
+
+```json
+{
+  "frontier.initializationMode": "minimal",
+  "frontier.seedRepoLocalAssets": false
+}
+```
+
+The default `standard` mode keeps the existing scaffold. `minimal` creates only
+four launchers under `.frontier/runtime/`, `.frontier/config.json`,
+`.frontier/version.json`, `.frontier/state/agent-status.json`, and the Frontier
+block in `.gitignore`. First-time GitHub remote detection can also configure
+`.vscode/mcp.json`, as in standard mode.
+
+Frontier terminal commands already work through those launchers; **Initialize
+CLI is not required for Frontier's own CLI**:
+
+```powershell
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 help
+```
+
+The installed extension supplies the executable runtime and framework assets.
+Commands create their own state and output directories when needed. Minimal
+initialization does not copy memories, agents, skills, scripts, rubrics or
+framework documentation. It rejects `seedRepoLocalAssets: true` before writing
+files rather than silently expanding the footprint.
+
+Changing to minimal mode does not delete previously generated or user-authored
+files. Reinstall preserves existing configuration, state and memories. Choose
+`standard` and run initialization again to add the starter scaffold.
+
+For GitHub Copilot CLI, see the [native plugin and workspace seeding
+options](../docs/GUIDE.md#using-frontier-with-github-copilot-cli-and-the-agents-window).
+Native plugin discovery is separate from Frontier runtime initialization.
 
 ### Duplicate Agents in the Picker
 
@@ -201,15 +234,9 @@ After enabling, reload the VS Code window. Frontier will appear in the Agents Wi
 
 Once a workspace is initialized, you can use Frontier inside VS Code to move an app from planning through review.
 
-```mermaid
-flowchart LR
-    I[Install Extension] --> W[Open Workspace]
-    W --> R[Initialize Local Runtime]
-    R --> B[Select Role Or Frontier Orchestration FDE]
-    B --> E[Create Or Execute Work]
-    E --> V[Review And Validate]
-    V --> C[Capture Learnings]
-```
+<img src="resources/diagrams/delivery-flow.png" width="320" alt="Install the extension, open a workspace, initialize the local runtime, select a role or orchestrator, execute work, review, and capture learnings.">
+
+[Editable Mermaid source](resources/diagrams/delivery-flow.mmd)
 
 ### Recommended Flow
 
@@ -250,6 +277,30 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 ## Compound Loop In The IDE
 
 Frontier exposes the compound-engineering loop directly in VS Code instead of leaving it implicit in docs alone.
+
+### Test Suites After the Loop
+
+From 9.6.2, loop iterations and code reviews use non-test
+verification and inspect authored tests without running suites. After a
+successful **Loop: Complete**, Frontier asks whether to run the test suite.
+**Run Test Task** uses your configured VS Code test task; **Not Now** or
+dismissal runs nothing. A started task is not reported as passed.
+
+Terminal/MCP completion returns the same question for the assistant to ask
+through its user-input tool. Missing passing-test counts do not block a loop,
+including legacy integer baselines; supplied malformed/regressed counts still
+fail. CI and mandatory release checks remain separate.
+
+### Lint Findings and Cleanup
+
+Loops and reviews report cosmetic lint/style findings as
+LOW advisories. They are not local completion requirements, and Frontier asks
+for explicit approval before formatting, import cleanup or other cosmetic
+fixes. No answer or a decline leaves them unchanged.
+
+Use `frontier scrub -Path <changed-area> -Advisory` for a read-only report.
+Build/type failures and verified defects keep their real severity. Independent
+CI, commit and production gates retain their existing behavior.
 
 ### Chat Entry Points
 
@@ -310,7 +361,7 @@ Frontier exposes the compound-engineering loop directly in VS Code instead of le
 | Loop: Start | Start a new quality loop iteration |
 | Loop: Status | Check current loop state |
 | Loop: Iterate | Record a loop iteration pass |
-| Loop: Complete | Mark the loop as complete |
+| Loop: Complete | Complete the reviewed loop, then offer the configured test task |
 | Loop: Cancel | Cancel the active loop |
 | Iterative Loop | Run the full iterative loop flow |
 
@@ -389,6 +440,20 @@ listed below and 11 hidden specialists that remain parent-invocable.
 ---
 
 ## Recent Changes
+
+### 9.6.2
+
+- Ask explicitly about test-suite execution after loop completion; reviews and
+  iterations do not launch suites. CI requirements remain separate.
+- Report cosmetic lint/style as LOW local advisories and request cleanup
+  approval; strict gates and genuine defect severity remain intact.
+- Add opt-in minimal workspace initialization without starter memories or empty
+  output folders; preserve the standard default and existing project files.
+- Preserve the selected remote or multi-root folder URI when reading settings.
+- Clarify that Frontier terminal commands do not require CLI asset seeding.
+- Correct packaged README image URLs and use the canonical Frontier PNG.
+- Render workflow diagrams as PNGs with editable Mermaid sources for previews
+  that do not support Mermaid.
 
 ### 9.6.1
 

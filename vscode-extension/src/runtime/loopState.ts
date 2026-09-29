@@ -44,6 +44,8 @@ export interface LoopState {
   readonly budgetMinutes?: number;
   /** False after loop complete; set true by post-commit after Git creates the consuming commit. */
   readonly loopConsumed?: boolean;
+  /** Completion follow-up only; this question is not approval to execute tests. */
+  readonly postLoopTestPrompt?: string;
   readonly history: ReadonlyArray<{
     readonly iteration: number;
     readonly timestamp: string;

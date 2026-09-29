@@ -37,13 +37,13 @@ Hypervelocity Engineering platform, Frontier.
 ```powershell
 # PowerShell -- into an existing project directory
 cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.1/install.ps1 | iex
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.2/install.ps1 | iex
 ```
 
 ```bash
 # Bash
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.1/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.2/install.sh | bash
 ```
 
 **What happens**: Frontier copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
@@ -156,8 +156,8 @@ Each agent produces a deliverable, validates it, and hands off to the next.
 ./install.sh
 
 # One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.1/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.1/install.sh | bash  # Bash
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.2/install.ps1 | iex    # PowerShell
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.2/install.sh | bash  # Bash
 ```
 
 PowerShell install path note:
@@ -180,22 +180,56 @@ shell-argument, review-state, parity, rollback and code-quality tests on native
 Ubuntu and macOS runners. A configured job is not a passing result: inspect its
 run for the current commit before claiming native platform verification.
 
-`--passing` is optional. The default evidence for an iteration is a Spec/ADR/PRD
-acceptance-criteria compliance mapping plus the sub-agent review findings, so an
-iteration that ran no suite simply omits the flag. When a step did run suites,
-report their counts: `--passing unit=12,api=40`. Each suite is compared only with
-its own last count, so a step reruns only the suites its change affects;
-`frontier loop affected` lists tests naming code changed since loop start.
-`loop baseline -c <suite>=<count>`
-records an intentional drop. An integer baseline (`loop baseline -c <count>`) keeps
-the older rule: each later iterate and complete needs an integer count no lower.
-A count proves neither a test run nor review independence; evidence and an
-attributed final review are still required.
+Quality loops and reviews do not execute test suites. They use acceptance
+mapping, independent review and non-test verification such as builds,
+typechecks, lint and schema checks. Tests can be authored and inspected without
+being reported as executed.
 
-For small changes, run checks covering the affected behavior and direct callers,
-recording commands and omitted surfaces with rationale; expand for shared
-contracts, broad changes or required CI/release gates, not for iteration count.
-The VS Code dialogs accept either count form, including zero.
+After successful `loop complete`, the owning agent asks whether to run the
+test suite and waits. The VS Code completion command offers **Run Test Task**
+or **Not Now**. Run Test Task uses VS Code's configured test task; configure a
+task in the `test` group if your workspace has none. It does not guess a shell
+command or report a test pass merely because the task was opened. Terminal and
+MCP completion output includes the same question for the host to surface.
+
+Approval to test is not approval to edit source or bypass workspace guards.
+Use the host test runner/configured task. If a host's terminal-write guard
+blocks an agent after loop completion, run the agreed command directly in
+your terminal; do not reopen a loop merely to unlock a test run.
+
+Declining or dismissing the offer leaves suites not run and coverage not
+measured. Approval starts a separate verification task. A failing suite still
+requires investigation; code corrections use a new fix/review loop.
+
+`--passing` remains optional metadata for actual supplied test evidence. An
+integer baseline no longer forces a count when tests are deferred. Explicit
+malformed or lower counts still fail; omission never invents a zero/pass count.
+The editor no longer asks for test counts during iterate/complete.
+`frontier loop affected` only lists candidate tests for the post-loop offer.
+
+CI jobs and mandatory release/certification checks remain unchanged. Local
+code-review approval is not a waiver of those gates or a claim that tests pass.
+
+### Advisory lint and optional cleanup
+
+Lint/hygiene checks still run during loops and reviews, but cosmetic findings
+are LOW advisories rather than local Done Criteria. Use:
+
+```powershell
+pwsh .\.frontier\runtime\frontier.ps1 scrub -Path <changed-area> -Advisory
+```
+
+The scan is read-only. It preserves original tool severity and strict-gate
+metadata, reports LOW candidates and does not block local completion for those
+findings. A scan failure is still an error, and exit code zero does not mean
+lint is clean. `-Advisory` cannot be combined with `-Fix` or `-Production`.
+
+The owning agent reports affected files and asks whether you want cleanup.
+No affirmative answer means no fixes. Approved cleanup is a separate bounded
+task; it is not silently added to feature work. Build/type errors and proven
+correctness, security, reliability or accessibility defects retain their
+impact-based severity. CI, commit and production checks may still enforce
+their existing rules; advisory handling does not waive them.
 
 ### Recovering evidence verification
 
@@ -207,11 +241,12 @@ artifact freshness before the expensive evaluator.
 
 - Checker timeout/startup failure: inspect the reported checker and its dependencies,
   then retry; do not regenerate unrelated test suites or disable verification.
-- Missing or regressed passing count: rerun that suite and report its real result;
-  lower a suite's count only for an intentional change, never with another suite.
+- Missing count: omit it while suites are deferred. Explicit regressed counts
+  remain invalid; report the real evidence and offer any retest after the loop.
 - Stale final evidence: run a fresh, scoped final check after the review iteration
   and submit its real output. Never touch timestamps or copy old evidence to pass.
-- Changed hashes or review findings: rerun affected tests and obtain a new review.
+- Changed hashes or review findings: refresh non-test checks and obtain a new
+  review; suite execution still needs the separate post-loop decision.
 - Complete the loop before committing; an active loop is rejected by the commit hook.
 
 Architect and UX Designer request `GPT-6 Astra (copilot)`. Copilot API catalog
@@ -266,7 +301,7 @@ Control what gets installed with the `-Profile` flag:
 ./install.sh --no-setup
 
 # One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.1/install.sh | bash
+PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.2/install.sh | bash
 ```
 
 ### What the Installer Does
@@ -287,8 +322,32 @@ Frontier supports three host surfaces. Pick the one that matches how you work.
 ### 1. VS Code extension (default)
 
 Install the Frontier extension. It contributes all 26 agents, 134 skills and the
-instruction files directly to the host -- nothing is copied into your
-workspace. This is the zero-copy path.
+instruction files directly to the host without copying those framework trees
+into your workspace. Initialization still writes workspace configuration,
+state and terminal launchers.
+
+For the smallest initial scaffold, configure:
+
+```json
+{
+  "frontier.initializationMode": "minimal",
+  "frontier.seedRepoLocalAssets": false
+}
+```
+
+Run `Frontier: Initialize Local Runtime`, not `Initialize CLI`. The generated
+launchers also support Frontier terminal commands:
+
+```powershell
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 help
+```
+
+Minimal mode skips starter memory files and empty documentation/output
+directories; those can be created when work needs them. It preserves existing
+files and requires asset seeding to be disabled. The default `standard` mode
+retains the previous scaffold. See the [initialization
+contract](../vscode-extension/README.md#minimal-workspace-setup) for the exact
+files and the conditional GitHub MCP configuration.
 
 To use Frontier in the **Agents window** (VS Code's dedicated agent surface),
 opt the extension in:
@@ -307,14 +366,33 @@ opt the extension in:
 
 ### 2. GitHub Copilot CLI -- native plugin
 
-The repository root ships a `plugin.json`, so Copilot CLI can register Frontier's
-agents, skills and lifecycle hooks without copying anything:
+The repository root ships a `plugin.json`. A managed plugin installation keeps
+its framework assets outside each application workspace:
 
 ```bash
 copilot plugin install jnPiyush/AgentX
 copilot plugin list
-copilot --agent engineer -p "Implement the health endpoint"
 ```
+
+Alternatively, launch Copilot from your application directory and point
+`--plugin-dir` at one shared Frontier checkout. On Windows, for example:
+
+```powershell
+copilot --plugin-dir "C:\Tools\AgentX" plugin list
+copilot --plugin-dir "C:\Tools\AgentX"
+```
+
+Replace the example path with your shared checkout. This does not install the
+VS Code extension or initialize Frontier state, and a managed plugin has its
+own version/update lifecycle.
+
+Plugin discovery is not a full workflow compatibility test. Current Frontier
+hooks and some gate commands contain workspace-relative paths. Before relying
+on a plugin-only application workspace, verify hook execution, reference
+resolution, and gate output locations. Do not assume `--plugin-dir` rewrites
+shell commands or makes every workflow portable. Use the bundled Frontier CLI
+launchers for Frontier runtime operations; use workspace seeding below when
+repo-local Copilot assets are required.
 
 ### 3. GitHub Copilot CLI -- workspace seeding
 
@@ -330,7 +408,13 @@ Two modes are available via the `frontier.cliAssetMode` setting:
 | Mode | Behaviour | Use when |
 |------|-----------|----------|
 | `copy` (default) | Duplicates bundled assets into the workspace | You want the assets committed and shared with a team |
-| `symlink` | Creates directory junctions into the installed extension bundle | Single-user, zero-copy; entries are added to `.gitignore` and refreshed on upgrade |
+| `symlink` | Links the eight `.github/` asset trees to the installed bundle; copies supporting files | Single-user, reduced duplication; linked entries are gitignored and broken links are refreshed on activation |
+
+Select the desired mode in the initialization dialog. Symlink mode still copies
+supporting docs, scripts, evaluation rubrics, packs, runtime plugins and
+standalone reference documents. Existing real directories are preserved, not
+converted to links. Neither setting changes nor reinitialization remove old
+copies; cleanup requires distinguishing generated files from project content.
 
 Seeding never overwrites existing files, and never writes host-owned files such
 as `.github/workflows`, `.github/ISSUE_TEMPLATE`, `CODEOWNERS` or `LICENSE`.
@@ -341,9 +425,13 @@ registrations so each agent appears once in the picker:
 ```jsonc
 // .vscode/settings.json
 {
-  "chat.agentFilesLocations": { ".github/agents": false }
+  "frontier.useBundledAgents": false,
+  "chat.agentFilesLocations": { ".github/agents": true }
 }
 ```
+
+This selects workspace agents instead of extension agents. Reload the window
+and start a new agent session after changing the selection.
 
 ### Standalone install (no VS Code extension)
 

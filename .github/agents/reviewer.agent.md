@@ -22,12 +22,13 @@ hooks:
 reasoning:
   level: high
 constraints:
-  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Verify (Risk-Scoped) -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
-  - "MUST treat suite execution as optional and risk-scoped: required only for a complex or shared module, meaning one of the canonical suite triggers in .github/AGENT-PROTOCOL.md section 1.4; MUST NOT run or demand a full suite for a bounded change whose Pass A mapping and focused checks already hold"
+  - "MUST report cosmetic lint/style findings as LOW non-blocking advisories and MUST NOT require or apply cleanup for approval; send the proposed cleanup scope to the owning agent for explicit user consent. Genuine defects retain impact-based severity"
+  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Non-Test Verification -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
+  - "MUST NOT execute or delegate test suites during review; inspect tests, supplied results and non-test evidence, and leave the post-loop test-suite question to the owning agent per .github/AGENT-PROTOCOL.md section 1.4"
   - "MUST score code-bearing reviews against evaluation/rubrics/code-quality.md and validate the exact-scope report with scripts/score-code-quality.ps1; score below 80, a blocking-floor breach, or unresolved HIGH/MEDIUM finding requires CHANGES REQUESTED"
   - "MUST read the Tech Spec and PRD before reviewing code"
   - "MUST verify the Engineer's quality loop reached status=complete"
-  - "MUST check test coverage >= 80% whenever a suite run under the Phase 5 risk triggers produced coverage data; when no suite was run, MUST instead confirm every in-scope acceptance criterion maps to a code path and MUST NOT report coverage as a gap"
+  - "MUST report coverage only from supplied measured evidence with its revision; otherwise label coverage not measured and suites not run, without inventing passes or treating review approval as test or release certification"
   - "MUST verify no hardcoded secrets, SQL injection, or unvalidated inputs"
   - "MUST NOT modify source code -- request changes via review comments"
   - "MUST NOT approve code with active or cancelled quality loops"
@@ -213,28 +214,28 @@ Failure or score <80 is `CHANGES REQUESTED`. Test/docs-only reviews skip it.
 | **RAG/Retrieval Contract** | Retrieval implementation matches spec Section 13.5: knowledge source, chunk strategy, relevance threshold, and fallback retrieval behavior |
 | **I/O Failure Modes** | Non-retryable errors fail fast; user-visible failure modes and error paths match spec Section 13.2 |
 
-### 5. Verify (Risk-Scoped)
+### 5. Verify (Without Suite Execution)
 
-Choose the narrowest verification that can fail for the right reason. Executing a
-test suite is optional and is expected only for a complex or shared module, which
-means one of the canonical suite triggers in
-[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) section 1.4:
+Inspect the Pass A mapping, implementation, regression cases and supplied
+evidence. Run relevant non-test checks such as typecheck, lint or schema
+validation, after confirming the command does not invoke suites indirectly.
+MUST NOT run tests, coverage or adversarial suites as part of review.
 
-- a shared contract, public interface or data model that other modules consume
-- cross-module impact, broad callers, or a change to cross-cutting behavior
-- package, dependency or runtime version changes
-- security, auth, payments, persistence or migrations
-- a required CI or release gate already runs that suite on this surface
+Recommend a scoped post-loop test command when useful; `frontier loop affected`
+can identify candidate files without executing them. The owning agent asks the
+user after successful loop completion and waits for approval, per
+[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) section 1.4. A delegated reviewer does
+not ask or launch suites on the parent's behalf.
 
-```bash
-# Only when one of the triggers above applies, and prefer the affected scope
-.frontier/runtime/frontier.ps1 loop affected   # select the suites this diff touches
-npm test                                       # or the project equivalent
-```
+Record suites as not run and coverage as not measured unless actual supplied
+results prove otherwise. Preserve their revision and age; do not relabel them
+as current. Known failures and independent CI/release requirements remain
+visible. Code-review approval does not mean those checks passed.
 
-Otherwise verification is the Pass A acceptance-criterion mapping plus the focused
-checks the change warrants, and an unrun suite is not a finding. Record what you
-ran and what you deliberately omitted, with the rationale, in the review document.
+Lint is detection-only in this review. Cosmetic findings are LOW and do not
+block local approval or reduce a rubric dimension below its gate solely because
+cleanup was declined/deferred. Report original tool results and the proposed
+cleanup scope. The owner asks the user; do not auto-fix or hide genuine defects.
 
 ### 5.1 Pattern Advisory (Read-Only)
 
@@ -379,7 +380,9 @@ Review evidence is complete; all findings are categorized HIGH/MEDIUM/LOW with f
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: decision; HIGH/MEDIUM/LOW finding counts and resolution status; the verification you ran and anything you deliberately omitted with its rationale (suite and coverage status only when the risk triggers in Phase 5 applied); security checklist status; and Frontier quality-loop state.
+Before handoff, report: decision; HIGH/MEDIUM/LOW finding counts; non-test
+verification; supplied test evidence or explicit not-run/not-measured status;
+recommended post-loop test scope; security checklist status; and loop state.
 
 ## Plugins (Optional Capabilities)
 

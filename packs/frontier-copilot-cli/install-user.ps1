@@ -216,7 +216,7 @@ foreach ($legalFile in @('LICENSE', 'NOTICE')) {
 # Version stamp
 $stamp = [ordered]@{
   plugin      = 'frontier-copilot-cli-user'
-  version     = '9.6.1'
+  version     = '9.6.2'
   installedAt = (Get-Date).ToUniversalTime().ToString('o')
   source      = $Source
   mcpRegistered = [bool]$RegisterMcp

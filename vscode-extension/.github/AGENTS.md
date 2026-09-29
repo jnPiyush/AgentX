@@ -24,8 +24,15 @@ file (in extension-only workspaces, inside the installed Frontier extension).
   --medium 0`); edits after it need a fresh review. Finish with
   `loop complete -s "<summary>" -e <fresh-evidence>`. Minimum iterations:
   standard 1, auto-fix 2, complex/orchestrated 3, high-risk 5.
+- Test suites MUST NOT run inside loop iterations or reviews. After successful
+  loop completion, the owning agent MUST ask whether the user wants the suite
+  run and wait for explicit approval. Declined or unanswered means not run,
+  never passed. CI and release gates remain separate and unchanged.
 - Honesty rule: report loop and gate state from `loop status` and the actual
   artifacts; never claim a check ran, passed or was reviewed without evidence.
+- Cosmetic lint/style findings are LOW advisories, not local loop/review Done
+  Criteria. Report them and ask before cleanup; no response is not approval.
+  Build/type failures and verified correctness/security defects remain blockers.
 - Shared mechanics (review, scrub, Karpathy, Model Council, plans, research) are
   defined once in `.github/AGENT-PROTOCOL.md`; agent files keep role rules only.
 

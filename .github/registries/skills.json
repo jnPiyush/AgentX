@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-09-26T12:46:30Z",
+  "generated": "2026-09-28T23:17:00Z",
   "source": ".github/skills/**/SKILL.md",
   "totalCount": 134,
   "countsByCategory": [
@@ -480,7 +480,7 @@
       "name": "code-hygiene",
       "category": "development",
       "path": ".github/skills/development/code-hygiene/SKILL.md",
-      "description": "Three-pass quality sweep detecting over-engineering, stale comments, and generic UI patterns produced during AI-assisted coding sessions. Reports findings with severity and optional safe auto-fix."
+      "description": "Read-only hygiene review that reports cosmetic lint/style findings as LOW advisories and requests explicit approval before cleanup. Genuine defects are assessed separately by impact."
     },
     {
       "id": "development/code-optimization",
@@ -571,7 +571,7 @@
       "name": "iterative-loop",
       "category": "development",
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "description": "Implement Ralph Loop iterative refinement for AI agent tasks. Use when a task needs multiple passes to reach quality: TDD red-green-refactor cycles, incremental feature building, self-correcting code generation, or any work with verifiable completion criteria. Covers loop setup, completion promises, progress tracking, and escape hatches."
+      "description": "Run evidence-backed refinement with independent review and non-test verification. Covers loop setup, completion criteria, progress, bounded recovery, and explicit user consent for separate post-loop test execution."
     },
     {
       "id": "development/karpathy-guidelines",
@@ -599,7 +599,7 @@
       "name": "scrub",
       "category": "development",
       "path": ".github/skills/development/scrub/SKILL.md",
-      "description": "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
+      "description": "Inspect code hygiene without automatic cleanup. Use advisory mode in local loops/reviews, report cosmetic findings as LOW, and request explicit user approval before safe fixes. Preserve independent strict gates."
     },
     {
       "id": "development/skill-creator",

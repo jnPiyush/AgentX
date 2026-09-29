@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="docs/assets/frontier-logo.svg" width="128" height="128" alt="Frontier Corp">
+  <img src="vscode-extension/resources/frontier-ai-coding-harness.png" width="128" height="128" alt="Frontier Corp">
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.6.1"><img src="https://img.shields.io/badge/Version-9.6.1-b11f4b?style=for-the-badge" alt="Version 9.6.1"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.6.2"><img src="https://img.shields.io/badge/Version-9.6.2-b11f4b?style=for-the-badge" alt="Version 9.6.2"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -33,16 +33,9 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 
 ### The core idea
 
-```mermaid
-flowchart LR
-    Intent["User intent"] --> Route{"Frontier Orchestration FDE"}
-    Route --> Plan["Plan and design"]
-    Plan --> Build["Implement"]
-    Build --> Verify["Verify and review"]
-    Verify -->|"findings"| Build
-    Verify --> Capture["Capture learning"]
-    Capture --> Done["Done with evidence"]
-```
+<img src="vscode-extension/resources/diagrams/core-flow.png" width="320" alt="User intent is routed through planning, implementation, verification, learning capture, and completion. Review findings return to implementation.">
+
+[Editable Mermaid source](vscode-extension/resources/diagrams/core-flow.mmd)
 
 Frontier Orchestration FDE can run that path in one session. For tighter control, select a specialist role for only the phase you need.
 
@@ -89,6 +82,9 @@ Frontier uses six shared checkpoints across chat, CLI, issues, plans, reviews, a
 
 ### Quality gates
 
+- Test suites run separately from local loops and reviews. After a completed
+  loop, Frontier asks whether to run the suite and waits for explicit approval.
+  Skipped suites remain not run; CI/release requirements are unchanged.
 - **Iterative loop:** evidence-backed minimums scale by risk: standard `1`, auto-fix `2`, complex delivery `3`, and high-risk `5`
 - **Independent review:** a subagent sees the deliverable, not the author's rationale
 - **Karpathy guidelines:** think before coding, keep it simple, change surgically, verify the goal
@@ -305,15 +301,20 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.6.1
+## New In 9.6.2
 
-This release prevents duplicate Frontier agents when local definitions and the
-extension are both available:
+This release reduces optional workspace scaffolding and repairs README rendering:
 
-- `frontier.useBundledAgents` selects whether the extension contributes its agents
-- bundled discovery remains enabled by default; this repository uses local agents
-- collaborator, handoff and prompt targets match the current display names
-- other extension features, icons, published history and dependency versions are preserved
+- loop/review suites are deferred until an explicit post-loop user decision
+- cosmetic lint findings are LOW local advisories; cleanup needs explicit approval
+- `frontier.initializationMode: minimal` skips starter memories and empty output
+  folders while retaining the terminal runtime launchers
+- standard initialization and existing project files remain unchanged by default
+- initialization reads settings from the selected folder, including remote URIs
+- both READMEs use the new Frontier icon and portable PNG workflow diagrams with
+  editable Mermaid sources
+- package README links resolve from the extension subdirectory rather than the
+  repository root
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

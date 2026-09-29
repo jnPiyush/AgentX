@@ -2064,8 +2064,12 @@ function Get-Flag([string[]]$flags, [string]$default = '') {
 
 function Get-JoinedFlagValue([string[]]$flags) {
     # Every occurrence counts, and an unquoted PowerShell list such as a=1,b=2 arrives as an array.
-    $values = for ($i = 0; $i -lt $Script:SubArgs.Count - 1; $i++) {
-        if ($flags -contains $Script:SubArgs[$i]) { @($Script:SubArgs[$i + 1]) -join ',' }
+    # Keep empty trailing occurrences so count validation rejects incomplete repeated flags.
+    $values = for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
+        if ($flags -contains $Script:SubArgs[$i]) {
+            if (($i + 1) -lt $Script:SubArgs.Count) { @($Script:SubArgs[$i + 1]) -join ',' }
+            else { '' }
+        }
     }
     return @($values) -join ','
 }
@@ -4298,23 +4302,23 @@ function Get-LoopIterationGuidance {
         'high-risk' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Make it Work: satisfy the in-scope Spec/ADR/PRD acceptance criteria';     gate='Every in-scope criterion maps to a code path; feature functional' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + the checks this change warrants';      gate='Changed-surface checks pass' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: inspect edge cases + lint + non-test checks';              gate='Changed-surface non-test checks pass' }
                 [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets + dependencies + applicable threat checks'; gate='Zero high/critical findings' }
-                [PSCustomObject]@{ n=4; focus='Adversarial: applicable mutation/property/fuzz/negative checks';          gate='Risk-specific adversarial checks pass' }
-                [PSCustomObject]@{ n=5; focus='Independent Review + risk-scoped final evidence';                          gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+                [PSCustomObject]@{ n=4; focus='Adversarial review: inspect failure paths and prepare test cases';       gate='Risks reviewed; test suites deferred for user consent' }
+                [PSCustomObject]@{ n=5; focus='Independent Review + non-test final evidence';                            gate='Zero HIGH/MEDIUM; after completion ask whether to run suites' }
             )
         }
         'complex-delivery' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Make it Work: satisfy the in-scope Spec/ADR/PRD acceptance criteria'; gate='Every in-scope criterion maps to a code path; feature functional' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface security checks';  gate='Changed-surface checks pass' }
-                [PSCustomObject]@{ n=3; focus='Independent Review + risk-scoped final evidence';                      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: inspect edge cases + lint + non-test checks';          gate='Changed-surface non-test checks pass' }
+                [PSCustomObject]@{ n=3; focus='Independent Review + non-test final evidence';                         gate='Zero HIGH/MEDIUM; after completion ask whether to run suites' }
             )
         }
         'auto-fix-review' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Review findings + apply safe fixes + verify the changed surface'; gate='Safe fixes hold on the changed surface' }
-                [PSCustomObject]@{ n=2; focus='Independent decision + risk-scoped final evidence';      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+                [PSCustomObject]@{ n=2; focus='Independent decision + non-test final evidence';        gate='Zero HIGH/MEDIUM; after completion ask whether to run suites' }
             )
         }
         'agent-x' {
@@ -4656,7 +4660,13 @@ function ConvertFrom-LoopPassingValue([string]$Raw) {
 
 function Get-LoopPassingCount([string]$contextLabel) {
     $raw = Get-JoinedFlagValue @('--passing')
-    if (-not $raw) { return $null }
+    if (-not $raw) {
+        if (Test-Flag @('--passing')) {
+            Write-CliOutput "$($C.r)  [FAIL] $contextLabel requires a value after --passing; omit the flag when tests are deferred.$($C.n)"
+            return '__INVALID__'
+        }
+        return $null
+    }
 
     $parsed = ConvertFrom-LoopPassingValue $raw
     if ($parsed -is [string]) {
@@ -4675,6 +4685,8 @@ function Test-LoopPassingBaseline {
         $CurrentPassing,
         [string]$ContextLabel
     )
+
+    if ($null -eq $CurrentPassing) { return $true }
 
     $hasCount = Test-LoopIntegerBaseline $Baseline
     if ($hasCount -and $CurrentPassing -isnot [int]) {
@@ -4698,8 +4710,7 @@ function Test-LoopPassingBaseline {
             }
         }
     } elseif (-not $hasCount) {
-        $note = if ($null -eq $CurrentPassing) { 'No test counts recorded.' } else { 'An integer count is compared only with an integer baseline (loop baseline -c <count>).' }
-        Write-CliOutput "$($C.d)  $note Add --passing <suite>=<count> for the suites this step ran.$($C.n)"
+        Write-CliOutput "$($C.d)  An integer count is compared only with an integer baseline (loop baseline -c <count>).$($C.n)"
     }
 
     return $true
@@ -4777,8 +4788,8 @@ function Format-LoopPreview([string]$Text, [int]$Max = 160) {
 .DESCRIPTION
   A test is affected when its text names a changed file by file name, path without
   extension, or a distinctive stem (compound, camelCase or 8+ characters, so words
-  such as 'config' or 'API' do not match everything). The list is where an iteration's
-  checks start, not proof of coverage; changed files no test names are reported.
+  such as 'config' or 'API' do not match everything). The list informs the post-loop
+  test offer, not execution or proof of coverage; unmatched files are reported.
 #>
 function Invoke-LoopAffected {
     $scope = Invoke-CodeQualityEvaluator -Mode Scope
@@ -4828,7 +4839,7 @@ function Invoke-LoopAffected {
         return
     }
     if ($changed.Count -eq 0) {
-        Write-CliOutput "$($C.d)  No implementation files changed since loop start; run only the tests you edited.$($C.n)"
+        Write-CliOutput "$($C.d)  No implementation files changed since loop start; include edited tests in the post-loop offer.$($C.n)"
         return
     }
     Write-CliOutput "$($C.c)  Affected tests: $($affected.Count) of $($testFiles.Count) test files cover $($changed.Count) changed file(s).$($C.n)"
@@ -4843,7 +4854,7 @@ function Invoke-LoopAffected {
         Write-CliOutput "$($C.y)  Not named by any test: $(@($untested | Select-Object -First 5) -join ', ')$more$($C.n)"
     }
     if ($skipped -gt 0) { Write-CliOutput "$($C.y)  Skipped $skipped test file(s) that are over 2 MB or unreadable.$($C.n)" }
-    Write-CliOutput "$($C.d)  Record each suite you run: --passing <suite>=<count>[,<suite>=<count>]$($C.n)"
+    Write-CliOutput "$($C.d)  Use these candidates for the post-loop user question. This command does not run suites.$($C.n)"
 }
 
 function Invoke-LoopStart {
@@ -5530,9 +5541,8 @@ function Invoke-LoopComplete {
     if (-not $finalEvidenceAbs -and (Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
         if ($finalEvidence) {
             Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
-            Write-CliOutput "$($C.d)  Provide a fresh log of the final checks for the changed code (see: frontier loop affected):$($C.n)"
-            Write-CliOutput "$($C.d)    e.g.: pwsh tests/<affected-suite>.ps1 > .frontier/state/final-gate.log$($C.n)"
-            Write-CliOutput "$($C.d)    then: frontier loop complete -s '<summary>' -e .frontier/state/final-gate.log --passing <suite>=<count>$($C.n)"
+            Write-CliOutput "$($C.d)  Provide fresh acceptance mapping, independent review and non-test verification evidence.$($C.n)"
+            Write-CliOutput "$($C.d)    then: frontier loop complete -s '<summary>' -e .frontier/state/final-gate.json$($C.n)"
         } else {
             Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., the log of the focused checks you ran last).$($C.n)"
         }
@@ -5606,6 +5616,8 @@ function Invoke-LoopComplete {
 
     $summary = Get-Flag @('-s', '--summary') 'Criteria met'
     $state.active = $false; $state.status = 'complete'; $state.lastIterationAt = Get-Timestamp
+    $testSuitePrompt = 'Would you like to run the test suite now?'
+    $state | Add-Member -NotePropertyName postLoopTestPrompt -NotePropertyValue $testSuitePrompt -Force
     # Explicitly mark as not yet consumed so the pre-commit gate can reliably
     # detect the completed-but-not-consumed state without relying on field absence.
     # The pre-commit hook (or post-commit hook as a fallback) will flip this to
@@ -5629,6 +5641,8 @@ function Invoke-LoopComplete {
     Write-JsonFile $Script:LOOP_STATE_FILE $state
     Write-CliOutput "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)"
     if ($finalArchivedPath) { Write-CliOutput "$($C.d)  Final evidence archived to: $finalArchivedPath$($C.n)" }
+    Write-CliOutput '  Test suites are separate from loop completion.'
+    Write-CliOutput "  $testSuitePrompt Ask the user and wait for explicit approval."
     Write-CliOutput ''
 }
 

@@ -1,8 +1,8 @@
 {
   "$schemaVersion": 1,
   "generated": null,
-  "source": "AGENTS.md (Role Pipeline Reference table)",
-  "notes": "Hand-authored mirror of per-role phase pipelines. Each role's phases MUST be executed in order; no phase may be skipped without an explicit documented reason. Update this file and AGENTS.md together.",
+  "source": "docs/guides/ROLE-PIPELINES.md",
+  "notes": "Hand-authored mirror of per-role phase pipelines. Phases MUST execute in order; no phase may be skipped without an explicit documented reason. Update this file and docs/guides/ROLE-PIPELINES.md together. Loop/review phases do not execute test suites; the owning agent asks about separate testing after loop completion. CI/release gates remain independent.",
   "pipelines": [
     {
       "role": "agent-x",
@@ -34,14 +34,14 @@
     {
       "role": "engineer",
       "displayName": "Engineer",
-      "phases": ["Research", "Brainstorm", "Plan", "Design", "Conditional Design Alignment", "Implement", "Test", "Review"],
-      "deliveryGate": "Loop complete + coverage >=80% + output score >=70% + code-quality rubric >=80% + required Architect/Data Scientist alignment captured",
+      "phases": ["Research", "Brainstorm", "Plan", "Design", "Conditional Design Alignment", "Implement", "Scrub", "Test Readiness", "Non-Test Verification", "Review", "Complete Loop", "Ask About Tests"],
+      "deliveryGate": "Loop complete + output score >=70% + code-quality rubric >=80% + required alignment captured; suites run only as a separate approved task; CI/release gates are not waived",
       "deliverable": "Code + Tests + Docs"
     },
     {
       "role": "reviewer",
       "displayName": "Reviewer",
-      "phases": ["Read Context", "Verify Loop", "Functional Review", "Code Review", "Run Tests", "Model Council (code-review)", "Write Review", "Decision"],
+      "phases": ["Read Context", "Verify Loop", "Functional Review", "Code Review", "Non-Test Verification", "Model Council (code-review)", "Write Review", "Decision"],
       "deliveryGate": "Review doc complete; approval/rejection explicitly stated; Model Council convened or skip rationale recorded",
       "deliverable": "docs/artifacts/reviews/REVIEW-{id}.md"
     },
@@ -49,7 +49,7 @@
       "role": "reviewer-auto",
       "displayName": "Auto-Fix Reviewer",
       "phases": ["Read Context", "Verify Loop", "Review Code", "Apply Safe Fixes", "Document", "Self-Review", "Decision"],
-      "deliveryGate": "All auto-fixes pass full test suite; review doc complete",
+      "deliveryGate": "Behavior-neutral auto-fixes have non-test evidence; test execution deferred; review doc complete",
       "deliverable": "docs/artifacts/reviews/REVIEW-{id}.md + safe auto-fixes"
     },
     {
@@ -69,8 +69,8 @@
     {
       "role": "tester",
       "displayName": "Tester",
-      "phases": ["Read Context", "Write Tests", "Execute Suite", "Report Defects", "Certification Report", "Commit"],
-      "deliveryGate": "Test pyramid complete; certification report signed off",
+      "phases": ["Confirm Separate Test Request", "Read Context", "Write Tests", "Execute Approved Suite", "Report Defects", "Certification Report", "Commit"],
+      "deliveryGate": "During loop/review delegation, return readiness findings only. Separate approved execution, complete test pyramid and signed-off certification report are required before certification",
       "deliverable": "docs/testing/ test suites + certification report"
     },
     {

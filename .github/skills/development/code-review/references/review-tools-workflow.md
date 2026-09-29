@@ -13,6 +13,9 @@
 
 ### Coverage Tools
 
+Use this section only for separately approved post-loop testing or CI, not
+inside a code review. Inspect an existing coverage report without rerunning it.
+
 ```bash
 # Generate coverage report
 dotnet test --collect:"XPlat Code Coverage"
@@ -77,8 +80,8 @@ jobs:
 ### 1. Self-Review (Pre-PR)
 
 ```bash
-# Run automated checks
-./scripts/pre-review-check.sh
+# Run only non-test checks here; inspect any wrapper before invoking it.
+dotnet build --no-restore
 
 # Review own changes
 git diff main...HEAD

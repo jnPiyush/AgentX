@@ -434,9 +434,12 @@ In Review + needs:testing -> Tester (pre-release certification)
 - UX: Wireframes + user flows + **HTML/CSS prototypes (MANDATORY)** complete, accessibility considered
 - Architect: ADR + Tech Spec exist, NO CODE EXAMPLES compliance, PM requirement-fit validation captured, and AI-bearing specs capture Data Scientist implementation-depth alignment
 - Data Scientist: ML pipeline design, evaluation plan, model card present
-- Engineer: Code committed, tests 80% coverage, docs updated, and required Architect/Data Scientist design alignment captured when the issue crosses those boundaries
+- Engineer: Implementation and regression cases reviewed, non-test checks recorded,
+  docs updated, and required design alignment captured. After loop completion,
+  ask whether to run suites; report not-run/not-measured status until executed.
 - Code-bearing implementation: final independent-review evidence passes `evaluation/rubrics/code-quality.md` at 80+ with exact changed-file hashes and no blocking findings
-- Reviewer: Review document complete, approval decision present
+- Reviewer: Review document complete, non-test evidence and deferred suite scope
+  recorded, approval decision present. Review does not launch suites.
 - DevOps: CI/CD pipelines validated, deployment docs present
 - Tester: Test suites pass, certification report complete
 - Fabric Engineer: data product artifacts, quality checks, lineage, recovery, and runtime-evidence status documented

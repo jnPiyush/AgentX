@@ -1,0 +1,23 @@
+---
+title: Build software with Frontier
+config:
+  theme: neutral
+  fontFamily: Arial, sans-serif
+  flowchart:
+    htmlLabels: false
+    rankSpacing: 24
+    padding: 12
+---
+%% Owner: ../../README.md#build-software-with-frontier; updated 2026-09-28.
+%% Mermaid is the maintained source; PNG is the portable README export.
+%% Render with Mermaid CLI 11.12.0 from this directory:
+%% mmdc -i delivery-flow.mmd -o delivery-flow.png -b white -s 2
+flowchart TB
+    accTitle: Build software with Frontier
+    accDescr: Follow the arrows from extension installation through learning capture.
+    I["Install Extension"] --> W["Open Workspace"]
+    W --> R["Initialize Local Runtime"]
+    R --> B["Select role or orchestrator"]
+    B --> E["Create Or Execute Work"]
+    E --> V["Review And Validate"]
+    V --> C["Capture Learnings"]

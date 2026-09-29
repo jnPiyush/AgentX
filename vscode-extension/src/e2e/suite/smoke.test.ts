@@ -3,6 +3,22 @@ import * as vscode from 'vscode';
 import { getRegisteredSidebarViewIds } from '../../views/registry';
 
 suite('Frontier Extension Host smoke', () => {
+  test('registers minimal initialization without changing the standard default', async () => {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    assert.ok(folder, 'The smoke test requires its isolated workspace');
+    const settings = vscode.workspace.getConfiguration('frontier', folder.uri);
+    assert.equal(settings.inspect('initializationMode')?.defaultValue, 'standard');
+    try {
+      await settings.update('initializationMode', 'minimal', vscode.ConfigurationTarget.WorkspaceFolder);
+      assert.equal(
+        vscode.workspace.getConfiguration('frontier', folder.uri).get('initializationMode'),
+        'minimal',
+      );
+    } finally {
+      await settings.update('initializationMode', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+    }
+  });
+
   test('activates, contributes sidebars, and executes a read-only command', async () => {
     const extension = vscode.extensions.all.find((candidate) => (
       candidate.packageJSON?.name === 'agentx'

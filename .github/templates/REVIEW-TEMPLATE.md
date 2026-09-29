@@ -36,6 +36,9 @@ Replace NOT ASSESSED with PASS, FAIL, or N/A only after assessment; justify N/A.
 Examples and diagrams are illustrative, not observed findings or measurements.
 Structural checks do not certify roles, skills, security, task completion, or
 production readiness. Record untested scope and remaining gates explicitly.
+Cosmetic lint/style findings are LOW advisories, not local approval blockers.
+Record original tool results and request separate cleanup consent; do not
+downgrade genuine build/type, correctness, security or accessibility defects.
 
 ---
 
@@ -102,7 +105,7 @@ Complete this pass first. If any row is `[FAIL]`, stop the review, return `CHANG
 | Scope matches issue (no scope creep, no scope cut) | NOT ASSESSED | {issue link} |
 | Non-goals from PRD respected | NOT ASSESSED | {note} |
 | Quality loop completed (`loop status` = complete) | NOT ASSESSED | {iteration count} |
-| Fresh verification evidence present (tests run on current commit) | NOT ASSESSED | {commit SHA + run log} |
+| Fresh non-test verification and exact revision present | NOT ASSESSED | {commit/file hashes + build/lint/schema evidence} |
 
 **Pass A verdict**: NOT ASSESSED. Proceed to Pass B only after evidence supports
 PASS; otherwise record CHANGES REQUESTED or BLOCKED with the failing or unassessed rows.
@@ -203,11 +206,13 @@ public async Task<User> GetUserAsync(string userId)
 
 ### Coverage Summary
 
-Fill these in only when a suite run under the Phase 5 risk triggers produced
-coverage data. Otherwise leave the `NOT MEASURED` default and point at the
-acceptance-criterion mapping in Section 2; an unrun suite is not a gap.
+Do not run suites or coverage during review. Populate measured results only
+from supplied evidence, retaining its revision and timestamp. Otherwise keep
+`NOT MEASURED` and describe the post-loop test scope.
 
-- **Total Coverage**: NOT MEASURED; no suite run under the Phase 5 risk triggers (Target when measured: 80%)
+- **Suite Execution**: NOT RUN BY REVIEW; awaiting the owning agent's post-loop user decision.
+- **Recommended Post-Loop Scope**: {suite/command and relevant project scope}
+- **Total Coverage**: NOT MEASURED (retain the repository target for separate testing)
 - **Line Coverage**: NOT MEASURED; {rationale}
 - **Branch Coverage**: NOT MEASURED; {rationale}
 - **Files with <80% coverage**: NOT MEASURED; {rationale}
@@ -650,7 +655,7 @@ Gate rules:
 1. Address all Critical issues
 2. Address all High-priority issues
 3. Consider Medium and Low suggestions
-4. Re-run the verification the fix warrants (a full suite and coverage only for complex or shared modules)
+4. Refresh non-test verification and regression-case design; offer suite execution after the new loop completes
 5. Update documentation if needed
 6. Comment on issue when ready for re-review
 
@@ -685,6 +690,7 @@ Gate rules:
 - **Time Spent**: {duration}
 
 ### Follow-Up
+- [ ] Report LOW lint/style findings and explicitly ask whether to fix the named scope; no approval means no cleanup
 - [ ] Schedule follow-up review after changes
 - [ ] Pair with engineer on complex sections
 - [ ] Document learnings in team wiki
@@ -809,7 +815,7 @@ flowchart TB
 
 | Decision | Required state |
 |----------|----------------|
-| APPROVED | 0 blocking issues. The verification the change warranted is recorded, with omissions and their rationale; a suite run and >= 80% coverage only where the Phase 5 risk triggers applied; required CI/release gates green where they apply. Self-review checklist passed. |
+| APPROVED | 0 blocking review issues; current non-test evidence and unexecuted test scope recorded. Approval does not certify tests or coverage. CI/release gates remain separate requirements and their status is reported accurately. Self-review checklist passed. |
 | CHANGES REQUESTED | >=1 blocking issue, or >=2 non-blocking issue + suggestion combinations on the same area. |
 | BLOCKED | Cannot review (missing artifact, broken build, scope unclear). |
 

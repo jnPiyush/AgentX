@@ -173,7 +173,7 @@
       "dimensions": [
         { "id": "scope-coverage", "weight": 20, "blocking": true, "floor": 3, "question": "Did the review cover the exact final change set and every acceptance criterion, naming anything not reviewed?" },
         { "id": "finding-quality", "weight": 20, "blocking": true, "floor": 3, "question": "Is each finding located, reproducible, severity-justified, and paired with a fix?" },
-        { "id": "verification-evidence", "weight": 20, "blocking": true, "floor": 3, "question": "Were tests and checks actually executed and cited with their results?" },
+        { "id": "verification-evidence", "weight": 20, "blocking": true, "floor": 3, "question": "Are current non-test checks and reviewed code paths cited, with test suites explicitly deferred or supplied results bound to their actual revision, without executing suites during review?" },
         { "id": "decision-consistency", "weight": 20, "blocking": true, "floor": 3, "question": "Does the verdict follow from the findings, with no approval over open HIGH or MEDIUM findings?" },
         { "id": "independence", "weight": 10, "blocking": true, "floor": 3, "question": "Was the review done by someone other than the author, from the artifacts rather than the author's rationale?" },
         { "id": "actionability", "weight": 10, "blocking": false, "floor": 2, "question": "Are next steps specific, prioritized, and owned?" }

@@ -22,6 +22,7 @@ hooks:
 reasoning:
   level: medium
 constraints:
+  - "MUST NOT execute suites when delegated from an active implementation loop or code review; return test design/readiness findings. Execute suites only as a separate explicitly requested or approved post-loop testing task, per .github/AGENT-PROTOCOL.md section 1.4"
   - "MUST follow pipeline phases in prescribed sequence: Read Context -> Write Tests -> Execute Suite -> Report Defects -> Certification Report; MUST NOT issue a certification report before running the full test suite; MUST report all defects before closing the testing phase"
   - "MUST write executable test code -- never just test plans or checklists"
   - "MUST use Playwright as default E2E framework unless project specifies otherwise"

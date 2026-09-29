@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "Frontier - Hypervelocity Engineering",
   "description": "Frontier Corp deploys a fleet of specialized AI Forward Deployed Engineers that plan, build, review, test, and operate software through governed, evidence-backed workflows.",
-  "version": "9.6.1",
+  "version": "9.6.2",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -20,6 +20,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jnPiyush/AgentX"
+  },
+  "vsce": {
+    "baseContentUrl": "https://github.com/jnPiyush/AgentX/blob/master/vscode-extension",
+    "baseImagesUrl": "https://github.com/jnPiyush/AgentX/raw/master/vscode-extension"
   },
   "bugs": {
     "url": "https://github.com/jnPiyush/AgentX/issues"
@@ -1257,10 +1261,24 @@
           "scope": "window",
           "description": "Expose the extension's bundled agents in the agent picker. Disable for a workspace that provides its own Frontier agents in .github/agents to avoid duplicate roles. Skills, instructions, prompts, commands, and sidebars remain available. Reload the window or start a new agent session after changing the source."
         },
+        "frontier.initializationMode": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "minimal"
+          ],
+          "enumDescriptions": [
+            "Create runtime state, terminal launchers, starter memories, and empty output directories.",
+            "Create only runtime configuration, state, and terminal launchers. Do not seed memories or output directories. Requires seedRepoLocalAssets to be false."
+          ],
+          "default": "standard",
+          "scope": "resource",
+          "description": "Workspace footprint for Initialize Local Runtime. Both modes use the installed extension's runtime and support Frontier terminal commands without Initialize CLI. Minimal mode never removes existing files."
+        },
         "frontier.seedRepoLocalAssets": {
           "type": "boolean",
           "default": false,
-          "description": "When Initialize Local Runtime runs, also copy bundled agents, skills, instructions, prompts, templates, and schemas into the workspace .github/ folder. Required only for non-VS-Code surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery. VS Code chat, commands, and the Frontier runtime resolve these assets from the extension bundle and do not need this seed. Default: false (zero-copy)."
+          "description": "When standard Initialize Local Runtime runs, also copy bundled agents, skills, instructions, prompts, templates, schemas and supporting files into the workspace. Only needed for workspace-based discovery outside VS Code. Frontier terminal commands do not need it. Must remain false with minimal initialization."
         },
         "frontier.cliAssetMode": {
           "type": "string",

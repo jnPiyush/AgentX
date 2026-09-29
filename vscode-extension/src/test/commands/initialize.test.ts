@@ -5,6 +5,7 @@ import { execFileSync } from 'child_process';
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
+import { __clearConfig, __setConfig } from '../mocks/vscode';
 import { registerInitializeLocalRuntimeCommand } from '../../commands/initialize';
 import { runInitializeLocalRuntimeCommand } from '../../commands/initializeCommandInternals';
 import {
@@ -169,7 +170,9 @@ describe('runInitializeLocalRuntimeCommand', () => {
         fs.mkdirSync(path.join(root, '.frontier'));
         const configFile = path.join(root, '.frontier', 'config.json');
         fs.writeFileSync(configFile, JSON.stringify(existing));
-        sandbox.stub(internals, 'promptWorkspaceRoot').resolves(root);
+        sandbox.stub(internals, 'promptWorkspaceFolder').resolves({
+          uri: vscode.Uri.file(root), name: 'reinstall-fixture', index: 0,
+        });
         sandbox.stub(internals, 'copyBundledRuntimeAssets');
         sandbox.stub(internals, 'copyCopilotCliAssets');
         sandbox.stub(internals, 'writeWorkspaceRuntimeWrappers');
@@ -199,7 +202,231 @@ describe('runInitializeLocalRuntimeCommand', () => {
     });
   }
 
-  it('should keep Initialize scoped to minimal runtime assets', () => {
+  describe('initialization footprint', () => {
+    let root: string;
+    let extensionRoot: string;
+    let errors: sinon.SinonStub;
+    let chooseWorkspace: sinon.SinonStub;
+    let githubSync: sinon.SinonStub;
+
+    beforeEach(async () => {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-init-footprint-'));
+      extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-init-bundle-'));
+      const memories = path.join(extensionRoot, RUNTIME_ASSET_DIRS[0].source);
+      fs.mkdirSync(memories, { recursive: true });
+      for (const name of ['conventions.md', 'decisions.md', 'pitfalls.md']) {
+        fs.writeFileSync(path.join(memories, name), `starter ${name}\n`);
+      }
+      const internals = await import('../../commands/initializeInternals');
+      const adapters = await import('../../commands/adaptersCommandInternals');
+      const dependencies = await import('../../utils/dependencyChecker');
+      chooseWorkspace = sandbox.stub(internals, 'promptWorkspaceFolder').resolves({
+        uri: vscode.Uri.file(root), name: 'footprint-fixture', index: 0,
+      });
+      githubSync = sandbox.stub(adapters, 'syncDetectedGitHubAdapter').resolves(false);
+      sandbox.stub(adapters, 'syncDetectedAdoAdapter').resolves(false);
+      sandbox.stub(dependencies, 'checkAllDependencies').resolves({ results: [] } as never);
+      sandbox.stub(fakeContext, 'extensionUri').value(vscode.Uri.file(extensionRoot));
+      fakeAgentx = sandbox.createStubInstance(FrontierContext);
+      sandbox.stub(fakeAgentx, 'workspaceRoot').get(() => root);
+      errors = sandbox.stub(vscode.window, 'showErrorMessage');
+      __clearConfig();
+    });
+
+    afterEach(() => {
+      __clearConfig();
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(extensionRoot, { recursive: true, force: true });
+    });
+
+    for (const mode of [undefined, 'standard']) {
+      it(`preserves the standard scaffold when mode is ${mode ?? 'unset'}`, async () => {
+        if (mode) {
+          __setConfig('frontier.initializationMode', mode);
+        }
+        await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+        sinon.assert.notCalled(errors);
+        for (const dir of RUNTIME_DIRS) {
+          assert.ok(fs.statSync(path.join(root, dir)).isDirectory(), dir);
+        }
+        assert.equal(
+          fs.readFileSync(path.join(root, 'memories', 'conventions.md'), 'utf8'),
+          'starter conventions.md\n',
+        );
+        assert.ok(!fs.existsSync(path.join(root, '.github')));
+      });
+    }
+
+    it('still seeds explicitly requested CLI assets in standard mode', async () => {
+      __setConfig('frontier.seedRepoLocalAssets', true);
+      const bundledAgents = path.join(extensionRoot, COPILOT_CLI_ASSET_DIRS[0].source);
+      fs.mkdirSync(bundledAgents, { recursive: true });
+      fs.writeFileSync(path.join(bundledAgents, 'fixture.agent.md'), 'fixture agent\n');
+
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+      sinon.assert.notCalled(errors);
+      assert.equal(fs.readFileSync(
+        path.join(root, '.github', 'agents', 'fixture.agent.md'), 'utf8'), 'fixture agent\n');
+    });
+
+    it('creates exactly the state and launcher files in minimal mode', async () => {
+      __setConfig('frontier.initializationMode', 'minimal');
+      const configuration = sandbox.spy(vscode.workspace, 'getConfiguration');
+
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+      sinon.assert.notCalled(errors);
+      const files = fs.readdirSync(root, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)))
+        .sort();
+      assert.deepEqual(files, [
+        '.frontier/config.json',
+        '.frontier/runtime/frontier.ps1',
+        '.frontier/runtime/frontier.sh',
+        '.frontier/runtime/local-issue-manager.ps1',
+        '.frontier/runtime/local-issue-manager.sh',
+        '.frontier/state/agent-status.json',
+        '.frontier/version.json',
+        '.gitignore',
+      ].map((entry) => path.normalize(entry)).sort());
+      assert.deepEqual(fs.readdirSync(root).sort(), ['.frontier', '.gitignore']);
+      assert.deepEqual(fs.readdirSync(path.join(root, '.frontier')).sort(),
+        ['config.json', 'runtime', 'state', 'version.json']);
+      assert.ok(configuration.getCalls().some((call) =>
+        call.args[0] === 'frontier'
+        && call.args[1] instanceof vscode.Uri && call.args[1].fsPath === root));
+    });
+
+    it('uses the exact selected remote URI for folder-specific minimal settings', async () => {
+      chooseWorkspace.restore();
+      const remoteUri = vscode.Uri.file(root);
+      sandbox.stub(remoteUri, 'scheme').value('vscode-remote');
+      sandbox.stub(remoteUri, 'authority').value('ssh-remote+fixture');
+      const remoteFolder = { uri: remoteUri, name: 'remote-project', index: 1 };
+      sandbox.stub(vscode.workspace, 'workspaceFolders').value([
+        { uri: vscode.Uri.file(extensionRoot), name: 'unselected-project', index: 0 },
+        remoteFolder,
+      ]);
+      sandbox.stub(vscode.window, 'showQuickPick').resolves({
+        label: remoteFolder.name, description: root, folder: remoteFolder,
+      } as never);
+      const selectedSettings = vscode.workspace.getConfiguration('frontier');
+      sandbox.stub(selectedSettings, 'get')
+        .withArgs('initializationMode', 'standard').returns('minimal');
+      const otherSettings = vscode.workspace.getConfiguration('frontier');
+      const configuration = sandbox.stub(vscode.workspace, 'getConfiguration')
+        .callsFake((_section, scope) => scope === remoteUri ? selectedSettings : otherSettings);
+
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+      sinon.assert.notCalled(errors);
+      assert.ok(configuration.getCalls().some((call) => call.args[1] === remoteUri));
+      assert.deepEqual(fs.readdirSync(root).sort(), ['.frontier', '.gitignore']);
+      assert.ok(!fs.existsSync(path.join(extensionRoot, '.frontier')));
+    });
+
+    it('preserves first-time GitHub MCP configuration as a documented footprint exception', async () => {
+      __setConfig('frontier.initializationMode', 'minimal');
+      githubSync.restore();
+      execFileSync('git', ['init', '--quiet'], { cwd: root });
+      execFileSync('git', ['remote', 'add', 'origin',
+        'https://github.com/example/minimal-fixture.git'], { cwd: root });
+
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+      sinon.assert.notCalled(errors);
+      const mcp = JSON.parse(fs.readFileSync(path.join(root, '.vscode', 'mcp.json'), 'utf8'));
+      assert.deepEqual(mcp.servers.github, {
+        type: 'http', url: 'https://api.githubcopilot.com/mcp/',
+      });
+      const config = JSON.parse(fs.readFileSync(
+        path.join(root, '.frontier', 'config.json'), 'utf8'));
+      assert.equal(config.provider, 'github');
+      assert.equal(config.repo, 'example/minimal-fixture');
+      assert.deepEqual(fs.readdirSync(root).sort(),
+        ['.frontier', '.git', '.gitignore', '.vscode']);
+      assert.ok(!fs.existsSync(path.join(root, 'docs')));
+      assert.ok(!fs.existsSync(path.join(root, 'memories')));
+    });
+
+    for (const mode of ['unknown', 3]) {
+      it(`rejects invalid initialization mode ${mode} before writing`, async () => {
+        __setConfig('frontier.initializationMode', mode);
+
+        await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+        sinon.assert.calledOnce(errors);
+        assert.match(String(errors.firstCall.args[0]), /initializationMode/);
+        assert.deepEqual(fs.readdirSync(root), []);
+      });
+    }
+
+    it('rejects minimal mode with asset seeding instead of silently copying files', async () => {
+      __setConfig('frontier.initializationMode', 'minimal');
+      __setConfig('frontier.seedRepoLocalAssets', true);
+
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+      sinon.assert.calledOnce(errors);
+      assert.match(String(errors.firstCall.args[0]), /seedRepoLocalAssets/);
+      assert.deepEqual(fs.readdirSync(root), []);
+    });
+
+    it('preserves existing project content and state during a minimal reinstall', async () => {
+      __setConfig('frontier.initializationMode', 'minimal');
+      sandbox.stub(vscode.window, 'showWarningMessage').resolves('Reinstall' as never);
+      const existing = new Map([
+        ['memories/decisions.md', 'project decisions\n'],
+        ['docs/artifacts/prd/PRD-1.md', 'project requirements\n'],
+        ['.github/agents/custom.agent.md', 'project agent\n'],
+        ['.frontier/state/agent-status.json', '{"engineer":{"status":"working"}}'],
+      ]);
+      for (const [relative, content] of existing) {
+        const target = path.join(root, relative);
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, content);
+      }
+      const config = { provider: 'local', nextIssueNumber: 12, enforceIssues: true };
+      fs.writeFileSync(path.join(root, '.frontier', 'config.json'), JSON.stringify(config));
+
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+
+      sinon.assert.notCalled(errors);
+      for (const [relative, content] of existing) {
+        assert.equal(fs.readFileSync(path.join(root, relative), 'utf8'), content);
+      }
+      const actual = JSON.parse(fs.readFileSync(
+        path.join(root, '.frontier', 'config.json'), 'utf8'));
+      assert.equal(actual.nextIssueNumber, 12);
+      assert.equal(actual.enforceIssues, true);
+      assert.ok(!fs.existsSync(path.join(root, 'memories', 'conventions.md')));
+      assert.ok(!fs.existsSync(path.join(root, 'docs', 'ux')));
+    });
+
+    it('creates learning output directories only when capture is requested', async () => {
+      __setConfig('frontier.initializationMode', 'minimal');
+      const { createLearningCapture } = await import('../../commands/learningsCommandInternals');
+      sandbox.stub(vscode.window, 'showInputBox')
+        .onFirstCall().resolves('7')
+        .onSecondCall().resolves('Capture in a minimal workspace');
+
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+      assert.ok(!fs.existsSync(path.join(root, 'docs')));
+
+      await createLearningCapture(fakeAgentx);
+
+      sinon.assert.notCalled(errors);
+      const learning = path.join(root, 'docs', 'artifacts', 'learnings', 'LEARNING-7.md');
+      assert.ok(fs.readFileSync(learning, 'utf8').includes('Capture in a minimal workspace'));
+      assert.ok(!fs.existsSync(path.join(root, 'docs', 'artifacts', 'prd')));
+      assert.ok(!fs.existsSync(path.join(root, 'memories')));
+    });
+  });
+
+  it('should keep standard initialization scoped to the existing runtime scaffold', () => {
     assert.deepEqual(ESSENTIAL_DIRS, []);
     assert.deepEqual(ESSENTIAL_FILES, []);
     assert.deepEqual(RUNTIME_ASSET_DIRS, [

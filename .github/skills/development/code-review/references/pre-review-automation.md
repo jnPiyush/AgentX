@@ -2,12 +2,14 @@
 
 ## Pre-Review Automated Checks
 
-Run these before requesting human review or deploying.
+These recipes are for CI or a separately approved post-loop verification task.
+Do not run test commands during a quality loop or review. For in-loop review,
+run only the non-test checks after confirming wrappers do not invoke suites.
 
 ### Quick Check Script
 
 ```bash
-# Run all automated checks
+# Use only after explicit approval for the post-loop test scope, or in CI
 ./scripts/pre-review-check.sh
 
 # Or manually:
@@ -21,6 +23,7 @@ dotnet list package --vulnerable --include-transitive
 
 ```powershell
 # scripts/Pre-Review-Check.ps1
+param([switch]$RunApprovedTests)
 Write-Host "=== Pre-Review Automated Checks ===" -ForegroundColor Cyan
 
 # 1. Format Check
@@ -39,7 +42,9 @@ if ($LASTEXITCODE -ne 0) {
  exit 1
 }
 
-# 3. Tests
+# 3-4. Suites and coverage run only in the separately approved phase
+if ($RunApprovedTests) {
+# Set this switch only after post-loop user consent, never during review.
 Write-Host "`n[3/6] Running tests..." -ForegroundColor Yellow
 dotnet test --no-build --verbosity minimal --collect:"XPlat Code Coverage"
 if ($LASTEXITCODE -ne 0) {
@@ -59,6 +64,10 @@ if ($coverageFile) {
  }
 }
 
+} else {
+ Write-Host "Test suites: not run; awaiting a separate post-loop decision."
+}
+
 # 5. Security Vulnerabilities
 Write-Host "`n[5/6] Checking for vulnerable packages..." -ForegroundColor Yellow
 dotnet list package --vulnerable --include-transitive
@@ -75,7 +84,7 @@ if (Get-Command "dotnet-sonarscanner" -ErrorAction SilentlyContinue) {
  dotnet sonarscanner end
 }
 
-Write-Host "`n[PASS] All automated checks passed!" -ForegroundColor Green
+Write-Host "`nNon-test checks complete. Report test status from actual execution only." -ForegroundColor Green
 ```
 
 ---

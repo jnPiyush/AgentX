@@ -6,7 +6,7 @@ import {
   copyBundledRuntimeAssets,
   copyCopilotCliAssets,
   mergeGitignore,
-  promptWorkspaceRoot,
+  promptWorkspaceFolder,
   readJsonWithComments,
   RUNTIME_DIRS,
   writeWorkspaceRuntimeWrappers,
@@ -32,10 +32,11 @@ export async function runInitializeLocalRuntimeCommand(
   context: vscode.ExtensionContext,
   agentx: FrontierContext,
 ): Promise<void> {
- const root = await promptWorkspaceRoot('Frontier - Initialize Local Runtime');
- if (!root) {
+ const folder = await promptWorkspaceFolder('Frontier - Initialize Local Runtime');
+ if (!folder) {
   return;
  }
+ const root = folder.uri.fsPath;
 
  const initialized = hasFrontierState(root);
  let isUpgrade = false;
@@ -59,21 +60,27 @@ export async function runInitializeLocalRuntimeCommand(
   },
   async (progress) => {
    try {
+    const settings = vscode.workspace.getConfiguration('frontier', folder.uri);
+    const mode = settings.get<string>('initializationMode', 'standard');
+    const seedRepoLocalAssets = settings.get<boolean>('seedRepoLocalAssets', false);
+    if (mode !== 'standard' && mode !== 'minimal') {
+      throw new Error('frontier.initializationMode must be "standard" or "minimal".');
+    }
+    if (mode === 'minimal' && seedRepoLocalAssets) {
+      throw new Error(
+        'Minimal initialization requires frontier.seedRepoLocalAssets to be false. '
+        + 'Disable seeding or select standard initialization.',
+      );
+    }
+
     progress.report({ message: 'Creating workspace state...', increment: 40 });
-    for (const dir of RUNTIME_DIRS) {
+    const directories = mode === 'minimal' ? ['.frontier/state'] : RUNTIME_DIRS;
+    for (const dir of directories) {
      fs.mkdirSync(path.join(root, dir), { recursive: true });
     }
-    copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
-    // Optionally seed workspace .github/ with Frontier assets for non-VS-Code
-    // surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery of
-    // agents/skills/instructions/prompts/templates/schemas. VS Code chat,
-    // commands, and the Frontier runtime resolve these from the extension bundle
-    // via runtimeAssets.resolveAssetPath, so the seed is opt-in.
-    // Setting: frontier.seedRepoLocalAssets (default false). Always skip-existing
-    // to preserve any workspace overrides the user has committed to .github/.
-    const seedRepoLocalAssets = vscode.workspace
-      .getConfiguration('frontier')
-      .get<boolean>('seedRepoLocalAssets', false);
+    if (mode === 'standard') {
+      copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
+    }
     if (seedRepoLocalAssets) {
       copyCopilotCliAssets(context.extensionUri.fsPath, root, false);
     }

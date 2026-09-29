@@ -24,9 +24,13 @@ Before reviewing, read these files first:
 
 1. **Security** - Input validation, SQL injection, no hardcoded secrets, auth/authz
 2. **Correctness** - Logic, edge cases, error handling, async/await
-3. **Quality** - Tests (80%+ coverage), conventions, no duplication
+3. **Quality** - Regression-case design, supplied coverage evidence, conventions, no duplication
 4. **Performance** - N+1 queries, algorithms, resource disposal
 5. **Maintainability** - SOLID, naming, documentation, abstraction
+
+Do not execute suites or coverage during this review. Report tests as not run
+unless supplied results show otherwise, and recommend a scope for the owning
+agent's explicit post-loop user question. CI/release gates are unchanged.
 
 ## Output Format
 
@@ -46,4 +50,3 @@ Before reviewing, read these files first:
 ## [PASS] Positives
 [What was done well]
 ```
-

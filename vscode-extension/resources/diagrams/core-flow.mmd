@@ -1,0 +1,24 @@
+---
+title: From intent to evidence
+config:
+  theme: neutral
+  fontFamily: Arial, sans-serif
+  flowchart:
+    htmlLabels: false
+    rankSpacing: 24
+    padding: 12
+---
+%% Owner: ../../../README.md; updated 2026-09-28.
+%% Mermaid is the maintained source; PNG is the portable README export.
+%% Render with Mermaid CLI 11.12.0 from this directory:
+%% mmdc -i core-flow.mmd -o core-flow.png -b white -s 2
+flowchart TB
+    accTitle: From intent to evidence
+    accDescr: Review findings return to implementation before learning and completion.
+    Intent["User intent"] --> Route["Frontier orchestration"]
+    Route --> Plan["Plan and design"]
+    Plan --> Build["Implement"]
+    Build --> Verify["Verify and review"]
+    Verify -->|"findings"| Build
+    Verify --> Capture["Capture learning"]
+    Capture --> Done["Done with evidence"]

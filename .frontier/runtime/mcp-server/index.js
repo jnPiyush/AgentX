@@ -235,7 +235,7 @@ const TOOLS = [
   {
     name: 'frontier_loop_complete',
     description:
-      'Mark the Frontier quality loop complete. Requires the risk-based 1/2/3/5 iteration minimum and an approved reviewer verdict with zero HIGH and MEDIUM findings on the final work iteration.',
+      'Mark the Frontier quality loop complete. Requires the risk-based 1/2/3/5 iteration minimum and an approved reviewer verdict with zero HIGH and MEDIUM findings on the final work iteration. Does not run test suites. After success, ask the user whether to run the suite and wait for explicit approval before separate test execution.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -457,7 +457,7 @@ const LEGACY_TOOL_BY_NAME = Object.fromEntries(
 
 function createServer(runner) {
 const server = new Server(
-  { name: 'frontier', version: '9.6.1' },
+  { name: 'frontier', version: '9.6.2' },
   { capabilities: { tools: {} } }
 );
 

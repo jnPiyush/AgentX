@@ -29,6 +29,18 @@ metadata:
 - Testing framework installed (pytest, Jest, xUnit, etc.)
 - CI/CD pipeline for automated test execution
 
+## Frontier Execution Boundary
+
+Inside a Frontier quality loop or review, use this skill to design and author
+tests, not execute suites. Test execution, coverage and adversarial test runs
+wait until the loop completes and the owning agent explicitly asks the user.
+No answer or a decline means not run. Use `.github/AGENT-PROTOCOL.md` section
+1.4 for the consent procedure.
+
+The execution recipes below apply to explicitly approved, separate testing
+tasks and CI/release jobs. They do not override the in-loop/review prohibition.
+Do not claim pass counts or coverage for tests that were only written or read.
+
 ## Rationalization Table
 
 If you find yourself thinking one of these, push back against it. These are the common ways agents and humans skip the discipline.

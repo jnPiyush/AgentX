@@ -1,6 +1,6 @@
 {
-  "version": "9.6.1",
-  "createdAt": "2026-09-28T02:56:21Z",
+  "version": "9.6.2",
+  "createdAt": "2026-09-28T23:24:40Z",
   "files": [
     {
       "path": ".frontier/runtime/agentic-runner.ps1",
@@ -9,7 +9,7 @@
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "05cf535576a387ddbf5d2bffba771f6658edcac3b608bce4dff53609e9759529",
+      "sha256": "57a2058680d3eab3ede5f07c1aceeaec955791f258fbf698107f18b3a8dd5367",
       "category": "cli"
     },
     {
@@ -49,7 +49,7 @@
     },
     {
       "path": ".github/agents/engineer.agent.md",
-      "sha256": "a934510fb31ae06aa9715d7913d15eae7dab64a37b5749116c9852a1e5c6e160",
+      "sha256": "a228388e5c3485dafbc981dd6b74d272435dcb5fc7d0c47f1582a8b794c799f7",
       "category": "agent"
     },
     {
@@ -134,17 +134,17 @@
     },
     {
       "path": ".github/agents/reviewer-auto.agent.md",
-      "sha256": "06cef6f31a4f700c0a3d2e5824edeaf54324cba4a724721e97857753a3d06cb2",
+      "sha256": "056965c60fc2f599aeaf7dd2a0bf960de61268744105fed3bbd70538a0a15c03",
       "category": "agent"
     },
     {
       "path": ".github/agents/reviewer.agent.md",
-      "sha256": "7f3fb555959ed8f11ad278910b2f8be22370c9f3297e83c66ac167741ed49ab7",
+      "sha256": "c0afb4a29600981b38eb2b99e9cf3289c6073dc8e05114311610022088733150",
       "category": "agent"
     },
     {
       "path": ".github/agents/tester.agent.md",
-      "sha256": "19cf1cc32dc5e1671a53ae1019fe8af8b44c4bb1e725820b3aa7eed7f75f5304",
+      "sha256": "39a4894d08665d3fdcced49a746bd67d0a6706ed03b145704774948c28d8d9a8",
       "category": "agent"
     },
     {
@@ -294,7 +294,7 @@
     },
     {
       "path": ".github/prompts/code-review.prompt.md",
-      "sha256": "1f835d57e02c4457bb084834ca6a57823dbf8af1c06e43338aa105eba104b609",
+      "sha256": "b4bc9f89f09db0da9242234f52f6a5249fa527759454e2d8f0f47329a33f3be3",
       "category": "prompt"
     },
     {
@@ -354,7 +354,7 @@
     },
     {
       "path": ".github/registries/pipelines.json",
-      "sha256": "a1c0e232dde6cf9669344e08e86832ea324bccf006c1a9a90143f64192d4abc6",
+      "sha256": "df51930e2968145c70e5e96529599f4d347dabeba606de47f32f546c915168f8",
       "category": "registry"
     },
     {
@@ -364,12 +364,12 @@
     },
     {
       "path": ".github/registries/skills.json",
-      "sha256": "cea7aea6e9daa67445e0737dc073627c48d795b3cc47fd0a264b258a408b2441",
+      "sha256": "dd27692c87aa0e5a8afdb5f7fbe518e8c4e075388b820620a54d966140cf3d73",
       "category": "registry"
     },
     {
       "path": ".github/registries/templates.json",
-      "sha256": "df70ce02d81b5024476503edcb52f0267a6ccf209e4db765268d99577d8a4496",
+      "sha256": "53e040516804a6a6ddfe4f938ab89e29816d3e4ff71023bee2e36d92e994fea7",
       "category": "registry"
     },
     {
@@ -754,7 +754,7 @@
     },
     {
       "path": ".github/skills/development/code-hygiene/SKILL.md",
-      "sha256": "fc2ab92cb7b0c77187147310d541ff208bf2927a02300c869aac9906be167dd8",
+      "sha256": "f6b22cff0f536b2045207203362379035002bcc02778d1a8882300587428dff4",
       "category": "skill"
     },
     {
@@ -769,7 +769,7 @@
     },
     {
       "path": ".github/skills/development/code-review/SKILL.md",
-      "sha256": "e7a4f51ecd39f4bd59a8f9836761acc5595b0075287e4aec5823d44ee042fddb",
+      "sha256": "e2339b3830cc8c304bdc406fc925f0cc4b88fc9850dcbbad6010331091ddc799",
       "category": "skill"
     },
     {
@@ -839,7 +839,7 @@
     },
     {
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "81cb0691093e20c077f7767674e7f04bdead3483992a748c85e35028f1d4ac13",
+      "sha256": "75df6aa66089a07e6fa683901536c12f243464ff0a910d54d3075ca9d783d384",
       "category": "skill"
     },
     {
@@ -859,7 +859,7 @@
     },
     {
       "path": ".github/skills/development/scrub/SKILL.md",
-      "sha256": "44436fc8d87835c94f743700f200ab16de765b44c1557331552c1380e7c5e12a",
+      "sha256": "5cf1845ab601a94573c5f75d495a0be02e36f39a1c339a297a69987295707f34",
       "category": "skill"
     },
     {
@@ -894,7 +894,7 @@
     },
     {
       "path": ".github/skills/development/testing/SKILL.md",
-      "sha256": "898fa89fa484888fe215ad2edb28ff828a2547054413e2ed12bf204e32dd10aa",
+      "sha256": "f8467a5840c9c5f6f4314e51537bf95506a9b4e9312f78953acca6693400b7a8",
       "category": "skill"
     },
     {
@@ -909,7 +909,7 @@
     },
     {
       "path": ".github/skills/development/verification-before-completion/SKILL.md",
-      "sha256": "a9fbf62257e051c6120f6e519b741101ff16e836572ea22e46a3910e37ea61c2",
+      "sha256": "32a466fb965a5ce0d74d6d8413e51d93248bd5620d98d9a5f180c9dd5e9f51ab",
       "category": "skill"
     },
     {
@@ -1249,7 +1249,7 @@
     },
     {
       "path": ".github/templates/REVIEW-TEMPLATE.md",
-      "sha256": "630d7f1d8420787e28e57a46350c38198d1c59482289dcc15960194bd969e6d8",
+      "sha256": "d9e96eae23af0650de73c4b6891b9cdfb37c3c0621c0986c18b776a77642f6ae",
       "category": "template"
     },
     {
@@ -1274,7 +1274,7 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "51560fb687e8851e4ce260b445588b6b34a885ed1df69b67682b7ebcbb8f0c49",
+      "sha256": "3a17d654e46cddf4533562bcf0cd36908be5c12f6bd5ece603e561cd25e0e2ff",
       "category": "doc"
     },
     {
@@ -1294,32 +1294,32 @@
     },
     {
       "path": "packs/frontier-copilot-cli/install-user.ps1",
-      "sha256": "5da2a3be63130911812bdf5ee10deca2c5432e5c32db3c5ab15f0d8cb7d00d3b",
+      "sha256": "7539fd0fffd28a0ab3334f13590191b25b16645306b655a5553ffaa5e669ecd3",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.ps1",
-      "sha256": "d70d8cb76be79b22cf8b790902b7397c5d9e6e71769be693e77a32796bc70e91",
+      "sha256": "fa598a99dc5cf1b3e018e6a11718804ae2ae441d38ee33c1f6c6f1aca2cf1711",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.sh",
-      "sha256": "f18bcebc8caa2e43fac87de6a5541d473f7e14742a8d374f40325a433e483ea3",
+      "sha256": "b666bcab4f48478d592b2b4047954af02016c97ee7e8e507466ec2866f6d8c45",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/manifest.json",
-      "sha256": "c3a2d63c08fe70126457e6ee6f932c725e12a06e1fc2434af0a636ce0c444b87",
+      "sha256": "4e9b482e892c1f7f35b6ab0dc41bae80455ffdf9582c07df0ca74ed56aba165a",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/README.md",
-      "sha256": "d3c011b5c1b9172b2009c7c9554b5ded04e537f16a35b7cfdc235993f85d52f4",
+      "sha256": "884fbd5b0d54beb56c8e09032dcfdc336b24ab35ff586d3dd40917d65ce56171",
       "category": "pack"
     },
     {
       "path": "packs/frontier-core/manifest.json",
-      "sha256": "e7a1dabcba5b9fbdb968f13afdddde13b774c1c31961367ef700659cd248cdbe",
+      "sha256": "f7076097d5d1ab9f093592a40d3773664ef9aa7367716c5dc64f0affc48fe67c",
       "category": "pack"
     },
     {
@@ -1474,7 +1474,7 @@
     },
     {
       "path": "scripts/scrub.ps1",
-      "sha256": "0c8d0ee23843604c6c31a74a1503d5c16338b81cb1710a2b9f36ce5dca038e0d",
+      "sha256": "5eeabc31347f023858d57a357294c136bf0f3aa9860b0470206d08e66fd96acf",
       "category": "script"
     },
     {

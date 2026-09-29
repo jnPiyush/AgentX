@@ -147,6 +147,12 @@ try {
         $invalid = Invoke-Loop @('iterate', '-s', 'Invalid count', '-e', (New-Evidence 'invalid.txt'), '--passing', $invalidValue)
         Assert-True ($invalid.ExitCode -ne 0 -and $invalid.Output -match 'requires --passing') "malformed count '$invalidValue' is rejected"
     }
+    $missingValue = Invoke-Loop @('iterate', '-s', 'Explicit count flag without a value', '-e', (New-Evidence 'empty-count.txt'), '--passing')
+    Assert-True ($missingValue.ExitCode -ne 0 -and $missingValue.Output -match 'requires a value after --passing') 'an explicitly empty count flag is rejected rather than treated as deferred metadata'
+    foreach ($firstValue in @('10', 'tool=5')) {
+        $trailingEmpty = Invoke-Loop @('iterate', '-s', 'Trailing repeated count flag without a value', '-e', (New-Evidence 'repeated-empty-count.txt'), '--passing', $firstValue, '--passing')
+        Assert-True ($trailingEmpty.ExitCode -ne 0 -and $trailingEmpty.Output -match 'requires --passing') "a trailing empty --passing is not discarded after '$firstValue'"
+    }
     $invalidBaseline = Invoke-Loop @('baseline', '-c', 'tool')
     Assert-True ($invalidBaseline.ExitCode -ne 0 -and [int](Read-State 'loop-state.json').iteration -eq 2) 'rejected counts and baselines exit non-zero without advancing the loop'
 
@@ -177,9 +183,13 @@ try {
     Assert-True ($noEvaluator.ExitCode -ne 0 -and $noEvaluator.Output -match 'Code-quality evaluator is missing' -and $noEvaluator.Output -match 'Code-quality verification failed') 'loop complete reports a missing code-quality evaluator'
     $complete = Invoke-Loop @('complete', '-s', 'Loop scope fixture complete', '-e', (New-Evidence 'final-3.txt'), '--passing', 'widget=3')
     Assert-True ($complete.ExitCode -eq 0 -and $complete.Output -match 'Code-quality: passed\. Code-quality rubric passed at 100/100' -and $complete.Output.Length -lt 1500) 'loop complete prints a one-line code-quality result'
+    Assert-True ($complete.Output -match 'Would you like to run the test suite now\?' -and
+        (Get-Property (Read-State 'loop-state.json') 'postLoopTestPrompt') -eq 'Would you like to run the test suite now?') 'successful completion exposes an explicit post-loop test question without running suites'
 
     $legacyStart = Invoke-Loop @('start', '-p', 'Loop scope integer fixture')
     $legacyBaseline = Invoke-Loop @('baseline', '-c', '10')
+    $legacyMissing = Invoke-Loop @('iterate', '-s', 'Tests deferred for post-loop consent', '-e', (New-Evidence 'l0.txt'))
+    Assert-True ($legacyMissing.ExitCode -eq 0 -and $null -eq (Get-Property (@((Read-State 'loop-state.json').history)[-1]) 'passingTests')) 'legacy integer baselines do not force tests or fabricate counts when metadata is omitted'
     $legacySuiteBaseline = Invoke-Loop @('baseline', '-c', 'widget=3')
     $legacySuite = Invoke-Loop @('iterate', '-s', 'Suite count only', '-e', (New-Evidence 'l1.txt'), '--passing', 'widget=3')
     $legacyLow = Invoke-Loop @('iterate', '-s', 'Integer below baseline', '-e', (New-Evidence 'l2.txt'), '--passing', '9')
@@ -187,6 +197,10 @@ try {
     Assert-True ($legacyStart.ExitCode -eq 0 -and $legacyBaseline.ExitCode -eq 0 -and $legacySuiteBaseline.ExitCode -ne 0 -and $legacySuiteBaseline.Output -match 'integer baseline') 'a suite baseline is refused while an integer baseline is recorded'
     Assert-True ($legacySuite.ExitCode -ne 0 -and $legacySuite.Output -match 'requires --passing <count>') 'an integer baseline still requires an integer count'
     Assert-True ($legacyLow.ExitCode -ne 0 -and $legacyLow.Output -match 'current=9 baseline=10' -and $legacyOk.ExitCode -eq 0) 'an integer baseline still rejects a lower count'
+    $legacyReview = Invoke-ApprovedReview (Write-Review 'legacy-review.json' 4) 'Independent review; suites deferred'
+    $legacyComplete = Invoke-Loop @('complete', '-s', 'Reviewed without running suites', '-e', (New-Evidence 'legacy-final.txt'))
+    Assert-True ($legacyReview.ExitCode -eq 0 -and $legacyComplete.ExitCode -eq 0 -and
+        $legacyComplete.Output -match 'Would you like to run the test suite now\?') 'legacy baseline permits reviewed completion without test counts and asks about separate testing'
 } finally {
     Remove-Item -LiteralPath $workspace, $installCopy -Recurse -Force -ErrorAction SilentlyContinue
 }

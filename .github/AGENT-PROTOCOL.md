@@ -79,20 +79,16 @@ simply records one reviewer verdict before completing.
 
 ### 1.4 Loop Steps
 
-1. **Spec compliance check** -- verify the change against the Spec, ADR and PRD
-  acceptance criteria. Map each in-scope criterion to the code or artifact that
-  satisfies it and name any criterion still unmet. This mapping, not a suite
-  run, is the default evidence for an iteration. Run executable checks only
-  where the change actually warrants them: `frontier loop affected` lists the
-  test files naming code changed since loop start. Prefer the narrowest check
-  that can fail for the right reason, and expand to a suite only for a complex
-  or shared module, meaning any of the **suite triggers** below. Record scope
-  and omitted checks with rationale. Never rerun the entire suite just to fill
-  an iteration.
+1. **Spec compliance check** -- map each in-scope Spec, ADR and PRD acceptance
+  criterion to its implementation and name any unmet criterion. Inspect changed
+  code and planned regression cases. Use relevant non-test checks such as build,
+  typecheck, lint, syntax or schema validation; inspect command scripts first
+  so a wrapper does not launch a test suite indirectly.
 2. **Evaluate results** -- on any failure, find the root cause before fixing.
 3. **Fix** -- address the failure with targeted, minimal changes.
-4. **Re-run verification** -- confirm the fix works and did not regress
-  anything the change touches.
+4. **Re-run non-test verification** -- inspect the changed paths and refresh the
+  applicable non-test evidence. Author or update regression tests without
+  executing their suites during the loop.
 5. **Self-review** -- once all checks pass, spawn a same-role reviewer sub-agent
    that sees only the deliverable (diff / artifact / spec), not the author's
    rationale. It returns structured findings: HIGH / MEDIUM / LOW.
@@ -104,26 +100,54 @@ simply records one reviewer verdict before completing.
     final review iteration evidence.
 6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from
   Step 2.
-7. **Repeat** until APPROVED, all Done Criteria pass, and the risk-based minimum is met.
+7. **Repeat** until the implementation review is APPROVED, non-test Done Criteria
+  hold, and the risk-based minimum is met. Complete the loop, then follow the
+  test-consent procedure below.
 
-Sub-agent review and evaluation carry the loop; executed suites are supporting
-evidence, not the price of an iteration. When a step did run suites, report them
-as `--passing <suite>=<count>`; the flag is optional, and a suite is compared
-only with its own last count, so unaffected suites are never rerun.
+**Test-suite execution boundary.** Agents MUST NOT launch test suites during
+quality-loop iterations or code reviews, including delegated reviews. This
+includes targeted/unit, integration, E2E, coverage, mutation, property and fuzz
+suites, whether invoked directly or through another command. Review existing
+test code and supplied results, but do not rerun suites to obtain a score,
+approval or passing-count field. This boundary takes precedence over generic
+test-running recipes in language skills and review references.
 
-**Suite triggers.** This is the single canonical list; every role that mentions
-"complex or shared module" means exactly these. Running a suite is REQUIRED when
-any one holds, and OPTIONAL otherwise:
+**After successful loop completion:**
 
-- a shared contract, public interface or data model that other modules consume
-- cross-module impact, broad callers, or a change to cross-cutting behavior
-- package, dependency or runtime version changes
-- security, auth, payments, persistence or migrations
-- a required CI or release gate already runs that suite on this surface
+1. The owning agent MUST explicitly ask, "Would you like to run the test suite
+   now?" Use the host's user-input tool or UI, identify the proposed suite/command
+   and scope, and wait for an affirmative answer. Delegated reviewers return
+   findings; they MUST NOT run suites or ask on the parent's behalf.
+2. An unanswered, dismissed or declined offer means **not run**. Record that
+   status and the remaining verification gap; do not report tests passed,
+   coverage met or release readiness from the loop verdict.
+3. If approved, execute only the selected suite as a separate post-loop
+   verification task. Report the actual command and results. Failures remain
+   failures; corrections require a new fix/review loop, not edits to approved
+   evidence or an automatic broad rerun. Consent covers the completed revision
+   and selected scope, not unlimited future changes.
+4. A specific standalone user request to run tests supplies consent for that
+   separate verification task. It does not authorize suites inside a loop or
+   review. Do not ask again for the identical already-approved post-loop scope.
 
-When none holds, the acceptance-criterion mapping plus the focused checks the
-change warrants is sufficient evidence, and an unrun suite is not a finding.
-Record what you ran and what you deliberately omitted, with the rationale.
+`frontier loop affected` MAY identify candidates for the offer; it does not
+execute tests. Risk and shared-module impact inform the recommended scope, not
+automatic execution. `--passing` remains optional metadata for actual supplied
+test evidence. Omission never means zero or passed and never requires a suite
+run, including when a legacy integer baseline exists. Explicit malformed or
+regressed counts remain invalid.
+
+Choose a review/non-test completion criterion for an implementation loop.
+Do not claim a test-based criterion is satisfied without actual results;
+track that acceptance condition in the separate verification task.
+
+CI workflows and mandatory release/certification gates are unchanged and
+operate separately. Skipping local suites does not bypass those gates, waive
+known failures or turn code-review approval into production certification.
+Use the host's test runner or configured test task for approved execution.
+If a host blocks agent terminal commands after completion, report the limitation
+and provide the command for the user to run directly; do not reopen a loop just
+to run suites or weaken source-edit/protected-state guards.
 
 The per-iteration focus table is printed by `loop start` and the current focus is
 shown by `loop status`. The canonical tiers are:
@@ -133,7 +157,7 @@ shown by `loop status`. The canonical tiers are:
 | standard | Deliver, verify, and independently review in one bounded pass |
 | auto-fix | Review/fix with focused checks, then independent decision with final evidence |
 | complex / Frontier | Implement, validate changed surfaces, then independent review with final evidence |
-| high-risk | Implement, harden, run security and applicable adversarial checks, then independently review |
+| high-risk | Implement, inspect risks/failure paths, run non-test checks, then independently review |
 
 ### 1.5 Per-Iteration Reporting + Final Summary (MANDATORY)
 
@@ -144,6 +168,7 @@ shown by `loop status`. The canonical tiers are:
 - **Summarize at the end**: before handoff, print the role's Delivery Report table
   (a one-line outcome plus the per-row results) and run
   `.frontier/runtime/frontier.ps1 loop complete -s "<summary>" -e <fresh-evidence>`.
+  After success, ask for the user's test-suite decision as specified in 1.4.
 
 ### 1.6 Hard Gate
 
@@ -211,12 +236,38 @@ MUST NOT impersonate several council members or invent independent consensus.
 
 ## 4. Scrub / Deslop (MANDATORY, NO SKIP)
 
-Every run that changes files MUST pass a deslop scrub before review/handoff:
-`pwsh .frontier/runtime/frontier.ps1 scrub -Path <changed-area>`. Run scrub through the Frontier
-CLI (not a literal `scripts/scrub.ps1` path) so it resolves the bundled scanner in
-zero-copy workspaces. Apply safe fixes; behavior MUST NOT change. The pre-commit
-hook hard-fails on HIGH-severity scrub findings in staged files; there is no skip
-token. `ship.ps1` runs scrub unconditionally.
+Every run that changes files MUST inspect lint/hygiene findings before
+review/handoff. Use a read-only local scan:
+`pwsh .frontier/runtime/frontier.ps1 scrub -Path <changed-area> -Advisory`.
+Run through the CLI so it resolves the bundled scanner in zero-copy workspaces.
+
+Cosmetic lint, formatting, naming/style and comment-cleanup findings MUST be
+reported as LOW advisories. They MUST NOT become local loop/review Done Criteria,
+blocking findings, or automatic cleanup work. Preserve the tool's original
+severity/rule and actual exit status where available; a completed advisory scan
+does not mean lint is clean. Unverified hygiene candidates remain advisory.
+
+After reporting the affected paths and proposed scope, the owning agent MUST
+explicitly ask whether the user wants those findings fixed. This decision is
+separate from the post-loop test question. No answer, dismissal or decline means
+no cleanup. A general feature request or selection of an auto-fix reviewer is
+not blanket approval for lint fixes. Do not invoke `--fix`, `-Fix`, a formatter,
+or import cleanup until the user explicitly approves that scope.
+
+Approved cleanup is a separate bounded task with its own applicable loop;
+preserve behavior and do not modify approved source/evidence silently.
+Review delegates report LOW findings to the owner instead of applying them or
+asking the owner's question themselves.
+
+Build/type failures, scan failures, and verified correctness, security,
+reliability or accessibility defects are not cosmetic lint. Report their actual
+impact and preserve applicable blockers; do not downgrade a real defect merely
+because a linter discovered it.
+
+`-Advisory` never writes fixes and rejects `-Fix` or `-Production` combinations.
+Default/production scrub behavior and independent CI, pre-commit and release
+rules remain unchanged. Report any such separate gate that is blocked; local
+advisory handling does not waive it. `ship.ps1` still runs its configured gate.
 
 ---
 
