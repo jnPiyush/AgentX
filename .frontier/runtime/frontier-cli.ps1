@@ -6400,12 +6400,112 @@ function Get-HookInputValue($InputObject, [string]$Name) {
     return $null
 }
 
-function Write-HookResponse([string]$Message) {
+function Write-HookResponse([string]$Message, [string]$AdditionalContext = '') {
     $response = [ordered]@{
         continue = $true
         systemMessage = $Message
-    } | ConvertTo-Json -Compress
-    [Console]::Out.WriteLine($response)
+    }
+    if ($AdditionalContext) {
+        $response.hookSpecificOutput = @{
+            hookEventName = 'SessionStart'
+            additionalContext = $AdditionalContext
+        }
+    }
+    [Console]::Out.WriteLine(($response | ConvertTo-Json -Depth 5 -Compress))
+}
+
+function Get-RepositorySessionContext($HookInput) {
+    # Session startup never runs discovery inline: it reads the small primer, schedules a
+    # detached refresh when stale, and injects at most once per session and graph version.
+    if (-not (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf)) { return '' }
+    . (Join-Path $PSScriptRoot 'repository-context.ps1')
+    $state = Get-FrontierRepositoryPrimer $Script:ROOT
+    $scheduled = $false
+    try { $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -State $state }
+    catch { [Console]::Error.WriteLine("[frontier-context] Background refresh not started: $($_.Exception.Message)") }
+    $context = Format-FrontierRepositoryPrimer $state $scheduled
+    $fingerprint = if ($null -ne $state.primer) { [string]$state.primer['fingerprint'] } else { 'pending' }
+    $session = [string](Get-HookInputValue $HookInput 'session_id')
+    if (-not $session) { $session = [string](Get-HookInputValue $HookInput 'sessionId') }
+    if (-not $session -or -not $state.directory) { return $context }
+
+    $claimPath = Join-Path $state.directory 'session-context.json'
+    $claimItem = Get-Item -LiteralPath $claimPath -Force -ErrorAction SilentlyContinue
+    if ($claimItem -and ($claimItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw 'Repository context session record must not be a symbolic link.'
+    }
+    $key = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($session)))
+    return Invoke-WithJsonLock -jsonPath $claimPath -agent 'repository-context' -fn {
+        $record = if (Test-Path -LiteralPath $claimPath) {
+            Get-Content -LiteralPath $claimPath -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable -Depth 5
+        } else { @{ schemaVersion = 1; sessions = @{} } }
+        if ($record -isnot [System.Collections.IDictionary] -or $record['schemaVersion'] -ne 1 -or $record['sessions'] -isnot [System.Collections.IDictionary]) {
+            throw 'Invalid repository context session record; existing data was preserved.'
+        }
+        $claims = $record['sessions']
+        if ($claims.Contains($key) -and $claims[$key].fingerprint -eq $fingerprint) { return '' }
+        $claims[$key] = @{ fingerprint = $fingerprint; at = [DateTime]::UtcNow.ToString('o') }
+        if ($claims.Count -gt 64) {
+            foreach ($old in @($claims.Keys | Sort-Object { [datetime]$claims[$_].at } | Select-Object -First ($claims.Count - 64))) {
+                [void]$claims.Remove($old)
+            }
+        }
+        $temporary = "$claimPath.$([guid]::NewGuid().ToString('N')).tmp"
+        try {
+            Write-JsonFile $temporary $record
+            [IO.File]::Move($temporary, $claimPath, $true)
+        } finally {
+            if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+        }
+        return $context
+    }
+}
+
+function Invoke-RepositoryContextCmd {
+    if (Test-Flag @('--hook')) {
+        $hookInput = [Console]::In.ReadToEnd() | ConvertFrom-Json -Depth 10
+        if ($hookInput -isnot [PSCustomObject]) { throw 'Repository-context hooks require a JSON object on stdin.' }
+        $context = Get-RepositorySessionContext $hookInput
+        if (Get-HookInputValue $hookInput 'hook_event_name') {
+            Write-HookResponse -Message '' -AdditionalContext $context
+        } else {
+            [Console]::Out.WriteLine((@{ additionalContext = $context } | ConvertTo-Json -Compress))
+        }
+        return
+    }
+    if (-not (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf)) {
+        throw "Repository context is a Frontier workspace capability; $Script:ROOT is not initialized. Run 'Frontier: Initialize Local Runtime' or the Frontier workspace installer first."
+    }
+    . (Join-Path $PSScriptRoot 'repository-context.ps1')
+    if (Test-Flag @('--start-refresh')) {
+        $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -Force
+        if ($Script:JsonOutput) { [Console]::Out.WriteLine((@{ scheduled = $scheduled } | ConvertTo-Json -Compress)) }
+        else { Write-CliOutput $(if ($scheduled) { 'Repository context refresh started in the background.' } else { 'Repository context refresh was not started.' }) }
+        return
+    }
+    $query = Get-DecodedFlag @('-q', '--query') @('--query64') ''
+    $agent = Get-Flag @('-a', '--agent') ''
+    $maxChars = [int](Get-Flag @('--max-chars') '4000')
+    $refresh = Test-Flag @('--refresh')
+    if ($refresh -or (Test-Flag @('--sync'))) {
+        $packet = Get-FrontierRepositoryContext -WorkspaceRoot $Script:ROOT -Query $query -Agent $agent -MaxChars $maxChars -Refresh:$refresh
+    } else {
+        # Default reads never block on discovery; a debounced background worker keeps the graph current.
+        $packet = Get-FrontierRepositoryContext -WorkspaceRoot $Script:ROOT -Query $query -Agent $agent -MaxChars $maxChars -Cached
+        $state = Get-FrontierRepositoryPrimer $Script:ROOT
+        $scheduled = $false
+        try { $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -State $state }
+        catch { [Console]::Error.WriteLine("[frontier-context] Background refresh not started: $($_.Exception.Message)") }
+        $packet | Add-Member -NotePropertyName refreshScheduled -NotePropertyValue $scheduled
+        $checkedAt = if ($null -ne $state.primer) { (ConvertTo-FrontierRepositoryUtc $state.primer['checkedAt']).ToString('o') } else { $null }
+        $packet | Add-Member -NotePropertyName checkedAt -NotePropertyValue $checkedAt
+        if ($packet.status -eq 'missing') { $packet.context = Format-FrontierRepositoryPrimer $state $scheduled }
+    }
+    if ($Script:JsonOutput) {
+        [Console]::Out.WriteLine(($packet | ConvertTo-Json -Depth 8 -Compress))
+    } else {
+        Write-CliOutput $packet.context
+    }
 }
 
 function Stop-HookToolCall([string]$Message) {
@@ -6555,16 +6655,29 @@ function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[str
     return $true
 }
 
-function Test-TrustedLoopStartCommand([string]$Command) {
+function Test-TrustedFrontierCommand {
+    param(
+        [string]$Command,
+        [ValidateSet('loop-start', 'repository-context')][string]$Operation = 'loop-start'
+    )
     $tokens = $null
     $parseErrors = $null
     $ast = [Management.Automation.Language.Parser]::ParseInput($Command, [ref]$tokens, [ref]$parseErrors)
     if (@($parseErrors).Count -gt 0) { return $false }
+    if ($ast.BeginBlock -or $ast.ProcessBlock -or -not $ast.EndBlock -or $ast.EndBlock.Statements.Count -ne 1) { return $false }
+    $statement = $ast.EndBlock.Statements[0]
+    if ($statement -isnot [Management.Automation.Language.PipelineAst] -or $statement.PipelineElements.Count -ne 1) { return $false }
     $commands = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true))
     if ($commands.Count -ne 1 -or @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FileRedirectionAst] }, $true)).Count -gt 0) {
         return $false
     }
     $commandAst = $commands[0]
+    foreach ($element in $commandAst.CommandElements) {
+        if ($element -is [Management.Automation.Language.StringConstantExpressionAst]) { continue }
+        if ($element -is [Management.Automation.Language.ConstantExpressionAst] -and $element.Value -is [ValueType]) { continue }
+        if ($element -is [Management.Automation.Language.CommandParameterAst] -and $null -eq $element.Argument) { continue }
+        return $false
+    }
     if (@($commandAst.CommandElements | Where-Object {
         @($_.FindAll({
             param($node)
@@ -6579,18 +6692,26 @@ function Test-TrustedLoopStartCommand([string]$Command) {
     })
     $commandName = [string]$commandAst.GetCommandName()
     $launcherIndex = 0
-    if (($commandName -split '\\')[-1] -match '(?i)^pwsh(?:\.exe)?$') {
+    if (($commandName -split '[\\/]')[-1] -match '(?i)^pwsh(?:\.exe)?$') {
+        $wrapper = Get-Command -Name $commandName -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $wrapper -or $wrapper.CommandType -ne [Management.Automation.CommandTypes]::Application) { return $false }
+        $wrapperFile = Get-Item -LiteralPath $wrapper.Source -Force
+        if ($wrapperFile.Attributes -band [IO.FileAttributes]::ReparsePoint) { $wrapperFile = $wrapperFile.ResolveLinkTarget($true) }
+        $expectedWrapper = Join-Path $PSHOME $(if ($IsWindows) { 'pwsh.exe' } else { 'pwsh' })
+        $wrapperComparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+        if (-not $wrapperFile.FullName.Equals([IO.Path]::GetFullPath($expectedWrapper), $wrapperComparison)) { return $false }
         $fileIndexes = @(for ($index = 1; $index -lt $elements.Count; $index++) {
             if ($elements[$index] -match '(?i)^-File$') { $index }
         })
         if ($fileIndexes.Count -ne 1) { return $false }
         $fileIndex = $fileIndexes[0]
-        if ($fileIndex -lt 0 -or $fileIndex + 3 -ge $elements.Count) { return $false }
+        if ($fileIndex -lt 0 -or $fileIndex + 2 -ge $elements.Count) { return $false }
         $safeWrapperSwitches = @('-NoProfile', '-NonInteractive', '-NoLogo')
         if ($fileIndex -gt 1 -and @($elements[1..($fileIndex - 1)] | Where-Object { $_ -notin $safeWrapperSwitches }).Count -gt 0) { return $false }
         $launcherIndex = $fileIndex + 1
     }
-    if ($launcherIndex + 2 -ge $elements.Count) { return $false }
+    $argumentCount = if ($Operation -eq 'loop-start') { 2 } else { 1 }
+    if ($launcherIndex + $argumentCount -ge $elements.Count) { return $false }
     try {
         $launcher = if ([IO.Path]::IsPathRooted($elements[$launcherIndex])) {
             [IO.Path]::GetFullPath($elements[$launcherIndex])
@@ -6603,9 +6724,10 @@ function Test-TrustedLoopStartCommand([string]$Command) {
     } catch {
         return $false
     }
-    return @($trustedLaunchers | Where-Object { $launcher.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0 -and
-        $elements[$launcherIndex + 1] -ceq 'loop' -and
-        $elements[$launcherIndex + 2] -ceq 'start'
+    $comparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+    if (@($trustedLaunchers | Where-Object { $launcher.Equals($_, $comparison) }).Count -eq 0) { return $false }
+    if ($Operation -eq 'repository-context') { return $elements[$launcherIndex + 1] -ceq 'context' }
+    return $elements[$launcherIndex + 1] -ceq 'loop' -and $elements[$launcherIndex + 2] -ceq 'start'
 }
 
 function Get-TerminalHookPathAnalysis([string]$Command) {
@@ -6797,9 +6919,10 @@ function Invoke-PolicyHookCmd {
         }
         if ($isTerminalTool) {
             $command = [string](Get-HookInputValue $toolInput 'command')
-            $isTrustedLoopStart = Test-TrustedLoopStartCommand $command
+            $isTrustedLoopStart = Test-TrustedFrontierCommand $command
+            $isTrustedContext = Test-TrustedFrontierCommand $command -Operation 'repository-context'
             $pathAnalysis = Get-TerminalHookPathAnalysis $command
-            if ((-not $isTrustedLoopStart -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
+            if ((-not $isTrustedLoopStart -and -not $isTrustedContext -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
                 Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use frontier loop commands instead.'
             }
             $readOnlyCommandPattern = '(?i)^\s*(Get-(Content|ChildItem|Item|Location|FileHash|Command)(\s+.*)?|Test-Path(\s+.*)?|Select-String(\s+.*)?|Resolve-Path(\s+.*)?|rg(\s+.*)?|cat(\s+.*)?|ls(\s+.*)?|head(\s+.*)?|tail(\s+.*)?|pwd\s*|stat(\s+.*)?|node\s+--version|npm\s+--version|python(?:3)?\s+--version|py\s+--version|dotnet\s+--version|pwsh\s+--version)\s*$'
@@ -6808,7 +6931,7 @@ function Invoke-PolicyHookCmd {
                 $command -match '(?i)(^|\s)--output(?:=|\s)' -or
                 $command -match '(?i)(^|\s)--(?:pre|hostname-bin)(?:=|\s|$)' -or
                 $command -match '(?i)^\s*git\s+(?:diff|log|show)\b.*(?:^|\s)--(?:no-)?(?:ext|textc)[a-z-]*(?:=|\s|$)'
-            $isFileMutation = $hasShellComposition -or $command -notmatch $readOnlyCommandPattern
+            $isFileMutation = -not $isTrustedContext -and ($hasShellComposition -or $command -notmatch $readOnlyCommandPattern)
         }
         if (-not $isFileMutation) { return }
         if (-not $loopState) {
@@ -6827,10 +6950,15 @@ function Invoke-PolicyHookCmd {
         return
     }
     if ($eventName -eq 'SessionStart') {
+        $message = ''
         if ($loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
             $issue = Get-HookInputValue $loopState 'issueNumber'
-            Write-HookResponse "Frontier resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
+            $message = "Frontier resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
         }
+        $context = ''
+        try { $context = Get-RepositorySessionContext $hookInput }
+        catch { $message += " Repository context unavailable: $($_.Exception.Message). Run frontier context to diagnose." }
+        if ($message -or $context) { Write-HookResponse -Message $message.Trim() -AdditionalContext $context }
         return
     }
     if ($eventName -eq 'Stop' -and $loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
@@ -7849,6 +7977,11 @@ $($C.w)  Commands:$($C.n)
   deps <issue>                     Check dependencies for an issue
     audit harness                    Run deterministic harness audit checks
   digest                           Generate weekly digest
+  context [-q task] [-a role]       Bounded context from the repository graph (Frontier workspaces only)
+    --max-chars <512..16000>        Context size limit (default 4000); --json includes cache metrics
+    --sync                         Update the graph incrementally before answering (default reads the cache)
+    --refresh                      Rebuild extraction while preserving curated map notes
+    --start-refresh                Start a detached background refresh and return immediately
     workflow [agent-name]            List/show workflow steps for an agent
   loop <start|status|affected|iterate|complete|cancel|rollback>  Iterative refinement; affected = tests naming changed code
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
@@ -9125,6 +9258,7 @@ switch ($Script:Command) {
     'deps'     { Invoke-DepsCmd }
     'audit'    { Invoke-AuditCmd }
     'digest'   { Invoke-DigestCmd }
+    'context'  { Invoke-RepositoryContextCmd }
     'workflow'  { Invoke-WorkflowCmd }
     'loop'     { Invoke-LoopCmd }
     'validate'  { Invoke-ValidateCmd }

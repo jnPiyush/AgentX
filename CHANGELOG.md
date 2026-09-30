@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- Add a local repository graph, incremental source discovery and a Mermaid map
+  with preserved curated notes as a Frontier workspace capability. Expose bounded
+  queries through `frontier context`, the `frontier_context` MCP tool, native
+  agents' `repository_context` tool and `Frontier: Refresh Repository Context`.
+- Build the graph in the background on initialization and refresh it in a
+  detached worker when stale. Session-start hooks inject a small cached primer in
+  about 1.4 seconds, deduplicate per session and fingerprint, and never index
+  folders where Frontier is not initialized.
+
 ### Changed
 
 - Route the Engineer, Architect and UX Designer to GPT-6 Astra (Copilot only)

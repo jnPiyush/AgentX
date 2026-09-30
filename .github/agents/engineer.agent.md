@@ -24,7 +24,7 @@ reasoning:
   level: medium
 constraints:
   - "MUST follow Compound Engineering: complete each phase gate before advancing to the next phase"
-  - "MUST read ALL available artifacts before writing any code: PRD, ADR, Tech Spec, UX Spec, and any Data Science artifacts"
+  - "MUST consult current repository graph context, then read the full in-scope artifact chain before writing code: PRD, ADR, Tech Spec, UX Spec, and applicable Data Science artifacts"
   - "MUST seek inter-agent clarification BEFORE writing dependent code when a spec, ADR, or UX ambiguity would change behavior, contracts, acceptance criteria, or security; record lower-impact assumptions in the plan and continue"
   - "MUST perform a design-alignment checkpoint with Architect before coding when the implementation crosses architecture boundaries, introduces a new pattern outside the ADR/Spec, or requires a meaningful design deviation"
   - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
@@ -109,7 +109,7 @@ Follow the ordered phases below; each gate must pass before the next phase.
 
 | Phase | MUST Load Skill | MUST Produce |
 |-------|----------------|--------------|
-| 1. Research | `karpathy-guidelines`, `iterative-loop`, `core-principles`, `testing`, language instruction | Artifact summary + ambiguity list + reuse inventory |
+| 1. Research | `karpathy-guidelines`, `iterative-loop`, `core-principles`, `testing`, language instruction | Current graph slice + artifact summary + ambiguity list + reuse inventory |
 | 2. Brainstorm | `core-principles` | Chosen approach + rationale |
 | 3. Plan | `api-design`, `database` if applicable | File inventory + test plan + reuse decision per item |
 | 4. Design | `core-principles` | Interfaces + DRY/reuse check |
@@ -132,7 +132,15 @@ Use the shared loop contract in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). Th
 
 > **Goal**: Understand the problem before writing code: load the artifacts and clear the ambiguities.
 
-### 1.1 Read the Full Artifact Chain
+### 1.1 Locate Context and Read the Full Artifact Chain
+
+Use the session's repository graph primer, then query `repository_context` or
+`.frontier/runtime/frontier.ps1 context -q "<task>" -a engineer` for relevant
+files, symbols and references. Queries read the cached graph and a background
+refresh keeps it current while preserving curated map notes. Do not load the entire graph
+or repeat repository-wide reads when a focused slice supplies the needed paths.
+The graph guides navigation; inspect live source and all in-scope requirements.
+If context cannot be refreshed, report why and use scoped source inspection.
 
 Read the PRD (problem/users/ACs), ADR (decision/rejected options/consequences), Tech
 Spec (contracts/data/security/performance/tests), and applicable UX/Data Science
@@ -476,7 +484,11 @@ After loop completion, the user receives the test-suite offer.
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: tests actually run with pass/fail counts, or `not run - awaiting user decision`; coverage only when measured; lint/type-check status; HIGH/MEDIUM findings; output scorer tier when run; acceptance criteria covered; and Frontier quality-loop state.
+Before handoff, run `frontier context --sync` after source changes and report its
+status or failure. Report tests actually run with pass/fail counts, or
+`not run - awaiting user decision`; coverage only when measured; lint/type-check
+status; HIGH/MEDIUM findings; output scorer tier when run; acceptance criteria
+covered; and Frontier quality-loop state.
 
 ## Plugins (Optional Capabilities)
 

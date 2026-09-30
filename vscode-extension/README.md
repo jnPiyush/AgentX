@@ -407,6 +407,7 @@ CI, commit and production gates retain their existing behavior.
 | Show Agent Status | View agent states and active work |
 | Check Dependencies | Check issue dependency blockers |
 | Generate Weekly Digest | Generate a weekly status digest |
+| Refresh Repository Context | Update the repository graph and show the orientation agents receive at session start |
 | Show Issue Detail | View detailed issue information |
 | Show Pending Clarification | Check for pending clarification requests |
 | Check Environment | Validate the Frontier runtime environment |

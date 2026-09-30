@@ -38,8 +38,11 @@ async function main() {
     if (tools.tools.some((tool) => tool.name.startsWith('agentx_'))) {
       throw new Error('legacy Frontier tools must not be advertised');
     }
-    if (tools.tools.length !== 19) {
-      throw new Error(`expected exactly 19 tools, received ${tools.tools.length}`);
+    if (!tools.tools.some((tool) => tool.name === 'frontier_context')) {
+      throw new Error('frontier_context was not advertised');
+    }
+    if (tools.tools.length !== 20) {
+      throw new Error(`expected exactly 20 tools, received ${tools.tools.length}`);
     }
 
     const result = await client.callTool({ name: 'frontier_loop_status', arguments: {} });

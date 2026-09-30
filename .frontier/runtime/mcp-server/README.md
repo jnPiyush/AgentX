@@ -6,7 +6,7 @@ Instead of asking the model to type `pwsh .frontier/runtime/frontier-cli.ps1 loo
 
 ## Tools Exposed
 
-The server advertises 19 `frontier_*` tools. Legacy `agentx_*` names remain
+The server advertises 20 `frontier_*` tools. Legacy `agentx_*` names remain
 accepted aliases with the same arguments.
 
 | Tool | Wraps | Purpose |
@@ -24,6 +24,7 @@ accepted aliases with the same arguments.
 | `frontier_issue` | `issue <action> [args...]` | list / get / create / update / close / comment |
 | `frontier_ship` | `ship -Issue <n>` | Invoke the configured delivery pipeline; inspect its actual evidence and outcome |
 | `frontier_digest` | `digest` | Generate weekly digest of closed issues |
+| `frontier_context` | `context --json` with bounded query options | Read bounded source pointers from the cached repository graph of an initialized Frontier workspace; `sync` updates incrementally first, `refresh` re-extracts |
 | `frontier_hook` | `hook <start\|finish> <agent> [issue]` | Record agent lifecycle hook (finish enforces loop gate) |
 | `frontier_run` | `run -a <agent> -p "<task>" [-m <model>] [--max <n>] [-i <issue>]` | Run an agent through the agentic loop (LLM + tools) |
 | `frontier_backlog_sync` | `backlog-sync [github] [--force]` | Sync local backlog to a remote provider |
@@ -50,7 +51,7 @@ Verify it starts:
 
 ```bash
 node index.js
-# Expect a ready message on stderr with the repository and 19 tools.
+# Expect a ready message on stderr with the repository and 20 tools.
 # Then it blocks waiting for MCP requests on stdin. Ctrl+C to exit.
 ```
 
@@ -141,7 +142,7 @@ The model emits `frontier_loop_start({ prompt: "auth refactor", issue: 42 })`, F
 ## Limitations
 
 - Commands have a ten-minute deadline and a combined 1 MiB stdout/stderr limit. MCP request cancellation and transport shutdown terminate the owned process tree. Termination waits for child closure with a bounded deadline; failure to confirm closure is an error and prevents another writer from starting. Host deadlines may be shorter.
-- `npm test` checks lifecycle behavior and a mocked 19-tool smoke fixture. It does not execute a live model or certify every CLI tool end to end.
+- `npm test` checks lifecycle behavior and a mocked 20-tool smoke fixture. It does not execute a live model or certify every CLI tool end to end.
 - Interactive prompts in `frontier-cli.ps1` are not supported -- only non-interactive subcommands are exposed.
 - The MCP server itself does not enforce the Frontier pre-edit gate; that enforcement lives in the hooks and pre-commit, exactly as in CLI-only flows.
 

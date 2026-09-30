@@ -121,6 +121,12 @@
         "icon": "$(notebook)"
       },
       {
+        "command": "frontier.refreshRepositoryContext",
+        "title": "Refresh Repository Context",
+        "category": "Frontier",
+        "icon": "$(type-hierarchy)"
+      },
+      {
         "command": "frontier.refresh",
         "title": "Refresh",
         "category": "Frontier",
@@ -449,6 +455,9 @@
         },
         {
           "command": "frontier.generateDigest"
+        },
+        {
+          "command": "frontier.refreshRepositoryContext"
         },
         {
           "command": "frontier.showWorkflowNextStep"

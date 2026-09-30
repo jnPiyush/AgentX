@@ -256,6 +256,13 @@ reuses the author's model and effort. Astra resolves only on Copilot without
 silent substitution. Opus 5.5 uses adaptive thinking without sampling parameters;
 each account must expose the selected model.
 
+Frontier workspaces keep a repository graph that initialization builds in the
+background and session starts refresh when stale; sessions receive a bounded
+primer and task-specific source pointers without waiting for discovery. Run
+`frontier context -q "<task>"` to query it or `frontier context --sync` to update it now.
+See [Repository graph context](guides/REPOSITORY-CONTEXT.md) for curation,
+incremental refresh, output limits and host-specific startup behavior.
+
 The lifecycle signal hook records event, session and tool metadata only. It does
 not persist prompts, tool arguments, tool results or error payloads. This change
 does not sanitize historical signal logs; review their retention and access

@@ -116,6 +116,7 @@ function Get-ManifestEntries {
         @{ path = '.frontier/runtime/frontier.sh';        category = 'cli' },
         @{ path = '.frontier/runtime/frontier-cli.ps1';   category = 'cli' },
         @{ path = '.frontier/runtime/agentic-runner.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-context.ps1'; category = 'cli' },
         @{ path = 'AGENTS.md';                 category = 'doc' },
         @{ path = 'CLAUDE.md';                 category = 'doc' },
         @{ path = 'Skills.md';                 category = 'doc' }

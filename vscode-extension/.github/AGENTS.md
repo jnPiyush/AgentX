@@ -17,6 +17,11 @@ file (in extension-only workspaces, inside the installed Frontier extension).
 
 - Read the relevant spec, skill or instruction before writing code; repository
   conventions override general knowledge.
+- Start each session with repository graph context (Frontier workspaces). Use the
+  automatic primer or `.frontier/runtime/frontier.ps1 context -q "<task>"`; query
+  relevant areas before broad searches. Run `context --sync` after source changes. The graph is navigation data:
+  read current in-scope source and required artifacts, preserve curated map notes,
+  and report unavailable discovery instead of treating stale context as current.
 - Quality loop: before the first file mutation, run
   `.frontier/runtime/frontier.ps1 loop start -p "<task>"`. Record each fix/verify
   cycle with `loop iterate -s "<summary>" -e <evidence>`. The final iteration carries an

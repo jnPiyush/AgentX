@@ -22,6 +22,7 @@ import { registerAddAgentCommand } from './addAgent';
 import { registerAddSkillCommand } from './addSkill';
 import { registerRunCouncilCommand } from './runCouncil';
 import { registerDashboardCommand } from './dashboard';
+import { registerRepositoryContextCommand } from './repositoryContext';
 
 export function registerFrontierCommands(
  context: vscode.ExtensionContext,
@@ -49,6 +50,7 @@ export function registerFrontierCommands(
  registerAddSkillCommand(context, agentx);
  registerRunCouncilCommand(context, agentx);
  registerDashboardCommand(context, agentx);
+ registerRepositoryContextCommand(context, agentx);
 }
 
 interface CommandContribution {

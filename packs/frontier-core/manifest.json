@@ -57,6 +57,7 @@
       ".frontier/runtime/frontier.ps1",
       ".frontier/runtime/frontier.sh",
       ".frontier/runtime/frontier-cli.ps1",
+      ".frontier/runtime/repository-context.ps1",
       ".frontier/runtime/local-issue-manager.ps1",
       ".frontier/runtime/local-issue-manager.sh",
       "scripts/score-output.ps1",

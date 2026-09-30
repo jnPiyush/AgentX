@@ -1557,9 +1557,9 @@ try {
 
     $allTools = @(Get-ToolSchemaList)
     $functionalTools = @(Get-AgentProviderToolSchema -AgentName 'functional-reviewer' -Tools $allTools)
-    Assert-Equal (($functionalTools.function.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'report-only schema advertises only declared read capabilities'
+    Assert-Equal (($functionalTools.function.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,repository_context' 'report-only schema advertises only declared read and navigation capabilities'
     $engineerTools = @(Get-AgentProviderToolSchema -AgentName 'engineer' -Tools $allTools)
-    Assert-Equal (($engineerTools.function.name | Sort-Object) -join ',') 'file_edit,file_read,file_write,grep_search,list_dir' 'engineer schema retains guarded editing capabilities'
+    Assert-Equal (($engineerTools.function.name | Sort-Object) -join ',') 'file_edit,file_read,file_write,grep_search,list_dir,repository_context' 'engineer schema retains guarded editing and navigation capabilities'
     Assert-Equal @(Get-AgentProviderToolSchema -AgentName 'missing-role-fixture' -Tools $allTools).Count 0 'unknown roles receive no advertised capabilities'
 
     $fixturePath = Join-Path $repairRoot 'src/fixture.txt'
@@ -1630,6 +1630,10 @@ try {
         return [PSCustomObject]@{ stop_reason = 'end_turn'; content = @([PSCustomObject]@{ type = 'text'; text = $(if ($isReview) { $script:repairVerdict } else { 'Offline adapter answer' }) }) }
     }
     $script:repairProvider = 'anthropic-api'
+    # Repository context is a Frontier workspace capability: seed an initialized fixture with a built graph.
+    [IO.Directory]::CreateDirectory((Join-Path $repairRoot '.frontier')) | Out-Null
+    Set-Content -LiteralPath (Join-Path $repairRoot '.frontier/config.json') -Value '{"mode":"local"}'
+    $null = Get-FrontierRepositoryContext -WorkspaceRoot $repairRoot
     foreach ($roleName in @('engineer', 'functional-reviewer')) {
         Set-Content -LiteralPath $fixturePath -Value 'original fixture' -NoNewline
         $adapterPath = Join-Path $repairRoot 'src/adapter/nested.txt'
@@ -1644,13 +1648,15 @@ try {
         Assert-Equal (Get-Content -LiteralPath $fixturePath -Raw) $(if ($roleName -eq 'engineer') { 'edited fixture' } else { 'original fixture' }) "Anthropic $roleName enforces edit permissions in loop dispatch"
         Assert-True (-not (Test-Path -LiteralPath (Join-Path $repairRoot 'src/review-forbidden.txt'))) 'internal self-review cannot create files'
         if ($script:repairRequests.Count -eq 4) {
+            Assert-True (($script:repairRequests[0].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:') 'Native agent work receives a current repository-context slice'
+            Assert-True (($script:repairRequests[2].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:') 'Internal review receives its own repository-context slice'
             $mainReply = $script:repairRequests[1].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
             Assert-Equal (($mainReply.tool_use_id | Sort-Object) -join ',') 'edit-fixture,read-fixture,write-fixture' 'Anthropic replay preserves every tool-result ID'
             $reviewReply = $script:repairRequests[3].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
             Assert-Equal @($reviewReply | Where-Object { $_.content -match 'not available in review mode' }).Count 2 'internal self-review rejects both write and edit attempts'
-            Assert-Equal (($script:repairRequests[2].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'self-review wire schema remains read-only'
+            Assert-Equal (($script:repairRequests[2].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,repository_context' 'self-review wire schema remains source-read-only with managed navigation context'
             if ($roleName -eq 'functional-reviewer') {
-                Assert-Equal (($script:repairRequests[0].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'report-only Anthropic wire schema remains read-only'
+                Assert-Equal (($script:repairRequests[0].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,repository_context' 'report-only Anthropic wire schema remains source-read-only with managed navigation context'
                 Assert-Equal @($mainReply | Where-Object { $_.content -match 'BLOCKED' }).Count 2 'unsolicited report-only writes return tool errors'
             }
         }

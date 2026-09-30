@@ -167,7 +167,8 @@ $RUNTIME_FILES = @(
  ".frontier/version.json",
  ".frontier/state/agent-status.json",
  ".frontier/runtime/frontier.ps1",
- ".frontier/runtime/frontier-cli.ps1"
+ ".frontier/runtime/frontier-cli.ps1",
+ ".frontier/runtime/repository-context.ps1"
 )
 $GIT_ARTIFACTS = @(".git", ".git/hooks/pre-commit", ".git/hooks/commit-msg")
 $TEMP_FILES = @(".frontier-install-tmp", ".frontier-install-raw", ".frontier-install.zip")

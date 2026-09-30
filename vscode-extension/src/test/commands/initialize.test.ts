@@ -258,6 +258,14 @@ describe('runInitializeLocalRuntimeCommand', () => {
       });
     }
 
+    it('starts background repository discovery for the initialized workspace', async () => {
+      await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      sinon.assert.notCalled(errors);
+      assert.ok((fakeAgentx.runCli as sinon.SinonStub).calledWith('context', ['--start-refresh'], root));
+    });
+
     it('still seeds explicitly requested CLI assets in standard mode', async () => {
       __setConfig('frontier.seedRepoLocalAssets', true);
       const bundledAgents = path.join(extensionRoot, COPILOT_CLI_ASSET_DIRS[0].source);

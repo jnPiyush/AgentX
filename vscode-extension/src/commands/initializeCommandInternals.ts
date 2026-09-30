@@ -13,6 +13,7 @@ import {
 } from './initializeInternals';
 import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './adaptersCommandInternals';
 import { checkAllDependencies } from '../utils/dependencyChecker';
+import { startRepositoryDiscovery } from './repositoryContext';
 import {
   hasFrontierState,
   resolveFrontierStatePath,
@@ -148,6 +149,9 @@ export async function runInitializeLocalRuntimeCommand(
     vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 
     vscode.window.showInformationMessage('Frontier: Local runtime initialized.');
+
+    // Discover the repository once in the background so Frontier sessions start from the graph.
+    startRepositoryDiscovery(agentx, root);
 
     // Non-blocking advisory: notify if recommended tools are missing (never blocks init).
     checkAllDependencies(agentx).then((report) => {

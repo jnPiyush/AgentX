@@ -236,6 +236,7 @@
       ".github/frontier/.frontier/runtime/frontier.sh",
       ".github/frontier/.frontier/runtime/frontier-cli.ps1",
       ".github/frontier/.frontier/runtime/agentic-runner.ps1",
+      ".github/frontier/.frontier/runtime/repository-context.ps1",
       ".github/frontier/.frontier/runtime/local-issue-manager.ps1",
       ".github/frontier/.frontier/runtime/local-issue-manager.sh"
     ],
@@ -256,6 +257,7 @@
       "docs/QUALITY_SCORE.md",
       "docs/tech-debt-tracker.md",
       "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md",
+      "docs/guides/REPOSITORY-CONTEXT.md",
       "CONTRIBUTING.md",
       "evaluation/baseline.json"
     ],

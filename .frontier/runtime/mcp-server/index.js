@@ -68,7 +68,7 @@ function createCliRunner(repoRoot, hooks = {}) {
     let child;
     try {
       child = (hooks.spawn || spawn)('pwsh', ['-NoProfile', '-NonInteractive', '-File', path.join(repoRoot, CLI_RELATIVE_PATH), ...args], {
-        cwd: repoRoot, env: { ...process.env, FRONTIER_NONINTERACTIVE: '1' },
+        cwd: repoRoot, env: { ...process.env, FRONTIER_NONINTERACTIVE: '1', FRONTIER_WORKSPACE_ROOT: repoRoot },
         windowsHide: true, detached: (hooks.platform || process.platform) !== 'win32',
       });
     } catch (error) { return Promise.resolve(failureResult(`[spawn-error] ${error.message}`)); }
@@ -338,6 +338,38 @@ const TOOLS = [
       required: ['issue'],
     },
     build: (a) => ['ship', '-Issue', String(a.issue)],
+  },
+  {
+    name: 'frontier_context',
+    description: 'Return bounded task-relevant source pointers from the repository graph of an initialized Frontier workspace. Reads the cached graph by default and schedules a background refresh when stale; sync updates incrementally first and refresh re-extracts everything. Preserves curated map notes; no model calls.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', maxLength: 4096, description: 'Task, symbol or area to locate; omit for repository orientation.' },
+        agent: { type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9-]{0,79}$', description: 'Optional role ID, such as engineer.' },
+        maxChars: { type: 'integer', minimum: 512, maximum: 16000, default: 4000 },
+        sync: { type: 'boolean', default: false, description: 'Update the graph incrementally before answering.' },
+        refresh: { type: 'boolean', default: false, description: 'Re-extract every file before answering (slowest).' },
+      },
+      additionalProperties: false,
+    },
+    build: (a) => {
+      if (Object.keys(a).some(key => !['query', 'agent', 'maxChars', 'sync', 'refresh'].includes(key))) {
+        throw new Error('Unsupported repository context argument.');
+      }
+      const query = a.query === undefined ? '' : a.query;
+      const maxChars = a.maxChars === undefined ? 4000 : a.maxChars;
+      if (typeof query !== 'string' || query.length > 4096) throw new Error('query must be a string of at most 4096 characters.');
+      if (!Number.isInteger(maxChars) || maxChars < 512 || maxChars > 16000) throw new Error('maxChars must be an integer from 512 to 16000.');
+      if (a.agent !== undefined && (typeof a.agent !== 'string' || !/^[a-z][a-z0-9-]{0,79}$/i.test(a.agent))) throw new Error('agent must be a role ID.');
+      if (a.sync !== undefined && typeof a.sync !== 'boolean') throw new Error('sync must be boolean.');
+      if (a.refresh !== undefined && typeof a.refresh !== 'boolean') throw new Error('refresh must be boolean.');
+      const args = ['context', '--json', '--query64', Buffer.from(query, 'utf8').toString('base64'), '--max-chars', String(maxChars)];
+      if (a.agent) args.push('-a', a.agent);
+      if (a.sync) args.push('--sync');
+      if (a.refresh) args.push('--refresh');
+      return args;
+    },
   },
   {
     name: 'frontier_digest',

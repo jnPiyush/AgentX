@@ -82,6 +82,7 @@ $RuntimeBundleFiles = @(
  'frontier.sh',
  'frontier-cli.ps1',
  'agentic-runner.ps1',
+ 'repository-context.ps1',
  'local-issue-manager.ps1',
  'local-issue-manager.sh'
 )

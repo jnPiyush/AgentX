@@ -13,12 +13,14 @@
 // of those shapes and falls back to the legacy COPILOT_HOOK_* environment
 // variables so older hosts keep working.
 //
-// Runs silently -- failures never block the session.
+// Session start also emits a bounded repository-context primer. Telemetry stays
+// metadata-only; context failures are reported without blocking the session.
 // ---------------------------------------------------------------------------
 "use strict";
 
 const fs = require("fs");
 const path = require("path");
+const { spawnSync } = require("node:child_process");
 
 const SIGNALS_DIR = path.join(process.cwd(), ".frontier", "signals");
 const SIGNALS_FILE = path.join(SIGNALS_DIR, "sessions.jsonl");
@@ -137,13 +139,55 @@ function buildEntry(payload) {
   return entry;
 }
 
-module.exports = { buildEntry, normalizeEventName, parsePayload };
+function requestRepositoryContext(payload, run = spawnSync, workspaceRoot = process.cwd()) {
+  // Repository context is a Frontier workspace capability: never index folders that did not opt in.
+  if (!fs.statSync(path.join(workspaceRoot, ".frontier", "config.json"), { throwIfNoEntry: false })?.isFile()) {
+    return null;
+  }
+  const assetRoot = path.resolve(__dirname, "..", "..", "..");
+  const candidates = [
+    path.join(assetRoot, ".frontier", "runtime", "frontier-cli.ps1"),
+    path.join(assetRoot, ".github", "frontier", ".frontier", "runtime", "frontier-cli.ps1"),
+    path.join(workspaceRoot, ".frontier", "runtime", "frontier.ps1"),
+  ];
+  const cli = candidates.find(candidate => fs.statSync(candidate, { throwIfNoEntry: false })?.isFile());
+  if (!cli) throw new Error("Frontier runtime not found; initialize or update Frontier");
+  const result = run("pwsh", ["-NoProfile", "-NonInteractive", "-File", cli, "context", "--hook"], {
+    cwd: workspaceRoot,
+    env: { ...process.env, FRONTIER_WORKSPACE_ROOT: workspaceRoot },
+    input: JSON.stringify(payload),
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 8000,
+    maxBuffer: 65536,
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(result.error?.code || `context command exited ${result.status}`);
+  }
+  const output = JSON.parse(result.stdout);
+  if (!output || typeof output !== "object" || Array.isArray(output)) {
+    throw new Error("context command returned an invalid hook response");
+  }
+  return output;
+}
+
+module.exports = { buildEntry, normalizeEventName, parsePayload, requestRepositoryContext };
 
 async function main() {
+  const payload = parsePayload(await readStdin());
+  const entry = buildEntry(payload);
   try {
-    appendSignal(buildEntry(parsePayload(await readStdin())));
+    appendSignal(entry);
   } catch (_) {
     // Signal capture must never block the session
+  }
+  if (entry.event.toLowerCase() === "sessionstart") {
+    try {
+      const response = requestRepositoryContext(payload);
+      if (response) process.stdout.write(JSON.stringify(response) + "\n");
+    } catch (error) {
+      process.stderr.write(`[frontier-context] Repository context unavailable (${error.message}); run frontier context to diagnose.\n`);
+    }
   }
   process.exit(0);
 }

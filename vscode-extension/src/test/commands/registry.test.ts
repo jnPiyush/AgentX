@@ -39,6 +39,7 @@ describe('registerFrontierCommands', () => {
     assert.ok(registerCommand.calledWith('frontier.showTaskBundles'));
     assert.ok(registerCommand.calledWith('frontier.showIssue'));
     assert.ok(registerCommand.calledWith('frontier.showPendingClarification'));
+    assert.ok(registerCommand.calledWith('frontier.refreshRepositoryContext'));
   });
 
   it('registers hidden legacy aliases that forward to Frontier commands', async () => {

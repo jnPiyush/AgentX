@@ -8,6 +8,41 @@ const { createCliRunner, createServer, discoverRepoRoot } = require('./index');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 
+test('repository context validates budgets and encodes query data before CLI dispatch', async () => {
+  const calls = [];
+  const runner = {
+    run: async (args) => {
+      calls.push(args);
+      return { exitCode: 0, stdout: '{"context":"source pointers"}', stderr: '' };
+    },
+    stop: async () => {},
+  };
+  const server = createServer(runner);
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'context-contract', version: '1.0.0' }, { capabilities: {} });
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    const tools = await client.listTools();
+    assert.ok(tools.tools.some(tool => tool.name === 'frontier_context'));
+    const query = '--refresh "literal query"; do not execute';
+    const result = await client.callTool({ name: 'frontier_context', arguments: { query, agent: 'engineer', maxChars: 1024 } });
+    assert.ok(!result.isError);
+    assert.deepEqual(calls[0], ['context', '--json', '--query64', Buffer.from(query).toString('base64'), '--max-chars', '1024', '-a', 'engineer']);
+    const synced = await client.callTool({ name: 'frontier_context', arguments: { sync: true } });
+    assert.ok(!synced.isError);
+    assert.deepEqual(calls[1], ['context', '--json', '--query64', '', '--max-chars', '4000', '--sync']);
+    for (const arguments_ of [{ maxChars: 511 }, { maxChars: 16001 }, { maxChars: 1.5 }, { maxChars: null }, { query: null }, { query: {} }, { query: 'x'.repeat(4097) }, { agent: '--refresh' }, { refresh: 'yes' }, { sync: 'yes' }, { root: '/elsewhere' }]) {
+      const invalid = await client.callTool({ name: 'frontier_context', arguments: arguments_ });
+      assert.equal(invalid.isError, true);
+    }
+    assert.equal(calls.length, 2);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
 function fixture(hooks = {}) {
   const children = [];
   const signals = [];
@@ -23,6 +58,20 @@ function fixture(hooks = {}) {
   });
   return { runner, children, signals };
 }
+
+test('CLI context calls pin the intended workspace instead of inheriting another session root', async () => {
+  let options;
+  const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
+  const { runner } = fixture({
+    spawn: (_command, _args, supplied) => { options = supplied; return child; },
+  });
+  const pending = runner.run(['context', '--json']);
+  assert.equal(options.cwd, '/fixture');
+  assert.equal(options.env.FRONTIER_WORKSPACE_ROOT, '/fixture');
+  child.emit('close', 0);
+  assert.equal((await pending).exitCode, 0);
+  await runner.stop();
+});
 
 test('explicit invalid roots throw; absent configuration discovers the runtime by walking up', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mcp-root-'));
@@ -133,7 +182,7 @@ test('spawn errors return failure without leaking active children', async () => 
   await runner.stop();
 });
 
-test('SDK requests advertise exactly 19 tools, preserve aliases, and forward request cancellation', async () => {
+test('SDK requests advertise exactly 20 tools, preserve aliases, and forward request cancellation', async () => {
   let cancelled;
   const cancellation = new Promise(resolve => { cancelled = resolve; });
   let started;
@@ -155,7 +204,7 @@ test('SDK requests advertise exactly 19 tools, preserve aliases, and forward req
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const catalog = await client.listTools();
-    assert.equal(catalog.tools.length, 19);
+    assert.equal(catalog.tools.length, 20);
     assert.ok(catalog.tools.every(tool => tool.name.startsWith('frontier_')));
     for (const name of ['frontier_loop_status', 'agentx_loop_status']) {
       assert.equal((await client.callTool({ name, arguments: {} })).isError, false);
