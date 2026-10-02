@@ -85,7 +85,11 @@ export async function runInitializeLocalRuntimeCommand(
     if (seedRepoLocalAssets) {
       copyCopilotCliAssets(context.extensionUri.fsPath, root, false);
     }
-    writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root);
+    if (fs.existsSync(path.join(root, '.frontier', 'cursor-assets.json'))) {
+      writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root, true);
+    } else {
+      writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root);
+    }
 
     const versionFile = resolveFrontierStatePath(root, 'version.json');
     const previousVersion = isUpgrade ? readJsonWithComments<ExistingVersionStamp>(versionFile) : undefined;

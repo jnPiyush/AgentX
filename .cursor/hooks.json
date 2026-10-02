@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "pwsh -NoProfile -NonInteractive -File \".frontier/runtime/frontier.ps1\" cursor hook sessionStart",
+        "timeout": 60
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "pwsh -NoProfile -NonInteractive -File \".frontier/runtime/frontier.ps1\" cursor hook preToolUse",
+        "timeout": 60,
+        "failClosed": true
+      }
+    ]
+  }
+}

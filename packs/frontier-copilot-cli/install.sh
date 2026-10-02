@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Frontier Copilot CLI Plugin v9.6.2 - Installer (Bash)
+# Frontier Copilot CLI Plugin v9.7.0 - Installer (Bash)
 # Standalone plugin for GitHub Copilot CLI.
 # Does NOT require the Frontier VS Code extension or the core install.
 #
@@ -15,7 +15,7 @@
 #   -h, --help             Show this help
 set -euo pipefail
 
-VERSION="9.6.2"
+VERSION="9.7.0"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false
@@ -28,6 +28,10 @@ RUNTIME_BUNDLE_FILES=(
   "frontier-cli.ps1"
   "agentic-runner.ps1"
   "repository-context.ps1"
+  "hydrafusion.ps1"
+  "hydrafusion-policy.ps1"
+  "hydrafusion-protocol.ps1"
+  "hydrafusion-workspace.ps1"
   "local-issue-manager.ps1"
   "local-issue-manager.sh"
 )

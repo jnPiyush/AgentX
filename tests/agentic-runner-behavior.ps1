@@ -734,9 +734,14 @@ Assert-True ($consultingResearchDef.canModify -contains 'docs/coaching/**') 'Rea
 Assert-True ($consultingResearchDef.cannotModify -contains 'src/**') 'Read-AgentDef parses nested cannot_modify boundaries'
 
 $architectDef = Read-AgentDef -agentName 'architect' -root $script:repoRoot
-Assert-True ($architectDef.agents -contains 'Frontier Product FDE') 'Read-AgentDef parses multiline collaborator agents from frontmatter'
+Assert-True ($architectDef.agents -contains 'Frontier TPM') 'Read-AgentDef parses multiline collaborator agents from frontmatter'
 $architectClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $architectDef)
 Assert-True ($architectClarifyTargets -contains 'product-manager') 'Resolve-ClarificationTargetList maps Architect collaborators to runtime agent IDs'
+foreach ($agentFile in Get-ChildItem -LiteralPath (Join-Path $script:repoRoot '.github/agents') -Recurse -Filter '*.agent.md') {
+    $agentId = $agentFile.Name -replace '\.agent\.md$', ''
+    $displayName = ((Select-String -LiteralPath $agentFile.FullName -Pattern '^name:\s*(.+)$' | Select-Object -First 1).Matches.Groups[1].Value).Trim().Trim("'", '"')
+    Assert-Equal (Resolve-AgentReference $displayName) $agentId "Resolve-AgentReference maps display name '$displayName' to its runtime agent ID"
+}
 
 $engineerDef = Read-AgentDef -agentName 'engineer' -root $script:repoRoot
 Assert-Equal $engineerDef.constraints.Count 22 'Read-AgentDef stops constraints at the next top-level key'
@@ -1184,7 +1189,8 @@ try {
     Assert-True (-not (Test-SandboxPath -Path '.git/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'git hooks directory is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.git/config' -WorkspaceRoot $sandboxRoot).allowed) 'git config is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.frontier/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'gate-bearing loop state is blocked'
-    foreach ($protectedPath in @('.frontier/state/tests-baseline.json', '.frontier/runtime/frontier.ps1', '.frontier/runtime/frontier.sh', '.frontier/runtime/agentic-runner.ps1')) {
+    foreach ($protectedPath in @('.frontier/state/tests-baseline.json', '.frontier/runtime/frontier.ps1', '.frontier/runtime/frontier.sh', '.frontier/runtime/agentic-runner.ps1',
+        '.frontier/runtime/hydrafusion.ps1', '.frontier/runtime/hydrafusion-policy.ps1', '.frontier/runtime/hydrafusion-protocol.ps1', '.frontier/runtime/hydrafusion-workspace.ps1')) {
         Assert-True (-not (Test-SandboxPath -Path $protectedPath -WorkspaceRoot $sandboxRoot).allowed) "$protectedPath is protected"
         $protectedWrite = Invoke-Tool 'file_write' @{ filePath = $protectedPath; content = 'tampered' } $sandboxRoot
         Assert-True $protectedWrite.error "file_write rejects $protectedPath"

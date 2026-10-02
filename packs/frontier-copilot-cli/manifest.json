@@ -1,6 +1,6 @@
 {
   "name": "frontier-copilot-cli",
-  "version": "9.6.2",
+  "version": "9.7.0",
   "description": "Frontier Copilot CLI pack -- installs agents, skills, instructions, prompts, templates, schemas and hooks into any workspace for GitHub Copilot CLI usage. Separate from the core Frontier VS Code extension.",
   "maturity": "stable",
   "platform": "copilot-cli",
@@ -237,6 +237,10 @@
       ".github/frontier/.frontier/runtime/frontier-cli.ps1",
       ".github/frontier/.frontier/runtime/agentic-runner.ps1",
       ".github/frontier/.frontier/runtime/repository-context.ps1",
+      ".github/frontier/.frontier/runtime/hydrafusion.ps1",
+      ".github/frontier/.frontier/runtime/hydrafusion-policy.ps1",
+      ".github/frontier/.frontier/runtime/hydrafusion-protocol.ps1",
+      ".github/frontier/.frontier/runtime/hydrafusion-workspace.ps1",
       ".github/frontier/.frontier/runtime/local-issue-manager.ps1",
       ".github/frontier/.frontier/runtime/local-issue-manager.sh"
     ],

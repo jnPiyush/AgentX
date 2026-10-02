@@ -1,15 +1,157 @@
 {
-  "version": "9.6.2",
-  "createdAt": "2026-09-30T14:40:26Z",
+  "version": "9.7.0",
+  "createdAt": "2026-10-02T18:04:53Z",
   "files": [
     {
+      "path": ".cursor/commands/ado-ops.md",
+      "sha256": "e5104dc8f8ce1f267b1e989826c4e7c35b0aa0782492ce5178795ccdcfb1f628",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/ado-prd-to-wit.md",
+      "sha256": "3a2ab8193005ba558fc3574c7641670103f17fccd77c94547a5a0e1765b51511",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/agile-coach.md",
+      "sha256": "97634949d98346f48824c6cf04c260c5fb11e0bd4759de463e2fceb383f9e2fe",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/architect.md",
+      "sha256": "1c6b93d91ffb7992971a75e63932860c0d0051c9352759072b82ddedf80f9718",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/consulting-research.md",
+      "sha256": "ead296e5c6a0695aef1b0bf231756252ba4f2158cd3e5646952a9cc41a24e1a1",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/data-scientist.md",
+      "sha256": "371892f48611a2e7a577cd9e1a3609265a92ea8ff6bf0df510ab0f79d0be8d96",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/devops.md",
+      "sha256": "7141812ee51c8c23dddf1487d1bfeb264a8a41d70c8b34f6dc19f718bfa4c8ba",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/engineer.md",
+      "sha256": "117e2a16d4e3ecb154b9ab91a98cbbcdf1fe84dc93cbe69211d28256a4637658",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/fabric-engineer.md",
+      "sha256": "34182c117a45628cbef55cb45a8cfc284e0bd68c4b45115165134d8e75ecba10",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/frontier.md",
+      "sha256": "c4cdb487902b8de62ec18f5a288eaf2365c0f6e9fcde06c07c3bff7587b5c67c",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/github-ops.md",
+      "sha256": "0f794dac1c423afdd619b9a44ac43e2621f2b59f22188cf400268b54d64ccdfa",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/power-platform-builder.md",
+      "sha256": "7cc8d68633444d0e3f0c4ba4750213ee8ad2516915a423298ba69226863baa73",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/powerbi-analyst.md",
+      "sha256": "b2d7fe133630196878f73915a21da8d365006031a422654a43a7bc7b61ba9fe6",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/product-manager.md",
+      "sha256": "fb06db3dafc39b81900b7b9f84d8b6f1f4673bda5bef147a3964ba7b05ceeffc",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/reviewer-auto.md",
+      "sha256": "9c84d09fda3dfc2e54b2e49f7c992eb61ca0bae0ae4ad711c822092f14179fbc",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/reviewer.md",
+      "sha256": "a6f5873ebb7b72bcf14f2bf338b1f5989a63d3870a1c6fe463a0b8ed9a13b937",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/tester.md",
+      "sha256": "2efc400b89ea658675f0f4dc9e15c6a86ca4a74b22a31364f521b8f262073d82",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/commands/ux-designer.md",
+      "sha256": "290640fe2a9b1a9ced243bec0691f96c1ac5731f907525cc8a001509deac8a87",
+      "category": "prompt"
+    },
+    {
+      "path": ".cursor/hooks.json",
+      "sha256": "000027658ecc66a013e786819c0fd22710b92369e0d6dfe0bf4833e190239167",
+      "category": "hook",
+      "shared": true
+    },
+    {
+      "path": ".cursor/mcp.json",
+      "sha256": "57391913f993f182508a8a02849118efcab91b49e3cc9dac0560e04ed2afe8db",
+      "category": "config",
+      "shared": true
+    },
+    {
+      "path": ".cursor/rules/000-frontier-core.mdc",
+      "sha256": "499ed31606d97794caad4d0c3b4b16a083449349fbc2dcea389f1be2b9820390",
+      "category": "instruction"
+    },
+    {
+      "path": ".cursor/rules/ai.mdc",
+      "sha256": "d800f1f91339c517c1e00feebc4c805633d8ed1f9869b883a217728bf7307908",
+      "category": "instruction"
+    },
+    {
+      "path": ".cursor/rules/csharp.mdc",
+      "sha256": "fbbe3b486b85598956e73a737dda4a3e6223f019bb1edbb365d2c50cde6dcae4",
+      "category": "instruction"
+    },
+    {
+      "path": ".cursor/rules/python.mdc",
+      "sha256": "f324b928234feb6254ff8df2b58ffc796e8d6180835b4e039ef85acdc3b12c84",
+      "category": "instruction"
+    },
+    {
+      "path": ".cursor/rules/react.mdc",
+      "sha256": "a0932a3ba6813b6dd87509cd843bb2d1140c7225e2bb2d86b135cc46040135ba",
+      "category": "instruction"
+    },
+    {
+      "path": ".cursor/rules/typescript.mdc",
+      "sha256": "7b6ba09fb5939810676f64bf2b917e1b39cc47fb79300056360a5a715b533530",
+      "category": "instruction"
+    },
+    {
       "path": ".frontier/runtime/agentic-runner.ps1",
-      "sha256": "38a6365d006c33ec7f1c4b3ea87c096ce16b598d295110571cf26648d2926f90",
+      "sha256": "d2c2d19f2d4fa8949ae46bf4f10b98d12f7fdd2eb6275707680dff810f9bce95",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/cursor-mcp.js",
+      "sha256": "cc26cfd27b37871f14e094992443b2df2831281f4dafcb3254ec2121ba417022",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/cursor.js",
+      "sha256": "9acbbb1393148c7ab6dbad63338d57290bcbdb15b50e1167e6ba2d0f6d707e47",
       "category": "cli"
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "420fb9745b1f715a75ab7ef795a1c9118b579c2674292e054ff2aefc2bb88f68",
+      "sha256": "9ea17d3bdc99a8f62024e43b34e62023a32e5a4cd7aa674fc86af7ffb91b2981",
       "category": "cli"
     },
     {
@@ -23,8 +165,43 @@
       "category": "cli"
     },
     {
+      "path": ".frontier/runtime/hydrafusion-policy.ps1",
+      "sha256": "3928e132b0faf7e5238f650f2487bf4ccf9d82fdee18c5be653c07f984c23418",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/hydrafusion-protocol.ps1",
+      "sha256": "26d43c27ce9316ad2cbccb5f5c5e4a74d7f2d0a0275ad30e202eab59a49b267e",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/hydrafusion-workspace.ps1",
+      "sha256": "9f0c1cdd70fc3d099cdd928ae073f664c75071ccf79f71a889f9d395a3ac7cfb",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/hydrafusion.ps1",
+      "sha256": "b65fb037dbf86a95e599f76f5bdd9e8dfc64787ab32e5f5cd08af0314aa4d032",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/mcp-server/index.js",
+      "sha256": "45276dc77ad932f6ffd4bfb821444e01186835fc47c2da3d33db8029e9aad1d2",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/mcp-server/package-lock.json",
+      "sha256": "bac8287299686736ff9971cd7a82aae2803c2745ce07aa06fda7968d8f77ebba",
+      "category": "config"
+    },
+    {
+      "path": ".frontier/runtime/mcp-server/package.json",
+      "sha256": "ab1241bf285a0095038875449919fc6c24557753fbe75b802b1fcfccc5078ade",
+      "category": "config"
+    },
+    {
       "path": ".frontier/runtime/repository-context.ps1",
-      "sha256": "d6ef60f4b8bf5335e0777bfab66f00b52706eecd1b37cb9e0efcfc77516c22a0",
+      "sha256": "8a4d446188f14317172a8c059d56cbf61a8fbeed68e7d17faec87e124778dbbc",
       "category": "cli"
     },
     {
@@ -1288,43 +1465,33 @@
       "category": "doc"
     },
     {
-      "path": "companions/collaboration/scripts/package-teams.ps1",
-      "sha256": "f296dd92be63035781690ebb80b4d7c54b8a16fae3c7059bf094a91b25d2a5aa",
-      "category": "script"
-    },
-    {
-      "path": "companions/whatsapp/scripts/check-coverage.js",
-      "sha256": "54f07cf8257d5d3ee805a4a30f02a08cce3c7bd06dc9f43d78e169bb3a11a2f8",
-      "category": "script"
-    },
-    {
       "path": "packs/frontier-copilot-cli/install-user.ps1",
-      "sha256": "7539fd0fffd28a0ab3334f13590191b25b16645306b655a5553ffaa5e669ecd3",
+      "sha256": "51733b31f37a01769a93adad9ea4820a5e49f1e3a25b7a8e5cf5684e83d72355",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.ps1",
-      "sha256": "3fd54a8fda2238da1e9de39d9d60046d6f1832d66bb37ccd8817b1b810c2b080",
+      "sha256": "7af31ae59b569356815fee3014b915e765ccdb7b14a11899f574e344fb9df9ce",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.sh",
-      "sha256": "40742e89ab545d4a522a1c65c2e38cb2102318f43b2875d57a77999194e430eb",
+      "sha256": "49fe67bdffe3010c08e2c8c6a0c116cabaf486d46f664a631fd058982b9c87e5",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/manifest.json",
-      "sha256": "9ec6149d92744f7924d5cae1b1f0e3097cb05dee1bcccbaec3919055828c5f6e",
+      "sha256": "29a5543af4433da11841ffe385ac3339f9f08463cc3108c3eda33a295c3bebc9",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/README.md",
-      "sha256": "884fbd5b0d54beb56c8e09032dcfdc336b24ab35ff586d3dd40917d65ce56171",
+      "sha256": "30201dfc694def6a69c28d08476eef2b97a95579c1eff7af265b46878eccc45f",
       "category": "pack"
     },
     {
       "path": "packs/frontier-core/manifest.json",
-      "sha256": "dc8e0913f8bb4912a1fd969e27dc41cbcc42e317a0eb96f4a3eed49f8fd5bbb9",
+      "sha256": "06f5ce5662d478b5cce88284cae012df2fd0346192285aed28634f743e4530eb",
       "category": "pack"
     },
     {
@@ -1404,7 +1571,7 @@
     },
     {
       "path": "scripts/install-manifest.ps1",
-      "sha256": "7dcbf74aaf8a7e66bf88e90f8c886c6b94cbe6527258ee40630cc3502a122bda",
+      "sha256": "af8171c8c6c2dafab50d3202e8db3ca569e3603400bf61442de27647208c2e5d",
       "category": "script"
     },
     {
@@ -1484,7 +1651,7 @@
     },
     {
       "path": "scripts/ship.ps1",
-      "sha256": "b87b38b991678973f51aa8a68c534af326502153b94a7fe994e1166fa0c1a797",
+      "sha256": "d102a29f06cd2a3f7c1a6ebb50e2b22c378a69d4417757388091d072fcbd2fba",
       "category": "script"
     },
     {
@@ -1494,7 +1661,7 @@
     },
     {
       "path": "scripts/stamp-version.js",
-      "sha256": "ee0bd0ba9db962a349cb943db87e5754bac89c14b7e90f9c3ed85788c0d51a33",
+      "sha256": "eb6e7a1aa1fd9d9952048335bab8883a20fc916cd2238fe6a14d8ccc30a3d1a0",
       "category": "script"
     },
     {

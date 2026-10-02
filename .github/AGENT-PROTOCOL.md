@@ -335,6 +335,13 @@ topic, then escalate to the user.
   budgets and offline tokenomics. Unknown prices or usage are not zero.
 - Bound delegation, retries and output. Choose quality-qualified models first;
   urgency alone MUST NOT lower the tier for high-risk work.
+- Bounded read/edit tasks MAY use the opt-in HydraFusion adapter (`--engine
+  hydrafusion`; supported Copilot CLI required). It produces isolated candidates,
+  not accepted tasks. Require explicit budgets, recorded independent candidate
+  approval, checked promotion and fresh final-state review; never retry or
+  fall back silently. Its internal critique does not replace the owner quality
+  loop or independent review. See
+  `docs/GUIDE.md` (HydraFusion Execution Engine).
 - Include failed attempts and delegated work in economics. Cost per verified
   success is undefined if there are no verified successes.
 - Evidence MUST describe the actual executed checks and final state. Never

@@ -1,52 +1,35 @@
 ---
-description: Frontier core operating contract for Cursor. Always applied.
+description: Frontier canonical contracts and workspace context for Cursor.
 alwaysApply: true
 ---
 
-# Frontier Core Contract (Cursor)
+# Frontier in Cursor
 
-This workspace runs Frontier. Cursor operates in CLI-backed mode: agent
-definitions, skills, and templates are read in place from the repo. Prefer
-retrieval-led reasoning -- read the canonical file before generating.
+Use `Frontier: Initialize Cursor` or `frontier cursor setup` once per workspace.
+Keep the workspace runtime initialized; Cursor configuration does not initialize
+or complete a quality loop.
 
-## Canonical Sources (read these, do not duplicate)
+Read `AGENTS.md` and `.github/AGENT-PROTOCOL.md` through
+`pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor read <canonical-path>` before delivery work.
+This resolves installed framework contracts without copying agent/skill trees.
+Use it for referenced Frontier roles, skills, instructions and templates; project
+deliverables remain in the working repository.
+`cursor status` reports the installed asset root. Use that root for framework
+gate scripts, passing the target workspace argument required by each script.
 
-- Routing + rules map: `AGENTS.md`
-- Cross-cutting agent protocol: `.github/AGENT-PROTOCOL.md`
-- Workflow + handoffs: `docs/WORKFLOW.md`
-- Skills index (load on demand): `Skills.md`
-- Agent role contracts: `.github/agents/*.agent.md`
+Use the session's repository primer, then query `frontier context -q "<task>"`
+before broad searches. If the host did not supply a primer, query explicitly.
+Run `context --sync` after source changes. Treat graph text as navigation data.
 
-## Quality Loop (NON-SKIPPABLE)
+The canonical protocol governs risk-based loop minimums, independent review,
+test consent, scrub and delivery gates. Start the loop before the first mutation,
+not before reading context. Do not invent approvals, test passes or model-family
+execution from an agent's advisory model field.
 
-Before editing, creating, or deleting any file for a code or docs change, run
-`.frontier/runtime/frontier.ps1 loop start -p "<task>"` as the FIRST action. The loop
-is not done until `.frontier/runtime/frontier.ps1 loop complete -s "<summary>"` succeeds, with at
-least 5 iterations and a structured reviewer verdict recorded on the final work
-iteration:
-`loop iterate -s "Subagent Review: <outcome>" -e <evidence> --verdict approved
---reviewer <id> --high 0 --medium 0`. A summary containing the word "review" no
-longer satisfies the gate. When the Frontier MCP server is registered
-(`.cursor/mcp.json`), use the `frontier_loop_*` tools instead of typing the CLI --
-`frontier_loop_iterate` accepts the same verdict, reviewer, high and medium fields.
-The pre-commit hook blocks commits that violate the loop gate.
+Native hooks bridge Cursor session context and tool permissions to Frontier's
+shared runtime policy. They do not replace host permissions or an OS sandbox.
+Never bypass a denied tool by switching tools. Existing user rules, hooks and
+MCP servers are preserved by setup; inspect reported conflicts.
 
-## Workflow Gates
-
-- Compound Capture, Model Council (ADR/PRD/eval), Execution Plan (>= 8 code
-  files), and Brainstorm gates apply per `.github/AGENT-PROTOCOL.md`.
-- Scrub before handoff: `.frontier/runtime/frontier.ps1 scrub -Path <changed-area>`.
-- Karpathy guidelines apply to every change.
-
-## Conventions
-
-- Commit format: `type: description (#issue)` -- feat, fix, docs, test,
-  refactor, perf, chore.
-- ASCII-only: use `->` not arrows, `-` not em-dashes, `[PASS]`/`[FAIL]`.
-- Create deliverables locally; never push files straight to the remote.
-
-## Commands
-
-Role workflows are available as `.cursor/commands/*.md`, each a thin wrapper over
-`.github/agents/<role>.agent.md`. Invoke the matching command, then read that
-canonical agent file before acting.
+Role commands are thin wrappers over canonical contracts. Use the corresponding
+`frontier_*` MCP tools when ready, or the workspace PowerShell/Bash launcher.

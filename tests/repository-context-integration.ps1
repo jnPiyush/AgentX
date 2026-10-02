@@ -47,8 +47,9 @@ function Wait-RefreshStatus([string]$Root, [int]$TimeoutSeconds = 120) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ([DateTime]::UtcNow -lt $deadline) {
         if (Test-Path -LiteralPath $statusPath) {
-            $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
-            if ($status.state -in @('succeeded', 'failed')) { return $status }
+            # The worker replaces this file atomically; a read can briefly collide with the replace.
+            $status = try { Get-Content -LiteralPath $statusPath -Raw -ErrorAction Stop | ConvertFrom-Json } catch { $null }
+            if ($null -ne $status -and $status.state -in @('succeeded', 'failed')) { return $status }
         }
         Start-Sleep -Milliseconds 250
     }
@@ -178,13 +179,13 @@ try {
     Assert-True (-not (Test-AgentToolAllowed -ToolName 'repository_context' -AgentDef @{tools=@('fetch')})) 'Roles without source access do not receive the graph tool'
     Assert-True (-not (Test-SandboxPath -Path '.frontier/runtime/repository-context.ps1' -WorkspaceRoot $workspace).allowed) 'Agents cannot rewrite the graph implementation used by trusted context commands'
     $toolResult = Invoke-Tool -name 'repository_context' -params @{query='provider';maxChars=900} -workspaceRoot $workspace -agentDef $role
-    Assert-True ($toolResult.text.Length -le 900 -and -not $toolResult.ContainsKey('error')) 'Native graph tool returns bounded source pointers'
+    Assert-True ($toolResult.text.Length -le 900 -and $toolResult.ContainsKey('error') -and $toolResult.error -eq $false) 'Native graph tool returns bounded source pointers with the standard tool result contract'
     $outside = Join-Path ([IO.Path]::GetTempPath()) ('frontier context outside ' + [guid]::NewGuid().ToString('N'))
     [IO.Directory]::CreateDirectory($outside) | Out-Null
     try {
         Assert-True ($null -eq (New-RunnerRepositoryContextMessage -WorkspaceRoot $outside -Query 'x' -AgentName 'engineer')) 'Native runs add no graph context outside Frontier workspaces'
         $outsideTool = Invoke-Tool -name 'repository_context' -params @{query='x'} -workspaceRoot $outside -agentDef $role
-        Assert-True ($outsideTool.ContainsKey('error') -and -not (Test-Path -LiteralPath (Join-Path $outside '.frontier'))) 'The native graph tool does not index folders that did not opt in'
+        Assert-True ($outsideTool.error -eq $true -and -not (Test-Path -LiteralPath (Join-Path $outside '.frontier'))) 'The native graph tool does not index folders that did not opt in'
     } finally { Remove-Item -LiteralPath $outside -Recurse -Force }
     $null = Wait-RefreshStatus $workspace 30
 } finally {

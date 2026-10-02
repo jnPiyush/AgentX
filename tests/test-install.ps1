@@ -42,9 +42,13 @@ function Initialize-LocalArchive {
  foreach ($directory in @('.github', '.claude', '.vscode', 'scripts', 'packs', 'docs')) {
   Copy-Item (Join-Path $SCRIPT_ROOT $directory) (Join-Path $archiveRoot $directory) -Recurse -Force
  }
- # Only tracked runtime files ship in a release archive; local .frontier state and
- # untracked installs such as mcp-server/node_modules do not.
- foreach ($relative in @(git -C $SCRIPT_ROOT ls-files -- '.frontier/runtime')) {
+ # Include pending runtime source in this worktree test; ignored dependencies and
+ # local Frontier state are never part of the fixture.
+ $runtimeFiles = @(
+  git -C $SCRIPT_ROOT ls-files -- '.frontier/runtime'
+  git -C $SCRIPT_ROOT ls-files --others --exclude-standard -- '.frontier/runtime'
+ ) | Sort-Object -Unique
+ foreach ($relative in $runtimeFiles) {
   $destination = Join-Path $archiveRoot $relative
   New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
   Copy-Item -LiteralPath (Join-Path $SCRIPT_ROOT $relative) -Destination $destination -Force
@@ -168,7 +172,11 @@ $RUNTIME_FILES = @(
  ".frontier/state/agent-status.json",
  ".frontier/runtime/frontier.ps1",
  ".frontier/runtime/frontier-cli.ps1",
- ".frontier/runtime/repository-context.ps1"
+ ".frontier/runtime/repository-context.ps1",
+ ".frontier/runtime/hydrafusion.ps1",
+ ".frontier/runtime/hydrafusion-policy.ps1",
+ ".frontier/runtime/hydrafusion-protocol.ps1",
+ ".frontier/runtime/hydrafusion-workspace.ps1"
 )
 $GIT_ARTIFACTS = @(".git", ".git/hooks/pre-commit", ".git/hooks/commit-msg")
 $TEMP_FILES = @(".frontier-install-tmp", ".frontier-install-raw", ".frontier-install.zip")

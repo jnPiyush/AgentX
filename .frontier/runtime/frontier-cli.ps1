@@ -5573,6 +5573,16 @@ function Invoke-LoopComplete {
         exit 1
     }
 
+    if (Test-Path -LiteralPath (Join-Path $Script:ROOT '.frontier/state/hydrafusion') -PathType Container) {
+        try {
+            . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
+            Assert-HydraFusionLoopDelivery -WorkspaceRoot $Script:ROOT -LoopState $state
+        } catch {
+            Write-CliOutput "$($C.r)  [FAIL] $($_.Exception.Message)$($C.n)"
+            exit 1
+        }
+    }
+
     # Archive the final evidence. Copied, never moved -- the caller's artifact must
     # survive loop completion. The same SHA-256 reuse guard as 'loop iterate'
     # applies here: 'loop complete' is the gate the pre-commit hook keys on, so
@@ -5674,6 +5684,15 @@ function Invoke-LoopGateCheck {
     if ($consumed) {
         Write-CliOutput 'BLOCK: quality loop was already consumed by a prior commit'
         exit 1
+    }
+    if (Test-Path -LiteralPath (Join-Path $Script:ROOT '.frontier/state/hydrafusion') -PathType Container) {
+        try {
+            . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
+            Assert-HydraFusionLoopDelivery -WorkspaceRoot $Script:ROOT -LoopState $state
+        } catch {
+            Write-CliOutput "BLOCK: $($_.Exception.Message)"
+            exit 1
+        }
     }
 
     $loopHealth = Get-LoopStateHealth -State $state
@@ -6068,6 +6087,11 @@ function Invoke-ConfigCmd {
             }
             $key = $Script:SubArgs[1]
             $rawValue = $Script:SubArgs[2]
+            if ($key -eq 'executionEngine' -and $rawValue -notin @('native', 'hydrafusion')) {
+                Write-CliOutput "$($C.r)  [FAIL] executionEngine must be 'native' or 'hydrafusion'.$($C.n)"
+                $global:LASTEXITCODE = 1
+                return
+            }
             # Parse boolean and numeric values
             $value = switch -Regex ($rawValue) {
                 '^true$'  { $true }
@@ -6658,7 +6682,7 @@ function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[str
 function Test-TrustedFrontierCommand {
     param(
         [string]$Command,
-        [ValidateSet('loop-start', 'repository-context')][string]$Operation = 'loop-start'
+        [ValidateSet('loop-start', 'repository-context', 'cursor-read')][string]$Operation = 'loop-start'
     )
     $tokens = $null
     $parseErrors = $null
@@ -6710,7 +6734,7 @@ function Test-TrustedFrontierCommand {
         if ($fileIndex -gt 1 -and @($elements[1..($fileIndex - 1)] | Where-Object { $_ -notin $safeWrapperSwitches }).Count -gt 0) { return $false }
         $launcherIndex = $fileIndex + 1
     }
-    $argumentCount = if ($Operation -eq 'loop-start') { 2 } else { 1 }
+    $argumentCount = if ($Operation -in @('loop-start', 'cursor-read')) { 2 } else { 1 }
     if ($launcherIndex + $argumentCount -ge $elements.Count) { return $false }
     try {
         $launcher = if ([IO.Path]::IsPathRooted($elements[$launcherIndex])) {
@@ -6727,6 +6751,11 @@ function Test-TrustedFrontierCommand {
     $comparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
     if (@($trustedLaunchers | Where-Object { $launcher.Equals($_, $comparison) }).Count -eq 0) { return $false }
     if ($Operation -eq 'repository-context') { return $elements[$launcherIndex + 1] -ceq 'context' }
+    if ($Operation -eq 'cursor-read') {
+        if ($elements[$launcherIndex + 1] -cne 'cursor') { return $false }
+        return ($elements.Count -eq $launcherIndex + 4 -and $elements[$launcherIndex + 2] -ceq 'read') -or
+            ($elements.Count -eq $launcherIndex + 3 -and $elements[$launcherIndex + 2] -cin @('status', 'runtime'))
+    }
     return $elements[$launcherIndex + 1] -ceq 'loop' -and $elements[$launcherIndex + 2] -ceq 'start'
 }
 
@@ -6920,7 +6949,8 @@ function Invoke-PolicyHookCmd {
         if ($isTerminalTool) {
             $command = [string](Get-HookInputValue $toolInput 'command')
             $isTrustedLoopStart = Test-TrustedFrontierCommand $command
-            $isTrustedContext = Test-TrustedFrontierCommand $command -Operation 'repository-context'
+            $isTrustedContext = (Test-TrustedFrontierCommand $command -Operation 'repository-context') -or
+                (Test-TrustedFrontierCommand $command -Operation 'cursor-read')
             $pathAnalysis = Get-TerminalHookPathAnalysis $command
             if ((-not $isTrustedLoopStart -and -not $isTrustedContext -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
                 Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use frontier loop commands instead.'
@@ -7034,6 +7064,74 @@ function Invoke-AgentHookCmd {
 }
 
 # ---------------------------------------------------------------------------
+# ENGINE: execution engine selection and HydraFusion readiness
+# ---------------------------------------------------------------------------
+
+function Invoke-EngineCmd {
+    . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
+    $global:LASTEXITCODE = 0
+    $action = if ($Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') { $Script:SubArgs[0] } else { 'status' }
+    if ($action -in @('inspect', 'accept', 'discard', 'recover')) {
+        try {
+            if ($Script:SubArgs.Count -lt 2) { throw "engine $action requires a candidate ID." }
+            $id = $Script:SubArgs[1]
+            if ($action -eq 'accept') {
+                $review = Get-Flag @('--review') ''
+                if (-not $review) { throw 'engine accept requires --review <independently-recorded-report.json>.' }
+                $run = Complete-HydraFusionCandidate -WorkspaceRoot $Script:ROOT -RunId $id -ReviewPath $review
+                $global:LASTEXITCODE = 3
+            } elseif ($action -eq 'discard') {
+                $run = Remove-HydraFusionCandidate $Script:ROOT $id
+            } elseif ($action -eq 'recover') {
+                $run = Repair-HydraFusionInterruptedRun $Script:ROOT $id
+            } else { $run = Get-HydraFusionRun $Script:ROOT $id }
+            if ($Script:JsonOutput) { [Console]::Out.WriteLine((ConvertTo-Json -InputObject $run -Depth 30 -Compress)) }
+            else {
+                Write-CliOutput "  Candidate ${id}: $($run['status'])"
+                Write-CliOutput "  Artifacts: $($run['scratch'])"
+                Write-CliOutput '  Candidate acceptance does not complete the owner quality loop.'
+            }
+        } catch {
+            $global:LASTEXITCODE = 1
+            if ($Script:JsonOutput) { [Console]::Out.WriteLine((@{ status = 'error'; message = $_.Exception.Message } | ConvertTo-Json -Compress)) }
+            else { Write-CliOutput "  [FAIL] $($_.Exception.Message)" }
+        }
+        return
+    }
+    if ($action -ne 'status') { throw 'engine supports status, inspect, accept, discard and recover.' }
+    $cfg = Get-FrontierConfig
+    $choice = $null
+    $problem = ''
+    try { $choice = Resolve-FrontierExecutionEngine -Requested '' -Config $cfg } catch { $problem = $_.Exception.Message }
+    $readiness = [ordered]@{ ready = $false; cliPath = ''; cliVersion = ''; minimumVersion = [string]$Script:HydraFusionMinimumCliVersion; reason = '' }
+    try {
+        $cli = Resolve-HydraFusionCli -WorkspaceRoot $Script:ROOT
+        $readiness.ready = $true
+        $readiness.cliPath = $cli.path
+        $readiness.cliVersion = [string]$cli.version
+    } catch { $readiness.reason = $_.Exception.Message }
+    $report = [ordered]@{
+        engine = $(if ($choice) { $choice.engine } else { '' }); source = $(if ($choice) { $choice.source } else { '' })
+        configError = $problem; hydraFusion = $readiness
+    }
+    if ($Script:JsonOutput) {
+        [Console]::Out.WriteLine(($report | ConvertTo-Json -Depth 5 -Compress))
+    } else {
+        Write-CliOutput "$($C.c)  Frontier Execution Engine$($C.n)"
+        if ($problem) { Write-CliOutput "$($C.r)  [FAIL] $problem$($C.n)" }
+        else { Write-CliOutput "  engine = $($report.engine) ($($report.source))" }
+        if ($readiness.ready) {
+            Write-CliOutput "$($C.g)  [PASS] Required CLI capabilities found: $($readiness.cliVersion) at $($readiness.cliPath)$($C.n)"
+        } else {
+            Write-CliOutput "$($C.y)  [WARN] HydraFusion unavailable: $($readiness.reason)$($C.n)"
+        }
+        Write-CliOutput "$($C.d)  Select per task with 'frontier run <agent> <prompt> --engine hydrafusion' or by default with 'frontier config set executionEngine hydrafusion'.$($C.n)"
+        Write-CliOutput "$($C.d)  This does not verify account entitlement; execution also requires an active owner loop and an explicit credit budget.$($C.n)"
+    }
+    if ($problem) { $global:LASTEXITCODE = 1 }
+}
+
+# ---------------------------------------------------------------------------
 # RUN: Agentic loop execution (LLM + tools via GitHub Models API)
 # ---------------------------------------------------------------------------
 
@@ -7072,6 +7170,8 @@ function Invoke-RunCmd {
         Write-CliOutput '  frontier run -a engineer -p "Fix the failing tests"'
         Write-CliOutput '  frontier run architect "Design the auth system" -i 42'
         Write-CliOutput '  frontier run engineer "Implement login" --max 20 -m gpt-4.1'
+        Write-CliOutput '  frontier run engineer "Smoke prompt" --no-loop-sync   (do not record into the active quality loop)'
+        Write-CliOutput '  frontier run engineer "Implement login" --engine hydrafusion   (Copilot CLI multi-model orchestration)'
         Write-CliOutput '  frontier run --resume-session <session-id> --clarification-response "Use the existing auth flow"'
         Write-CliOutput "`n$($C.w)  Available agents:$($C.n)"
         foreach ($agentFilePath in (Get-AgentDefinitionFiles)) {
@@ -7125,11 +7225,24 @@ function Invoke-RunCmd {
     }
     if ($issue) { $params['IssueNumber'] = $issue }
     if ($model) { $params['Model'] = $model }
+    $engine = Get-Flag @('--engine')
+    if ($engine) { $params['Engine'] = $engine }
+    if (Test-Flag @('--allow-tool')) {
+        Write-CliOutput '  [FAIL] --allow-tool is not supported by Frontier run; use the role tool contract, not additional grants.'
+        $global:LASTEXITCODE = 1
+        return
+    }
+    $feedback = Get-Flag @('--feedback')
+    if ($feedback) { $params['FeedbackPath'] = $feedback }
+    # Smoke and diagnostic runs must not record iterations into the developer's active quality loop.
+    if (Test-Flag @('--no-loop-sync')) { $params['SkipLoopStateSync'] = $true }
 
     $result = Invoke-AgenticLoop @params
 
     if (Test-AgenticLoopResultSucceeded -Result $result) {
         $global:LASTEXITCODE = 0
+    } elseif ($result -and ([string]$result.exitReason -ceq 'candidate_ready')) {
+        $global:LASTEXITCODE = 3
     } elseif ($result -and ([string]$result.exitReason -ceq 'human_required')) {
         $global:LASTEXITCODE = 2
     } else {
@@ -7982,9 +8095,19 @@ $($C.w)  Commands:$($C.n)
     --sync                         Update the graph incrementally before answering (default reads the cache)
     --refresh                      Rebuild extraction while preserving curated map notes
     --start-refresh                Start a detached background refresh and return immediately
+  cursor setup [--restore-mcp]      Configure Cursor commands, native hooks and ready MCP
+  cursor read <canonical-path>     Read a framework contract from the installed runtime
+  cursor status                   Inspect Cursor dependencies and the selected runtime
     workflow [agent-name]            List/show workflow steps for an agent
   loop <start|status|affected|iterate|complete|cancel|rollback>  Iterative refinement; affected = tests naming changed code
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
+    --engine <native|hydrafusion>    Execution engine (default: config executionEngine, else native)
+    --feedback <report.json>         HydraFusion: independently recorded changes-requested feedback
+  engine [status]                   Show the execution engine and CLI capabilities (no model calls)
+  engine inspect <candidate>        Inspect an isolated candidate and its hashes
+  engine accept <candidate> --review <report.json>  Apply a bound, independently approved candidate
+  engine discard <candidate>        Remove an owned, stopped candidate workspace
+  engine recover <candidate>        Stop a recorded interrupted child and reconcile its durable ledger
   hire <name>                      Scaffold a new custom agent definition
     watch [--execute] [--once]       Poll backlog; --once runs one deterministic cycle
   validate <issue> <role>          Pre-handoff validation
@@ -8282,6 +8405,11 @@ function Invoke-WatchCmd {
                             if (Test-AgenticLoopResultSucceeded -Result $result) {
                                 $watchState.itemsExecuted++
                                 Write-CliOutput "$($C.g)    [PASS] #$($item.number) completed ($($result.exitReason))$($C.n)"
+                            } elseif ($result -and $result.exitReason -eq 'candidate_ready') {
+                                Write-CliOutput "    [PENDING] #$($item.number): candidate $($result.sessionId) awaits independent acceptance."
+                                $global:LASTEXITCODE = 3
+                                Write-JsonFile $watchStateFile $watchState
+                                return
                             } else {
                                 $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
                                 Write-CliOutput "$($C.r)    [FAIL] #$($item.number) did not complete ($exitReason)$($C.n)"
@@ -9132,6 +9260,10 @@ function Invoke-SprintCmd {
                     $result = Invoke-AgenticLoop @params
                     if (Test-AgenticLoopResultSucceeded -Result $result) {
                         Write-CliOutput "    $($C.g)[PASS]$($C.n) Build completed ($($result.exitReason))"
+                    } elseif ($result -and $result.exitReason -eq 'candidate_ready') {
+                        Write-CliOutput "    [PENDING] Candidate $($result.sessionId) requires review and explicit acceptance; ship is paused."
+                        $global:LASTEXITCODE = 3
+                        return
                     } else {
                         $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
                         Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build did not complete ($exitReason)"
@@ -9159,6 +9291,10 @@ function Invoke-SprintCmd {
                     $reviewResult = Invoke-AgenticLoop @reviewParams
                     if (Test-AgenticLoopResultSucceeded -Result $reviewResult) {
                         Write-CliOutput "    $($C.g)[PASS]$($C.n) Review completed ($($reviewResult.exitReason))"
+                    } elseif ($reviewResult -and $reviewResult.exitReason -eq 'candidate_ready') {
+                        Write-CliOutput "    [PENDING] Review result $($reviewResult.sessionId) requires independent acceptance."
+                        $global:LASTEXITCODE = 3
+                        return
                     } else {
                         $exitReason = if ($reviewResult) { [string]$reviewResult.exitReason } else { 'no-result' }
                         Write-CliOutput "    $($C.r)[FAIL]$($C.n) Review did not complete ($exitReason)"
@@ -9207,6 +9343,9 @@ function Invoke-SprintCmd {
         Write-CliOutput "$($C.d)  Issue: #${issueNumber}$($C.n)"
     }
     Write-CliOutput "$($C.d)  Stages: $($stages.Count) executed$($C.n)`n"
+    # Advisory discovery may run Git probes that fail in a new or non-Git workspace.
+    # Reaching this point, rather than the last auxiliary native exit, defines success.
+    $global:LASTEXITCODE = 0
 }
 
 # ---------------------------------------------------------------------------
@@ -9235,6 +9374,20 @@ function Invoke-ScriptWrapper {
 }
 
 function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scrub.ps1'             -Label 'scrub' }
+function Invoke-CursorCmd {
+    if ($IsWindows) {
+        $extensions = @($env:PATHEXT -split ';' | Where-Object { $_ })
+        $missing = @('.EXE', '.CMD' | Where-Object { $extensions -notcontains $_ })
+        if ($missing.Count -gt 0) {
+            [Console]::Error.WriteLine('[frontier-cursor] Restoring process-local Windows executable extensions for the restricted host environment.')
+            $env:PATHEXT = (@($extensions) + @($missing)) -join ';'
+        }
+    }
+    $nodeName = if ($IsWindows) { 'node.exe' } else { 'node' }
+    $node = Get-Command $nodeName -CommandType Application -ErrorAction Stop | Select-Object -First 1
+    & $node.Source (Join-Path $PSScriptRoot 'cursor.js') --workspace $Script:ROOT @Script:SubArgs
+    exit $LASTEXITCODE
+}
 function Invoke-DreamCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/dream.ps1'             -Label 'dream' }
 function Invoke-ResearchCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/research.ps1'          -Label 'research' }
 function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
@@ -9265,6 +9418,7 @@ switch ($Script:Command) {
     'hook'     { Invoke-AgentHookCmd }
     'hooks'    { Invoke-HooksCmd }
     'policy-hook' { Invoke-PolicyHookCmd }
+    'cursor' { Invoke-CursorCmd }
     'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
     'bundle'   { Invoke-BundleCmd }
@@ -9272,16 +9426,17 @@ switch ($Script:Command) {
     'backlog-sync' { Invoke-BacklogSyncCmd }
     'lessons'  { Invoke-LessonsCmd }
     'git-sync' { Invoke-GitSyncCmd }
-    'run'      { Invoke-RunCmd }
+    'run'      { Invoke-RunCmd; exit $global:LASTEXITCODE }
+    'engine'   { Invoke-EngineCmd; exit $global:LASTEXITCODE }
     'hire'     { Invoke-HireCmd }
-    'watch'    { Invoke-WatchCmd }
+    'watch'    { Invoke-WatchCmd; if ((Test-Path variable:LASTEXITCODE) -and $global:LASTEXITCODE -eq 3) { exit 3 } }
     'tokens'   { Invoke-TokensCmd }
     'stage-gate' { Invoke-StageGateCmd }
     'budget'   { Invoke-BudgetCmd }
     'score'    { Invoke-ScoreCmd }
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }
-    'sprint'   { Invoke-SprintCmd }
+    'sprint'   { $global:LASTEXITCODE = 0; Invoke-SprintCmd; exit $global:LASTEXITCODE }
     'scrub'    { Invoke-ScrubCmd }
     'deslop'   { Invoke-ScrubCmd }
     'antislop' { Invoke-ScrubCmd }

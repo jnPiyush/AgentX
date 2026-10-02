@@ -522,9 +522,24 @@ function quoteShellLiteral(value: string): string {
   return value.replace(/'/g, `'"'"'`);
 }
 
-function renderPowerShellWrapper(entryFile: string, extensionRoot: string): string {
+function renderPowerShellWrapper(
+  entryFile: string,
+  extensionRoot: string,
+  cursorBinding = false,
+): string {
   const runtimeRelativePath = quotePowerShellLiteral(path.join('.github', 'frontier', '.frontier', 'runtime', entryFile));
   const preferredExtensionRoot = quotePowerShellLiteral(extensionRoot);
+  const cursorCheck = (variable: string): string => cursorBinding
+    ? ` -and (Test-Path -LiteralPath (Join-Path ${variable} '.github/frontier/.frontier/runtime/cursor.js') -PathType Leaf)`
+    : '';
+  const preferredLookup = [
+    `  $preferredExtensionRoot = '${preferredExtensionRoot}'`,
+    `  $preferredRuntimeEntry = Join-Path $preferredExtensionRoot '${runtimeRelativePath}'`,
+    `  if ((Test-Path -LiteralPath $preferredRuntimeEntry -PathType Leaf)${cursorCheck('$preferredExtensionRoot')}) {`,
+    '    return (Resolve-Path $preferredExtensionRoot).Path',
+    '  }',
+    '',
+  ];
 
   return [
     '#!/usr/bin/env pwsh',
@@ -535,14 +550,22 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     '  $extensionRootOverride = if ($env:FRONTIER_EXTENSION_ROOT) { $env:FRONTIER_EXTENSION_ROOT } elseif ($env:HVE_EXTENSION_ROOT) { $env:HVE_EXTENSION_ROOT } else { $env:AGENTX_EXTENSION_ROOT }',
     '  if ($extensionRootOverride) {',
     `    $runtimeEntry = Join-Path $extensionRootOverride '${runtimeRelativePath}'`,
-    '    if (Test-Path -LiteralPath $runtimeEntry -PathType Leaf) {',
+    `    if ((Test-Path -LiteralPath $runtimeEntry -PathType Leaf)${cursorCheck('$extensionRootOverride')}) {`,
     '      return (Resolve-Path $extensionRootOverride).Path',
     '    }',
+    ...(cursorBinding ? ["    throw 'The explicit Frontier runtime override does not support Cursor.'"] : []),
     '  }',
     '',
+    ...(cursorBinding ? preferredLookup : []),
     '  $searchRoots = @(',
-    "    (Join-Path $HOME '.vscode\\extensions'),",
-    "    (Join-Path $HOME '.vscode-insiders\\extensions')",
+    ...(cursorBinding ? [
+      `    (Split-Path -Parent '${preferredExtensionRoot}'),`,
+      "    (Join-Path $HOME '.cursor/extensions'),",
+      "    (Join-Path $HOME '.cursor-server/extensions')",
+    ] : [
+      "    (Join-Path $HOME '.vscode\\extensions'),",
+      "    (Join-Path $HOME '.vscode-insiders\\extensions')",
+    ]),
     '  )',
     '',
     '  $matches = @(',
@@ -561,17 +584,12 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     '',
     '  foreach ($match in $matches) {',
     `    $runtimeEntry = Join-Path $match.Path '${runtimeRelativePath}'`,
-    '    if (Test-Path -LiteralPath $runtimeEntry -PathType Leaf) {',
+    `    if ((Test-Path -LiteralPath $runtimeEntry -PathType Leaf)${cursorCheck('$match.Path')}) {`,
     '      return $match.Path',
     '    }',
     '  }',
     '',
-    `  $preferredExtensionRoot = '${preferredExtensionRoot}'`,
-    `  $preferredRuntimeEntry = Join-Path $preferredExtensionRoot '${runtimeRelativePath}'`,
-    '  if (Test-Path -LiteralPath $preferredRuntimeEntry -PathType Leaf) {',
-    '    return (Resolve-Path $preferredExtensionRoot).Path',
-    '  }',
-    '',
+    ...(!cursorBinding ? preferredLookup : []),
     "  throw 'Frontier extension runtime not found. Reinstall the Frontier extension or set FRONTIER_EXTENSION_ROOT.'",
     '}',
     '',
@@ -591,9 +609,27 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
   ].join('\n');
 }
 
-function renderBashWrapper(entryFile: string, extensionRoot: string): string {
+function renderBashWrapper(
+  entryFile: string,
+  extensionRoot: string,
+  cursorBinding = false,
+): string {
   const runtimeRelativePath = quoteShellLiteral(toPosixPath(path.join('.github', 'frontier', '.frontier', 'runtime', entryFile)));
   const preferredExtensionRoot = quoteShellLiteral(toPosixPath(extensionRoot));
+  const cursorCheck = (variable: string): string => cursorBinding
+    ? ` && -f "\${${variable}}/.github/frontier/.frontier/runtime/cursor.js"`
+    : '';
+  const preferredLookup = [
+    `  candidate='${preferredExtensionRoot}'`,
+    `  if [[ -f "\${candidate}/\${runtime_relative}"${cursorCheck('candidate')} ]]; then`,
+    "    printf '%s\\n' \"$candidate\"",
+    '    return 0',
+    '  fi',
+    '',
+  ];
+  const searchRoots = cursorBinding
+    ? `'${quoteShellLiteral(toPosixPath(path.dirname(extensionRoot)))}' "$HOME/.cursor/extensions" "$HOME/.cursor-server/extensions"`
+    : '"$HOME/.vscode/extensions" "$HOME/.vscode-insiders/extensions"';
 
   return [
     '#!/usr/bin/env bash',
@@ -606,15 +642,22 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     '  local candidate=""',
     '  local extension_root_override="${FRONTIER_EXTENSION_ROOT:-${HVE_EXTENSION_ROOT:-${AGENTX_EXTENSION_ROOT:-}}}"',
     '',
-    '  if [[ -n "$extension_root_override" && -f "${extension_root_override}/${runtime_relative}" ]]; then',
+    `  if [[ -n "$extension_root_override" && -f "\${extension_root_override}/\${runtime_relative}"${cursorCheck('extension_root_override')} ]]; then`,
     "    printf '%s\n' \"$extension_root_override\"",
     '    return 0',
     '  fi',
     '',
+    ...(cursorBinding ? [
+      '  if [[ -n "$extension_root_override" ]]; then',
+      "    echo 'The explicit Frontier runtime override does not support Cursor.' >&2",
+      '    return 1',
+      '  fi',
+      ...preferredLookup,
+    ] : []),
     '  local match=""',
     '  while IFS=$\'\\t\' read -r _ match; do',
     '    [[ -n "$match" ]] || continue',
-    '    if [[ -f "${match}/${runtime_relative}" ]]; then',
+    `    if [[ -f "\${match}/\${runtime_relative}"${cursorCheck('match')} ]]; then`,
     "      printf '%s\\n' \"$match\"",
     '      return 0',
     '    fi',
@@ -622,7 +665,7 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     '    local search_root=""',
     '    local version=""',
     '    local version_key=""',
-    '    for search_root in "$HOME/.vscode/extensions" "$HOME/.vscode-insiders/extensions"; do',
+    `    for search_root in ${searchRoots}; do`,
     '      [[ -d "$search_root" ]] || continue',
     '      while IFS= read -r match; do',
     '        version="${match##*/jnpiyush.agentx-}"',
@@ -634,12 +677,7 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     "    done | sort -t $'\\t' -k1,1r",
     '  )',
     '',
-    `  candidate='${preferredExtensionRoot}'`,
-    '  if [[ -f "${candidate}/${runtime_relative}" ]]; then',
-    "    printf '%s\\n' \"$candidate\"",
-    '    return 0',
-    '  fi',
-    '',
+    ...(!cursorBinding ? preferredLookup : []),
     "  echo 'Frontier extension runtime not found. Reinstall the Frontier extension or set FRONTIER_EXTENSION_ROOT.' >&2",
     '  return 1',
     '}',
@@ -652,12 +690,16 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
   ].join('\n');
 }
 
-export function writeWorkspaceRuntimeWrappers(extensionRoot: string, workspaceRoot: string): void {
+export function writeWorkspaceRuntimeWrappers(
+  extensionRoot: string,
+  workspaceRoot: string,
+  cursorBinding = false,
+): void {
   for (const wrapper of WORKSPACE_WRAPPER_FILES) {
     const targetPath = path.join(workspaceRoot, wrapper.relativePath);
     const content = wrapper.shell === 'pwsh'
-      ? renderPowerShellWrapper(wrapper.entryFile, extensionRoot)
-      : renderBashWrapper(wrapper.entryFile, extensionRoot);
+      ? renderPowerShellWrapper(wrapper.entryFile, extensionRoot, cursorBinding)
+      : renderBashWrapper(wrapper.entryFile, extensionRoot, cursorBinding);
 
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, content, 'utf-8');

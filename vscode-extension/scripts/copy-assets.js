@@ -20,7 +20,7 @@ const rootDirs = [
     { src: path.join(repoRoot, '.github', 'hooks'), dest: path.join('.github', 'hooks') },
     { src: path.join(repoRoot, '.frontier', 'runtime', 'templates'), dest: path.join('.frontier', 'runtime', 'templates') },
     { src: path.join(repoRoot, '.frontier', 'runtime', 'plugins'), dest: path.join('.frontier', 'runtime', 'plugins') },
-    { src: path.join(repoRoot, '.cursor'), dest: '.cursor' },
+    { src: path.join(repoRoot, '.cursor'), dest: path.join('.frontier', 'runtime', 'cursor-assets') },
     { src: path.join(repoRoot, 'packs'), dest: 'packs' },
 ];
 
@@ -72,6 +72,16 @@ const rootRuntimeFiles = [
     'frontier-cli.ps1',
     'agentic-runner.ps1',
     'repository-context.ps1',
+    'hydrafusion.ps1',
+    'hydrafusion-policy.ps1',
+    'hydrafusion-protocol.ps1',
+    'hydrafusion-workspace.ps1',
+    'cursor.js',
+    'cursor-mcp.js',
+    'mcp-server/index.js',
+    'mcp-server/package.json',
+    'mcp-server/package-lock.json',
+    'mcp-server/README.md',
     'local-issue-manager.ps1',
     'local-issue-manager.sh',
 ].map((file) => ({
@@ -97,7 +107,17 @@ const artifactDocFiles = [
     dest: path.join(...relativePath.split('/')),
 }));
 
+// The extension README is not part of bundled or seeded docs; point GUIDE links at GitHub.
+const guideExtensionReadmeLink = '](../vscode-extension/README.md#minimal-workspace-setup)';
+const guideExtensionReadmeUrl = '](https://github.com/jnPiyush/AgentX/blob/master/vscode-extension/README.md#minimal-workspace-setup)';
+
 const bundledMarkdownRewrites = [
+    {
+        relativePath: path.join('docs', 'GUIDE.md'),
+        replacements: [
+            [guideExtensionReadmeLink, guideExtensionReadmeUrl],
+        ],
+    },
     {
         relativePath: 'AGENT-PROTOCOL.md',
         replacements: [
@@ -506,6 +526,7 @@ function applySeedRewrites(seedRoot) {
             relativePath: path.join('docs', 'GUIDE.md'),
             replacements: [
                 ['](../CONTRIBUTING.md)', '](https://github.com/jnPiyush/AgentX/blob/master/CONTRIBUTING.md)'],
+                [guideExtensionReadmeLink, guideExtensionReadmeUrl],
             ],
         },
     ];

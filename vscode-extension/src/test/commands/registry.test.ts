@@ -25,6 +25,7 @@ describe('registerFrontierCommands', () => {
 
     const registerCommand = vscode.commands.registerCommand as sinon.SinonStub;
     assert.ok(registerCommand.calledWith('frontier.initializeLocalRuntime'));
+    assert.ok(registerCommand.calledWith('frontier.initializeCursor'));
     assert.ok(registerCommand.calledWith('frontier.addRemoteAdapter'));
     assert.ok(registerCommand.calledWith('frontier.addPlugin'));
     assert.ok(registerCommand.calledWith('frontier.showStatus'));

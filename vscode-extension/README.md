@@ -4,7 +4,7 @@
 
 **Frontier Corp's FDE fleet for Hypervelocity Engineering in VS Code**
 
-[![Version](https://img.shields.io/badge/Version-9.6.2-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.7.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 Frontier deploys specialized Forward Deployed Engineers (FDEs) into your
@@ -336,6 +336,7 @@ CI, commit and production gates retain their existing behavior.
 | Command | Description |
 |:--------|:------------|
 | Initialize Local Runtime | Prepare local runtime for the current workspace |
+| Initialize Cursor | Configure Cursor commands, rules, native hooks and workspace-bound MCP |
 | Enable in Agents Window | Opt Frontier into the VS Code Agents Window (Preview) for the current user |
 | Add Remote Adapter | Connect GitHub or Azure DevOps for backlog integration |
 | Add LLM Adapter | Switch the workspace LLM adapter (Copilot, Claude, OpenAI) |
@@ -441,6 +442,18 @@ listed below and 11 hidden specialists that remain parent-invocable.
 ---
 
 ## Recent Changes
+
+### 9.7.0
+
+- Discover initialized workspaces into a local reference graph and reuse bounded
+  cached context at session start while preserving curated map notes.
+- Prefer GPT-6 Astra for Engineer, Architect and UX Designer on Copilot and
+  Claude Opus 5.5 for other roles.
+- Add opt-in HydraFusion candidate generation with isolated snapshots, explicit
+  budgets, durable recovery and independently reviewed promotion. Native remains
+  the default; the adapter's live and platform qualification is separate.
+- Correct runner aliases, repository-context results and Windows process identity
+  capture. Update the standalone MCP runtime's patched dependencies.
 
 ### 9.6.2
 

@@ -33,6 +33,10 @@ $repositoryContextModule = Join-Path $PSScriptRoot 'repository-context.ps1'
 if (Test-Path -LiteralPath $repositoryContextModule -PathType Leaf) {
     . $repositoryContextModule
 }
+$hydraFusionModule = Join-Path $PSScriptRoot 'hydrafusion.ps1'
+if (Test-Path -LiteralPath $hydraFusionModule -PathType Leaf) {
+    . $hydraFusionModule
+}
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -2075,6 +2079,10 @@ $Script:SANDBOX_BLOCKED_RELATIVE_PATHS = @(
     '.frontier/runtime/frontier-cli.ps1',
     '.frontier/runtime/agentic-runner.ps1',
     '.frontier/runtime/repository-context.ps1',
+    '.frontier/runtime/hydrafusion.ps1',
+    '.frontier/runtime/hydrafusion-policy.ps1',
+    '.frontier/runtime/hydrafusion-protocol.ps1',
+    '.frontier/runtime/hydrafusion-workspace.ps1',
     '.frontier/runtime/frontier.ps1',
     '.frontier/runtime/frontier.sh',
     '.github/hooks'
@@ -2292,9 +2300,9 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, 
                 $packet = Get-FrontierRepositoryContext -WorkspaceRoot $workspaceRoot -Query ([string]$params.query) -Agent $agentName -MaxChars $limit -Cached
                 $null = Start-RunnerRepositoryContextRefresh $workspaceRoot
                 if ($packet.status -eq 'missing') {
-                    return @{ text = 'Repository graph is being built in the background. Use grep_search and list_dir now; retry repository_context later.' }
+                    return @{ error = $false; text = 'Repository graph is being built in the background. Use grep_search and list_dir now; retry repository_context later.' }
                 }
-                return @{ text = $packet.context }
+                return @{ error = $false; text = $packet.context }
             } catch {
                 return @{ error = $true; text = "Repository context unavailable: $($_.Exception.Message)" }
             }
@@ -3241,6 +3249,12 @@ function Resolve-AgentReference([string]$value) {
 
     switch -Regex ($normalized) {
         '^orchestration$' { return 'frontier' }
+        '^e2e-sdlc$' { return 'frontier' }
+        '^tpm$' { return 'product-manager' }
+        '^researcher$' { return 'consulting-research' }
+        '^auto-fix-reviewer$' { return 'reviewer-auto' }
+        '^power-platform-engineer$' { return 'power-platform-builder' }
+        '^power-bi-analyst$' { return 'powerbi-analyst' }
         '^product$' { return 'product-manager' }
         '^experience$' { return 'ux-designer' }
         '^architecture$' { return 'architect' }
@@ -4727,6 +4741,63 @@ function Get-RunnerRelevantLearnings {
 # Main agentic loop
 # ---------------------------------------------------------------------------
 
+function Invoke-RunnerHydraFusionTask {
+    param(
+        [string]$Agent, [string]$Prompt, [int]$IssueNumber, [string]$Model, [string]$WorkspaceRoot,
+        [string]$ResumeSessionId, $Config, [string]$EngineSource, [string[]]$AllowTools = @(), [switch]$SuppressUserSummary,
+        [int]$MaxIterations = 30, [string]$FeedbackPath = ''
+    )
+    $fail = {
+        param([string]$Reason, [string]$Message)
+        Write-RunnerConsole "`e[31m  [FAIL] $Message`e[0m"
+        return @{ engine = 'hydrafusion'; sessionId = ''; iterations = 0; toolCalls = 0; finalText = $Message; exitReason = $Reason }
+    }
+    if ($ResumeSessionId) { return & $fail 'error' 'HydraFusion runs cannot resume a native Frontier session. Resume with --engine native or start a new HydraFusion task.' }
+    if ($Model) { return & $fail 'error' "HydraFusion selects its own models; remove --model '$Model' or use --engine native." }
+    if ([string]::IsNullOrWhiteSpace($Prompt)) { return & $fail 'error' 'HydraFusion requires a task prompt.' }
+    $agentPath = Resolve-AgentDefPath -agentName $Agent -root $WorkspaceRoot
+    if (-not $agentPath) { return & $fail 'error' "Agent '$Agent' was not found; HydraFusion runs require a Frontier agent definition." }
+    $agentDef = Read-AgentDef -agentName $Agent -root $WorkspaceRoot
+    try {
+        $settings = Get-HydraFusionSettings -Config $Config -MaxModelCalls $MaxIterations
+        Assert-HydraFusionToolPermission $AllowTools
+        if (Get-RunnerNestedConfigValue $Config 'harness' 'tokenBudget') {
+            throw 'A native harness.tokenBudget cannot be enforced by this CLI adapter; use --engine native for this task.'
+        }
+        $null = Get-HydraFusionLoopBinding $WorkspaceRoot
+    } catch { return & $fail 'error' $_.Exception.Message }
+
+    $rules = Read-BoundaryRuleSet -AgentDef $agentDef
+    $readOnly = -not ($rules.canModifySpecified -and @($rules.canModify).Count -gt 0 -and
+        (Test-AgentToolAllowed -ToolName 'file_write' -AgentDef $agentDef))
+
+    $taskPrompt = if ($IssueNumber -gt 0) { "[Frontier issue #$IssueNumber]`n$Prompt" } else { $Prompt }
+    $goal = $taskPrompt
+    $repositoryContext = New-RunnerRepositoryContextMessage -WorkspaceRoot $WorkspaceRoot -Query $Prompt -AgentName $Agent
+    if ($repositoryContext) { $taskPrompt = "$($repositoryContext.content)`n`n[Task]`n$taskPrompt" }
+    Write-RunnerConsole "`e[36m  Agent: $($agentDef.name) | Engine: HydraFusion isolated candidate ($EngineSource)`e[0m"
+    $progress = { param([string]$Message) Write-RunnerConsole "`e[90m  [HYDRAFUSION] $Message`e[0m" }
+    try {
+        $token = if ($env:COPILOT_GITHUB_TOKEN) { $env:COPILOT_GITHUB_TOKEN } else { Get-GitHubToken }
+        $result = Invoke-HydraFusionTask -WorkspaceRoot $WorkspaceRoot -Agent $Agent -AgentPath $agentPath -Prompt $taskPrompt `
+            -Rules $rules -Settings $settings -AuthToken $token -ReadOnly:$readOnly -FeedbackPath $FeedbackPath -Goal $goal -OnProgress $progress
+    } catch {
+        return & $fail 'error' "HydraFusion run failed: $($_.Exception.Message)"
+    }
+
+    $hf = $result.hydraFusion
+    if ($result.exitReason -eq 'candidate_ready') {
+        Write-RunnerConsole "  [PENDING] Candidate $($result.sessionId) is validated, not accepted. The source checkout was not changed."
+        Write-RunnerConsole "  Review the retained candidate, record its independent approval through frontier loop iterate, then use frontier engine accept."
+    } else { Write-RunnerConsole "  [FAIL] HydraFusion $($result.exitReason): $($result.finalText)" }
+    if ($hf) {
+        $credits = if ($hf.usageKnown) { [Math]::Round($hf.nanoCredits / 1000000000.0, 3) } else { 'unknown' }
+        Write-RunnerConsole "  Candidate workspace: $($hf.scratch); model calls: $($hf.modelCalls); AI credits: $credits."
+    }
+    if (-not $SuppressUserSummary -and $result.finalText) { Write-RunnerConsole "`n$($result.finalText)" }
+    return $result
+}
+
 <#
 .SYNOPSIS
   Run a full LLM-powered agentic loop from the CLI.
@@ -4749,6 +4820,10 @@ function Get-RunnerRelevantLearnings {
 .PARAMETER WorkspaceRoot
   Workspace root path (default: auto-detect from script location).
 
+.PARAMETER Engine
+  'native' or 'hydrafusion'. Empty uses the workspace executionEngine config (default native).
+  HydraFusion delegates the task to Copilot CLI and fails closed when it cannot be verified.
+
 .OUTPUTS
   PSCustomObject with: sessionId, iterations, toolCalls, finalText, exitReason
 #>
@@ -4766,7 +4841,13 @@ function Invoke-AgenticLoop {
         [switch]$SkipLoopStateSync,
         [switch]$SuppressUserSummary,
         # Internal: a clarification responder that shares its parent's usage ledger and budget.
-        [switch]$DelegatedRun
+        [switch]$DelegatedRun,
+        # Execution engine: 'native' (Frontier's model loop) or 'hydrafusion' (Copilot CLI
+        # multi-model orchestration). Empty uses the workspace executionEngine setting.
+        [string]$Engine = '',
+        # Retained to reject old callers explicitly; additional grants are unsupported.
+        [string[]]$AllowTools = @(),
+        [string]$FeedbackPath = ''
     )
 
     $startTime = Get-Date
@@ -4777,6 +4858,32 @@ function Invoke-AgenticLoop {
     }
 
     $runtimeConfig = Get-RunnerConfig -WorkspaceRoot $WorkspaceRoot
+    try {
+        if (@($AllowTools | Where-Object { $_ }).Count) { throw 'Additional tool grants are unsupported by Frontier execution; use the role tool contract.' }
+        $engineChoice = if (Get-Command Resolve-FrontierExecutionEngine -ErrorAction SilentlyContinue) {
+            Resolve-FrontierExecutionEngine -Requested $Engine -Config $runtimeConfig
+        } else {
+            # A missing engine module must not break native runs, nor silently replace a requested
+            # or configured HydraFusion run.
+            $configured = [string](Get-RunnerConfigValue $runtimeConfig 'executionEngine' '')
+            $wanted = if ($Engine) { $Engine } else { $configured }
+            if ($wanted -and $wanted.Trim().ToLowerInvariant() -ne 'native') {
+                throw "Execution engine '$wanted' is unavailable: .frontier/runtime/hydrafusion.ps1 is missing. Reinstall or update Frontier."
+            }
+            [pscustomobject]@{ engine = 'native'; source = 'default' }
+        }
+    } catch {
+        Write-RunnerConsole "`e[31m  [FAIL] $($_.Exception.Message)`e[0m"
+        return @{ sessionId = ''; iterations = 0; toolCalls = 0; finalText = $_.Exception.Message; exitReason = 'error' }
+    }
+    # Delegated clarification responders share the parent's native ledger, so they stay native.
+    if ($engineChoice.engine -eq 'hydrafusion' -and -not $DelegatedRun) {
+        return Invoke-RunnerHydraFusionTask -Agent $Agent -Prompt $Prompt -IssueNumber $IssueNumber -Model $Model `
+            -WorkspaceRoot $WorkspaceRoot -ResumeSessionId $ResumeSessionId -Config $runtimeConfig `
+            -EngineSource $engineChoice.source -AllowTools $AllowTools -SuppressUserSummary:$SuppressUserSummary `
+            -MaxIterations $MaxIterations -FeedbackPath $FeedbackPath
+    }
+    if ($FeedbackPath) { throw '--feedback applies only to an isolated HydraFusion refinement.' }
     $Script:RunnerConfig = $runtimeConfig
     $Script:ApiMode = $null
     $Script:ActiveProvider = $null

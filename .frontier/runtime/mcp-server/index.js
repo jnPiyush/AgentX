@@ -34,6 +34,12 @@ const {
 // ---------- repo discovery ----------
 
 const CLI_RELATIVE_PATH = path.join('.frontier', 'runtime', 'frontier-cli.ps1');
+const WRAPPER_RELATIVE_PATH = path.join('.frontier', 'runtime', 'frontier.ps1');
+
+function resolveCliEntry(root) {
+  return [CLI_RELATIVE_PATH, WRAPPER_RELATIVE_PATH].map(relative => path.join(root, relative))
+    .find(candidate => fs.statSync(candidate, { throwIfNoEntry: false })?.isFile());
+}
 
 function discoverRepoRoot(env = process.env, start = __dirname) {
   const key = ['FRONTIER_REPO_ROOT', 'HVE_REPO_ROOT', 'AGENTX_REPO_ROOT'].find(name => env[name] !== undefined);
@@ -43,12 +49,12 @@ function discoverRepoRoot(env = process.env, start = __dirname) {
       throw new Error(`${key} must be an absolute repository path.`);
     }
     const root = path.resolve(configuredRoot);
-    if (fs.statSync(path.join(root, CLI_RELATIVE_PATH), { throwIfNoEntry: false })?.isFile()) return root;
-    throw new Error(`${key} does not contain .frontier/runtime/frontier-cli.ps1: ${root}`);
+    if (resolveCliEntry(root)) return root;
+    throw new Error(`${key} does not contain a Frontier runtime CLI or workspace wrapper: ${root}`);
   }
   let cur = start;
   for (let i = 0; i < 6; i++) {
-    if (fs.existsSync(path.join(cur, CLI_RELATIVE_PATH))) return cur;
+    if (resolveCliEntry(cur)) return cur;
     const parent = path.dirname(cur);
     if (parent === cur) break;
     cur = parent;
@@ -59,6 +65,7 @@ function discoverRepoRoot(env = process.env, start = __dirname) {
 // ---------- CLI invocation ----------
 
 function createCliRunner(repoRoot, hooks = {}) {
+  const cliEntry = resolveCliEntry(repoRoot) ?? path.join(repoRoot, CLI_RELATIVE_PATH);
   const active = new Map();
   let stopped = false;
   const failureResult = (message) => ({ exitCode: -1, stdout: '', stderr: message });
@@ -67,8 +74,11 @@ function createCliRunner(repoRoot, hooks = {}) {
     if (active.size) return Promise.resolve(failureResult('CLI busy or previous child termination unconfirmed.'));
     let child;
     try {
-      child = (hooks.spawn || spawn)('pwsh', ['-NoProfile', '-NonInteractive', '-File', path.join(repoRoot, CLI_RELATIVE_PATH), ...args], {
-        cwd: repoRoot, env: { ...process.env, FRONTIER_NONINTERACTIVE: '1', FRONTIER_WORKSPACE_ROOT: repoRoot },
+      child = (hooks.spawn || spawn)('pwsh', ['-NoProfile', '-NonInteractive', '-File', cliEntry, ...args], {
+        cwd: repoRoot, env: {
+          ...process.env, FRONTIER_NONINTERACTIVE: '1', FRONTIER_WORKSPACE_ROOT: repoRoot,
+          FRONTIER_OPERATION_TIMEOUT_SECONDS: String(Math.max(1, Math.floor((hooks.timeoutMs || 600000) / 1000) - 30)),
+        },
         windowsHide: true, detached: (hooks.platform || process.platform) !== 'win32',
       });
     } catch (error) { return Promise.resolve(failureResult(`[spawn-error] ${error.message}`)); }
@@ -175,7 +185,8 @@ function toolResult({ exitCode, stdout, stderr }) {
     (stderr.trim() ? `stderr:\n${stderr.trim()}\n` : '');
   return {
     content: [{ type: 'text', text: body || '(no output)' }],
-    isError: exitCode !== 0,
+    isError: exitCode !== 0 && exitCode !== 3,
+    ...(exitCode === 3 ? { structuredContent: { status: 'pending_owner_review_or_verification', exitCode } } : {}),
   };
 }
 
@@ -399,23 +410,63 @@ const TOOLS = [
   {
     name: 'frontier_run',
     description:
-      'Run an agent through the agentic loop (LLM + tools). Requires a configured LLM provider (GitHub Models, Claude Code, etc.). Use this to delegate a task to a named agent role.',
+      'Run a named Frontier agent. engine=hydrafusion generates an isolated candidate only: an active owner loop, explicit credit budget and supported Copilot CLI are required. Exit 3 is pending independent review, not task completion.',
     inputSchema: {
       type: 'object',
       properties: {
         agent: { type: 'string', description: 'Agent role name (engineer, architect, pm, ...)' },
         prompt: { type: 'string', description: 'Task description for the agent' },
-        model: { type: 'string', description: 'Optional model id (e.g. gpt-4.1)' },
-        max: { type: 'number', description: 'Max iterations (default 30)' },
+        model: { type: 'string', description: 'Optional model id (e.g. gpt-4.1); not valid with engine=hydrafusion' },
+        max: { type: 'integer', minimum: 1, maximum: 1000, description: 'Native iterations or observed HydraFusion model calls (default 30)' },
         issue: { type: 'number', description: 'Optional issue number to associate' },
+        engine: { type: 'string', enum: ['native', 'hydrafusion'], description: 'Execution engine; omit to use the workspace executionEngine setting' },
+        feedback: { type: 'string', description: 'Owner-recorded candidate-bound changes-requested report for a bounded HydraFusion refinement' },
       },
       required: ['agent', 'prompt'],
     },
     build: (a) => {
+      if (a.engine !== undefined && !['native', 'hydrafusion'].includes(a.engine)) {
+        throw new Error('engine must be native or hydrafusion.');
+      }
+      if (a.max !== undefined && (!Number.isInteger(a.max) || a.max < 1 || a.max > 1000)) {
+        throw new Error('max must be an integer from 1 to 1000.');
+      }
+      if (a.feedback !== undefined && (typeof a.feedback !== 'string' || !a.feedback.trim())) {
+        throw new Error('feedback must name an owner-recorded report.');
+      }
       const args = ['run', '-a', a.agent, '-p', a.prompt];
       if (a.model) args.push('-m', a.model);
       if (a.max != null) args.push('--max', String(a.max));
       if (a.issue != null) args.push('-i', String(a.issue));
+      if (a.engine) args.push('--engine', a.engine);
+      if (a.feedback) args.push('--feedback', a.feedback);
+      return args;
+    },
+  },
+  {
+    name: 'frontier_engine',
+    description: 'Inspect execution capabilities or isolated candidates. accept requires an independent candidate-bound approval already archived by the active owner loop; application remains pending final verification. No action invokes a model.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['status', 'inspect', 'accept', 'discard', 'recover'], default: 'status' },
+        candidate: { type: 'string', pattern: '^hf-[0-9]{14}-[a-f0-9]{12}$' },
+        review: { type: 'string', description: 'Owner-recorded independent review report; required for accept' },
+      },
+      additionalProperties: false,
+    },
+    build: (a) => {
+      if (Object.keys(a).some(key => !['action', 'candidate', 'review'].includes(key))) throw new Error('Unsupported engine argument.');
+      const action = a.action ?? 'status';
+      if (!['status', 'inspect', 'accept', 'discard', 'recover'].includes(action)) throw new Error('Unsupported engine action.');
+      if (action !== 'status' && (typeof a.candidate !== 'string' || !/^hf-[0-9]{14}-[a-f0-9]{12}$/.test(a.candidate))) {
+        throw new Error('A valid candidate ID is required.');
+      }
+      if (action === 'accept' && (typeof a.review !== 'string' || !a.review.trim())) throw new Error('accept requires an independent review report.');
+      const args = ['engine', action];
+      if (action !== 'status') args.push(a.candidate);
+      if (action === 'accept') args.push('--review', a.review);
+      args.push('--json');
       return args;
     },
   },
@@ -489,7 +540,7 @@ const LEGACY_TOOL_BY_NAME = Object.fromEntries(
 
 function createServer(runner) {
 const server = new Server(
-  { name: 'frontier', version: '9.6.2' },
+  { name: 'frontier', version: '9.7.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -554,4 +605,4 @@ if (require.main === module) main().catch((err) => {
   process.exit(1);
 });
 
-module.exports = { createCliRunner, createServer, discoverRepoRoot };
+module.exports = { createCliRunner, createServer, discoverRepoRoot, main };

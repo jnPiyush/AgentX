@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "Frontier - Hypervelocity Engineering",
   "description": "Frontier Corp deploys a fleet of specialized AI Forward Deployed Engineers that plan, build, review, test, and operate software through governed, evidence-backed workflows.",
-  "version": "9.6.2",
+  "version": "9.7.0",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -71,6 +71,12 @@
         "title": "Initialize CLI",
         "category": "Frontier",
         "icon": "$(terminal)"
+      },
+      {
+        "command": "frontier.initializeCursor",
+        "title": "Initialize Cursor",
+        "category": "Frontier",
+        "icon": "$(plug)"
       },
       {
         "command": "frontier.addRemoteAdapter",
@@ -1337,9 +1343,14 @@
     "diff": "8.0.3",
     "serialize-javascript": "^7.0.3",
     "undici": "7.29.0",
-    "flatted": "3.4.2"
+    "flatted": "3.4.2",
+    "hono": "4.13.7",
+    "qs": "6.16.0",
+    "fast-uri": "3.1.8",
+    "ip-address": "10.7.2"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
     "yaml": "^2.8.2"
   }
 }

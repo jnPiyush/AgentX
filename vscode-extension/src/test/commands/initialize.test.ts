@@ -152,8 +152,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
     assert.ok(String(errorStub.firstCall.args[0]).includes('Open a workspace folder first'));
   });
 
-  for (const enforceIssues of [true, false]) {
-    it(`preserves existing configuration on reinstall with enforceIssues=${enforceIssues}`, async () => {
+  for (const [enforceIssues, cursorBound] of [[true, false], [false, false], [true, true], [false, true]]) {
+    it(`preserves configuration and Cursor binding on reinstall: issues=${enforceIssues}, cursor=${cursorBound}`, async () => {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-reinstall-'));
       const internals = await import('../../commands/initializeInternals');
       const adapters = await import('../../commands/adaptersCommandInternals');
@@ -170,12 +170,15 @@ describe('runInitializeLocalRuntimeCommand', () => {
         fs.mkdirSync(path.join(root, '.frontier'));
         const configFile = path.join(root, '.frontier', 'config.json');
         fs.writeFileSync(configFile, JSON.stringify(existing));
+        if (cursorBound) {
+          fs.writeFileSync(path.join(root, '.frontier', 'cursor-assets.json'), '{"schemaVersion":1,"files":{}}');
+        }
         sandbox.stub(internals, 'promptWorkspaceFolder').resolves({
           uri: vscode.Uri.file(root), name: 'reinstall-fixture', index: 0,
         });
         sandbox.stub(internals, 'copyBundledRuntimeAssets');
         sandbox.stub(internals, 'copyCopilotCliAssets');
-        sandbox.stub(internals, 'writeWorkspaceRuntimeWrappers');
+        const wrappers = sandbox.stub(internals, 'writeWorkspaceRuntimeWrappers');
         sandbox.stub(internals, 'mergeGitignore');
         const githubSync = sandbox.stub(adapters, 'syncDetectedGitHubAdapter').rejects(new Error('Must preserve selected provider'));
         const adoSync = sandbox.stub(adapters, 'syncDetectedAdoAdapter').rejects(new Error('Must preserve selected provider'));
@@ -189,6 +192,11 @@ describe('runInitializeLocalRuntimeCommand', () => {
         sinon.assert.notCalled(errors);
         sinon.assert.notCalled(githubSync);
         sinon.assert.notCalled(adoSync);
+        if (cursorBound) {
+          sinon.assert.calledWithExactly(wrappers, fakeContext.extensionUri.fsPath, root, true);
+        } else {
+          sinon.assert.calledWithExactly(wrappers, fakeContext.extensionUri.fsPath, root);
+        }
         const actual = JSON.parse(fs.readFileSync(configFile, 'utf8'));
         assert.deepEqual(actual, {
           provider: enforceIssues ? 'github' : 'ado',

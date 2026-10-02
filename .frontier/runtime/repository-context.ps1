@@ -1250,7 +1250,13 @@ function ConvertTo-FrontierRepositoryUtc($Value) {
 function Read-FrontierRepositoryContextRecord([string]$Path) {
     $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
     if ($null -eq $item -or $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -gt 262144) { return $null }
-    try { $record = Get-Content -LiteralPath $Path -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable -Depth 5 }
+    try {
+        # Share read/write/delete so a concurrent atomic replace by a worker is never blocked by this reader.
+        $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+        try { $text = [IO.StreamReader]::new($stream, [Text.UTF8Encoding]::new($false), $true).ReadToEnd() }
+        finally { $stream.Dispose() }
+        $record = ConvertFrom-Json -InputObject $text -AsHashtable -Depth 5
+    }
     catch { return $null }
     if ($record -isnot [System.Collections.IDictionary] -or $record['schemaVersion'] -ne 1) { return $null }
     return $record

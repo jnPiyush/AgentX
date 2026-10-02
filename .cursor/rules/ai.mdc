@@ -6,7 +6,8 @@ alwaysApply: false
 
 # AI / Agents / LLM (Frontier)
 
-Canonical: `.github/instructions/ai.instructions.md` -- read for full standards.
+Read the canonical `.github/instructions/ai.instructions.md` through
+`pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor read <canonical-path>`.
 
 - Pin model versions; define evaluation strategy and guardrails up front.
 - Treat prompts as versioned artifacts; add tracing/observability hooks.

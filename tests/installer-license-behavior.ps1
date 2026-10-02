@@ -131,6 +131,12 @@ try {
 		Set-Content -LiteralPath (Join-Path $fixtureRoot 'docs' $file) -Value 'fixture' -Encoding ascii
 	}
 	Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE'), (Join-Path $repoRoot 'NOTICE') -Destination $fixtureRoot
+	Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/install-manifest.ps1') -Destination (Join-Path $fixtureRoot 'scripts/install-manifest.ps1')
+	@{
+		version = (Get-Content -LiteralPath (Join-Path $repoRoot 'version.json') -Raw | ConvertFrom-Json).version
+		createdAt = [DateTime]::UtcNow.ToString('o')
+		files = @(@{ path = 'AGENTS.md'; sha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureRoot 'AGENTS.md')).Hash.ToLowerInvariant(); category = 'doc' })
+	} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $fixtureRoot '.frontier/runtime/install-manifest.json') -Encoding utf8
 	Compress-Archive -LiteralPath $fixtureRoot -DestinationPath $archivePath
 
 	New-Item -ItemType Directory -Path $installTarget -Force | Out-Null

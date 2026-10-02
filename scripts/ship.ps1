@@ -141,6 +141,21 @@ if ($DryRun) {
     return
 }
 
+$candidateState = Join-Path (Get-Location).Path '.frontier/state/hydrafusion'
+if (Test-Path -LiteralPath $candidateState -PathType Container) {
+    $candidateRuntime = Join-Path $PSScriptRoot '../.frontier/runtime/hydrafusion.ps1'
+    if (-not (Test-Path -LiteralPath $candidateRuntime -PathType Leaf)) {
+        throw 'HydraFusion state exists but its delivery guard is unavailable.'
+    }
+    . $candidateRuntime
+    $ownerLoop = Read-HydraFusionJson (Join-Path (Get-Location).Path '.frontier/state/loop-state.json')
+    try { Assert-HydraFusionLoopDelivery (Get-Location).Path $ownerLoop }
+    catch {
+        Write-Host "[ship] [PENDING] $($_.Exception.Message)"
+        exit 3
+    }
+}
+
 $failures = New-Object 'System.Collections.Generic.List[string]'
 
 if ($Parallel) {

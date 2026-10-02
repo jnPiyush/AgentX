@@ -3,7 +3,7 @@
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.6.2"><img src="https://img.shields.io/badge/Version-9.6.2-b11f4b?style=for-the-badge" alt="Version 9.6.2"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.7.0"><img src="https://img.shields.io/badge/Version-9.7.0-b11f4b?style=for-the-badge" alt="Version 9.7.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -170,6 +170,11 @@ Model names are advisory. Role boundaries, evidence requirements, and tool permi
 
 Frontier also ships GitHub Copilot CLI packs, Claude Code commands, Cursor rules/commands, and PowerShell/Bash launchers.
 
+For Cursor, initialize the local runtime and run `Frontier: Initialize Cursor`.
+Standalone installs use `frontier cursor setup --restore-mcp`. Setup preserves
+user configuration and wires native context/policy hooks without copying agent
+or skill trees. See the [Cursor setup guide](docs/GUIDE.md#cursor).
+
 ---
 
 ## Featured 8.7 Capabilities
@@ -301,9 +306,19 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.6.2
+## New In 9.7.0
 
-This release reduces optional workspace scaffolding and repairs README rendering:
+Frontier 9.7.0 adds repository context and bounded execution:
+
+- discover initialized workspaces into a local reference graph, preserve curated
+  map notes, and reuse a cached session primer while refresh runs in the background
+- route Engineer, Architect and UX Designer preferences to GPT-6 Astra on Copilot
+  and other roles to Claude Opus 5.5
+- offer HydraFusion as an experimental opt-in candidate adapter with isolated
+  snapshots, explicit budgets, independent promotion and final source review;
+  native execution remains the default
+
+It also retains the preceding workflow and setup changes:
 
 - loop/review suites are deferred until an explicit post-loop user decision
 - cosmetic lint findings are LOW local advisories; cleanup needs explicit approval
@@ -315,6 +330,10 @@ This release reduces optional workspace scaffolding and repairs README rendering
   editable Mermaid sources
 - package README links resolve from the extension subdirectory rather than the
   repository root
+
+Local validation and remaining provider/platform limitations are recorded with
+the release package. Public publishing and experimental HydraFusion qualification
+remain separate from packaging and source review.
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

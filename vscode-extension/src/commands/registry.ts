@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
 import { registerInitializeLocalRuntimeCommand } from './initialize';
 import { registerInitializeCliCommand } from './initializeCli';
+import { registerInitializeCursorCommand } from './initializeCursor';
 import { registerAddRemoteAdapterCommand } from './adapters';
 import { registerAddLlmAdapterCommand } from './llmAdapters';
 import { registerAddPluginCommand } from './plugins';
@@ -30,6 +31,7 @@ export function registerFrontierCommands(
 ): void {
  registerInitializeLocalRuntimeCommand(context, agentx);
  registerInitializeCliCommand(context, agentx);
+ registerInitializeCursorCommand(context);
  registerAddRemoteAdapterCommand(context, agentx);
  registerAddLlmAdapterCommand(context, agentx);
  registerAddPluginCommand(context, agentx);

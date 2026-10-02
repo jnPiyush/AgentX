@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install Frontier Copilot CLI Plugin v9.6.2 into a workspace.
+ Install Frontier Copilot CLI Plugin v9.7.0 into a workspace.
 
 .DESCRIPTION
  Copies Frontier FDEs, skills, instructions, and prompts into a target workspace
@@ -83,6 +83,10 @@ $RuntimeBundleFiles = @(
  'frontier-cli.ps1',
  'agentic-runner.ps1',
  'repository-context.ps1',
+ 'hydrafusion.ps1',
+ 'hydrafusion-policy.ps1',
+ 'hydrafusion-protocol.ps1',
+ 'hydrafusion-workspace.ps1',
  'local-issue-manager.ps1',
  'local-issue-manager.sh'
 )
@@ -415,7 +419,7 @@ function Initialize-WorkspaceCliState {
  }
 
  $version = [ordered]@{
-  version = '9.6.2'
+  version = '9.7.0'
   provider = 'local'
   mode = 'local'
   integration = 'local'
@@ -484,7 +488,7 @@ $Target = [System.IO.Path]::GetFullPath($Target)
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "| Frontier Copilot CLI Plugin v9.6.2        |" -ForegroundColor Cyan
+Write-Host "| Frontier Copilot CLI Plugin v9.7.0        |" -ForegroundColor Cyan
 Write-Host "| Standalone plugin for GitHub Copilot CLI |" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
@@ -557,7 +561,7 @@ if (-not (Test-Path $versionDir)) {
 if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
  @{
   plugin = "frontier-copilot-cli"
-    version = "9.6.2"
+    version = "9.7.0"
   installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
   source = $Source
   includeCli = [bool]$IncludeCli
@@ -569,7 +573,7 @@ if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host " Frontier Copilot CLI Plugin v9.6.2 installed" -ForegroundColor Green
+Write-Host " Frontier Copilot CLI Plugin v9.7.0 installed" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " Files copied  : $totalCopied" -ForegroundColor White

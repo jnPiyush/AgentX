@@ -2,7 +2,32 @@
 
 ## Unreleased
 
+### Fixed
+
+- Resolve all Cursor role commands through the installed canonical contracts,
+  including the renamed Frontier router, and use the shared risk-based policy.
+- Add explicit, user-configuration-preserving Cursor setup with native session
+  context and pre-tool policy hooks. Bundle the MCP runtime dependencies for
+  extension consumers; standalone setup restores its pinned lock explicitly.
+- Bind MCP execution to initialized consumer wrappers and include Cursor
+  configuration/commands/rules in install integrity tracking.
+
+## 9.7.0 - 2026-10-01
+
 ### Added
+
+- Add HydraFusion as an opt-in isolated candidate adapter for bounded read/edit tasks
+  (`frontier run --engine hydrafusion`, `executionEngine` config default, MCP
+  `frontier_run` `engine`, and `frontier engine` readiness). Runs delegate to
+  Copilot CLI with an unpinned agent in an independent snapshot repository.
+  Native policy hooks constrain reads/edits; strict events, bounded processes
+  and an owner-loop ledger govern execution. Candidates require archived,
+  hash-bound independent review and explicit promotion; final owner verification
+  remains separate. Native stays the default and no automatic fallback occurs.
+- Preserve applied-candidate audit history across every attempt; disallow
+  discarding applied or partial promotions and accepting superseded candidates.
+  Add identity-bound recovery for interrupted workers, byte-preserving patches,
+  all-attempt no-progress checks and pending exit propagation through pipelines.
 
 - Add a local repository graph, incremental source discovery and a Mermaid map
   with preserved curated notes as a Frontier workspace capability. Expose bounded
@@ -38,6 +63,33 @@
 - Tag persisted replay blocks by transport. When a resumed session switches
   transports, convert normalized text and tool calls rather than forwarding
   foreign opaque blocks. Existing untagged histories remain supported.
+- Resolve renamed agent display names (Frontier TPM, Researcher, E2E SDLC,
+  Auto-Fix Reviewer, Power Platform Engineer, Power BI Analyst) to runtime agent
+  IDs so clarification routing reaches the intended collaborator.
+- Return the standard tool-result contract from `repository_context`; a live run
+  previously stopped with a StrictMode error on the first graph query.
+- Add `frontier run --no-loop-sync` so smoke and diagnostic runs do not record
+  iterations into the active quality loop; the live smoke test uses it.
+- Rewrite the bundled/seeded GUIDE link to the extension README as a GitHub URL,
+  and ignore the generated `public/` landing build output.
+- Replace the temporary MCP `fast-uri` commit override with patched release
+  3.1.8 and refresh the compatible `ip-address` lock to 10.7.2.
+- Wait briefly for Windows process executable metadata before recording
+  HydraFusion recovery identity; incomplete identities still fail closed.
+
+### Release qualification
+
+- Native execution remains the default. HydraFusion is an experimental,
+  opt-in candidate adapter, not an automatically accepted task result.
+- Local release validation includes the extension coverage suite, real Windows
+  Extension Host, MCP lifecycle/smoke tests, core scripts and companion suites.
+  The full run identified a process-start race and stale framework assertions;
+  results for their final fixes are recorded with the release artifact.
+- Live hardened-CLI qualification and Linux/macOS execution remain separate
+  requirements for the experimental adapter. Historical provider probes do
+  not establish current quality, cost or platform behavior.
+- Local packaging does not authorize publication. Release CI and required
+  source approval remain separate gates.
 
 ## 9.6.2 - 2026-09-28
 

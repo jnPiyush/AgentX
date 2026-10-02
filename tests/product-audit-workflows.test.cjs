@@ -23,7 +23,8 @@ test('Role defaults, focused verification and UX auditor routing remain explicit
   assert.match(auditor, /Anti-slop critique/);
   assert.match(auditor, /MUST NOT start, reset, iterate or complete the/);
   const engineer = read('.github/agents/engineer.agent.md');
-  assert.match(engineer, /focused checks can be final evidence/);
+  assert.match(engineer, /MUST NOT execute test suites inside loops or reviews/);
+  assert.match(engineer, /after successful loop completion MUST ask the user whether to run the suite/);
   assert.match(engineer, /Complete the loop before an authorized commit/);
   assert.ok(!engineer.includes('git add -A && git commit'));
 });
