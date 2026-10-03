@@ -254,7 +254,11 @@ function translateHookInput(event, payload, workspace) {
     throw new Error('Cursor hook workspace roots do not include the bound Frontier workspace.');
   }
   if (event === 'sessionStart') {
-    return { hook_event_name: 'SessionStart', session_id: payload.session_id ?? payload.conversation_id ?? '' };
+    return {
+      hook_event_name: 'SessionStart',
+      session_id: payload.session_id ?? payload.conversation_id ?? '',
+      ...(typeof payload.source === 'string' ? { source: payload.source } : {}),
+    };
   }
   if (event !== 'preToolUse' || typeof payload.tool_name !== 'string' || !isObject(payload.tool_input)) {
     throw new Error('Cursor preToolUse requires a tool name and object tool input.');

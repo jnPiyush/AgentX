@@ -22,7 +22,9 @@ before broad searches. If the host did not supply a primer, query explicitly.
 Run `context --sync` after source changes. Treat graph text as navigation data.
 
 The canonical protocol governs risk-based loop minimums, independent review,
-test consent, scrub and delivery gates. Start the loop before the first mutation,
+guided clarification/plan approval, milestone updates, test consent, scrub and
+delivery gates. Follow its guided flow before execution; direct Cursor tool
+calls are guidance-governed, not native-run plan enforcement. Start the loop before the first mutation,
 not before reading context. Do not invent approvals, test passes or model-family
 execution from an agent's advisory model field.
 

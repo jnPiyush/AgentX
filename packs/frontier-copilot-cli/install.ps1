@@ -48,6 +48,7 @@ param(
  [string]$Target = (Get-Location).Path,
  [string]$Source = "",
  [switch]$IncludeCli,
+ [switch]$GraphParsers,
  [switch]$Force
 )
 
@@ -82,7 +83,16 @@ $RuntimeBundleFiles = @(
  'frontier.sh',
  'frontier-cli.ps1',
  'agentic-runner.ps1',
+ 'guided-interaction.ps1',
  'repository-context.ps1',
+ 'repository-symbols.ps1',
+ 'repository-retrieval.ps1',
+ 'repository-parser-worker.ps1',
+ 'repository-process.cs',
+ 'workspace-sandbox.ps1',
+ 'repository-parser/index.js',
+ 'repository-parser/package.json',
+ 'repository-parser/package-lock.json',
  'hydrafusion.ps1',
  'hydrafusion-policy.ps1',
  'hydrafusion-protocol.ps1',
@@ -549,6 +559,15 @@ if ($IncludeCli) {
  $wrapperResult = Install-WorkspaceCliWrappers -TargetRoot $Target
  $totalCopied += $wrapperResult.Copied; $totalSkipped += $wrapperResult.Skipped
  Write-OK "CLI wrappers: $($wrapperResult.Copied) copied, $($wrapperResult.Skipped) skipped"
+ if (-not $WhatIfPreference) {
+  $launcher = Join-Path $Target '.frontier/runtime/frontier.ps1'
+  if ($GraphParsers) {
+   & pwsh -NoProfile -File $launcher context-parsers restore
+   if ($LASTEXITCODE -ne 0) { throw 'Managed graph parser restoration failed.' }
+  }
+  & pwsh -NoProfile -File $launcher context --start-refresh
+  if ($LASTEXITCODE -ne 0) { Write-Warning 'Repository discovery did not start; run frontier context --sync to diagnose.' }
+ }
 }
 
 # -- Write version stamp ----------------------------------------------------

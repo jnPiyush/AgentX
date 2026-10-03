@@ -25,6 +25,11 @@ schemas for machine consumers, and reference retrieval for large context.
 
 ## Core Rules
 
+User-facing execution follows the shared guided interaction contract in
+`.github/AGENT-PROTOCOL.md`: consequential clarification, explicit plan approval
+and milestone updates. Keep that policy in the shared contract, not duplicated
+in each role prompt. A model-generated approval claim is never a user decision.
+
 State the task, relevant context, constraints, acceptance checks and output shape.
 Use the smallest prompt that passes representative evaluations. Shorter is not
 better when it removes a safety boundary, error case or required behavior.

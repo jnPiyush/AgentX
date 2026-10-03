@@ -34,6 +34,7 @@ NO_SETUP="${NO_SETUP:-false}"
 INSTALL_PATH="${AGENTX_PATH:-}"
 AZURE="${AGENTX_AZURE:-false}"
 CURSOR_SETUP="false"
+GRAPH_PARSERS="false"
 BRANCH="v9.7.0"
 TMP=".frontier-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
@@ -96,6 +97,7 @@ while [[ $# -gt 0 ]]; do
  --local) MODE="local"; shift ;;
  --azure) AZURE=true; shift ;;
  --cursor) CURSOR_SETUP=true; shift ;;
+ --graph-parsers) GRAPH_PARSERS=true; shift ;;
  --no-setup) NO_SETUP=true; shift ;;
  *) shift ;;
  esac
@@ -600,6 +602,12 @@ else
 fi
 pwsh -NoProfile -File "$TMP/scripts/install-manifest.ps1" -Action install \
  -SourceManifest "$TMP/.frontier/runtime/install-manifest.json"
+if [ "$GRAPH_PARSERS" = true ]; then
+ pwsh -NoProfile -File .frontier/runtime/frontier.ps1 context-parsers restore
+fi
+if ! pwsh -NoProfile -File .frontier/runtime/frontier.ps1 context --start-refresh; then
+ echo 'Repository discovery did not start; run frontier context --sync to diagnose.'
+fi
 
 # -- Done ------------------------------------------------
 echo ""

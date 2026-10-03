@@ -1,0 +1,19 @@
+{
+  "name": "@frontier/repository-parser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Managed offline syntax extraction for Frontier repository context.",
+  "type": "commonjs",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@vscode/tree-sitter-wasm": "0.3.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "test": "node --test parser.test.cjs"
+  },
+  "license": "Apache-2.0"
+}

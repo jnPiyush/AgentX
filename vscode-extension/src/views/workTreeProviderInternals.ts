@@ -73,14 +73,14 @@ export function getLocalIssues(root: string): LocalIssue[] {
 
 export function buildOverviewChildren(
  root: string,
- pendingClarification: { agentName?: string } | undefined,
+ pendingClarification: { agentName?: string; interaction?: { kind: string } } | undefined,
  openIssueCount: number,
 ): SidebarTreeItem[] {
  return [
   SidebarTreeItem.detail('Workspace', 'root-folder', path.basename(root), root),
   pendingClarification
    ? SidebarTreeItem.action(
-    'Pending clarification',
+    pendingClarification.interaction?.kind === 'plan' ? 'Pending plan approval' : 'Pending clarification',
     'comment-discussion',
     'frontier.showPendingClarification',
     'Show Pending Clarification',

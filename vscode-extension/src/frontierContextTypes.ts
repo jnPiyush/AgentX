@@ -1,3 +1,38 @@
+export interface InteractionPlan {
+  readonly sessionId: string;
+  readonly workspaceRoot: string;
+  readonly agent: string;
+  readonly engine: 'native';
+  readonly mode: 'guided';
+  readonly version: number;
+  readonly goal: string;
+  readonly scope: string[];
+  readonly nonGoals: string[];
+  readonly assumptions: string[];
+  readonly steps: Array<{ id: string; title: string; verification: string }>;
+}
+
+interface PendingInteractionBase {
+  readonly sessionId: string;
+  readonly agent: string;
+  readonly inputId: string;
+  readonly phase: string;
+  readonly message: string;
+}
+
+export type PendingInteraction =
+  | (PendingInteractionBase & {
+    readonly kind: 'plan';
+    readonly planVersion: number;
+    readonly digest: string;
+    readonly plan: InteractionPlan;
+  })
+  | (PendingInteractionBase & {
+    readonly kind: 'question';
+    readonly question: string;
+    readonly choices: string[];
+  });
+
 export interface PendingClarificationState {
   sessionId: string;
   agentName: string;
@@ -8,6 +43,7 @@ export interface PendingClarificationState {
   topic?: string;
   status?: string;
   exchangeCount?: number;
+  interaction?: PendingInteraction;
 }
 
 export interface PendingSetupState {

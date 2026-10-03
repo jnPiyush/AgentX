@@ -38,11 +38,15 @@ import {
   renderBoundedParallelRunsText,
 } from '../parallel/parallel-delivery';
 import { stripAnsi } from '../utils/stripAnsi';
+import { PendingInteraction } from '../frontierContextTypes';
+import {
+  buildInteractionResumeArgs, readPendingInteraction, renderPendingInteraction,
+} from './guidedInteraction';
 
 const CHAT_OUTPUT_CHANNEL_NAME = 'Frontier Chat';
 const CHAT_OUTPUT_INLINE_LIMIT = 4000;
 const CHAT_OUTPUT_PREVIEW_LINES = 8;
-const LIVE_STATUS_PATTERN = /\[(?:COMPACTION|CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|SELF-REVIEW(?: SUMMARY)?|EXECUTION SUMMARY|MODEL FALLBACK|LOOP WARNING|CIRCUIT BREAKER|TOOL ERROR|BOUNDARY BLOCKED|FAIL|WARN|PASS|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE|HUMAN REQUIRED SESSION)\]|^\s*Iteration \d+\/\d+|^\s*Tool:/i;
+const LIVE_STATUS_PATTERN = /\[(?:MILESTONE|COMPACTION|CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|SELF-REVIEW(?: SUMMARY)?|EXECUTION SUMMARY|MODEL FALLBACK|LOOP WARNING|CIRCUIT BREAKER|TOOL ERROR|BOUNDARY BLOCKED|FAIL|WARN|PASS|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE|HUMAN REQUIRED SESSION)\]|^\s*Iteration \d+\/\d+|^\s*Tool:/i;
 const CHAT_VISIBLE_DISCUSSION_PATTERN = /^\[(?:CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE)\]/i;
 const HUMAN_REQUIRED_SESSION_PATTERN = /\[HUMAN REQUIRED SESSION\]\s+(.+)$/i;
 const EXECUTION_SUMMARY_PATTERN = /^\[EXECUTION SUMMARY\].*$/gim;
@@ -51,6 +55,11 @@ const SELF_REVIEW_SUMMARY_PATTERN = /^\[SELF-REVIEW SUMMARY\].*$/gim;
 export type PendingClarification = NonNullable<
   Awaited<ReturnType<FrontierContext['getPendingClarification']>>
 >;
+
+interface RunResponse {
+  markdown(value: string): void;
+  progress(value: string): void;
+}
 
 let chatOutputChannel: vscode.OutputChannel | undefined;
 
@@ -90,7 +99,7 @@ export function resetChatRouterInternalStateForTests(): void {
 }
 
 export async function runAgentCommand(
-  response: vscode.ChatResponseStream,
+  response: RunResponse,
   agentx: FrontierContext,
   agentName: string,
   task: string,
@@ -108,7 +117,7 @@ export async function runAgentCommand(
     const visibleDiscussionLines: string[] = [];
     const output = await agentx.runCliStreaming(
       'run',
-      [agentName, task],
+      [agentName, task, '--json'],
       (line) => {
         const normalized = normalizeCliLine(line);
         const sessionMatch = normalized.match(HUMAN_REQUIRED_SESSION_PATTERN);
@@ -128,6 +137,15 @@ export async function runAgentCommand(
     );
 
     writeOutputToChannel(`Frontier Chat Run: ${agentName}`, output);
+    const interaction = readPendingInteraction(output);
+    if (interaction) {
+      await updatePendingClarification(agentx, {
+        sessionId: interaction.sessionId, agentName, prompt: task, interaction,
+        humanPrompt: renderPendingInteraction(interaction),
+      });
+      response.markdown(renderPendingInteraction(interaction));
+      return {};
+    }
 
     if (pendingSessionId) {
       await updatePendingClarification(agentx, {
@@ -152,7 +170,7 @@ export async function runAgentCommand(
 }
 
 export async function resumePendingClarification(
-  response: vscode.ChatResponseStream,
+  response: RunResponse,
   agentx: FrontierContext,
   pending: PendingClarification,
   guidance: string,
@@ -165,15 +183,34 @@ export async function resumePendingClarification(
   }
 
   try {
+    let resumeArgs = [
+      '--resume-session', pending.sessionId, '--clarification-response', guidance,
+    ];
+    if (pending.interaction) {
+      const current = readPendingInteraction(await agentx.runCli('run',
+        ['--session-info', pending.sessionId, '--json']));
+      if (!current) {
+        await clearPendingClarification(agentx);
+        response.markdown('This session no longer has pending input. No decision was applied.');
+        return {};
+      }
+      if (current.inputId !== pending.interaction.inputId
+        || (current.kind === 'plan' && pending.interaction.kind === 'plan'
+          && current.digest !== pending.interaction.digest)) {
+        await updatePendingClarification(agentx, {
+          ...pending, interaction: current, humanPrompt: renderPendingInteraction(current),
+        });
+        response.markdown(`The pending input changed. Review the current version before responding.\n\n${renderPendingInteraction(current)}`);
+        return {};
+      }
+      resumeArgs = buildInteractionResumeArgs(current, guidance);
+    }
     response.progress(`Resuming ${pending.agentName} agent...`);
     let nextPendingSessionId = '';
     const visibleDiscussionLines: string[] = [];
     const output = await agentx.runCliStreaming(
       'run',
-      [
-        '--resume-session', pending.sessionId,
-        '--clarification-response', guidance,
-      ],
+      resumeArgs,
       (line) => {
         const normalized = normalizeCliLine(line);
         const sessionMatch = normalized.match(HUMAN_REQUIRED_SESSION_PATTERN);
@@ -193,6 +230,15 @@ export async function resumePendingClarification(
     );
 
     writeOutputToChannel(`Frontier Chat Resume: ${pending.agentName}`, output);
+    const interaction = readPendingInteraction(output);
+    if (interaction) {
+      await updatePendingClarification(agentx, {
+        sessionId: interaction.sessionId, agentName: pending.agentName,
+        prompt: pending.prompt, interaction, humanPrompt: renderPendingInteraction(interaction),
+      });
+      response.markdown(renderPendingInteraction(interaction));
+      return {};
+    }
 
     if (nextPendingSessionId) {
       await updatePendingClarification(agentx, {
@@ -234,8 +280,10 @@ export function buildPendingClarificationMessage(
     topic?: string;
     status?: string;
     exchangeCount?: number;
+    interaction?: PendingInteraction;
   },
 ): string {
+  if (pending.interaction) { return renderPendingInteraction(pending.interaction); }
   const lines = [
     `**Pending clarification for ${pending.agentName}**`,
     '',
@@ -510,7 +558,7 @@ export async function tryHandleClarificationStatusRequest(
   response: vscode.ChatResponseStream,
   pending: PendingClarification | undefined,
 ): Promise<vscode.ChatResult | undefined> {
-  if (!/^(clarification status|pending clarification)$/i.test(userText)) {
+  if (!/^(clarification status|pending clarification|plan status|pending plan|pending input)$/i.test(userText)) {
     return undefined;
   }
 
@@ -929,7 +977,10 @@ function writeOutputToChannel(title: string, output: string): void {
 
 async function updatePendingClarification(
   agentx: FrontierContext,
-  pending: { sessionId: string; agentName: string; prompt: string; humanPrompt?: string },
+  pending: {
+    sessionId: string; agentName: string; prompt: string;
+    humanPrompt?: string; interaction?: PendingInteraction;
+  },
 ): Promise<void> {
   if (typeof agentx.setPendingClarification === 'function') {
     await agentx.setPendingClarification({

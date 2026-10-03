@@ -115,7 +115,7 @@ try {
         Assert-True ($cold.changedFiles -eq 3 -and $cold.deletedFiles -eq 0) 'cold change counters describe added records'
         Assert-True ($cold.context -match 'src/main.ts' -and $cold.context -match 'lib/helper.ts' -and $cold.context -match 'architecture.md') 'context includes matching source, neighbor and architecture pointers'
         $graph = Read-Graph $cold
-        Assert-True ($graph.root -eq $fixture -and $graph.schemaVersion -eq 1 -and $graph.nodes.Count -eq 3) 'graph has the requested root and file inventory'
+        Assert-True ($graph.root -eq $fixture -and $graph.schemaVersion -eq 2 -and $graph.nodes.Count -eq 3) 'graph has the requested root and version2 file inventory'
         Assert-True (($graph.limits -join ' ') -match 'sourceReads.*extraction opens.*not total I/O' -and
             ($graph.limits -join ' ') -match 'no separate warm source-hashing pass') 'metadata documents extraction counts separately from fingerprint and other I/O work'
         Assert-True (@($graph.edges | Where-Object { $_.from -eq 'src/main.ts' -and $_.to -eq 'lib/helper.ts' -and $_.line -eq 1 }).Count -eq 1) 'import edge is grounded at its actual line'
@@ -309,7 +309,7 @@ try {
             $native.context.Length -le 3600) 'native and startup budgets share one stable curation-aware fingerprint'
         Assert-StableState $hookState (Get-StateSnapshot $native) 'Warm native query after curation-only refresh'
         $fields = @('schemaVersion', 'status', 'graphPath', 'mapPath', 'fingerprint', 'fileCount', 'edgeCount', 'sourceReads',
-            'changedFiles', 'deletedFiles', 'context', 'estimatedTokens', 'elapsedMs')
+            'changedFiles', 'deletedFiles', 'context', 'estimatedTokens', 'elapsedMs', 'contextVersion', 'items', 'coverage', 'budget', 'freshness')
         Assert-True (@(Compare-Object -ReferenceObject $fields -DifferenceObject @($native.PSObject.Properties.Name)).Count -eq 0) 'curation freshness retains exactly the agreed public result fields'
 
         [IO.File]::WriteAllText($hook.mapPath, $updatedMap.Replace($suffix, "`r`nHuman routing footer: gamma.  "), [Text.Encoding]::Unicode)
@@ -342,6 +342,7 @@ try {
         foreach ($name in @('schemaVersion', 'analysisVersion', 'root', 'discovery', 'nodes', 'edges', 'omitted', 'limits')) {
             $payload[$name] = $legacy.$name
         }
+        foreach ($name in @('parserIdentity', 'relations', 'hierarchy', 'coverage')) { $payload[$name] = $legacy.$name }
         $hasher = [Security.Cryptography.SHA256]::Create()
         try {
             $bytes = $utf8.GetBytes((ConvertTo-Json -InputObject $payload -Depth 16 -Compress))
@@ -349,7 +350,7 @@ try {
         } finally { $hasher.Dispose() }
         [IO.File]::WriteAllText($current.graphPath, (ConvertTo-Json -InputObject $legacy -Depth 16), $utf8)
         $upgraded = Get-FrontierRepositoryContext -WorkspaceRoot $fixture -MaxChars 1200
-        Assert-True ($upgraded.status -eq 'updated' -and $upgraded.sourceReads -eq 0 -and $upgraded.changedFiles -eq 0) 'valid source-only schema-1 caches upgrade without discarding extracted records'
+        Assert-True ($upgraded.status -eq 'updated' -and $upgraded.sourceReads -eq 0 -and $upgraded.changedFiles -eq 0) 'valid source-only current-schema caches add curation binding without discarding extracted records'
         Assert-True ($upgraded.fingerprint -cne $legacy.fingerprint -and (Read-Graph $upgraded).curationHash -match '^[a-f0-9]{64}$') 'upgraded cache binds its fingerprint to curated map text'
         $state = Get-StateSnapshot $upgraded
         $warm = Get-FrontierRepositoryContext -WorkspaceRoot $fixture
@@ -391,7 +392,7 @@ try {
             Assert-Throws { Get-FrontierRepositoryContext -WorkspaceRoot $fixture -MaxChars $invalid } '512|16000|range' "invalid $invalid budget is rejected"
         }
         $unknown = Get-FrontierRepositoryContext -WorkspaceRoot $fixture -Query zzzNoSpecificSymbol -Agent tester -MaxChars 512
-        Assert-True ($unknown.context -match 'No specific match' -and $unknown.context -match 'orientation') 'unknown query explicitly falls back to orientation, even with a matching role hint'
+        Assert-True ($unknown.context -match 'No matching metadata' -and $unknown.items.Count -eq 0) 'unknown query explicitly reports no match without fabricating role-based evidence'
         $blank = Get-FrontierRepositoryContext -WorkspaceRoot $fixture
         Assert-True ($blank.context -match 'Repository orientation' -and $blank.context -match 'architecture.md') 'empty query surfaces existing context documents'
         Assert-True ([IO.File]::ReadAllText($blank.graphPath) -notmatch 'zzzNoSpecificSymbol|authorizePayment -Agent') 'query and role text are not persisted in graph state'
@@ -460,7 +461,7 @@ try {
         Assert-True (@($graph.edges | Where-Object { $_.from -eq 'src/entry.ts' -and $_.to -eq 'lib/space name.ts' }).Count -eq 1) 'imports with spaces resolve to actual source files'
         Assert-True (@($graph.edges | Where-Object { $_.from -eq 'scripts/entry.ps1' -and $_.to -eq 'scripts/helper.ps1' }).Count -eq 1) 'literal PSScriptRoot references resolve without execution'
         $scriptNode = @($graph.nodes | Where-Object path -eq 'scripts/entry.ps1')[0]
-        Assert-True (@($scriptNode.symbols | Where-Object { $_.Name -eq 'Start-Session' -and $_.Kind -ceq 'FUNCTION' -and $_.Line -eq 2 }).Count -eq 1 -and
+        Assert-True (@($scriptNode.symbols | Where-Object { $_.Name -eq 'Start-Session' -and $_.Kind -eq 'function' -and $_.Line -eq 2 }).Count -eq 1 -and
             @($scriptNode.symbols | Where-Object { $_.Name -eq 'Agent' -and $_.Line -eq 3 }).Count -eq 1) 'extraction preserves case-insensitive declarations and CRLF/CR line pointers'
         Assert-True (@($graph.edges | Where-Object { $_.from -eq 'pkg/main.py' -and $_.to -eq 'pkg/helper.py' }).Count -eq 1) 'relative Python module reference is grounded in an existing file'
         Assert-True (-not [IO.File]::Exists((Join-Path $fixture 'executed.txt'))) 'repository scripts are never executed'

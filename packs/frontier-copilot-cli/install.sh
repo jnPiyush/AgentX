@@ -19,6 +19,7 @@ VERSION="9.7.0"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false
+GRAPH_PARSERS=false
 FORCE=false
 DRY_RUN=false
 RUNTIME_BUNDLE_ROOT=".github/frontier/.frontier/runtime"
@@ -27,7 +28,16 @@ RUNTIME_BUNDLE_FILES=(
   "frontier.sh"
   "frontier-cli.ps1"
   "agentic-runner.ps1"
+  "guided-interaction.ps1"
   "repository-context.ps1"
+  "repository-symbols.ps1"
+  "repository-retrieval.ps1"
+  "repository-parser-worker.ps1"
+  "repository-process.cs"
+  "workspace-sandbox.ps1"
+  "repository-parser/index.js"
+  "repository-parser/package.json"
+  "repository-parser/package-lock.json"
   "hydrafusion.ps1"
   "hydrafusion-policy.ps1"
   "hydrafusion-protocol.ps1"
@@ -74,6 +84,7 @@ while [[ $# -gt 0 ]]; do
     -t|--target) TARGET="$2"; shift 2 ;;
     -s|--source) SOURCE="$2"; shift 2 ;;
     -c|--include-cli) INCLUDE_CLI=true; shift ;;
+    --graph-parsers) GRAPH_PARSERS=true; shift ;;
     -f|--force) FORCE=true; shift ;;
     -n|--dry-run) DRY_RUN=true; shift ;;
     -h|--help)
@@ -442,6 +453,9 @@ copy_file "evaluation/rubrics/code-quality.md" "evaluation/rubrics/code-quality.
 copy_file "evaluation/rubrics/stage-gates.json" "evaluation/rubrics/stage-gates.json"
 copy_file "evaluation/rubrics/stage-gates.md" "evaluation/rubrics/stage-gates.md"
 copy_file "evaluation/baseline.json" "evaluation/baseline.json"
+copy_file "evaluation/repository-context/queries.json" "evaluation/repository-context/queries.json"
+copy_file "scripts/evaluate-repository-context.ps1" "scripts/evaluate-repository-context.ps1"
+copy_file "scripts/repository-context-evaluation.ps1" "scripts/repository-context-evaluation.ps1"
 ok "Scripts: copied scoring, validation and workflow runtime files"
 
 info "Installing reference docs..."
@@ -472,6 +486,14 @@ if [ "$INCLUDE_CLI" = true ]; then
 
   info "Writing workspace CLI wrappers..."
   install_workspace_cli_wrappers
+  if [ "$DRY_RUN" = false ]; then
+    if [ "$GRAPH_PARSERS" = true ]; then
+      pwsh -NoProfile -File "$TARGET/.frontier/runtime/frontier.ps1" context-parsers restore
+    fi
+    if ! pwsh -NoProfile -File "$TARGET/.frontier/runtime/frontier.ps1" context --start-refresh; then
+      info "Repository discovery did not start; run frontier context --sync to diagnose."
+    fi
+  fi
 fi
 
 # -- Version stamp ---------------------------------------------------------

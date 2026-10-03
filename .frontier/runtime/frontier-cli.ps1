@@ -6451,6 +6451,8 @@ function Get-RepositorySessionContext($HookInput) {
     $fingerprint = if ($null -ne $state.primer) { [string]$state.primer['fingerprint'] } else { 'pending' }
     $session = [string](Get-HookInputValue $HookInput 'session_id')
     if (-not $session) { $session = [string](Get-HookInputValue $HookInput 'sessionId') }
+    $source = [string](Get-HookInputValue $HookInput 'source')
+    $resetContext = $source -in @('resume', 'compact', 'clear')
     if (-not $session -or -not $state.directory) { return $context }
 
     $claimPath = Join-Path $state.directory 'session-context.json'
@@ -6467,7 +6469,7 @@ function Get-RepositorySessionContext($HookInput) {
             throw 'Invalid repository context session record; existing data was preserved.'
         }
         $claims = $record['sessions']
-        if ($claims.Contains($key) -and $claims[$key].fingerprint -eq $fingerprint) { return '' }
+        if (-not $resetContext -and $claims.Contains($key) -and $claims[$key].fingerprint -eq $fingerprint) { return '' }
         $claims[$key] = @{ fingerprint = $fingerprint; at = [DateTime]::UtcNow.ToString('o') }
         if ($claims.Count -gt 64) {
             foreach ($old in @($claims.Keys | Sort-Object { [datetime]$claims[$_].at } | Select-Object -First ($claims.Count - 64))) {
@@ -6486,6 +6488,18 @@ function Get-RepositorySessionContext($HookInput) {
 }
 
 function Invoke-RepositoryContextCmd {
+    $valueFlags = @('-q', '--query', '--query64', '-a', '--agent', '--max-chars', '--tokens', '--detail', '--hops', '--subsystem', '--subsystem64')
+    $switchFlags = @('--hook', '--start-refresh', '--refresh', '--sync', '--json')
+    for ($index = 0; $index -lt $Script:SubArgs.Count; $index++) {
+        $flag = [string]$Script:SubArgs[$index]
+        if ($flag -in $valueFlags) {
+            if (++$index -ge $Script:SubArgs.Count) { throw "Missing value for $flag." }
+            if ($flag -in @('--max-chars', '--tokens', '--hops')) {
+                $integer = 0
+                if (-not [int]::TryParse([string]$Script:SubArgs[$index], [ref]$integer)) { throw "$flag requires an integer." }
+            }
+        } elseif ($flag -notin $switchFlags) { throw "Unsupported repository context argument '$flag'." }
+    }
     if (Test-Flag @('--hook')) {
         $hookInput = [Console]::In.ReadToEnd() | ConvertFrom-Json -Depth 10
         if ($hookInput -isnot [PSCustomObject]) { throw 'Repository-context hooks require a JSON object on stdin.' }
@@ -6509,27 +6523,53 @@ function Invoke-RepositoryContextCmd {
     }
     $query = Get-DecodedFlag @('-q', '--query') @('--query64') ''
     $agent = Get-Flag @('-a', '--agent') ''
-    $maxChars = [int](Get-Flag @('--max-chars') '4000')
+    $tokenBudget = Get-Flag @('--tokens') ''
+    $maxChars = [int](Get-Flag @('--max-chars') $(if ($tokenBudget) { '16000' } else { '4000' }))
+    $contextParameters = @{
+        WorkspaceRoot = $Script:ROOT; Query = $query; Agent = $agent; MaxChars = $maxChars
+        Detail = Get-Flag @('--detail') 'map'
+        GraphHops = [int](Get-Flag @('--hops') '1')
+        Subsystem = Get-DecodedFlag @('--subsystem') @('--subsystem64') ''
+    }
+    if ($tokenBudget) { $contextParameters.TokenBudget = [int]$tokenBudget }
     $refresh = Test-Flag @('--refresh')
     if ($refresh -or (Test-Flag @('--sync'))) {
-        $packet = Get-FrontierRepositoryContext -WorkspaceRoot $Script:ROOT -Query $query -Agent $agent -MaxChars $maxChars -Refresh:$refresh
+        $packet = Get-FrontierRepositoryContext @contextParameters -Refresh:$refresh
     } else {
         # Default reads never block on discovery; a debounced background worker keeps the graph current.
-        $packet = Get-FrontierRepositoryContext -WorkspaceRoot $Script:ROOT -Query $query -Agent $agent -MaxChars $maxChars -Cached
+        $packet = Get-FrontierRepositoryContext @contextParameters -Cached
         $state = Get-FrontierRepositoryPrimer $Script:ROOT
         $scheduled = $false
-        try { $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -State $state }
+        try { if ($packet.status -ne 'incompatible') { $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -State $state -Stale:($packet.status -eq 'stale') } }
         catch { [Console]::Error.WriteLine("[frontier-context] Background refresh not started: $($_.Exception.Message)") }
         $packet | Add-Member -NotePropertyName refreshScheduled -NotePropertyValue $scheduled
         $checkedAt = if ($null -ne $state.primer) { (ConvertTo-FrontierRepositoryUtc $state.primer['checkedAt']).ToString('o') } else { $null }
         $packet | Add-Member -NotePropertyName checkedAt -NotePropertyValue $checkedAt
-        if ($packet.status -eq 'missing') { $packet.context = Format-FrontierRepositoryPrimer $state $scheduled }
+        if ($packet.status -eq 'missing') {
+            Set-FrontierRepositoryRefreshNotice -Packet $packet -State $state -Scheduled $scheduled -MaxChars $maxChars
+        }
     }
     if ($Script:JsonOutput) {
         [Console]::Out.WriteLine(($packet | ConvertTo-Json -Depth 8 -Compress))
     } else {
         Write-CliOutput $packet.context
     }
+}
+
+function Invoke-ContextParsersCmd {
+    . (Join-Path $PSScriptRoot 'repository-symbols.ps1')
+    $action = if ($Script:SubArgs.Count) { $Script:SubArgs[0] } else { 'status' }
+    if (@($Script:SubArgs | Where-Object { $_ -ne '--json' }).Count -gt 1) {
+        throw 'Usage: frontier context-parsers status|restore'
+    }
+    if ($action -notin @('status', 'restore')) { throw 'Usage: frontier context-parsers status|restore' }
+    if ($action -eq 'restore') {
+        $npm = Get-Command npm -ErrorAction Stop
+        & $npm.Source ci --prefix (Join-Path $PSScriptRoot 'repository-parser') --ignore-scripts --omit=dev --no-fund
+        if ($LASTEXITCODE -ne 0) { throw 'Managed graph parser restore failed; no parser capability is assumed.' }
+    }
+    $capabilities = Get-FrontierRepositoryParserCapabilities $Script:ROOT
+    [Console]::Out.WriteLine(($capabilities | ConvertTo-Json -Depth 6 -Compress))
 }
 
 function Stop-HookToolCall([string]$Message) {
@@ -6859,6 +6899,7 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
     $protectedRelativePaths = foreach ($fileName in @('loop-state.json', 'tests-baseline.json', 'code-quality-baseline.json')) {
         ".frontier/state/$fileName"
     }
+    $protectedRelativePaths += '.frontier/sessions'
 
     foreach ($relativePath in $protectedRelativePaths) {
         $protectedPath = Join-Path $Script:ROOT $relativePath
@@ -6896,6 +6937,8 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
                     }
                     $fullCandidate = [IO.Path]::GetFullPath($resolvedCandidatePath)
                     if ($fullCandidate.Equals($fullAlias, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                    if ($relativePath -eq '.frontier/sessions' -and
+                        $fullCandidate.StartsWith($fullAlias.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { return $true }
                     $candidatePrefix = $fullCandidate.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
                     if ($fullAlias.StartsWith($candidatePrefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
                     $candidateItem = Get-Item -LiteralPath $candidatePath -Force -ErrorAction SilentlyContinue
@@ -6948,6 +6991,10 @@ function Invoke-PolicyHookCmd {
         }
         if ($isTerminalTool) {
             $command = [string](Get-HookInputValue $toolInput 'command')
+            if ($command -match '(?i)\b(frontier|agentx|hve)(?:-cli)?(?:\.ps1|\.sh)?\b' -and
+                $command -match '(?i)--(?:input-decision|input-id|plan-version|plan-digest|interaction|autonomous)\b') {
+                Stop-HookToolCall 'Frontier input decisions and autonomous authorization belong to the user or a trusted host input channel, not an agent terminal tool.'
+            }
             $isTrustedLoopStart = Test-TrustedFrontierCommand $command
             $isTrustedContext = (Test-TrustedFrontierCommand $command -Operation 'repository-context') -or
                 (Test-TrustedFrontierCommand $command -Operation 'cursor-read')
@@ -7125,7 +7172,7 @@ function Invoke-EngineCmd {
         } else {
             Write-CliOutput "$($C.y)  [WARN] HydraFusion unavailable: $($readiness.reason)$($C.n)"
         }
-        Write-CliOutput "$($C.d)  Select per task with 'frontier run <agent> <prompt> --engine hydrafusion' or by default with 'frontier config set executionEngine hydrafusion'.$($C.n)"
+        Write-CliOutput "$($C.d)  Select a preauthorized candidate with 'frontier run <agent> <prompt> --engine hydrafusion --interaction autonomous'. Setting executionEngine alone does not authorize automation.$($C.n)"
         Write-CliOutput "$($C.d)  This does not verify account entitlement; execution also requires an active owner loop and an explicit credit budget.$($C.n)"
     }
     if ($problem) { $global:LASTEXITCODE = 1 }
@@ -7136,6 +7183,7 @@ function Invoke-EngineCmd {
 # ---------------------------------------------------------------------------
 
 function Invoke-RunCmd {
+    $global:LASTEXITCODE = 0
     # Dot-source the agentic runner module
     . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
 
@@ -7146,6 +7194,30 @@ function Invoke-RunCmd {
     $issue = [int](Get-Flag @('-i', '--issue') '0')
     $resumeSession = Get-Flag @('--resume-session')
     $clarificationResponse = Get-Flag @('--clarification-response')
+    $inputDecision = Get-Flag @('--input-decision') ''
+    $inputId = Get-Flag @('--input-id') ''
+    $planVersion = [int](Get-Flag @('--plan-version') '0')
+    $planDigest = Get-Flag @('--plan-digest') ''
+    $interactionMode = Get-Flag @('--interaction') ''
+    $sessionInfo = Get-Flag @('--session-info') ''
+    if ($sessionInfo) {
+        $infoSession = Read-Session $sessionInfo $Script:ROOT
+        if (-not $infoSession) { throw "Session '$sessionInfo' not found." }
+        $storedInteraction = Get-MessageFieldValue $infoSession.meta 'interaction'
+        if ($storedInteraction) {
+            $state = ConvertFrom-RunnerInteraction $storedInteraction $sessionInfo $Script:ROOT ([string]$infoSession.meta.agentName)
+            $info = @{
+                sessionId = $sessionInfo; agent = $state.agent; mode = $state.mode; phase = $state.phase
+                planVersion = $state.planVersion; digest = $state.digest
+                progress = @($state.progress)
+                pendingInteraction = Get-InteractionPendingView $state
+            }
+        } else {
+            $info = @{ sessionId = $sessionInfo; agent = $infoSession.meta.agentName; phase = 'legacy_clarification'; pendingInteraction = $null }
+        }
+        [Console]::Out.WriteLine(($info | ConvertTo-Json -Depth 20 -Compress))
+        return
+    }
 
     if (-not $agent -and $Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') {
         $agent = $Script:SubArgs[0]
@@ -7170,9 +7242,16 @@ function Invoke-RunCmd {
         Write-CliOutput '  frontier run -a engineer -p "Fix the failing tests"'
         Write-CliOutput '  frontier run architect "Design the auth system" -i 42'
         Write-CliOutput '  frontier run engineer "Implement login" --max 20 -m gpt-4.1'
+        Write-CliOutput '  frontier run engineer "Preauthorized bounded task" --interaction autonomous'
+        Write-CliOutput '  frontier run --session-info <session-id> --json'
+        Write-CliOutput '  frontier run --resume-session <id> --input-id <input-id> --input-decision approve --plan-version 1 --plan-digest <sha256>'
+        Write-CliOutput '  frontier run --resume-session <id> --input-id <input-id> --input-decision revise --plan-version 1 --plan-digest <sha256> --clarification-response "Requested changes"'
+        Write-CliOutput '  frontier run --resume-session <id> --input-id <input-id> --input-decision answer --clarification-response "Your answer"'
+        Write-CliOutput '  frontier run --resume-session <id> --input-decision continue --plan-version <version> --plan-digest <sha256>'
         Write-CliOutput '  frontier run engineer "Smoke prompt" --no-loop-sync   (do not record into the active quality loop)'
-        Write-CliOutput '  frontier run engineer "Implement login" --engine hydrafusion   (Copilot CLI multi-model orchestration)'
+        Write-CliOutput '  frontier run engineer "Bounded candidate" --engine hydrafusion --interaction autonomous'
         Write-CliOutput '  frontier run --resume-session <session-id> --clarification-response "Use the existing auth flow"'
+        Write-CliOutput '  Exit codes: 0 execution finished, 1 error/incomplete, 2 awaiting input, 3 candidate pending review, 4 cancelled.'
         Write-CliOutput "`n$($C.w)  Available agents:$($C.n)"
         foreach ($agentFilePath in (Get-AgentDefinitionFiles)) {
             $f = Get-Item $agentFilePath
@@ -7195,7 +7274,7 @@ function Invoke-RunCmd {
             $agent = [string]$session.meta.agentName
         }
 
-        if (-not $clarificationResponse) {
+        if (-not $clarificationResponse -and -not $inputDecision) {
             Write-CliOutput "$($C.r)  [FAIL] Clarification response required. Use: frontier run --resume-session $resumeSession --clarification-response \"your guidance\"$($C.n)"
             $global:LASTEXITCODE = 1
             return
@@ -7214,18 +7293,25 @@ function Invoke-RunCmd {
 
     $params = @{
         Agent = $agent
-        MaxIterations = $max
         WorkspaceRoot = $Script:ROOT
     }
+    if (-not $resumeSession -or (Test-Flag @('--max', '-n'))) { $params['MaxIterations'] = $max }
     if ($resumeSession) {
         $params['ResumeSessionId'] = $resumeSession
         $params['HumanClarificationResponse'] = $clarificationResponse
+        $params['InputDecision'] = $inputDecision
+        $params['InputId'] = $inputId
+        $params['PlanVersion'] = $planVersion
+        $params['PlanDigest'] = $planDigest
     } else {
+        if ($inputDecision -or $inputId -or $planVersion -or $planDigest) { throw 'Input decisions require --resume-session.' }
         $params['Prompt'] = $prompt
     }
+    if ($interactionMode) { $params['InteractionMode'] = $interactionMode }
     if ($issue) { $params['IssueNumber'] = $issue }
     if ($model) { $params['Model'] = $model }
     $engine = Get-Flag @('--engine')
+    if ($resumeSession -and -not $engine) { $engine = 'native' }
     if ($engine) { $params['Engine'] = $engine }
     if (Test-Flag @('--allow-tool')) {
         Write-CliOutput '  [FAIL] --allow-tool is not supported by Frontier run; use the role tool contract, not additional grants.'
@@ -7245,12 +7331,14 @@ function Invoke-RunCmd {
         $global:LASTEXITCODE = 3
     } elseif ($result -and ([string]$result.exitReason -ceq 'human_required')) {
         $global:LASTEXITCODE = 2
+    } elseif ($result -and ([string]$result.exitReason -ceq 'cancelled')) {
+        $global:LASTEXITCODE = 4
     } else {
         $global:LASTEXITCODE = 1
     }
 
     if ($Script:JsonOutput -and $result) {
-        $result | ConvertTo-Json -Depth 5
+        [Console]::Out.WriteLine(($result | ConvertTo-Json -Depth 25 -Compress))
     }
 }
 
@@ -8091,6 +8179,8 @@ $($C.w)  Commands:$($C.n)
     audit harness                    Run deterministic harness audit checks
   digest                           Generate weekly digest
   context [-q task] [-a role]       Bounded context from the repository graph (Frontier workspaces only)
+    --tokens N --detail map|evidence --hops 0|1|2 --subsystem path
+  context-parsers status|restore    Inspect or explicitly restore managed offline language parsers
     --max-chars <512..16000>        Context size limit (default 4000); --json includes cache metrics
     --sync                         Update the graph incrementally before answering (default reads the cache)
     --refresh                      Rebuild extraction while preserving curated map notes
@@ -8401,6 +8491,7 @@ function Invoke-WatchCmd {
                                 WorkspaceRoot = $Script:ROOT
                                 IssueNumber = [int]$item.number
                             }
+                            if (Test-Flag @('--autonomous')) { $params.InteractionMode = 'autonomous' }
                             $result = Invoke-AgenticLoop @params
                             if (Test-AgenticLoopResultSucceeded -Result $result) {
                                 $watchState.itemsExecuted++
@@ -8408,6 +8499,11 @@ function Invoke-WatchCmd {
                             } elseif ($result -and $result.exitReason -eq 'candidate_ready') {
                                 Write-CliOutput "    [PENDING] #$($item.number): candidate $($result.sessionId) awaits independent acceptance."
                                 $global:LASTEXITCODE = 3
+                                Write-JsonFile $watchStateFile $watchState
+                                return
+                            } elseif ($result -and $result.exitReason -eq 'human_required') {
+                                Write-CliOutput "    [PENDING] #$($item.number): session $($result.sessionId) awaits user input; watch is paused."
+                                $global:LASTEXITCODE = 2
                                 Write-JsonFile $watchStateFile $watchState
                                 return
                             } else {
@@ -9256,6 +9352,7 @@ function Invoke-SprintCmd {
                         MaxIterations = 10
                         WorkspaceRoot = $Script:ROOT
                     }
+                    if (Test-Flag @('--autonomous')) { $params.InteractionMode = 'autonomous' }
                     if ($issueNumber) { $params.IssueNumber = [int]$issueNumber }
                     $result = Invoke-AgenticLoop @params
                     if (Test-AgenticLoopResultSucceeded -Result $result) {
@@ -9263,6 +9360,10 @@ function Invoke-SprintCmd {
                     } elseif ($result -and $result.exitReason -eq 'candidate_ready') {
                         Write-CliOutput "    [PENDING] Candidate $($result.sessionId) requires review and explicit acceptance; ship is paused."
                         $global:LASTEXITCODE = 3
+                        return
+                    } elseif ($result -and $result.exitReason -eq 'human_required') {
+                        Write-CliOutput "    [PENDING] Session $($result.sessionId) awaits user input; sprint is paused."
+                        $global:LASTEXITCODE = 2
                         return
                     } else {
                         $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
@@ -9286,6 +9387,7 @@ function Invoke-SprintCmd {
                         Prompt = if ($issueNumber) { "Review changes for $sprintScope" } else { "Review changes for: $description" }
                         MaxIterations = 5
                         WorkspaceRoot = $Script:ROOT
+                        InteractionMode = 'autonomous'
                     }
                     if ($issueNumber) { $reviewParams.IssueNumber = [int]$issueNumber }
                     $reviewResult = Invoke-AgenticLoop @reviewParams
@@ -9412,6 +9514,7 @@ switch ($Script:Command) {
     'audit'    { Invoke-AuditCmd }
     'digest'   { Invoke-DigestCmd }
     'context'  { Invoke-RepositoryContextCmd }
+    'context-parsers' { Invoke-ContextParsersCmd }
     'workflow'  { Invoke-WorkflowCmd }
     'loop'     { Invoke-LoopCmd }
     'validate'  { Invoke-ValidateCmd }
@@ -9429,7 +9532,7 @@ switch ($Script:Command) {
     'run'      { Invoke-RunCmd; exit $global:LASTEXITCODE }
     'engine'   { Invoke-EngineCmd; exit $global:LASTEXITCODE }
     'hire'     { Invoke-HireCmd }
-    'watch'    { Invoke-WatchCmd; if ((Test-Path variable:LASTEXITCODE) -and $global:LASTEXITCODE -eq 3) { exit 3 } }
+    'watch'    { $global:LASTEXITCODE = 0; Invoke-WatchCmd; if ($global:LASTEXITCODE -in @(2, 3)) { exit $global:LASTEXITCODE } }
     'tokens'   { Invoke-TokensCmd }
     'stage-gate' { Invoke-StageGateCmd }
     'budget'   { Invoke-BudgetCmd }

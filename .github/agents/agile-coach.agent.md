@@ -99,6 +99,11 @@ Each story SHOULD have 3-7 acceptance criteria covering:
 
 ## Execution Phases
 
+Use the shared guided interaction contract for the engagement plan before these
+phases. That plan can include elicitation, drafting and final story confirmation.
+Reuse answers already supplied; do not repeat intake or replace the final story
+confirmation with initial plan approval. Report the agreed milestones to the user.
+
 ### Phase 1: Mode Selection
 
 Determine what the user needs:

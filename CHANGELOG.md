@@ -2,8 +2,33 @@
 
 ## Unreleased
 
+### Added
+
+- Extend repository context with hierarchical subsystem cards, native
+  PowerShell/managed TypeScript and Tree-sitter syntax extraction, complete
+  symbol ranges/signatures beyond the former64-symbol cap, and typed
+  evidence-qualified relationships.
+- Add exact/BM25 retrieval, bounded graph expansion, current safe source spans,
+  estimated token budgets, retained-history evidence deduplication, parser
+  capability reporting and a frozen offline comparison harness.
+- Add shared guided interaction across Frontier roles: consequential
+  clarification, high-level plan approval and milestone reporting.
+- Add native versioned plan/input state, guarded execution, atomic session
+  persistence and explicit resume/revision/cancellation. Preserve caller-authorized
+  automation without treating it as user approval.
+- Connect full plan review and live milestones to Frontier chat, and add
+  host-elicited MCP continuation with explicit unsupported-host behavior.
+
+### Changed
+
+- Native runs default to guided execution. HydraFusion requires explicit
+  bounded automation authorization; it does not silently use another planner.
+- Document direct editor-host guidance separately from native enforcement.
+
 ### Fixed
 
+- Start repository discovery from standalone installers and ship all required
+  graph/guided runtime helpers in the Bash Copilot CLI package.
 - Resolve all Cursor role commands through the installed canonical contracts,
   including the renamed Frontier router, and use the shared risk-based policy.
 - Add explicit, user-configuration-preserving Cursor setup with native session

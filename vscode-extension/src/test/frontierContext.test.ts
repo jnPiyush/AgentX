@@ -86,6 +86,15 @@ describe('FrontierContext', () => {
     assert.equal(stream.secondCall.args[5]?.timeoutMs, undefined);
   });
 
+  it('gives explicit graph rebuilds a bounded deadline beyond ordinary commands', async () => {
+    const context = new FrontierContext(fakeExtensionContext());
+    const execute = sinon.stub(context, 'runCliStreaming').resolves('graph updated');
+    const result = await context.runCli('context', ['--sync'], tmpBase);
+    assert.equal(result, 'graph updated');
+    assert.equal(execute.firstCall.args[4], tmpBase);
+    assert.equal(execute.firstCall.args[5]?.timeoutMs, 10 * 60_000);
+  });
+
   // --- workspaceRoot detection ------------------------------------------
 
   describe('workspaceRoot', () => {

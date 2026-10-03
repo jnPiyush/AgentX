@@ -108,6 +108,17 @@ try {
     $duplicate = Invoke-ContextProcess $workspace @('context', '--hook') $copilotPayload
     Assert-True ($duplicate.exitCode -eq 0) 'Copilot-compatible bootstrap succeeds'
     Assert-True (($duplicate.output | ConvertFrom-Json).additionalContext -eq '') 'Agent and workspace hooks do not inject the same session context twice'
+    $resetPayload = @{ sessionId = 'context-fixture'; source = 'compact' } | ConvertTo-Json -Compress
+    $resetPrimer = Invoke-ContextProcess $workspace @('context', '--hook') $resetPayload
+    Assert-True (($resetPrimer.output | ConvertFrom-Json).additionalContext.Length -gt 0) 'Compaction re-injects the primer even when the graph fingerprint is unchanged'
+    $evidencePacket = Invoke-ContextProcess $workspace @('context', '--json', '-q', 'Resolve-Provider', '--tokens', '1000', '--detail', 'evidence', '--hops', '0')
+    $evidenceResult = $evidencePacket.output | ConvertFrom-Json
+    Assert-True ($evidencePacket.exitCode -eq 0 -and $evidenceResult.contextVersion -eq 2 -and
+        $evidenceResult.budget.requestedChars -eq 16000 -and $evidenceResult.items[0].freshness -eq 'live') 'CLI exposes safe source evidence and token-only budget semantics'
+    foreach ($invalidFlags in @(@('--hops', '1.5'), @('--tokens', 'not-a-number'), @('--unknown-query-option'))) {
+        $invalidContext = Invoke-ContextProcess $workspace (@('context', '--json') + $invalidFlags)
+        Assert-True ($invalidContext.exitCode -ne 0) "CLI rejects invalid context options: $($invalidFlags -join ' ')"
+    }
 
     Add-Content -LiteralPath (Join-Path $workspace 'src/provider.ps1') -Value 'function Resolve-UpdatedProvider { return "updated" }'
     $resync = Invoke-ContextProcess $workspace @('context', '--sync', '--json')

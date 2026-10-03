@@ -52,7 +52,8 @@ param(
  [switch]$NoSetup,
  [switch]$Local,
  [switch]$Azure,
- [switch]$Cursor
+ [switch]$Cursor,
+ [switch]$GraphParsers
 )
 
 $MinimumPowerShellVersion = [Version]'7.4.0'
@@ -825,6 +826,12 @@ if ($Cursor) {
 & pwsh -NoProfile -File (Join-Path $TMP 'scripts/install-manifest.ps1') -Action install `
  -SourceManifest (Join-Path $TMP '.frontier/runtime/install-manifest.json')
 if ($LASTEXITCODE -ne 0) { throw 'Installed manifest projection failed.' }
+if ($GraphParsers) {
+ & pwsh -NoProfile -File '.frontier/runtime/frontier.ps1' context-parsers restore
+ if ($LASTEXITCODE -ne 0) { throw 'Managed graph parser restoration failed.' }
+}
+& pwsh -NoProfile -File '.frontier/runtime/frontier.ps1' context --start-refresh
+if ($LASTEXITCODE -ne 0) { Write-Warning 'Repository discovery did not start; run frontier context --sync to diagnose.' }
 
 # -- Done --------------------------------------------
 Write-Host ""

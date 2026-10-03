@@ -7,6 +7,7 @@ const { EventEmitter } = require('node:events');
 const { createCliRunner, createServer, discoverRepoRoot } = require('./index');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+const { ElicitRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 
 test('repository context validates budgets and encodes query data before CLI dispatch', async () => {
   const calls = [];
@@ -28,6 +29,8 @@ test('repository context validates budgets and encodes query data before CLI dis
     const query = '--refresh "literal query"; do not execute';
     const result = await client.callTool({ name: 'frontier_context', arguments: { query, agent: 'engineer', maxChars: 1024 } });
     assert.ok(!result.isError);
+    assert.equal(result.content[0].text, 'source pointers');
+    assert.ok(!('context' in result.structuredContent));
     assert.deepEqual(calls[0], ['context', '--json', '--query64', Buffer.from(query).toString('base64'), '--max-chars', '1024', '-a', 'engineer']);
     const synced = await client.callTool({ name: 'frontier_context', arguments: { sync: true } });
     assert.ok(!synced.isError);
@@ -37,6 +40,18 @@ test('repository context validates budgets and encodes query data before CLI dis
       assert.equal(invalid.isError, true);
     }
     assert.equal(calls.length, 2);
+    await client.callTool({ name: 'frontier_context', arguments: {
+      query: 'Service', tokenBudget: 1200, detail: 'evidence', graphHops: 2, subsystem: 'src/services',
+    } });
+    assert.deepEqual(calls[2], ['context', '--json', '--query64', Buffer.from('Service').toString('base64'),
+      '--max-chars', '16000', '--tokens', '1200', '--detail', 'evidence', '--hops', '2',
+      '--subsystem64', Buffer.from('src/services').toString('base64')]);
+    for (const arguments_ of [{ tokenBudget: 255 }, { tokenBudget: 8001 }, { tokenBudget: true },
+      { graphHops: 3 }, { graphHops: 1.5 }, { detail: 'raw' }, { subsystem: '../outside' }]) {
+      const invalid = await client.callTool({ name: 'frontier_context', arguments: arguments_ });
+      assert.equal(invalid.isError, true);
+    }
+    assert.equal(calls.length, 3);
   } finally {
     await client.close();
     await server.close();
@@ -54,16 +69,20 @@ test('frontier_run forwards the execution engine and rejects unknown engines bef
   };
   const server = createServer(runner);
   const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: 'run-engine-contract', version: '1.0.0' }, { capabilities: {} });
+  const client = new Client({ name: 'run-engine-contract', version: '1.0.0' },
+    { capabilities: { elicitation: { form: {} } } });
+  client.setRequestHandler(ElicitRequestSchema, async () =>
+    ({ action: 'accept', content: { authorize: true } }));
   try {
     await server.connect(serverTransport);
     await client.connect(transport);
     const result = await client.callTool({ name: 'frontier_run', arguments: { agent: 'engineer', prompt: 'task', engine: 'hydrafusion' } });
     assert.ok(!result.isError);
-    assert.deepEqual(calls[0], ['run', '-a', 'engineer', '-p', 'task', '--engine', 'hydrafusion']);
+    assert.deepEqual(calls[0], ['run', '-a', 'engineer', '-p', 'task', '--json',
+      '--engine', 'hydrafusion', '--interaction', 'autonomous']);
     const defaulted = await client.callTool({ name: 'frontier_run', arguments: { agent: 'engineer', prompt: 'task' } });
     assert.ok(!defaulted.isError);
-    assert.deepEqual(calls[1], ['run', '-a', 'engineer', '-p', 'task']);
+    assert.deepEqual(calls[1], ['run', '-a', 'engineer', '-p', 'task', '--json']);
     const invalid = await client.callTool({ name: 'frontier_run', arguments: { agent: 'engineer', prompt: 'task', engine: 'auto' } });
     assert.equal(invalid.isError, true);
     assert.equal(calls.length, 2);
@@ -284,7 +303,7 @@ test('spawn errors return failure without leaking active children', async () => 
   await runner.stop();
 });
 
-test('SDK requests advertise exactly 21 tools, preserve aliases, and forward request cancellation', async () => {
+test('SDK requests advertise exactly 22 tools, preserve aliases, and forward request cancellation', async () => {
   let cancelled;
   const cancellation = new Promise(resolve => { cancelled = resolve; });
   let started;
@@ -306,7 +325,8 @@ test('SDK requests advertise exactly 21 tools, preserve aliases, and forward req
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const catalog = await client.listTools();
-    assert.equal(catalog.tools.length, 21);
+    assert.equal(catalog.tools.length, 22);
+    assert.ok(catalog.tools.some(tool => tool.name === 'frontier_resume'));
     assert.ok(catalog.tools.every(tool => tool.name.startsWith('frontier_')));
     for (const name of ['frontier_loop_status', 'agentx_loop_status']) {
       assert.equal((await client.callTool({ name, arguments: {} })).isError, false);

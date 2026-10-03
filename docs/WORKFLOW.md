@@ -143,7 +143,7 @@ The current checkpoint is resolved from durable evidence, not chat history or mo
 | Transition | Required Before Transition | Blockers |
 |------------|----------------------------|----------|
 | `Brainstorm -> Plan` | The work is named and scoped to an issue, thread, or bounded task | Missing scope owner, unresolved problem statement |
-| `Plan -> Work` | A durable execution plan exists and the main constraints are explicit; for complex work, the next bounded slice is ready to be expressed as a work contract | No plan, no progress anchor for complex work, pending clarification |
+| `Plan -> Work` | The user-facing plan revision is explicitly approved or the scope is explicitly preauthorized; a durable execution plan exists for complex work and the next bounded slice has explicit constraints | Missing approval, material scope change, no plan/progress anchor for complex work, pending clarification |
 | `Work -> Review` | Validation evidence is ready, the quality loop is complete when applicable, and any active bounded work contract is satisfied or explicitly superseded | Incomplete validation, unresolved clarification, no plan context for review |
 
 #### Bounded Work Contracts
@@ -373,7 +373,7 @@ Frontier uses a **Hub-and-Spoke architecture** for agent coordination:
 
 **Key Principles:**
 
-1. **Centralized Coordination** - Frontier is the top-level autonomous executor. It SHOULD complete work in one session whenever feasible and use specialist stages as internal workflow phases. Manual agent switching is a fallback for isolation or platform limitations.
+1. **Centralized Coordination** - Frontier owns guided user interaction and executes approved or explicitly preauthorized work. It SHOULD complete that scope in one session and use specialist stages internally. Delegates report questions and progress to the parent. Manual agent switching is a fallback for isolation or platform limitations.
 2. **Role-Contract Preservation** - When Frontier executes a specialist phase internally, it MUST follow that specialist agent's constraints, boundaries, required templates, required skills, entry gates, exit gates, and deliverable rules. Internal execution is not permission to weaken the role contract.
 3. **Strict Role Separation** - Each agent produces one deliverable type (PRD, ADR, Code, Review)
 4. **Least-Privilege Tool Access** - Each agent receives only the tools needed for its role; parent agents own remote mutations and durable lifecycle closeout unless explicitly delegated

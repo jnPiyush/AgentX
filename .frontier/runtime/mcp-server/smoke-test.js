@@ -41,8 +41,8 @@ async function main() {
     if (!tools.tools.some((tool) => tool.name === 'frontier_context')) {
       throw new Error('frontier_context was not advertised');
     }
-    if (tools.tools.length !== 21) {
-      throw new Error(`expected exactly 21 tools, received ${tools.tools.length}`);
+    if (tools.tools.length !== 22) {
+      throw new Error(`expected exactly 22 tools, received ${tools.tools.length}`);
     }
 
     const result = await client.callTool({ name: 'frontier_loop_status', arguments: {} });

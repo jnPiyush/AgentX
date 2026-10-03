@@ -22,7 +22,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "test": "node --test lifecycle.test.js && node smoke-test.js",
+    "test": "node --test lifecycle.test.js guided-interaction.test.js && node smoke-test.js",
     "audit:runtime": "npm audit --omit=dev --audit-level=high"
   },
   "keywords": [

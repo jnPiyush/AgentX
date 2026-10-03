@@ -12,6 +12,10 @@ Paths below are plain text: read them when a task needs them.
 
 ## Before Editing
 
+Follow the shared guided interaction contract in `.github/AGENT-PROTOCOL.md`:
+clarify meaningful gaps, show a high-level plan, wait for approval, and report
+milestone outcomes. Delegates inherit scope; do not restart user intake.
+
 Run `.frontier/runtime/frontier.ps1 loop start -p "<task>"` before the first file
 mutation and finish with `loop complete` after an independent reviewer approves the final
 state (`--verdict approved --reviewer <id> --high 0 --medium 0`).

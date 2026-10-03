@@ -23,6 +23,47 @@ applyTo: '**'
 
 ---
 
+## 0. Guided Interaction
+
+Every directly invoked user-facing role MUST use this shared flow for task
+execution: bounded read-only context -> clarification -> proposed high-level
+plan -> user approval -> execution with milestone updates -> verification and
+delivery. This complements the role's phases rather than replacing technical
+planning, independent review, or action-specific consent.
+
+- Read the relevant repository context before asking questions. Ask one focused
+  question at a time when its answer changes scope, behavior, contracts,
+  acceptance, security or cost. Offer useful choices and a recommendation when
+  possible. Never manufacture uncertainty or repeat an already answered question.
+- Once the goal, scope, success criteria and material constraints are clear,
+  present a short plan with assumptions, exclusions, milestone outcomes and
+  verification. For clear requests, combine the understanding summary with this
+  plan instead of adding a redundant clarification turn.
+- Wait for an explicit user decision. Feedback revises the plan; material
+  revisions require renewed approval. Silence, dismissal, timeout and a
+  clarification answer MUST NOT be treated as approval. Keep pending work paused.
+- Approval covers the particular task and plan revision, not arbitrary future
+  tasks, expanded scope, higher costs or new permissions. Normal implementation
+  choices within that scope MAY proceed without another approval.
+- After each milestone, report its ID, outcome, actual verification or explicitly
+  reported evidence, next step and blockers. Report long-running work when new
+  information is available, without invented percentages or repeated tool noise.
+  A completed edit is not proof of successful verification.
+- One parent owns the conversation. Delegates inherit bounded approved scope,
+  report uncertainty and progress to the parent, and MUST NOT ask the user to
+  approve the same work again. Clarification delegates remain read-only.
+- Simple informational answers need no execution plan. Explicitly preauthorized
+  automation MAY use the authorized scope without another planning approval;
+  record it as caller-authorized, never as a user-approved plan. Required
+  unanswered questions and all existing consent gates still pause automation.
+- Respect host capabilities. Native Frontier run/resume enforces its plan state;
+  direct editor-host tools follow this contract but MUST NOT be described as
+  mechanically gated unless the host actually enforces it. Unsupported input
+  channels remain pending and identify the supported continuation path.
+
+The native tool contract is in `prompts/guided-interaction.prompt.md` relative
+to this protocol. It does not authorize tools outside the role's permissions.
+
 ## 1. Iterative Quality Loop (MANDATORY, NO SKIP)
 
 ### 1.1 Pre-Edit Gate (NON-SKIPPABLE)
@@ -319,6 +360,15 @@ Verify current source before changing behavior. Report stale/unavailable context
 excluded material and unresolved references honestly. See
 `docs/guides/REPOSITORY-CONTEXT.md` for commands, curation and host limitations.
 
+Graph v2 stores syntax-aware definitions and typed/provenance-qualified relations
+separately from prompt budgets. Prefer an exact symbol or subsystem query, then
+bounded graph expansion; request safe live evidence only when needed. Check
+freshness and parser coverage before treating a missing result as absence.
+Native evidence deduplication applies only to retained, already-observed tool
+results. A new session, compaction or source change must not inherit an unsupported
+claim that the model still has the evidence. Token estimates and provider billing
+are distinct; neither a small map nor a cache hit proves task-quality savings.
+
 Before asking any agent or the user for help, read the relevant repo-local
 artifacts (`docs/artifacts/prd/`, `docs/artifacts/adr/`, `docs/artifacts/specs/`,
 `docs/ux/`). Prefer retrieval-led reasoning: `read_file` the relevant SKILL.md,
@@ -370,15 +420,16 @@ stall or over-extend them:
   you pause, ask for confirmation or leave requested work unfinished, name the
   file, quote the rule, and say whether it is an explicit requirement or your
   interpretation.
-- **Clarify or proceed**: outside the consent gates listed here, ask only when
+- **Clarify or proceed**: follow section 0 for user-facing plan approval.
+  Outside the consent gates listed here, ask only when
   the answer would change behavior, contracts, acceptance criteria, security or
   cost; pause the dependent work, continue independent work, and follow the
   role's clarification protocol, including its no-answer fallback. Record
-  lower-impact assumptions and continue.
+  lower-impact assumptions in the plan and continue within approved scope.
   For non-blocking questions, finish the authorized work first so the question
   concerns a concrete, reviewable result. Valid stops are destructive or
   irreversible actions, the consent gates in this file (independent review,
-  test-suite run, lint cleanup, council authority), and blockers only the user
+  user-facing plan approval, test-suite run, lint cleanup, council authority), and blockers only the user
   can remove.
 - **Turn endings**: a progress summary is not completion. Do not end a turn by
   announcing the next step, offering to continue, or listing decisions that do

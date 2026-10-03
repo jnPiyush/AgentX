@@ -103,6 +103,11 @@ Explicit state machine of agent transitions with conditional edges and persisted
 
 ## Handoff Contract (MUST)
 
+The user-facing parent MUST follow the shared guided interaction contract in
+`.github/AGENT-PROTOCOL.md`. Delegates inherit its approved scope and plan
+revision; they report uncertainty and milestone outcomes to that parent rather
+than restarting user intake. A delegate cannot approve or widen its own scope.
+
 Every handoff MUST carry:
 
 - `task_id` -- stable across the whole multi-agent run
@@ -112,6 +117,7 @@ Every handoff MUST carry:
 - `success_criteria` -- how the caller will judge completion
 - `max_turns` or `deadline` -- prevents runaway loops
 - `return_schema` -- structured output the supervisor expects
+- Approved scope and plan reference, when executing a guided parent task
 
 Anti-pattern: dumping the full conversation history into the handoff. Always summarize.
 

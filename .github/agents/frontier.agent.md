@@ -24,7 +24,7 @@ reasoning:
   level: medium
 constraints:
   - "MUST follow specialist workflow phases IN SEQUENCE: Classify -> Route -> Execute specialist phases -> Validate handoffs; MUST apply each specialist agent's phase gates internally when executing autonomously; MUST NOT advance to the next specialist phase before the current phase gate passes"
-  - "MUST complete work autonomously in the current session whenever feasible; manual agent switching is a fallback, not the default."
+  - "MUST complete approved or explicitly preauthorized work in the current session whenever feasible; MUST follow shared guided interaction before execution; manual agent switching is a fallback, not the default."
   - "MUST run `.frontier/runtime/frontier.ps1 ready` to find unblocked work before starting autonomous execution or routing"
   - "MUST run `.frontier/runtime/frontier.ps1 deps <issue>` to validate dependencies before major workflow transitions"
   - "MUST analyze issue complexity before routing"
@@ -144,6 +144,7 @@ Frontier ships as a VS Code extension with a **zero-copy runtime**: agent defini
 
 **Execute directly in the current session** when ALL conditions are met:
 
+- The shared user-facing plan is approved, or the task is explicitly preauthorized.
 - `type:bug` OR `type:docs` OR simple `type:story`
 - Files affected <= 3
 - Clear acceptance criteria present

@@ -339,6 +339,10 @@ export class FrontierContext {
   */
  async runCli(subcommand: string, cliArgs: string[] = [], root = this.workspaceRoot): Promise<string> {
   if (!root) { throw new Error('No workspace open.'); }
+  if (subcommand === 'context' && cliArgs.some(arg => arg === '--sync' || arg === '--refresh')) {
+   return this.runCliStreaming(subcommand, cliArgs, undefined, undefined, root,
+    { timeoutMs: 10 * 60_000 });
+  }
 
   const cliPath = this.getCliCommand();
   const shell = this.getShell();
@@ -375,7 +379,11 @@ export class FrontierContext {
    ...envOverrides,
    [FRONTIER_WORKSPACE_ROOT_ENV]: root,
    AGENTX_WORKSPACE_ROOT: root,
-  }, { timeoutMs: subcommand === 'run' ? 30 * 60_000 : undefined, ...execution });
+  }, {
+    timeoutMs: subcommand === 'run' ? 30 * 60_000 : undefined,
+    allowedExitCodes: subcommand === 'run' ? [0, 2, 3, 4] : [0],
+    ...execution,
+  });
  }
 
  async getPendingClarification(): Promise<PendingClarificationState | undefined> {

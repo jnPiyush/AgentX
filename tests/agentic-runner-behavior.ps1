@@ -985,7 +985,7 @@ try {
         )
     } | ConvertTo-Json -Depth 6 | Set-Content -Path $loopStatePath -Encoding UTF8
 
-    $result = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $result = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $syncedLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $result.exitReason 'text_response' 'Invoke-AgenticLoop exits normally after one approved internal self-review'
@@ -1031,7 +1031,7 @@ try {
 
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
-    $bugResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Fix bug in login redirect handling' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $bugResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Fix bug in login redirect handling' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $bugLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $bugResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully for standard bug work'
@@ -1063,7 +1063,7 @@ try {
 
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
-    $skipResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Answer the clarification request' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -SkipLoopStateSync
+    $skipResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Answer the clarification request' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -SkipLoopStateSync -InteractionMode autonomous
     $unsyncedLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $skipResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully when loop-state sync is skipped'
@@ -1075,7 +1075,7 @@ try {
     Remove-Item $loopStatePath -ErrorAction SilentlyContinue
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
-    $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
 
     Assert-Equal $configuredResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully with self-review config overrides'
     Assert-Equal $script:selfReviewCalls 2 'Invoke-AgenticLoop honors an explicit higher internal-review minimum'
@@ -1097,7 +1097,7 @@ try {
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
     $script:selfReviewApproved = $false
-    $failedReviewResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement a still-broken change' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $failedReviewResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement a still-broken change' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $failedReviewState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $failedReviewResult.exitReason 'self_review_failed' 'self-review exhaustion exits as failure rather than text_response'
@@ -1645,7 +1645,7 @@ try {
         $adapterPath = Join-Path $repairRoot 'src/adapter/nested.txt'
         if (Test-Path -LiteralPath $adapterPath) { Remove-Item -LiteralPath $adapterPath -Force }
         $script:repairRequests = [Collections.Generic.List[object]]::new()
-        $adapterResult = Invoke-AgenticLoop -Agent $roleName -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 3 -SkipLoopStateSync
+        $adapterResult = Invoke-AgenticLoop -Agent $roleName -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 3 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $adapterResult.exitReason 'text_response' "Anthropic $roleName completes the real mocked loop"
         Assert-Equal $adapterResult.toolCalls 3 "Anthropic $roleName processes normalized tool calls"
         Assert-Equal $script:repairRequests.Count 4 "Anthropic $roleName executes main and read-only self-review tool turns"
@@ -1662,7 +1662,7 @@ try {
             Assert-Equal @($reviewReply | Where-Object { $_.content -match 'not available in review mode' }).Count 2 'internal self-review rejects both write and edit attempts'
             Assert-Equal (($script:repairRequests[2].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,repository_context' 'self-review wire schema remains source-read-only with managed navigation context'
             if ($roleName -eq 'functional-reviewer') {
-                Assert-Equal (($script:repairRequests[0].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,repository_context' 'report-only Anthropic wire schema remains source-read-only with managed navigation context'
+                Assert-Equal (($script:repairRequests[0].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,propose_plan,report_progress,repository_context,request_user_input' 'report-only Anthropic schema remains source-read-only while supporting guided input and progress'
                 Assert-Equal @($mainReply | Where-Object { $_.content -match 'BLOCKED' }).Count 2 'unsolicited report-only writes return tool errors'
             }
         }
@@ -1680,7 +1680,7 @@ try {
     foreach ($rawResponse in @($false, $true)) {
         $script:repairClaudeCalls = 0
         $script:repairClaudeRaw = $rawResponse
-        $claudeLoop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 2 -SkipLoopStateSync
+        $claudeLoop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 2 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $claudeLoop.exitReason 'text_response' "Claude raw=$rawResponse completes the real mocked loop"
         Assert-Equal $script:repairClaudeCalls 2 "Claude raw=$rawResponse reaches internal self-review"
         Assert-True ($claudeLoop.finalText -match 'Offline adapter answer') "Claude raw=$rawResponse preserves final content"
@@ -1814,7 +1814,7 @@ try {
     $script:ledgerClarify = $false
     # A ledger left open by an earlier run that threw must not become this run's parent.
     $Script:CurrentUsageLedger = [PSCustomObject]@{ parent = $null; tokenBudget = 1; calls = [System.Collections.Generic.List[object]]::new() }
-    $ledgerRun = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 3 -SkipLoopStateSync
+    $ledgerRun = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 3 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $ledgerRun.exitReason 'text_response' 'Metered run completes normally'
     Assert-True ($null -eq $Script:CurrentUsageLedger) 'A top-level run replaces a stale ledger and closes its own'
     Assert-Equal $ledgerRun.usage.calls 2 'Metered run records the main and self-review calls'
@@ -1826,24 +1826,24 @@ try {
 
     $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 50 } }
     $script:ledgerUseTool = $true
-    $budgetStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    $budgetStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $budgetStop.exitReason 'token_budget' 'A tool-call run stops at the next iteration once the token budget is spent'
     Assert-Equal $budgetStop.iterations 1 'Token budget stop does not count an unexecuted iteration'
     Assert-True ($budgetStop.finalText -match '120 of 50') 'Token budget stop reports spend against the budget'
 
     $script:ledgerUseTool = $false
-    $textStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    $textStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $textStop.exitReason 'token_budget' 'A text response over budget ends the run before self-review'
     Assert-Equal $textStop.usage.calls 1 'No self-review call is made once the budget is spent'
     Assert-True ($textStop.finalText -match 'Ledger fixture answer' -and $textStop.finalText -match 'before review or clarification') 'The unreviewed response is returned with the budget note'
 
     $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 200 } }
     $script:ledgerReviewUsesTool = $true
-    $reviewStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    $reviewStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $reviewStop.exitReason 'token_budget' 'Self-review stops before its next call once the budget is spent'
     Assert-Equal $reviewStop.usage.byPurpose.'self-review'.calls 1 'The reviewer makes no call after the budget is spent'
     Assert-Equal $reviewStop.usage.calls 2 'A budget stop inside self-review makes no further calls'
-    $reviewStopLast = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 1 -SkipLoopStateSync
+    $reviewStopLast = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 1 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $reviewStopLast.exitReason 'token_budget' 'A reviewer budget stop on the last iteration reports token_budget'
     Assert-True ($reviewStopLast.finalText -match 'Ledger fixture answer' -and $reviewStopLast.finalText -match 'during self-review') 'The unreviewed response is returned when self-review runs out of budget'
     $script:ledgerReviewUsesTool = $false
@@ -1855,7 +1855,7 @@ try {
         $script:ledgerConfig = @{ researchFirstMode = 'off' }
         $usageDir = Join-Path $ledgerRoot '.frontier/sessions'
         $usageFilesBefore = @(Get-ChildItem -LiteralPath $usageDir -Filter '*.usage.json' -ErrorAction SilentlyContinue).Count
-        $clarified = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+        $clarified = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $clarified.exitReason 'text_response' 'A delegated clarification completes end to end'
         Assert-Equal $clarified.usage.byPurpose.agent.calls 3 'Clarification responder calls merge into the requesting run ledger'
         $usageFilesAfter = @(Get-ChildItem -LiteralPath $usageDir -Filter '*.usage.json' -ErrorAction SilentlyContinue).Count
@@ -1868,7 +1868,7 @@ try {
 
         $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 150 } }
         $script:ledgerResponderUsesTool = $true
-        $clarifyStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+        $clarifyStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $clarifyStop.exitReason 'token_budget' 'A budget stop inside a delegated clarification ends the requesting run'
         Assert-Equal $clarifyStop.usage.calls 2 'No further clarification rounds run after the budget is spent'
         Assert-True ($clarifyStop.finalText -match 'during clarification: 240 of 150') 'The budget stop names the clarification stage'

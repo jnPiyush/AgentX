@@ -23,6 +23,7 @@
 const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
+const { StringDecoder } = require('node:string_decoder');
 
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
@@ -69,14 +70,15 @@ function createCliRunner(repoRoot, hooks = {}) {
   const active = new Map();
   let stopped = false;
   const failureResult = (message) => ({ exitCode: -1, stdout: '', stderr: message });
-  const run = (args, signal) => {
+  const run = (args, signal, onProgress) => {
     if (stopped || signal?.aborted) return Promise.resolve(failureResult('Request cancelled or server shutting down.'));
     if (active.size) return Promise.resolve(failureResult('CLI busy or previous child termination unconfirmed.'));
     let child;
     try {
       child = (hooks.spawn || spawn)('pwsh', ['-NoProfile', '-NonInteractive', '-File', cliEntry, ...args], {
         cwd: repoRoot, env: {
-          ...process.env, FRONTIER_NONINTERACTIVE: '1', FRONTIER_WORKSPACE_ROOT: repoRoot,
+          ...process.env, FRONTIER_NONINTERACTIVE: '1', FRONTIER_NONINTERACTIVE_HUMAN: '1',
+          FRONTIER_WORKSPACE_ROOT: repoRoot,
           FRONTIER_OPERATION_TIMEOUT_SECONDS: String(Math.max(1, Math.floor((hooks.timeoutMs || 600000) / 1000) - 30)),
         },
         windowsHide: true, detached: (hooks.platform || process.platform) !== 'win32',
@@ -92,6 +94,9 @@ function createCliRunner(repoRoot, hooks = {}) {
       let settled = false;
       let childClosed = false;
       let treeTerminated = false;
+      let progressBuffer = '';
+      const stdoutDecoder = new StringDecoder('utf8');
+      const stderrDecoder = new StringDecoder('utf8');
       let escalation;
       let teardown;
       const maxBytes = hooks.maxOutputBytes || 1048576;
@@ -150,16 +155,27 @@ function createCliRunner(repoRoot, hooks = {}) {
         if (settled || failure) return;
         const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         const available = maxBytes - bytes;
-        const text = data.subarray(0, available).toString();
+        const decoder = stream === 'stdout' ? stdoutDecoder : stderrDecoder;
+        const text = decoder.write(data.subarray(0, available));
         if (stream === 'stdout') stdout += text; else stderr += text;
         bytes += Math.min(available, data.length);
         if (data.length > available) terminate(`[output-limit] Output exceeded ${maxBytes} bytes.`);
+        if (stream === 'stdout' && onProgress && !failure) {
+          progressBuffer += text;
+          const lines = progressBuffer.split(/\r?\n/);
+          progressBuffer = lines.pop();
+          for (const line of lines) {
+            if (line.startsWith('[MILESTONE]')) onProgress(line);
+          }
+        }
       };
       const timeout = setTimeout(() => terminate('[timeout] CLI execution timed out.'), hooks.timeoutMs || 600000);
       child.stdout.on('data', chunk => capture(chunk, 'stdout'));
       child.stderr.on('data', chunk => capture(chunk, 'stderr'));
       child.on('error', error => terminate(`[spawn-error] ${error.message}`));
       child.once('close', code => {
+        stdout += stdoutDecoder.end();
+        stderr += stderrDecoder.end();
         childClosed = true;
         if (failure) finishStopped(); else finish(code);
       });
@@ -185,9 +201,106 @@ function toolResult({ exitCode, stdout, stderr }) {
     (stderr.trim() ? `stderr:\n${stderr.trim()}\n` : '');
   return {
     content: [{ type: 'text', text: body || '(no output)' }],
-    isError: exitCode !== 0 && exitCode !== 3,
+    isError: ![0, 3, 4].includes(exitCode),
     ...(exitCode === 3 ? { structuredContent: { status: 'pending_owner_review_or_verification', exitCode } } : {}),
+    ...(exitCode === 4 ? { structuredContent: { status: 'cancelled', exitCode } } : {}),
   };
+}
+
+function readRunResult(result) {
+  const lastLine = result.stdout.trim().split(/\r?\n/).at(-1);
+  try { return JSON.parse(lastLine); }
+  catch { throw new Error('Frontier run returned no valid final JSON result. No approval was recorded.'); }
+}
+
+function pendingToolResult(pending, message = 'User input is required before this task can continue.') {
+  return {
+    content: [{ type: 'text', text: `${message}\n${JSON.stringify(pending, null, 2)}` }],
+    structuredContent: { status: 'awaiting_user_input', pendingInteraction: pending },
+    isError: false,
+  };
+}
+
+function authorizationToolResult(status, message) {
+  return {
+    content: [{ type: 'text', text: message }],
+    structuredContent: { status, sessionCreated: false },
+    isError: false,
+  };
+}
+
+function supportsFormInput(server) {
+  const capability = server.getClientCapabilities()?.elicitation;
+  return !!capability && ('form' in capability || Object.keys(capability).length === 0);
+}
+
+async function resumeWithHostInput(server, runner, pending, signal, onProgress) {
+  if (!pending || typeof pending.sessionId !== 'string' ||
+      !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(pending.sessionId) ||
+      !/^[a-f0-9]{32}$/.test(pending.inputId) || !['plan', 'question'].includes(pending.kind)) {
+    throw new Error('Invalid pending-input state from the native runtime.');
+  }
+  if (!supportsFormInput(server)) {
+    return pendingToolResult(pending,
+      'This host has no form elicitation. The task remains pending; respond using the trusted Frontier CLI run/resume command.');
+  }
+  const isPlan = pending.kind === 'plan';
+  if (isPlan && (!Number.isInteger(pending.planVersion) || pending.planVersion < 1 ||
+      !/^[a-f0-9]{64}$/.test(pending.digest) || !pending.plan)) {
+    throw new Error('Pending plan identity is invalid.');
+  }
+  let response;
+  try {
+    response = await server.elicitInput({
+      mode: 'form',
+      message: isPlan
+        ? `Review the exact Frontier plan below. Approval does not authorize separate test or release gates.\n${JSON.stringify(pending, null, 2)}`
+        : `${pending.question}${pending.choices?.length ? `\nChoices: ${pending.choices.join('; ')}` : ''}`,
+      requestedSchema: isPlan ? {
+        type: 'object',
+        properties: {
+          decision: { type: 'string', enum: ['approve', 'revise', 'cancel_task'], title: 'Plan decision' },
+          feedback: { type: 'string', maxLength: 12000, title: 'Changes requested (required for revise)' },
+        },
+        required: ['decision'],
+      } : {
+        type: 'object',
+        properties: { answer: { type: 'string', minLength: 1, maxLength: 12000, title: 'Your answer' } },
+        required: ['answer'],
+      },
+    }, { signal, timeout: 120000 });
+  } catch (error) {
+    return pendingToolResult(pending, `Host input was unavailable: ${error.message}. No decision was applied.`);
+  }
+  if (response.action !== 'accept') {
+    return pendingToolResult(pending, 'The input request was declined or dismissed. No approval was recorded.');
+  }
+  const content = response.content || {};
+  const args = ['run', '--resume-session', pending.sessionId, '--input-id', pending.inputId];
+  if (isPlan) {
+    if (!['approve', 'revise', 'cancel_task'].includes(content.decision)) {
+      return pendingToolResult(pending, 'A valid explicit plan decision is required.');
+    }
+    const feedback = typeof content.feedback === 'string' ? content.feedback.trim() : '';
+    if ((content.decision === 'approve' && feedback) ||
+        (content.decision === 'revise' && !feedback)) {
+      return pendingToolResult(pending, 'Request changes with feedback, or approve the unchanged plan. Approval with edits is not supported.');
+    }
+    args.push('--input-decision', content.decision === 'cancel_task' ? 'cancel' : content.decision,
+      '--plan-version', String(pending.planVersion), '--plan-digest', pending.digest);
+    if (feedback) args.push('--clarification-response', feedback);
+  } else {
+    if (typeof content.answer !== 'string' || !content.answer.trim()) {
+      return pendingToolResult(pending, 'An empty answer does not resolve the question.');
+    }
+    args.push('--input-decision', 'answer', '--clarification-response', content.answer);
+  }
+  args.push('--json');
+  const result = await runner.run(args, signal, onProgress);
+  if (result.exitCode === 2) {
+    return pendingToolResult(readRunResult(result).pendingInteraction);
+  }
+  return toolResult(result);
 }
 
 // ---------- tool catalog ----------
@@ -358,27 +471,40 @@ const TOOLS = [
       properties: {
         query: { type: 'string', maxLength: 4096, description: 'Task, symbol or area to locate; omit for repository orientation.' },
         agent: { type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9-]{0,79}$', description: 'Optional role ID, such as engineer.' },
-        maxChars: { type: 'integer', minimum: 512, maximum: 16000, default: 4000 },
+        maxChars: { type: 'integer', minimum: 512, maximum: 16000 },
+        tokenBudget: { type: 'integer', minimum: 256, maximum: 8000 },
+        detail: { type: 'string', enum: ['map', 'evidence'] },
+        graphHops: { type: 'integer', minimum: 0, maximum: 2 },
+        subsystem: { type: 'string', maxLength: 256 },
         sync: { type: 'boolean', default: false, description: 'Update the graph incrementally before answering.' },
         refresh: { type: 'boolean', default: false, description: 'Re-extract every file before answering (slowest).' },
       },
       additionalProperties: false,
     },
     build: (a) => {
-      if (Object.keys(a).some(key => !['query', 'agent', 'maxChars', 'sync', 'refresh'].includes(key))) {
+      if (Object.keys(a).some(key => !['query', 'agent', 'maxChars', 'tokenBudget', 'detail', 'graphHops', 'subsystem', 'sync', 'refresh'].includes(key))) {
         throw new Error('Unsupported repository context argument.');
       }
       const query = a.query === undefined ? '' : a.query;
-      const maxChars = a.maxChars === undefined ? 4000 : a.maxChars;
+      const maxChars = a.maxChars === undefined ? (a.tokenBudget === undefined ? 4000 : 16000) : a.maxChars;
       if (typeof query !== 'string' || query.length > 4096) throw new Error('query must be a string of at most 4096 characters.');
       if (!Number.isInteger(maxChars) || maxChars < 512 || maxChars > 16000) throw new Error('maxChars must be an integer from 512 to 16000.');
       if (a.agent !== undefined && (typeof a.agent !== 'string' || !/^[a-z][a-z0-9-]{0,79}$/i.test(a.agent))) throw new Error('agent must be a role ID.');
       if (a.sync !== undefined && typeof a.sync !== 'boolean') throw new Error('sync must be boolean.');
       if (a.refresh !== undefined && typeof a.refresh !== 'boolean') throw new Error('refresh must be boolean.');
+      if (a.tokenBudget !== undefined && (!Number.isInteger(a.tokenBudget) || a.tokenBudget < 256 || a.tokenBudget > 8000)) throw new Error('tokenBudget must be an integer from 256 to 8000.');
+      if (a.detail !== undefined && !['map', 'evidence'].includes(a.detail)) throw new Error('detail must be map or evidence.');
+      if (a.graphHops !== undefined && (!Number.isInteger(a.graphHops) || a.graphHops < 0 || a.graphHops > 2)) throw new Error('graphHops must be 0, 1 or 2.');
+      if (a.subsystem !== undefined && (typeof a.subsystem !== 'string' || a.subsystem.length > 256 ||
+          /(^|[\\/])\.\.?([\\/]|$)|^[\\/]|[\x00-\x1f:*?"<>|]/.test(a.subsystem))) throw new Error('subsystem must be a relative directory prefix.');
       const args = ['context', '--json', '--query64', Buffer.from(query, 'utf8').toString('base64'), '--max-chars', String(maxChars)];
       if (a.agent) args.push('-a', a.agent);
       if (a.sync) args.push('--sync');
       if (a.refresh) args.push('--refresh');
+      if (a.tokenBudget !== undefined) args.push('--tokens', String(a.tokenBudget));
+      if (a.detail !== undefined) args.push('--detail', a.detail);
+      if (a.graphHops !== undefined) args.push('--hops', String(a.graphHops));
+      if (a.subsystem !== undefined) args.push('--subsystem64', Buffer.from(a.subsystem, 'utf8').toString('base64'));
       return args;
     },
   },
@@ -410,7 +536,7 @@ const TOOLS = [
   {
     name: 'frontier_run',
     description:
-      'Run a named Frontier agent. engine=hydrafusion generates an isolated candidate only: an active owner loop, explicit credit budget and supported Copilot CLI are required. Exit 3 is pending independent review, not task completion.',
+      'Run a named Frontier agent in guided mode: clarify, propose a plan, wait for host input, then report milestones. HydraFusion requires host-confirmed bounded automation, an active owner loop and explicit credit budget; candidates still need independent approval.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -423,8 +549,16 @@ const TOOLS = [
         feedback: { type: 'string', description: 'Owner-recorded candidate-bound changes-requested report for a bounded HydraFusion refinement' },
       },
       required: ['agent', 'prompt'],
+      additionalProperties: false,
     },
     build: (a) => {
+      if (Object.keys(a).some(key => !['agent', 'prompt', 'model', 'max', 'issue', 'engine', 'feedback'].includes(key))) {
+        throw new Error('Unsupported run argument; model-supplied approval or interaction overrides are not accepted.');
+      }
+      if (typeof a.agent !== 'string' || !/^[a-z][a-z0-9-]{0,79}$/.test(a.agent) ||
+          typeof a.prompt !== 'string' || !a.prompt.trim() || a.prompt.length > 16000) {
+        throw new Error('A valid agent ID and task prompt of at most 16000 characters are required.');
+      }
       if (a.engine !== undefined && !['native', 'hydrafusion'].includes(a.engine)) {
         throw new Error('engine must be native or hydrafusion.');
       }
@@ -434,13 +568,30 @@ const TOOLS = [
       if (a.feedback !== undefined && (typeof a.feedback !== 'string' || !a.feedback.trim())) {
         throw new Error('feedback must name an owner-recorded report.');
       }
-      const args = ['run', '-a', a.agent, '-p', a.prompt];
+      const args = ['run', '-a', a.agent, '-p', a.prompt, '--json'];
       if (a.model) args.push('-m', a.model);
       if (a.max != null) args.push('--max', String(a.max));
       if (a.issue != null) args.push('-i', String(a.issue));
       if (a.engine) args.push('--engine', a.engine);
       if (a.feedback) args.push('--feedback', a.feedback);
       return args;
+    },
+  },
+  {
+    name: 'frontier_resume',
+    description: 'Inspect a pending native task and request genuine user input through host elicitation. No model-supplied approval or answer is accepted. Unsupported hosts remain pending.',
+    inputSchema: {
+      type: 'object',
+      properties: { sessionId: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$' } },
+      required: ['sessionId'],
+      additionalProperties: false,
+    },
+    build: (a) => {
+      if (Object.keys(a).some(key => key !== 'sessionId') ||
+          typeof a.sessionId !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(a.sessionId)) {
+        throw new Error('A valid sessionId is required; decisions must come from host input.');
+      }
+      return ['run', '--session-info', a.sessionId, '--json'];
     },
   },
   {
@@ -557,6 +708,16 @@ server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
     };
   }
   let argv;
+  let progressSequence = 0;
+  const progressToken = req.params._meta?.progressToken;
+  const onProgress = progressToken === undefined ? undefined : (message) => {
+    void extra.sendNotification({
+      method: 'notifications/progress',
+      params: { progressToken, progress: ++progressSequence, message },
+    }).catch(error => {
+      process.stderr.write(`[frontier-mcp] progress delivery failed: ${error.message}\n`);
+    });
+  };
   try {
     argv = tool.build(req.params.arguments || {});
   } catch (err) {
@@ -565,7 +726,55 @@ server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
       isError: true,
     };
   }
-  const result = await runner.run(argv, extra.signal);
+  if (tool.name === 'frontier_run' && req.params.arguments?.engine === 'hydrafusion') {
+    if (!supportsFormInput(server)) {
+      return authorizationToolResult('authorization_required', 'HydraFusion requires explicit bounded automation authorization. This host cannot collect it; use the trusted CLI with --interaction autonomous after reviewing the task and budget. No session was created.');
+    }
+    try {
+      const authorization = await server.elicitInput({
+        mode: 'form',
+        message: `Authorize this bounded HydraFusion candidate task? Existing tool, budget, independent review and test gates remain unchanged.\n${JSON.stringify(req.params.arguments)}`,
+        requestedSchema: {
+          type: 'object',
+          properties: { authorize: { type: 'boolean', title: 'Authorize this candidate task without guided planning' } },
+          required: ['authorize'],
+        },
+      }, { signal: extra.signal, timeout: 120000 });
+      if (authorization.action !== 'accept' || authorization.content?.authorize !== true) {
+        return authorizationToolResult('not_authorized', 'Candidate execution was not authorized; no session or model call was created.');
+      }
+      argv.push('--interaction', 'autonomous');
+    } catch (error) {
+      return authorizationToolResult('authorization_required', `Host authorization was unavailable: ${error.message}. No session or candidate was created.`);
+    }
+  }
+  const result = await runner.run(argv, extra.signal, onProgress);
+  if (tool.name === 'frontier_context' && result.exitCode === 0) {
+    try {
+      const packet = JSON.parse(result.stdout.trim());
+      if (typeof packet.context !== 'string') throw new Error('Missing bounded context.');
+      const { context, ...metadata } = packet;
+      return {
+        content: [{ type: 'text', text: context }],
+        structuredContent: metadata,
+        isError: packet.status === 'incompatible',
+      };
+    } catch (error) {
+      return { content: [{ type: 'text', text: `Invalid repository context response: ${error.message}` }], isError: true };
+    }
+  }
+  if (tool.name === 'frontier_resume' || (tool.name === 'frontier_run' && result.exitCode === 2)) {
+    if (![0, 2].includes(result.exitCode)) return toolResult(result);
+    try {
+      const pending = readRunResult(result).pendingInteraction;
+      if (!pending) {
+        return { content: [{ type: 'text', text: 'This session has no pending input. Inspect its status; no decision was applied.' }], isError: true };
+      }
+      return await resumeWithHostInput(server, runner, pending, extra.signal, onProgress);
+    } catch (error) {
+      return { content: [{ type: 'text', text: `Frontier input error: ${error.message}` }], isError: true };
+    }
+  }
   return toolResult(result);
 });
 server.onclose = () => {

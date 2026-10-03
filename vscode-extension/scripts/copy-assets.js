@@ -48,6 +48,8 @@ const runtimeScriptFiles = [
     'score-output.ps1',
     'generate-registries.ps1',
     'token-counter.ps1',
+    'evaluate-repository-context.ps1',
+    'repository-context-evaluation.ps1',
     'score-code-quality.ps1',
     'score-stage-gate.ps1',
     'score-skill.ps1',
@@ -71,7 +73,13 @@ const rootRuntimeFiles = [
     'frontier.sh',
     'frontier-cli.ps1',
     'agentic-runner.ps1',
+    'guided-interaction.ps1',
     'repository-context.ps1',
+    'repository-symbols.ps1',
+    'repository-retrieval.ps1',
+    'repository-parser-worker.ps1',
+    'repository-process.cs',
+    'workspace-sandbox.ps1',
     'hydrafusion.ps1',
     'hydrafusion-policy.ps1',
     'hydrafusion-protocol.ps1',
@@ -102,6 +110,7 @@ const artifactDocFiles = [
     'evaluation/rubrics/stage-gates.md',
     'evaluation/rubrics/README.md',
     'evaluation/baseline.json',
+    'evaluation/repository-context/queries.json',
 ].map((relativePath) => ({
     src: path.join(repoRoot, ...relativePath.split('/')),
     dest: path.join(...relativePath.split('/')),
@@ -378,6 +387,21 @@ for (const file of rootRuntimeFiles) {
 if (runtimeFileCount > 0) {
     console.log('  Copied ' + runtimeFileCount + ' runtime files');
 }
+
+const parserSource = path.join(repoRoot, '.frontier', 'runtime', 'repository-parser');
+const parserDestination = path.join(destRoot, '.frontier', 'runtime', 'repository-parser');
+for (const dependency of ['typescript', '@vscode/tree-sitter-wasm']) {
+    if (!fs.existsSync(path.join(parserSource, 'node_modules', dependency, 'package.json'))) {
+        throw new Error('Missing managed graph parser dependency: ' + dependency
+            + '. Run npm ci --prefix .frontier/runtime/repository-parser --ignore-scripts.');
+    }
+}
+fs.cpSync(parserSource, parserDestination, {
+    recursive: true,
+    filter: file => !file.endsWith('.test.cjs') && !file.endsWith('.test.js'),
+});
+totalFiles += countFiles(parserDestination);
+console.log('  Copied managed offline repository parser and pinned dependencies');
 
 // Copy docs/ reference files to docs/ subdirectory
 const docsDestDir = path.join(destRoot, 'docs');
