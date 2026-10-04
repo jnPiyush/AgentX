@@ -17,8 +17,8 @@ if [ ! -f "$CLI" ]; then
   exit 0
 fi
 
-ISSUE=${FRONTIER_ISSUE:-${HVE_ISSUE:-${AGENTX_ISSUE:-}}}
-PROMPT=${FRONTIER_TASK:-${HVE_TASK:-${AGENTX_TASK:-}}}
+ISSUE=${FRONTIER_ISSUE:-}
+PROMPT=${FRONTIER_TASK:-}
 if [ -z "$ISSUE" ] || [ -z "$PROMPT" ]; then
   trace skipped "FRONTIER_ISSUE or FRONTIER_TASK was not provided."
   exit 0

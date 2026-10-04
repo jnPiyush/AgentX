@@ -4,6 +4,7 @@ import * as path from 'path';
 import { AgentBoundaries, AgentDefinition } from './frontierContextTypes';
 import { collectAssetFiles, resolveAssetPath } from './utils/runtimeAssets';
 import { hasFrontierState, resolveFrontierStatePath } from './utils/frontierPaths';
+import { parseConfigurationJson } from './utils/configurationJson';
 
 interface McpConfig {
   servers?: Record<string, { type?: string; url?: string; command?: string }>;
@@ -31,7 +32,7 @@ export function readFrontierConfig(root: string | undefined): FrontierConfig | u
   }
 
   try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8')) as FrontierConfig;
+    return parseConfigurationJson(fs.readFileSync(configPath, 'utf-8')) as FrontierConfig;
   } catch {
     return undefined;
   }
@@ -250,6 +251,7 @@ export function parseAgentDefinition(content: string, agentFile: string): AgentD
 export function resolveWorkspaceRoot(
   config: vscode.WorkspaceConfiguration,
   folders: readonly vscode.WorkspaceFolder[] | undefined,
+  activeRoot?: string,
 ): string | undefined {
   const explicit = config.get<string>('rootPath', '').trim();
   if (explicit && fs.existsSync(explicit)) {
@@ -260,21 +262,10 @@ export function resolveWorkspaceRoot(
     return undefined;
   }
 
-  for (const folder of folders) {
-    if (hasCliRuntime(folder.uri.fsPath)) {
-      return folder.uri.fsPath;
-    }
+  if (activeRoot && folders.some(folder => folder.uri.fsPath === activeRoot)) {
+    return activeRoot;
   }
-
-  const searchDepth = config.get<number>('searchDepth', 2);
-  for (const folder of folders) {
-    const found = findCliRuntimeInDir(folder.uri.fsPath, searchDepth);
-    if (found) {
-      return found;
-    }
-  }
-
-  return folders[0].uri.fsPath;
+  return folders.length === 1 ? folders[0].uri.fsPath : undefined;
 }
 
 export function hasConfiguredIntegration(root: string | undefined, integration: string): boolean {
@@ -322,6 +313,11 @@ export function hasConfiguredAdoAdapter(root: string | undefined): boolean {
   } catch {
     return false;
   }
+}
+
+export function hasConfiguredGitHubAdapter(root: string | undefined): boolean {
+  const config = readFrontierConfig(root);
+  return !!config && [config.provider, config.integration, config.mode].includes('github');
 }
 
 export function getConfiguredShell(config: vscode.WorkspaceConfiguration): string {

@@ -81,9 +81,9 @@ function Invoke-AgenticLoop {
     return $recordPath
 }
 
-function Initialize-FailedRunner([string]$root) {
+function Initialize-FailedRunner([string]$root, [string]$ExitReason = 'self_review_failed') {
     $stubPath = Join-Path $root '.frontier\runtime\agentic-runner.ps1'
-    @'
+    $source = @'
 function Test-AgenticLoopResultSucceeded($Result) {
     return $null -ne $Result -and ([string]$Result.exitReason -ceq 'text_response')
 }
@@ -96,9 +96,10 @@ function Invoke-AgenticLoop {
         [string]$WorkspaceRoot,
         [int]$IssueNumber = 0
     )
-    return [PSCustomObject]@{ exitReason = 'self_review_failed' }
+    return [PSCustomObject]@{ exitReason = 'self_review_failed'; sessionId = 'hf-20261001000000-123456abcdef' }
 }
-'@ | Set-Content $stubPath -Encoding utf8
+'@
+    $source.Replace('self_review_failed', $ExitReason) | Set-Content $stubPath -Encoding utf8
 }
 
 function Test-SprintDryRunIssueOnly {
@@ -189,6 +190,45 @@ function Test-WatchDoesNotCountFailedSelfReview {
         Assert-True ([int]$watchState.itemsExecuted -eq 0) 'watch does not increment executed count for failed self-review'
     } finally {
         Remove-TestWorkspace $root
+    }
+}
+
+function Test-PendingCandidatePausesPipeline {
+    foreach ($command in @('sprint', 'watch')) {
+        $root = New-TestWorkspace "$command-candidate"
+        try {
+            Initialize-FailedRunner $root 'candidate_ready'
+            if ($command -eq 'watch') {
+                @{
+                    number = 1; title = '[Bug] Pending candidate'; body = ''; labels = @('type:bug')
+                    status = 'Ready'; state = 'open'; created = '2026-04-15T00:00:00Z'; comments = @()
+                } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root '.frontier\issues\1.json') -Encoding utf8
+                $result = Invoke-Frontier $root @('watch', '--execute', '--once')
+                $state = Get-Content (Join-Path $root '.frontier\state\watch-state.json') -Raw | ConvertFrom-Json
+                Assert-True ($state.itemsExecuted -eq 0) 'watch does not count a pending candidate as executed work'
+            } else {
+                $result = Invoke-Frontier $root @('sprint', 'Produce an isolated candidate')
+                Assert-True ($result.Output -notmatch 'Running self-review') 'sprint stops before review when build is a pending candidate'
+            }
+            Assert-True ($result.ExitCode -eq 3) "$command preserves pending exit code through the CLI launcher"
+            Assert-True ($result.Output -match '\[PENDING\]') "$command reports pending owner acceptance"
+        } finally { Remove-TestWorkspace $root }
+    }
+}
+
+function Test-SprintSuccessIgnoresAdvisoryGitExit {
+    foreach ($skipHygiene in @($false, $true)) {
+        $root = New-TestWorkspace 'sprint-empty-history'
+        try {
+            & git -C $root init --quiet
+            if ($LASTEXITCODE -ne 0) { throw 'Could not initialize the isolated empty-history fixture.' }
+            $null = Initialize-StubRunner $root
+            $arguments = @('sprint', 'Finish a bounded fixture')
+            if ($skipHygiene) { $arguments += '--skip-hygiene' }
+            $result = Invoke-Frontier $root $arguments
+            Assert-True ($result.Output -match 'Sprint complete!') "successful sprint completes even without Git history (skip hygiene=$skipHygiene)"
+            Assert-True ($result.ExitCode -eq 0) 'advisory HEAD~5 Git failure does not leak into successful sprint exit status'
+        } finally { Remove-TestWorkspace $root }
     }
 }
 
@@ -303,6 +343,8 @@ Test-SprintDryRunIssueOnly
 Test-SprintPassesIssueContextToBuildAndReview
 Test-SprintStopsOnFailedSelfReview
 Test-WatchDoesNotCountFailedSelfReview
+Test-PendingCandidatePausesPipeline
+Test-SprintSuccessIgnoresAdvisoryGitExit
 Test-DiscoverEscapesQuotedSignals
 Test-DiscoverRunIsIdempotent
 Test-GraduateWritesSkillsUnderDevelopmentCategory

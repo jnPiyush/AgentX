@@ -77,13 +77,14 @@ when the shorter form is unambiguous.
 
 | Surface | Canonical value | Compatibility rule |
 |---------|-----------------|--------------------|
-| VS Code commands and settings | `frontier.*` | Hidden `agentx.*` aliases may remain for published clients |
-| Chat participant | `frontier.chat`, `@frontier` | Keep legacy chat aliases only when the host supports hidden registration |
+| VS Code commands and settings | `frontier.*` | AgentX/HVE aliases and settings fallbacks are not supported |
+| Chat participant | `frontier.chat`, `@frontier` | Use Frontier command prefixes; no old product-name aliases |
 | CLI-facing name | `frontier` | Launchers live in `.frontier/runtime/`; no legacy `.agentx` launchers |
-| MCP tools | `frontier_*` | Legacy tool aliases are callable but not advertised |
+| MCP tools | `frontier_*` | Old product-name tool aliases are rejected |
 | Runtime code | `.frontier/runtime/` | Tracked CLI, MCP server, hooks, plugins and templates |
-| Mutable state | `.frontier/` | Write and read only `.frontier/`; legacy `.agentx/` and `.hve/` state is ignored |
-| Environment variables | `FRONTIER_*` | Read `AGENTX_*` and partial `HVE_*` only as compatibility fallbacks |
+| Mutable state | Private workspace profile or `.frontier/` | Old `.agentx/` and `.hve/` state is ignored and is not migrated |
+| Environment variables | `FRONTIER_*` | No `AGENTX_*` or `HVE_*` fallback readers or emitters |
+| Plugin host requirements | `engines.frontier` | Deprecated AgentX/HVE engine keys are rejected; update manifests explicitly |
 | Pack names | `frontier-*` | Preserve old package coordinates only where already published |
 
 The repository URL, Marketplace extension ID, historical release assets, and

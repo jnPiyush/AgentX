@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { hasFrontierState } from '../utils/frontierPaths';
+import { hasRepositoryState, isPrivateFrontierState } from '../utils/frontierPaths';
 import { FrontierContext } from '../frontierContext';
 import {
   COPILOT_CLI_ASSET_DIRS,
@@ -30,7 +30,7 @@ import {
  *    Creates directory junctions (Windows) or symlinks (macOS/Linux) under
  *    `.github/` pointing at the installed extension bundle. Always current,
  *    near-zero disk cost. The symlink destinations are added to .gitignore.
- *    Refreshed automatically on extension activation if the bundle moves.
+ *    Refresh through explicit setup when the bundle moves.
  *
  * VS Code chat, commands, and the Frontier runtime resolve assets from the
  * extension bundle directly and do NOT need either mode.
@@ -39,12 +39,18 @@ export async function runInitializeCliCommand(
   context: vscode.ExtensionContext,
   agentx: FrontierContext,
 ): Promise<void> {
+  if (!vscode.workspace.isTrusted) {
+    void vscode.window.showErrorMessage('Trust this workspace before initializing CLI support.');
+    return;
+  }
   const root = await promptWorkspaceRoot('Frontier - Initialize CLI');
   if (!root) {
     return;
   }
 
-  const runtimeInitialized = hasFrontierState(root);
+  agentx.workspaceState.assertAvailable(root);
+  agentx.workspaceState.inspect(root, true);
+  const runtimeInitialized = hasRepositoryState(root) && !isPrivateFrontierState(root);
   if (!runtimeInitialized) {
     const choice = await vscode.window.showWarningMessage(
       'Frontier local runtime is not initialized in this workspace. Run "Initialize Local Runtime" first?',
@@ -55,7 +61,8 @@ export async function runInitializeCliCommand(
       return;
     }
     await vscode.commands.executeCommand('frontier.initializeLocalRuntime');
-    if (!hasFrontierState(root)) {
+    agentx.workspaceState.inspect(root, true);
+    if (!hasRepositoryState(root) || isPrivateFrontierState(root)) {
       return;
     }
   }

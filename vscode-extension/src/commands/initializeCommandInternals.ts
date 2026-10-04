@@ -6,16 +6,17 @@ import {
   copyBundledRuntimeAssets,
   copyCopilotCliAssets,
   mergeGitignore,
-  promptWorkspaceRoot,
+  promptWorkspaceFolder,
   readJsonWithComments,
   RUNTIME_DIRS,
   writeWorkspaceRuntimeWrappers,
 } from './initializeInternals';
 import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './adaptersCommandInternals';
 import { checkAllDependencies } from '../utils/dependencyChecker';
+import { startRepositoryDiscovery } from './repositoryContext';
 import {
-  hasFrontierState,
-  resolveFrontierStatePath,
+  hasRepositoryState,
+  resolveRepositoryStatePath,
 } from '../utils/frontierPaths';
 
 interface ExistingVersionStamp {
@@ -32,12 +33,33 @@ export async function runInitializeLocalRuntimeCommand(
   context: vscode.ExtensionContext,
   agentx: FrontierContext,
 ): Promise<void> {
- const root = await promptWorkspaceRoot('Frontier - Initialize Local Runtime');
- if (!root) {
+ if (!vscode.workspace.isTrusted) {
+  void vscode.window.showErrorMessage('Trust this workspace before initializing repository support.');
   return;
  }
+ const folder = await promptWorkspaceFolder('Frontier - Initialize Repository Support');
+ if (!folder) {
+  return;
+ }
+ const root = agentx.workspaceState.assertAvailable(folder.uri.fsPath);
+ const privateMode = agentx.workspaceState.inspect(root, true)?.mode === 'private';
+ if (privateMode) {
+  const choice = await vscode.window.showWarningMessage(
+   'Create repository-managed Frontier state and terminal launchers? Private history will be preserved, but approvals and credentials will not be exported. Repository configuration starts with local defaults.',
+   { modal: true }, 'Create repository setup');
+  if (choice !== 'Create repository setup') { return; }
+  if (await agentx.getPendingClarification(root) || await agentx.getPendingSetup(root)) {
+   void vscode.window.showErrorMessage('Resolve pending Frontier chat input before switching storage mode.');
+   return;
+  }
+  try { await agentx.runCli('workspace-state', ['check-transition'], root); }
+  catch (error) {
+   void vscode.window.showErrorMessage(`Frontier storage transition blocked: ${error instanceof Error ? error.message : String(error)}`);
+   return;
+  }
+ }
 
- const initialized = hasFrontierState(root);
+ const initialized = hasRepositoryState(root);
  let isUpgrade = false;
  if (initialized) {
   const overwrite = await vscode.window.showWarningMessage(
@@ -59,27 +81,45 @@ export async function runInitializeLocalRuntimeCommand(
   },
   async (progress) => {
    try {
+    agentx.workspaceState.assertAvailable(root);
+    const priorConfigPath = resolveRepositoryStatePath(root, 'config.json');
+    if (fs.existsSync(priorConfigPath)) {
+      const priorConfig = readJsonWithComments<ExistingConfig>(priorConfigPath);
+      if (!priorConfig || typeof priorConfig !== 'object' || Array.isArray(priorConfig)) {
+        throw new Error('Existing repository configuration is invalid. Repair it before reinstalling; no defaults were written.');
+      }
+    }
+    const settings = vscode.workspace.getConfiguration('frontier', folder.uri);
+    const mode = settings.get<string>('initializationMode', 'standard');
+    const seedRepoLocalAssets = settings.get<boolean>('seedRepoLocalAssets', false);
+    if (mode !== 'standard' && mode !== 'minimal') {
+      throw new Error('frontier.initializationMode must be "standard" or "minimal".');
+    }
+    if (mode === 'minimal' && seedRepoLocalAssets) {
+      throw new Error(
+        'Minimal initialization requires frontier.seedRepoLocalAssets to be false. '
+        + 'Disable seeding or select standard initialization.',
+      );
+    }
+
     progress.report({ message: 'Creating workspace state...', increment: 40 });
-    for (const dir of RUNTIME_DIRS) {
+    const directories = mode === 'minimal' ? ['.frontier/state'] : RUNTIME_DIRS;
+    for (const dir of directories) {
      fs.mkdirSync(path.join(root, dir), { recursive: true });
     }
-    copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
-    // Optionally seed workspace .github/ with Frontier assets for non-VS-Code
-    // surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery of
-    // agents/skills/instructions/prompts/templates/schemas. VS Code chat,
-    // commands, and the Frontier runtime resolve these from the extension bundle
-    // via runtimeAssets.resolveAssetPath, so the seed is opt-in.
-    // Setting: frontier.seedRepoLocalAssets (default false). Always skip-existing
-    // to preserve any workspace overrides the user has committed to .github/.
-    const seedRepoLocalAssets = vscode.workspace
-      .getConfiguration('frontier')
-      .get<boolean>('seedRepoLocalAssets', false);
+    if (mode === 'standard') {
+      copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
+    }
     if (seedRepoLocalAssets) {
       copyCopilotCliAssets(context.extensionUri.fsPath, root, false);
     }
-    writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root);
+    if (fs.existsSync(path.join(root, '.frontier', 'cursor-assets.json'))) {
+      writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root, true);
+    } else {
+      writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root);
+    }
 
-    const versionFile = resolveFrontierStatePath(root, 'version.json');
+    const versionFile = resolveRepositoryStatePath(root, 'version.json');
     const previousVersion = isUpgrade ? readJsonWithComments<ExistingVersionStamp>(versionFile) : undefined;
     const currentExtVersion = context.extension?.packageJSON?.version ?? '8.0.0';
     fs.writeFileSync(versionFile, JSON.stringify({
@@ -88,7 +128,7 @@ export async function runInitializeLocalRuntimeCommand(
      updatedAt: new Date().toISOString(),
     }, null, 2));
 
-    const statusFile = resolveFrontierStatePath(root, 'state', 'agent-status.json');
+    const statusFile = resolveRepositoryStatePath(root, 'state', 'agent-status.json');
     if (!fs.existsSync(statusFile)) {
      const agentStatus: Record<string, unknown> = {};
      for (const agent of [
@@ -111,7 +151,7 @@ export async function runInitializeLocalRuntimeCommand(
      fs.writeFileSync(statusFile, JSON.stringify(agentStatus, null, 2));
     }
 
-    const configFile = resolveFrontierStatePath(root, 'config.json');
+    const configFile = resolveRepositoryStatePath(root, 'config.json');
     const existingConfig = readJsonWithComments<ExistingConfig>(configFile);
     const provider = existingConfig?.provider ?? existingConfig?.integration ?? existingConfig?.mode ?? 'local';
     fs.writeFileSync(configFile, JSON.stringify({
@@ -128,6 +168,10 @@ export async function runInitializeLocalRuntimeCommand(
     progress.report({ message: 'Finalizing runtime...', increment: 30 });
     mergeGitignore(root);
 
+    if (privateMode) {
+      await agentx.runCli('workspace-state', ['use-repository'], root);
+      agentx.workspaceState.inspect(root);
+    }
     if (!existingConfig) {
       await syncDetectedGitHubAdapter(agentx, { root });
       await syncDetectedAdoAdapter(agentx, { root });
@@ -140,7 +184,10 @@ export async function runInitializeLocalRuntimeCommand(
     vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
     vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 
-    vscode.window.showInformationMessage('Frontier: Local runtime initialized.');
+    vscode.window.showInformationMessage('Frontier: Repository support initialized. Private history, if any, was preserved.');
+
+    // Discover the repository once in the background so Frontier sessions start from the graph.
+    startRepositoryDiscovery(agentx, root);
 
     // Non-blocking advisory: notify if recommended tools are missing (never blocks init).
     checkAllDependencies(agentx).then((report) => {

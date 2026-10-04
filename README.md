@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="docs/assets/frontier-logo.svg" width="128" height="128" alt="Frontier Corp">
+  <img src="vscode-extension/resources/frontier-ai-coding-harness.png" width="128" height="128" alt="Frontier Corp">
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.6.0"><img src="https://img.shields.io/badge/Version-9.6.0-b11f4b?style=for-the-badge" alt="Version 9.6.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.7.0"><img src="https://img.shields.io/badge/Version-9.7.0-b11f4b?style=for-the-badge" alt="Version 9.7.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -24,6 +24,7 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 |:-------------|:----------------|
 | Frontier FDEs | **26 total**: 15 visible roles and 11 internal specialists |
 | Production knowledge | **134 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
+| Reusable delivery assets | **15 templates**, **23 reusable prompt templates**, and **7 root instruction files**, plus scoped instruction sets |
 | Quality discipline | **Risk-based evidenced iterations** (`1/2/3/5`), fresh verification, independent review, scrub, and completion gates |
 | Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
 | Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |
@@ -32,16 +33,9 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 
 ### The core idea
 
-```mermaid
-flowchart LR
-    Intent["User intent"] --> Route{"Frontier Orchestration FDE"}
-    Route --> Plan["Plan and design"]
-    Plan --> Build["Implement"]
-    Build --> Verify["Verify and review"]
-    Verify -->|"findings"| Build
-    Verify --> Capture["Capture learning"]
-    Capture --> Done["Done with evidence"]
-```
+<img src="vscode-extension/resources/diagrams/core-flow.png" width="320" alt="User intent is routed through planning, implementation, verification, learning capture, and completion. Review findings return to implementation.">
+
+[Editable Mermaid source](vscode-extension/resources/diagrams/core-flow.mmd)
 
 Frontier Orchestration FDE can run that path in one session. For tighter control, select a specialist role for only the phase you need.
 
@@ -88,6 +82,9 @@ Frontier uses six shared checkpoints across chat, CLI, issues, plans, reviews, a
 
 ### Quality gates
 
+- Test suites run separately from local loops and reviews. After a completed
+  loop, Frontier asks whether to run the suite and waits for explicit approval.
+  Skipped suites remain not run; CI/release requirements are unchanged.
 - **Iterative loop:** evidence-backed minimums scale by risk: standard `1`, auto-fix `2`, complex delivery `3`, and high-risk `5`
 - **Independent review:** a subagent sees the deliverable, not the author's rationale
 - **Karpathy guidelines:** think before coding, keep it simple, change surgically, verify the goal
@@ -173,6 +170,11 @@ Model names are advisory. Role boundaries, evidence requirements, and tool permi
 
 Frontier also ships GitHub Copilot CLI packs, Claude Code commands, Cursor rules/commands, and PowerShell/Bash launchers.
 
+For Cursor, initialize the local runtime and run `Frontier: Initialize Cursor`.
+Standalone installs use `frontier cursor setup --restore-mcp`. Setup preserves
+user configuration and wires native context/policy hooks without copying agent
+or skill trees. See the [Cursor setup guide](docs/GUIDE.md#cursor).
+
 ---
 
 ## Featured 8.7 Capabilities
@@ -241,12 +243,14 @@ Requirements:
 - PowerShell 7.4+ (`pwsh`) on every OS; the Bash launcher also delegates to PowerShell
 - GitHub Copilot and GitHub Copilot Chat
 
-### 2. Initialize the workspace
+### 2. Use Frontier in a trusted workspace
 
-Open a repository and run this Command Palette action:
+Open a trusted repository and use Frontier chat or commands. Private state is
+created on first use; installation alone supplies the shared agents and skills.
+For optional portable launchers and repository configuration, run:
 
 ```text
-Frontier: Initialize Local Runtime
+Frontier: Initialize Repository Support
 ```
 
 Or use chat:
@@ -304,15 +308,34 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.6.0
+## New In 9.7.0
 
-This release uses the new Frontier AI Coding Harness icon across active branding:
+Frontier 9.7.0 adds repository context and bounded execution:
 
-- Marketplace and chat use the transparent 256x256 PNG
-- the VS Code Activity Bar uses the matching monochrome SVG
-- documentation, the website header/favicon, and Teams icons share the same artwork
-- current release versions and generated artifacts are aligned to 9.6.0
-- functional icons, theme tokens, published history, and dependency versions are preserved
+- discover selected workspaces on demand into a local reference graph, preserve curated
+  map notes, and reuse a cached session primer while refresh runs in the background
+- route Engineer, Architect and UX Designer preferences to GPT-6 Astra on Copilot
+  and other roles to Claude Opus 5.5
+- offer HydraFusion as an experimental opt-in candidate adapter with isolated
+  snapshots, explicit budgets, independent promotion and final source review;
+  native execution remains the default
+
+It also retains the preceding workflow and setup changes:
+
+- loop/review suites are deferred until an explicit post-loop user decision
+- cosmetic lint findings are LOW local advisories; cleanup needs explicit approval
+- `frontier.initializationMode: minimal` skips starter memories and empty output
+  folders while retaining the terminal runtime launchers
+- standard initialization and existing project files remain unchanged by default
+- initialization reads settings from the selected folder, including remote URIs
+- both READMEs use the new Frontier icon and portable PNG workflow diagrams with
+  editable Mermaid sources
+- package README links resolve from the extension subdirectory rather than the
+  repository root
+
+Local validation and remaining provider/platform limitations are recorded with
+the release package. Public publishing and experimental HydraFusion qualification
+remain separate from packaging and source review.
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

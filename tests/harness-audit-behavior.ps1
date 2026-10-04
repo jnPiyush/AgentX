@@ -177,7 +177,7 @@ if ($SubprocessOnly) {
             param($node)
             $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-LoopIterationGuidance'
         }, $false).Extent.Text
-        Assert-True ($guidance -match 'risk-scoped final evidence' -and $guidance -notmatch 'full-suite') 'Loop guidance selects final checks by risk, not a blanket full suite'
+        Assert-True ($guidance -match 'non-test final evidence' -and $guidance -match 'ask whether to run suites' -and $guidance -notmatch 'full-suite') 'Loop guidance separates non-test review from the post-loop test offer'
         $evaluator = $source.Find({
             param($node)
             $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-CodeQualityEvaluator'
@@ -202,7 +202,8 @@ if ($SubprocessOnly) {
         $offset = $writtenAt.AddSeconds(-1).ToOffset([timespan]::FromHours(5.5)).ToString('o')
         Assert-True (Test-LoopEvidenceFreshness $artifact ([PSCustomObject]@{ lastIterationAt = $offset })) 'Equivalent offset timestamp does not reject fresh evidence'
         $baseline = [PSCustomObject]@{ passing = 10 }
-        Assert-True (-not (Test-LoopPassingBaseline $baseline $null 'fixture')) 'Missing passing count is rejected'
+        Assert-True (Test-LoopPassingBaseline $baseline $null 'fixture') 'Omitted passing count is accepted while tests are deferred'
+        Assert-True ($baseline.passing -eq 10) 'Deferral does not replace the recorded baseline with a fabricated count'
         Assert-True (-not (Test-LoopPassingBaseline $baseline 9 'fixture')) 'Lower passing count is rejected'
         Assert-True (Test-LoopPassingBaseline $baseline 10 'fixture') 'Matching selected-surface count is accepted'
         foreach ($scenario in @('noisy', 'exit-error', 'timeout', 'missing')) {

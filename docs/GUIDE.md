@@ -37,13 +37,13 @@ Hypervelocity Engineering platform, Frontier.
 ```powershell
 # PowerShell -- into an existing project directory
 cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.ps1 | iex
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.ps1 | iex
 ```
 
 ```bash
 # Bash
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.sh | bash
 ```
 
 **What happens**: Frontier copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
@@ -156,8 +156,8 @@ Each agent produces a deliverable, validates it, and hands off to the next.
 ./install.sh
 
 # One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash  # Bash
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.ps1 | iex    # PowerShell
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.sh | bash  # Bash
 ```
 
 PowerShell install path note:
@@ -180,22 +180,56 @@ shell-argument, review-state, parity, rollback and code-quality tests on native
 Ubuntu and macOS runners. A configured job is not a passing result: inspect its
 run for the current commit before claiming native platform verification.
 
-`--passing` is optional. The default evidence for an iteration is a Spec/ADR/PRD
-acceptance-criteria compliance mapping plus the sub-agent review findings, so an
-iteration that ran no suite simply omits the flag. When a step did run suites,
-report their counts: `--passing unit=12,api=40`. Each suite is compared only with
-its own last count, so a step reruns only the suites its change affects;
-`frontier loop affected` lists tests naming code changed since loop start.
-`loop baseline -c <suite>=<count>`
-records an intentional drop. An integer baseline (`loop baseline -c <count>`) keeps
-the older rule: each later iterate and complete needs an integer count no lower.
-A count proves neither a test run nor review independence; evidence and an
-attributed final review are still required.
+Quality loops and reviews do not execute test suites. They use acceptance
+mapping, independent review and non-test verification such as builds,
+typechecks, lint and schema checks. Tests can be authored and inspected without
+being reported as executed.
 
-For small changes, run checks covering the affected behavior and direct callers,
-recording commands and omitted surfaces with rationale; expand for shared
-contracts, broad changes or required CI/release gates, not for iteration count.
-The VS Code dialogs accept either count form, including zero.
+After successful `loop complete`, the owning agent asks whether to run the
+test suite and waits. The VS Code completion command offers **Run Test Task**
+or **Not Now**. Run Test Task uses VS Code's configured test task; configure a
+task in the `test` group if your workspace has none. It does not guess a shell
+command or report a test pass merely because the task was opened. Terminal and
+MCP completion output includes the same question for the host to surface.
+
+Approval to test is not approval to edit source or bypass workspace guards.
+Use the host test runner/configured task. If a host's terminal-write guard
+blocks an agent after loop completion, run the agreed command directly in
+your terminal; do not reopen a loop merely to unlock a test run.
+
+Declining or dismissing the offer leaves suites not run and coverage not
+measured. Approval starts a separate verification task. A failing suite still
+requires investigation; code corrections use a new fix/review loop.
+
+`--passing` remains optional metadata for actual supplied test evidence. An
+integer baseline no longer forces a count when tests are deferred. Explicit
+malformed or lower counts still fail; omission never invents a zero/pass count.
+The editor no longer asks for test counts during iterate/complete.
+`frontier loop affected` only lists candidate tests for the post-loop offer.
+
+CI jobs and mandatory release/certification checks remain unchanged. Local
+code-review approval is not a waiver of those gates or a claim that tests pass.
+
+### Advisory lint and optional cleanup
+
+Lint/hygiene checks still run during loops and reviews, but cosmetic findings
+are LOW advisories rather than local Done Criteria. Use:
+
+```powershell
+pwsh .\.frontier\runtime\frontier.ps1 scrub -Path <changed-area> -Advisory
+```
+
+The scan is read-only. It preserves original tool severity and strict-gate
+metadata, reports LOW candidates and does not block local completion for those
+findings. A scan failure is still an error, and exit code zero does not mean
+lint is clean. `-Advisory` cannot be combined with `-Fix` or `-Production`.
+
+The owning agent reports affected files and asks whether you want cleanup.
+No affirmative answer means no fixes. Approved cleanup is a separate bounded
+task; it is not silently added to feature work. Build/type errors and proven
+correctness, security, reliability or accessibility defects retain their
+impact-based severity. CI, commit and production checks may still enforce
+their existing rules; advisory handling does not waive them.
 
 ### Recovering evidence verification
 
@@ -207,17 +241,27 @@ artifact freshness before the expensive evaluator.
 
 - Checker timeout/startup failure: inspect the reported checker and its dependencies,
   then retry; do not regenerate unrelated test suites or disable verification.
-- Missing or regressed passing count: rerun that suite and report its real result;
-  lower a suite's count only for an intentional change, never with another suite.
+- Missing count: omit it while suites are deferred. Explicit regressed counts
+  remain invalid; report the real evidence and offer any retest after the loop.
 - Stale final evidence: run a fresh, scoped final check after the review iteration
   and submit its real output. Never touch timestamps or copy old evidence to pass.
-- Changed hashes or review findings: rerun affected tests and obtain a new review.
+- Changed hashes or review findings: refresh non-test checks and obtain a new
+  review; suite execution still needs the separate post-loop decision.
 - Complete the loop before committing; an active loop is rejected by the commit hook.
 
-Architect and UX Designer request `GPT-6 Astra (copilot)`. Copilot API catalog
-metadata verified `gpt-6-astra` with Responses transport; other providers are not
-silently substituted. Catalog availability is not a measured architecture or UX
-quality comparison, and each end user's account must expose the selected model.
+Engineer, Architect and UX Designer request GPT-6 Astra; every other agent
+requests Claude Opus 5.5. Cross-family review requires a separately invoked
+reviewer and host-confirmed model selection. The CLI's automatic self-review
+reuses the author's model and effort. Astra resolves only on Copilot without
+silent substitution. Opus 5.5 uses adaptive thinking without sampling parameters;
+each account must expose the selected model.
+
+Frontier workspaces keep a repository graph that initialization builds in the
+background and session starts refresh when stale; sessions receive a bounded
+primer and task-specific source pointers without waiting for discovery. Run
+`frontier context -q "<task>"` to query it or `frontier context --sync` to update it now.
+See [Repository graph context](guides/REPOSITORY-CONTEXT.md) for curation,
+incremental refresh, output limits and host-specific startup behavior.
 
 The lifecycle signal hook records event, session and tool metadata only. It does
 not persist prompts, tool arguments, tool results or error payloads. This change
@@ -237,6 +281,31 @@ Configuration, issues, state, sessions, memory and digests are preserved under
 `.agentx/` and `.hve/` state is not read and not migrated: the runtime ignores
 those folders and leaves them untouched. Copy anything you still need out of them
 manually, then delete them.
+
+### Frontier-only interfaces
+
+AgentX/HVE compatibility aliases are no longer supported. Update automation and
+configuration to current names before using the runtime:
+
+- Use `frontier.*` editor settings and commands and `frontier_*` MCP tools.
+- Use `FRONTIER_WORKSPACE_ROOT`, `FRONTIER_REPO_ROOT` and
+  `FRONTIER_EXTENSION_ROOT` for workspace, server and launcher configuration.
+  Old `AGENTX_*` and `HVE_*` variables are ignored.
+- Use `FRONTIER_*` provider options, such as `FRONTIER_LLM_PROVIDER` and
+  `FRONTIER_OPENAI_BASE_URL`. Provider-standard secrets such as `OPENAI_API_KEY`
+  and `ANTHROPIC_API_KEY` retain their meaning.
+- Installer overrides use `FRONTIER_MODE`, `FRONTIER_PATH`, `FRONTIER_AZURE`,
+  `FRONTIER_NOSETUP` and `FRONTIER_INSTALL_ARCHIVE`.
+- Re-enter editor credentials under the Frontier namespace if they were saved
+  only under AgentX/HVE keys. Those old secrets are not read, migrated or deleted.
+- Plugin manifests and registry entries use `engines.frontier`, not
+  `engines.agentx` or `engines.hve`. Version ranges are not changed automatically.
+- Use the `frontier` orchestration role ID in native requests and handoffs.
+
+The published `jnPiyush.agentx` extension ID and `jnPiyush/AgentX` repository
+coordinate remain unchanged. Current Frontier version upgrades, state modes and
+ownership checks remain supported; retiring old product aliases does not remove
+their safety checks.
 
 ### Install Profiles
 
@@ -266,7 +335,7 @@ Control what gets installed with the `-Profile` flag:
 ./install.sh --no-setup
 
 # One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash
+PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.sh | bash
 ```
 
 ### What the Installer Does
@@ -287,8 +356,34 @@ Frontier supports three host surfaces. Pick the one that matches how you work.
 ### 1. VS Code extension (default)
 
 Install the Frontier extension. It contributes all 26 agents, 134 skills and the
-instruction files directly to the host -- nothing is copied into your
-workspace. This is the zero-copy path.
+instruction files directly to the host without copying those framework trees
+into your workspace. Initialization still writes workspace configuration,
+state and terminal launchers.
+
+For the smallest initial scaffold, configure:
+
+```json
+{
+  "frontier.initializationMode": "minimal",
+  "frontier.seedRepoLocalAssets": false
+}
+```
+
+Ordinary extension use now provisions private state lazily; repository setup is
+optional. For these portable launchers run `Frontier: Initialize Repository
+Support`, not `Initialize CLI`. The generated
+launchers also support Frontier terminal commands:
+
+```powershell
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 help
+```
+
+Minimal mode skips starter memory files and empty documentation/output
+directories; those can be created when work needs them. It preserves existing
+files and requires asset seeding to be disabled. The default `standard` mode
+retains the previous scaffold. See the [initialization
+contract](../vscode-extension/README.md#minimal-workspace-setup) for the exact
+files and the conditional GitHub MCP configuration.
 
 To use Frontier in the **Agents window** (VS Code's dedicated agent surface),
 opt the extension in:
@@ -307,14 +402,33 @@ opt the extension in:
 
 ### 2. GitHub Copilot CLI -- native plugin
 
-The repository root ships a `plugin.json`, so Copilot CLI can register Frontier's
-agents, skills and lifecycle hooks without copying anything:
+The repository root ships a `plugin.json`. A managed plugin installation keeps
+its framework assets outside each application workspace:
 
 ```bash
 copilot plugin install jnPiyush/AgentX
 copilot plugin list
-copilot --agent engineer -p "Implement the health endpoint"
 ```
+
+Alternatively, launch Copilot from your application directory and point
+`--plugin-dir` at one shared Frontier checkout. On Windows, for example:
+
+```powershell
+copilot --plugin-dir "C:\Tools\AgentX" plugin list
+copilot --plugin-dir "C:\Tools\AgentX"
+```
+
+Replace the example path with your shared checkout. This does not install the
+VS Code extension or initialize Frontier state, and a managed plugin has its
+own version/update lifecycle.
+
+Plugin discovery is not a full workflow compatibility test. Current Frontier
+hooks and some gate commands contain workspace-relative paths. Before relying
+on a plugin-only application workspace, verify hook execution, reference
+resolution, and gate output locations. Do not assume `--plugin-dir` rewrites
+shell commands or makes every workflow portable. Use the bundled Frontier CLI
+launchers for Frontier runtime operations; use workspace seeding below when
+repo-local Copilot assets are required.
 
 ### 3. GitHub Copilot CLI -- workspace seeding
 
@@ -330,7 +444,13 @@ Two modes are available via the `frontier.cliAssetMode` setting:
 | Mode | Behaviour | Use when |
 |------|-----------|----------|
 | `copy` (default) | Duplicates bundled assets into the workspace | You want the assets committed and shared with a team |
-| `symlink` | Creates directory junctions into the installed extension bundle | Single-user, zero-copy; entries are added to `.gitignore` and refreshed on upgrade |
+| `symlink` | Links the eight `.github/` asset trees to the installed bundle; copies supporting files | Single-user, reduced duplication; linked entries are gitignored. Activation detects broken recorded targets and matching versioned installs in this host's extension directory, then offers an explicit Repair links action |
+
+Select the desired mode in the initialization dialog. Symlink mode still copies
+supporting docs, scripts, evaluation rubrics, packs, runtime plugins and
+standalone reference documents. Existing real directories are preserved, not
+converted to links. Neither setting changes nor reinitialization remove old
+copies; cleanup requires distinguishing generated files from project content.
 
 Seeding never overwrites existing files, and never writes host-owned files such
 as `.github/workflows`, `.github/ISSUE_TEMPLATE`, `CODEOWNERS` or `LICENSE`.
@@ -341,9 +461,13 @@ registrations so each agent appears once in the picker:
 ```jsonc
 // .vscode/settings.json
 {
-  "chat.agentFilesLocations": { ".github/agents": false }
+  "frontier.useBundledAgents": false,
+  "chat.agentFilesLocations": { ".github/agents": true }
 }
 ```
+
+This selects workspace agents instead of extension agents. Reload the window
+and start a new agent session after changing the selection.
 
 ### Standalone install (no VS Code extension)
 
@@ -374,72 +498,393 @@ new-ADR council gate. A single model playing three roles is incomplete, even if
 all roles respond. VS Code host vendor names do not prove training diversity.
 Historical councils are not rewritten by these checks.
 
-### HydraFusion Research Preview
+### Guided Interaction
 
-Use GitHub's native HydraFusion workflow when available; do not emulate it by
-adding a guessed model ID to Frontier's API model map. Frontier's `copilot`
-provider uses model APIs (chat completions or Responses), whereas HydraFusion orchestrates a complete
-native Copilot CLI task. Model Council and Frontier's independent review gates
-are separate capabilities and remain required.
+User-facing Frontier tasks follow the shared guided contract: inspect relevant
+context, clarify consequential uncertainty, propose a high-level plan, obtain
+approval, and report milestone outcomes. Clear requests need no artificial
+question; direct informational answers need no execution plan. Delegates reuse
+the parent's scope and report uncertainty to that parent.
 
-The native-first evaluation on 2026-09-15 confirmed Copilot CLI `1.0.84-2` can
-start an experimental ACP session. Its account-specific session catalog returned
-23 model choices, including Auto, but no HydraFusion entry. This blocks a
-verified automated integration on that tested surface. It does not establish
-that HydraFusion is unavailable in the interactive picker or on other accounts.
-No HydraFusion solver run, custom-agent compatibility, usage aggregation or
-cancellation/patch behavior has been verified in Frontier yet.
+Native `frontier run` defaults to guided execution. It allows bounded read-only
+discovery before approval and exposes `request_user_input`, `propose_plan` and
+`report_progress`. The runtime assigns plan versions, milestone IDs and hashes.
+A proposal or question suspends the run with exit 2 and durable pending state.
+Later tool calls in the same batch are declined, not replayed.
+Invoking `run` starts a task, so a plain final reply cannot bypass its plan.
+The informational-answer exception applies to direct host conversations, not
+to an implicit change of mode inside a native task.
 
-#### Interactive Opt-In
+The native run exit contract is:
 
-Use a disposable test checkout with Frontier's native plugin or seeded agents
-already configured. Do not run a second editing agent against an active checkout.
-Start the native CLI, keeping normal permission prompts:
+| Exit | Meaning |
+| --- | --- |
+| 0 | Execution finished; independent review and test gates are not implied |
+| 1 | Error, incomplete work or failed verification |
+| 2 | Existing session awaits user input |
+| 3 | Candidate awaits owner review or verification |
+| 4 | Task cancelled; history preserved |
+
+Use your initialized workspace's `.frontier/runtime/frontier.ps1` launcher for
+the commands below (`frontier` denotes that launcher):
 
 ```powershell
-copilot --experimental
+frontier run engineer "Implement the agreed fixture change"
+frontier run --session-info '<session-id>' --json
+frontier run --resume-session '<session-id>' --input-id '<input-id>' --input-decision approve --plan-version 1 --plan-digest '<sha256>'
+frontier run --resume-session '<session-id>' --input-id '<input-id>' --input-decision revise --plan-version 1 --plan-digest '<sha256>' --clarification-response "Keep the existing API"
+frontier run --resume-session '<session-id>' --input-id '<input-id>' --input-decision answer --clarification-response "Use the existing API"
+frontier run --resume-session '<session-id>' --input-id '<input-id>' --input-decision cancel
 ```
 
-In that interactive session:
+Copy IDs and hashes from the current pending record, not an earlier plan.
+Approval with edits is rejected: revise first, then approve the new version.
+Answering a question, dismissing a dialog, timeout, or silence never approves.
+Consequential new questions during guided execution remove the old approval;
+required action-specific consent is kept separate.
 
-1. Check `/version`. Update through `/update` if needed, then restart. Multiple
-  installations and cached updates can resolve to different CLI versions.
-2. Select the intended Frontier agent through `/agent` and verify `/env` lists
-  the expected instructions and hooks. Do not disable them for a coding task.
-3. Open `/model` and select `HydraFusion (Research Preview)` if offered. Verify
-  the active model after agent selection; do not change global defaults.
-4. Review `/limits` and billing terms before sending one bounded task. The tested
-  CLI accepts a minimum of 30 AI credits for `--max-ai-credits`; this is a soft
-  limit, not an estimated charge or a hard spending guarantee.
-5. Inspect the resulting diff, run the task's tests and complete Frontier's
-  independent review. HydraFusion's internal critique is not proof that the
-  repository's review gate passed.
+Session state is workspace/role/engine/provider/model/permission-bound, locked
+while running, and atomically saved. Native file tools cannot edit it. A stale,
+corrupt or cross-workspace record fails explicitly. To resume an interrupted,
+already-authorized run, inspect its status and effects first, then use
+`--input-decision continue` with the current plan version and hash, without an
+input ID. Missing tool results are marked unknown, never automatically replayed.
+A completed or cancelled run cannot consume the same approval again. An
+interrupted session without pending input can also be cancelled with
+`--input-decision cancel` and its current plan version/hash instead of an input ID.
+Once a plan is recorded, model-availability failures do not transfer its
+authorization to a fallback model. Cancel and create a new scoped task instead.
+Existing configured model fallbacks remain available before a plan is recorded.
+The original per-run iteration and reported-token budgets survive resume;
+omitting `--max` does not reset a smaller limit to 30. These are per invocation,
+not a cumulative price guarantee. Unreported token usage remains unknown.
+Stored sessions are limited to 32 MB on both save and read. An oversized save
+fails explicitly and leaves the previous checkpoint intact.
 
-If the picker does not offer HydraFusion, stop and check CLI updates and account
-or organization availability. Do not substitute Auto or another model while
-reporting the result as HydraFusion. Do not add `--allow-all` or `--yolo` to make
-an unattended probe work.
+For an explicitly preauthorized bounded task, use
+`frontier run engineer "Approved scope" --interaction autonomous`. This records
+caller authorization, not a user-approved plan. Required questions still pause.
+`watch --execute` and `sprint` pause on pending input; their explicit
+`--autonomous` option supplies preauthorization. This does not add an
+`--autonomous` flag to the separate artifact-driven `ship` script.
+Neither mode waives role permissions, budgets, quality review or test consent.
 
-#### Evaluation Findings And Next Gate
+| Surface | Interaction support |
+| --- | --- |
+| Native Copilot/direct API runner | Enforced plan state, guarded writes, durable input and progress |
+| Frontier VS Code chat | Full plan display, explicit approval/revision/cancel replies, stale-input checks and streamed milestones |
+| MCP `frontier_run` / `frontier_resume` | Genuine client form elicitation when supported; otherwise durable pending state and trusted CLI continuation |
+| Direct Copilot/Claude/Cursor role invocation | Shared conversational guidance; no claim that Frontier enforces approval on host-owned tools |
+| Native Claude Code bridge | Text-only; guided tool execution is unavailable, and no provider fallback is attempted |
+| HydraFusion candidates | Explicit bounded automation authorization required; native guided plan transfer is not supported |
 
-The account catalog was read using ACP `initialize` and `session/new`, with no
-`session/prompt` call. An earlier `-p "/model"` probe instead invoked Sonnet once;
-it is not model-discovery or HydraFusion evidence. The same build treated an
-empty `--available-tools=` as default tools, not a tool-less configuration.
-Do not rely on either behavior for automation. No repository files were exposed
-to those probes; they used separate temporary workspaces and settings.
+MCP clients must implement form elicitation to collect decisions. Form acceptance
+alone is insufficient; the user must explicitly approve the displayed plan.
+Milestones stream over MCP progress notifications when the client requests them.
+Host confirmation is trusted as client input, not cryptographic proof of a human.
 
-Before adding an automated Frontier entry point, verify a supported native
-selector, explicit opt-in, model-selection fidelity, custom-agent/tool boundaries,
-timeout/cancellation behavior, one final validated patch, and complete usage
-reporting. Preserve unsupported, denied and failed states without silent model
-fallback. Keep the existing provider path unchanged until these checks pass.
+Milestone evidence is agent-reported and labeled accordingly. Runtime approval
+does not prove semantic adherence to a free-text scope; role path guards and
+independent review still apply. Execution completion does not close the owner
+quality loop, grant review approval, or claim that deferred suites passed.
+New runtime/session behavior requires updated installed assets; this source
+change does not update an already installed extension automatically.
+
+### HydraFusion Execution Engine
+
+HydraFusion is an opt-in, experimental candidate generator. GitHub chooses its
+Single, Cascade or Critique workflow; Frontier owns isolation, budgets,
+validation and acceptance. Native execution remains the default. Use this
+initial pilot for bounded read/edit tasks, not unattended deployment, shell
+automation or a replacement for independent review.
+
+Native entry requires `--interaction autonomous` for the explicitly authorized
+candidate task. MCP obtains that authorization through client form elicitation.
+Selecting `executionEngine=hydrafusion` alone does not grant it.
+
+Requirements are Copilot CLI 1.0.89 or later with the required isolation flags,
+a supported Copilot account, Git, PowerShell, an initialized Frontier workspace
+and an active owner quality loop. The adapter runs the CLI in a private home;
+authentication is supplied only through its process environment using
+`COPILOT_GITHUB_TOKEN` or Frontier's existing GitHub-token helper.
+
+Set an explicit aggregate credit budget in `.frontier/config.json`; the following
+is an example budget, not an estimated charge:
+
+```json
+{
+  "executionEngine": "native",
+  "hydrafusion": {
+    "maxAiCredits": 60,
+    "timeoutMinutes": 15,
+    "maxAttempts": 2
+  }
+}
+```
+
+```powershell
+.\.frontier\runtime\frontier.ps1 engine
+.\.frontier\runtime\frontier.ps1 loop start -p "Implement the login form"
+.\.frontier\runtime\frontier.ps1 run engineer "Implement the login form" --engine hydrafusion --max 12
+```
+
+`engine` inspects CLI version/capabilities without a model call; it does not
+verify account entitlement or certify production readiness.
+
+#### Candidate lifecycle
+
+1. Capture eligible current working-tree bytes, including dirty and untracked
+   inputs, in an independent snapshot repository outside the source checkout.
+   No Git metadata, remote, hardlink or branch is shared with the original.
+2. Generate a temporary unpinned agent and a native `preToolUse` policy. Only
+   contained read/search/edit tools are available. Shell, web, MCP and nested
+   agent tools are unavailable; extra `allowTools` grants are rejected.
+3. Run one bounded CLI attempt. Require a resolved HydraFusion route, matching
+   phase completions, a successful terminal result and well-shaped usage data.
+   Exceptions and cancellation stop the owned process before artifacts freeze.
+4. Audit the full candidate filesystem, independently of the CLI's change list.
+   Check additions, deletions, rename sources, ignored additions, links and
+   protected paths. Save a binary-capable patch and content/policy hashes.
+5. Return `candidate_ready` with exit code `3`. The source checkout is unchanged.
+   `watch`, `sprint` and MCP treat this as pending rather than delivered work.
+   The `ship` delivery wrapper refuses to advance while a candidate is pending.
+6. A separate reviewer inspects the frozen candidate. The owner records that
+   review, then explicitly accepts it. Promotion verifies the source baseline,
+   exact candidate bytes, policy and approval before applying any patch.
+7. The applied revision remains `applied_pending_verification`. Verify the actual
+   source revision and obtain a fresh independent review before completing the
+   owner loop. Candidate approval alone cannot satisfy `loop complete`.
+
+Records and the owner-loop budget ledger live in
+`.frontier/state/hydrafusion/`. The record identifies the retained temporary
+workspace, patch, response and hashes; the task itself is stored only as a hash
+in Frontier's record. The private CLI profile is removed after confirmed
+termination. Inspect or discard owned artifacts with:
+
+```powershell
+.\.frontier\runtime\frontier.ps1 engine inspect <candidate-id> --json
+.\.frontier\runtime\frontier.ps1 engine discard <candidate-id>
+```
+
+The host-side record, process receipts and budget ledger are durable under
+`.frontier/state/hydrafusion/`; they do not depend on the temporary snapshot
+surviving OS cleanup. Losing that snapshot prevents new acceptance or refinement,
+but a stopped, unpromoted record can still be discarded. Already applied work
+still needs final source review, and losing temporary files does not erase that
+review obligation or block a review that was properly completed.
+
+Discard is only for candidates that have never started promotion. Applied,
+mid-apply and recovery-required records cannot be erased with this command.
+The delivery gate checks every attempt, not just the latest; only the latest
+settled candidate can be accepted. A discarded task still needs a fresh
+independent source review before the owner loop can complete.
+
+#### Independent review and promotion
+
+Use the canonical code-quality rubric against the retained candidate workspace.
+The report also needs `verdict` and a `candidate` object containing the exact
+`runId`, `baselineSha256`, `patchSha256`, `responseSha256`, `manifestSha256` and
+`policySha256` values shown by `engine inspect`. Do not synthesize reviewer
+scores or treat the worker's own response as an approval.
+
+The review file MUST be under the source workspace's `.frontier/state/`, outside
+the candidate. The owner records the actual independent review through the
+existing loop mechanism:
+
+```powershell
+.\.frontier\runtime\frontier.ps1 loop iterate -s "Independent candidate review" -e .frontier\state\candidate-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low 0
+.\.frontier\runtime\frontier.ps1 engine accept <candidate-id> --review .frontier\state\candidate-review.json
+```
+
+An approval label is insufficient: the report digest must match the archived
+owner-loop evidence, all candidate bindings must match, and the canonical
+validator must accept the report. The host/controller is trusted to attest
+actual reviewer independence; hashes prove content binding, not human identity.
+
+Promotion needs a quiescent checkout. Frontier's lock serializes Frontier
+operations, not unrelated editors. Drift or conflicts reject promotion; an
+interrupted or partially failed application is `recovery_required`. Inspect
+the source and retained candidate rather than rerunning or rolling back the
+whole working tree automatically. Application does not stage or commit files.
+
+#### Interrupted execution recovery
+
+Each launch writes a host-owned process receipt containing PID, executable and
+process-start identity; PID reuse does not authorize terminating another
+process. A durable zero-usage `preparing` record precedes budget reservation, so
+setup failures before scratch creation remain recoverable. Cancellation records
+a stopped terminal state even when PowerShell
+skips its `catch` block. If an outer host terminates the owner before `finally`
+finishes, use:
+
+```powershell
+.\.frontier\runtime\frontier.ps1 engine recover <candidate-id>
+.\.frontier\runtime\frontier.ps1 engine discard <candidate-id>
+```
+
+Recovery acquires the workspace lock, stops the recorded child if necessary,
+reconciles the active ledger marker once, and marks billing unknown rather than
+refunding the attempt. It never promotes output or authorizes another model
+call. Repeating recovery after a partial ledger write is safe; a completed
+failure retains its original status, reason and known billing. A missing receipt
+or interruption before child identity capture cannot
+be repaired by guessing a PID: confirm process-tree shutdown externally and
+cancel that owner loop explicitly. Recovery does not resolve a partial source
+promotion; retain those artifacts for manual postimage inspection.
+
+For `applying` or `recovery_required` after promotion, stop editing and inspect
+the candidate manifest and the actual source files. Manually finish the named
+changes or restore their recorded preimages without touching unrelated user
+work. Then cancel the old owner loop and start a new one with
+`--include-existing-changes`, referencing the retained run ID and recovery
+evidence. Verify the repaired source and obtain a fresh independent review in
+that loop before completion. Do not repeatedly call accept, or delete records
+to bypass this recovery boundary.
+
+#### Bounded refinement and budgets
+
+- There are no automatic retries, fallbacks or unbounded self-review loops.
+  Default maximum is two attempts; the configurable range is one to three.
+- Attempt two needs independently recorded `changes-requested` feedback bound
+  to attempt one's candidate, with a nonempty `feedback` string in the report.
+  Repeat the same task/role with `--feedback <report.json>`. A patch or no-change
+  response repeated from any earlier attempt stops as `no_progress`, including
+  an A-to-B-to-A cycle.
+- One locked owner-loop ledger reserves attempts and accumulates observed model
+  calls, credits and active elapsed time. A fresh run ID cannot reset it.
+  Unknown usage blocks another attempt; failures and rejected work are retained.
+- `--max` limits observed model-call starts across the task, including compound
+  legs. A call-start event can arrive after dispatch, so termination is not a
+  guarantee of zero overshoot. Copilot's AI-credit cap is also soft.
+- Credit budgets must be explicit integers from 30 to 100000. Time budgets are
+  one to 120 minutes across attempts; insufficient remaining budget stops work.
+  MCP adds its existing ten-minute transport deadline and passes a shorter
+  inner deadline to leave cleanup time. Forced transport termination can still
+  require `engine recover`.
+- Native `harness.tokenBudget`, `--model`, native-session resume and extra tool
+  grants are unsupported by this adapter and rejected rather than silently
+  ignored. Choose `--engine native` when those contracts are required.
+
+#### Isolation limits and pilot qualification
+
+Snapshot limits are 20000 files, 32 MiB per file, 512 MiB total and 100000
+filesystem entries. Excluded inputs include secrets, links, generated/vendor
+output, mutable Frontier state and executable discovery configuration.
+Omissions are recorded; if required context is excluded, use the native engine.
+
+Private configuration and explicit native hooks prevent inherited permission
+approvals from authorizing model edits. Hook errors deny operations; GitHub
+documents hook timeouts as fail-open, so there is no blanket write grant and
+candidate validation remains independent. This is application-level isolation,
+not an OS sandbox against a malicious CLI binary or administrator.
+
+Earlier one-file smoke runs established that CLI delegation can work, not that
+HydraFusion beats the current native model configuration. Before expanding this
+pilot, compare matched, representative coding tasks with the same acceptance
+checks and budgets. Record accepted-task success, all-attempt cost, latency,
+review effort and failure/cancellation behavior. Missing measurements remain
+unknown. Live comparisons require an explicit budget; offline fixtures do not
+establish model quality or cost savings.
 
 References: [HydraFusion announcement](https://github.blog/ai-and-ml/github-copilot/project-hydrafusion-frontier-quality-via-multi-model-orchestration/),
 [Copilot CLI command reference](https://docs.github.com/en/copilot/reference/cli-command-reference),
-and [ACP reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/acp-server).
+and [custom agent tool aliases](https://docs.github.com/en/copilot/reference/custom-agents-configuration#tool-aliases).
 
 ---
+
+## Cursor
+
+Cursor uses thin commands and rules over the installed Frontier runtime. It does
+not need copied agent or skill trees.
+
+### Extension-based setup
+
+1. Install/update Frontier and run `Frontier: Initialize Repository Support` in the
+   target workspace.
+2. Run `Frontier: Initialize Cursor`. This configures the 18 role commands,
+   scoped rules, native hooks and workspace-bound MCP entry.
+3. Reload Cursor if its command or hook discovery has not refreshed.
+
+PowerShell 7.4+ and Node.js 18+ must be available to the editor's child processes.
+The extension includes the pinned MCP server/SDK. Setup does not download
+dependencies or change global settings. Existing user servers, hooks and custom
+rules are preserved; a conflicting `frontier` server name or malformed JSON is
+reported rather than overwritten.
+Setup also rebinds managed workspace launchers to this installation. The
+Cursor-bound launcher prefers that runtime, then its version-directory siblings
+and Cursor extension locations if an update removes it. It does not select a
+newer unrelated VS Code installation. Explicit runtime overrides must support
+Cursor. Setup and MCP use the same workspace launcher.
+
+### Standalone setup
+
+Use `install.ps1 -Cursor` or `install.sh --cursor` to configure Cursor during
+installation. Otherwise the installer leaves MCP/native-hook registration
+disabled until this explicit step:
+
+```powershell
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 cursor setup --restore-mcp
+```
+
+Restoration uses the existing MCP lock with `npm ci --ignore-scripts --omit=dev`;
+no global npm installation occurs. A dependency failure prevents registration.
+Do not use restoration to modify an installed extension: update/reinstall the
+extension if its bundled dependencies are missing.
+
+Re-run setup after updating Frontier. Unmodified Frontier-owned files and
+recognized legacy wrappers can update; edited overrides are preserved and listed.
+The installer also preserves shared Cursor JSON during force upgrades.
+Concurrent setup operations are rejected. After an interrupted setup, confirm
+its process has stopped before removing `.frontier/cursor-setup.lock` and retrying.
+The source manifest marks shared MCP/hook JSON. Installers project that inventory
+onto the deployed layout: optional user JSON is excluded, while all 26 private
+canonical templates are tracked. Thus installs without Cursor opt-in do not
+report missing user configuration or claim ownership of unrelated user servers.
+
+### Runtime and hook behavior
+
+```powershell
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 cursor status
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 cursor read .github/AGENT-PROTOCOL.md
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 cursor read .github/agents/engineer.agent.md
+```
+
+The read command resolves canonical framework contracts from the installed
+runtime. Follow referenced contract paths through the same command; application
+source and deliverables remain in the consumer workspace.
+For gate scripts not wrapped by a Frontier command, `cursor status` reports
+`assetRoot`. Use the script under that root and explicitly pass its workspace
+selector (for example, `-WorkspaceRoot` for `score-code-quality.ps1`).
+
+Native `sessionStart` injects the cached graph primer using Cursor's
+`additional_context` contract. It does not start a quality loop. Native
+`preToolUse` maps Cursor tools to the existing Frontier policy engine and emits
+Cursor permission responses. Hook errors deny tool execution; session-context
+failures provide explicit fallback guidance. Run shell tools from the workspace
+root so relative paths have the same meaning to the host and policy engine.
+MCP tools retain the shared policy's behavior and the host/server permission
+boundaries; the Cursor adapter does not introduce a separate MCP authorization
+policy or require an editing loop merely to inspect another server's data.
+Direct MCP file-write methods are denied even when Cursor omits the provider
+name. Read-only tools and subagent dispatch do not require an editing loop.
+
+MCP uses a small Node launcher that resolves the current runtime through the
+workspace wrapper before opening the protocol stream. This avoids persistent
+stdio buffering through nested PowerShell script launchers. The SDK and server
+remain in the installed runtime; they are not copied into the workspace.
+Startup resolution is metadata-only, so the SDK loads once in the server.
+The resolver allows up to 120 seconds for a cold, busy desktop and reports a
+retry/restart instruction on timeout without retrying automatically. Policy
+processing has a 30-second inner deadline inside a 60-second host-hook budget;
+permission failures still deny the action.
+Reinstalling the local runtime preserves the Cursor binding when its setup
+ownership record is present.
+
+The canonical risk-based loop, independent review and post-loop test-consent
+rules apply; Cursor no longer has a separate five-iteration minimum. These hooks
+are application-level controls, not an OS sandbox. Disabling hooks disables that
+host enforcement. Cursor's cloud-host hook support may differ; local protocol
+checks do not establish live or cross-platform Cursor qualification.
 
 ## Companion Extensions
 
@@ -1181,7 +1626,7 @@ go install github.com/github/github-mcp-server@latest
 
 | Problem | Solution |
 |---------|----------|
-| Git hooks not working | Run `agentx hooks install`; it resolves Git's active `core.hooksPath`, installs all three hook sources, and verifies their bytes. |
+| Git hooks not working | Run `frontier hooks install`; it resolves Git's active `core.hooksPath`, installs all three hook sources, and verifies their bytes. |
 | Permission denied on scripts | Linux/Mac: `chmod +x .github/scripts/*.sh`; Windows: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | GitHub CLI not authenticated | `gh auth login` (install first: `winget install GitHub.cli` / `brew install gh`) |
 

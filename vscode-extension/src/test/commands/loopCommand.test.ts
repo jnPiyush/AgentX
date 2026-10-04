@@ -2,7 +2,6 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerLoopCommand } from '../../commands/loopCommand';
-import { isPassingCountInput } from '../../commands/loopCommandInternals';
 import { FrontierContext } from '../../frontierContext';
 
 // ---------------------------------------------------------------------------
@@ -14,7 +13,7 @@ describe('registerLoopCommand', () => {
   let fakeContext: vscode.ExtensionContext;
   let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let registeredCallbacks: Record<string, (...args: unknown[]) => unknown>;
-  let infoSpy: sinon.SinonSpy;
+  let infoStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -27,9 +26,12 @@ describe('registerLoopCommand', () => {
     fakeAgentx = {
       checkInitialized: sandbox.stub(),
       runCli: sandbox.stub(),
+      ensureWorkspaceReady: sandbox.stub().resolves('fixture'),
+      forWorkspace: () => fakeAgentx,
+      workspaceState: { withMutation: async <T>(_root: string, action: () => Promise<T>) => action() },
     } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
-    infoSpy = sandbox.spy(vscode.window, 'showInformationMessage');
+    infoStub = sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (cmd: string, cb: (...args: unknown[]) => unknown) => {
@@ -99,23 +101,22 @@ describe('registerLoopCommand', () => {
       sandbox.stub(vscode.window, 'showInputBox')
         .onFirstCall().resolves('Implement harness')
         .onSecondCall().resolves('10')
-        .onThirdCall().resolves('ALL_TESTS_PASSING')
+        .onThirdCall().resolves('IMPLEMENTATION_REVIEWED')
         .onCall(3).resolves('42');
       fakeAgentx.runCli.resolves('Loop started');
 
       await registeredCallbacks['frontier.loopStart']!();
       assert.ok(fakeAgentx.runCli.calledWith('loop', sinon.match.array.deepEquals([
-        'start', '-p', 'Implement harness', '-m', '10', '-c', 'ALL_TESTS_PASSING', '-i', '42',
+        'start', '-p', 'Implement harness', '-m', '10', '-c', 'IMPLEMENTATION_REVIEWED', '-i', '42',
       ])));
-      assert.ok(infoSpy.calledWith('Iterative loop started with a risk-based minimum of 1 to 5 iterations.'));
+      assert.ok(infoStub.calledWith('Iterative loop started with a risk-based minimum of 1 to 5 iterations.'));
     });
 
     it('should pass required evidence to the direct loopIterate command', async () => {
       fakeAgentx.checkInitialized.resolves(true);
       sandbox.stub(vscode.window, 'showInputBox')
         .onFirstCall().resolves('Verified the gate')
-        .onSecondCall().resolves('.frontier/state/gate.log')
-        .onThirdCall().resolves('');
+        .onSecondCall().resolves('.frontier/state/gate.log');
       sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
       fakeAgentx.runCli.resolves('Iteration recorded');
 
@@ -126,41 +127,90 @@ describe('registerLoopCommand', () => {
     });
 
     for (const action of ['iterate', 'complete']) {
-      for (const count of ['0', '12', 'stage-gate=12,runner=40']) {
-        it(`forwards explicit passing count ${count} for ${action}`, async () => {
-          fakeAgentx.checkInitialized.resolves(true);
-          sandbox.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('Verified selected checks')
-            .onSecondCall().resolves('fresh-evidence.json')
-            .onThirdCall().resolves(count);
-          sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
-          fakeAgentx.runCli.resolves('Accepted');
-          await registeredCallbacks[`frontier.loop${action === 'iterate' ? 'Iterate' : 'Complete'}`]!();
-          const args = fakeAgentx.runCli.firstCall.args[1] as string[];
-          assert.equal(args[args.indexOf('--passing') + 1], count);
-          assert.equal(args[args.indexOf('-e') + 1], 'fresh-evidence.json');
-        });
-      }
-
-      it(`does not submit ${action} when passing-count entry is cancelled`, async () => {
+      it(`submits ${action} without prompting for passing test counts`, async () => {
         fakeAgentx.checkInitialized.resolves(true);
-        sandbox.stub(vscode.window, 'showInputBox')
-          .onFirstCall().resolves('Verified selected checks')
+        const inputs = sandbox.stub(vscode.window, 'showInputBox')
+          .onFirstCall().resolves('Reviewed implementation; suites not run')
           .onSecondCall().resolves('fresh-evidence.json')
-          .onThirdCall().resolves(undefined);
+          .onThirdCall().rejects(new Error('Unexpected passing-count prompt'));
         sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
+        fakeAgentx.runCli.resolves('Accepted');
         await registeredCallbacks[`frontier.loop${action === 'iterate' ? 'Iterate' : 'Complete'}`]!();
-        sinon.assert.notCalled(fakeAgentx.runCli);
+        sinon.assert.calledTwice(inputs);
+        sinon.assert.calledOnce(fakeAgentx.runCli);
+        const args = fakeAgentx.runCli.firstCall.args[1] as string[];
+        assert.ok(!args.includes('--passing'));
+        assert.equal(args[args.indexOf('-e') + 1], 'fresh-evidence.json');
       });
     }
 
-    it('accepts the integer and per-suite passing-count forms the CLI accepts', () => {
-      for (const input of ['', '0', '12', 'stage-gate=12', 'stage-gate=12, runner=40', 'tests/unit.ps1=3']) {
-        assert.ok(isPassingCountInput(input), input);
-      }
-      for (const input of ['-1', 'abc', 'stage-gate', 'stage-gate=', '=5', 'a=1,A=2', 'a=1,,b=2', '2147483648', 'a\u00A0=1', 'a=\u{3000}1']) {
-        assert.ok(!isPassingCountInput(input), input);
-      }
+    function prepareCompletion(): sinon.SinonStub {
+      fakeAgentx.checkInitialized.resolves(true);
+      sandbox.stub(vscode.window, 'showInputBox')
+        .onFirstCall().resolves('Review complete')
+        .onSecondCall().resolves('fresh-evidence.json');
+      fakeAgentx.runCli.resolves('Loop complete');
+      return sandbox.stub(vscode.commands, 'executeCommand').resolves(undefined);
+    }
+
+    it('offers tests after completion and opens only the configured test task on approval', async () => {
+      const execute = prepareCompletion();
+      fakeAgentx.runCli.callsFake(async () => {
+        sinon.assert.notCalled(infoStub);
+        return 'Loop complete';
+      });
+      infoStub.resolves({ title: 'Run Test Task' });
+
+      await registeredCallbacks['frontier.loopComplete']!();
+
+      sinon.assert.calledOnce(infoStub);
+      assert.match(String(infoStub.firstCall.args[0]), /Would you like to run the test suite now/);
+      assert.deepEqual(infoStub.firstCall.args[1], { modal: true });
+      assert.deepEqual(infoStub.firstCall.args.slice(2).map(item => item.title),
+        ['Run Test Task', 'Not Now']);
+      sinon.assert.calledOnceWithExactly(execute, 'workbench.action.tasks.test');
+      assert.ok(fakeAgentx.runCli.calledBefore(infoStub));
+      assert.ok(infoStub.calledBefore(execute));
+    });
+
+    for (const choice of [undefined, { title: 'Not Now' }]) {
+      it(`does not launch tests when the offer is ${choice ? 'declined' : 'dismissed'}`, async () => {
+        const execute = prepareCompletion();
+        infoStub.resolves(choice);
+
+        await registeredCallbacks['frontier.loopComplete']!();
+
+        sinon.assert.calledOnce(fakeAgentx.runCli);
+        sinon.assert.calledOnce(infoStub);
+        sinon.assert.notCalled(execute);
+      });
+    }
+
+    it('does not offer or launch tests when completion is blocked', async () => {
+      const execute = prepareCompletion();
+      fakeAgentx.runCli.rejects(new Error('Reviewer approval missing'));
+      const errors = sandbox.stub(vscode.window, 'showErrorMessage');
+
+      await registeredCallbacks['frontier.loopComplete']!();
+
+      sinon.assert.notCalled(infoStub);
+      sinon.assert.notCalled(execute);
+      sinon.assert.calledOnce(errors);
+      assert.match(String(errors.firstCall.args[0]), /Loop complete failed/);
+    });
+
+    it('reports test-task launch errors without undoing successful loop completion', async () => {
+      const execute = prepareCompletion();
+      infoStub.resolves({ title: 'Run Test Task' });
+      execute.rejects(new Error('Task unavailable'));
+      const errors = sandbox.stub(vscode.window, 'showErrorMessage');
+
+      await registeredCallbacks['frontier.loopComplete']!();
+
+      sinon.assert.calledOnce(fakeAgentx.runCli);
+      sinon.assert.calledOnce(errors);
+      assert.match(String(errors.firstCall.args[0]), /loop is complete, but the test task/);
+      assert.doesNotMatch(String(errors.firstCall.args[0]), /Loop complete failed/);
     });
 
     it('does not complete a loop after cancelling the summary or evidence prompt', async () => {

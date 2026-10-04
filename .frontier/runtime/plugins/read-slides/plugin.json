@@ -24,7 +24,7 @@
   "pythonPackages": ["python-pptx"],
   "tags": ["read", "ingest", "slides", "pptx", "powerpoint", "python-pptx", "markdown"],
   "maturity": "stable",
-  "engines": { "agentx": "^8.4.0" },
+  "engines": { "frontier": "^8.4.0" },
   "permissions": { "filesystem": "read-write", "process": "allowlist" },
   "distribution": {
     "artifactUrl": "https://github.com/jnPiyush/AgentX/raw/master/.frontier/runtime/plugins/read-slides/",

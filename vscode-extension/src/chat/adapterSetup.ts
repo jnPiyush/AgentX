@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
 import type { PendingSetupState } from '../frontierContextTypes';
-import { hasFrontierState } from '../utils/frontierPaths';
 import {
   type AdapterMode,
   applyRemoteAdapterConfiguration,
@@ -22,31 +21,15 @@ const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4.8';
 
 export type PendingSetup = NonNullable<Awaited<ReturnType<FrontierContext['getPendingSetup']>>>;
 
-function getWorkspaceRoot(agentx: FrontierContext): string | undefined {
-  return agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
-}
-
-function hasWorkspaceRuntimeConfig(root: string | undefined): boolean {
-  return !!root && hasFrontierState(root);
-}
-
-function renderMissingInitializationMessage(subject: string): string {
-  return [
-    `**Frontier ${subject} setup needs workspace initialization first.**`,
-    '',
-    'Run **Frontier: Initialize Local Runtime** and then retry this setup request in chat.',
-  ].join('\n');
-}
-
 async function updatePendingSetup(agentx: FrontierContext, pending: PendingSetupState): Promise<void> {
   if (typeof agentx.setPendingSetup === 'function') {
     await agentx.setPendingSetup(pending);
   }
 }
 
-async function clearPendingSetup(agentx: FrontierContext): Promise<void> {
+async function clearPendingSetup(agentx: FrontierContext, root: string | undefined): Promise<void> {
   if (typeof agentx.clearPendingSetup === 'function') {
-    await agentx.clearPendingSetup();
+    await agentx.clearPendingSetup(root);
   }
 }
 
@@ -156,7 +139,7 @@ async function completeLlmProviderSetup(
   root: string,
   providerId: LlmAdapterSetupMode,
 ): Promise<vscode.ChatResult> {
-  await clearPendingSetup(agentx);
+  await clearPendingSetup(agentx, root);
 
   switch (providerId) {
     case 'copilot': {
@@ -275,14 +258,11 @@ async function beginLlmSetup(
   providerId?: LlmAdapterSetupMode,
   prompt = '',
 ): Promise<vscode.ChatResult> {
-  const root = getWorkspaceRoot(agentx);
-  if (!hasWorkspaceRuntimeConfig(root)) {
-    response.markdown(renderMissingInitializationMessage('LLM adapter'));
-    return {};
-  }
+  const root = await agentx.ensureWorkspaceReady();
 
   if (!providerId) {
     const pending: PendingSetupState = {
+      workspaceRoot: root,
       kind: 'llm-adapter',
       step: 'choose-llm-provider',
       prompt,
@@ -292,7 +272,7 @@ async function beginLlmSetup(
     return {};
   }
 
-  return completeLlmProviderSetup(response, agentx, root!, providerId);
+  return completeLlmProviderSetup(response, agentx, root, providerId);
 }
 
 async function beginRemoteSetup(
@@ -301,14 +281,11 @@ async function beginRemoteSetup(
   adapterMode?: AdapterMode,
   prompt = '',
 ): Promise<vscode.ChatResult> {
-  const root = getWorkspaceRoot(agentx);
-  if (!hasWorkspaceRuntimeConfig(root)) {
-    response.markdown(renderMissingInitializationMessage('repo adapter'));
-    return {};
-  }
+  const root = await agentx.ensureWorkspaceReady();
 
   if (!adapterMode) {
     const pending: PendingSetupState = {
+      workspaceRoot: root,
       kind: 'remote-adapter',
       step: 'choose-remote-adapter',
       prompt,
@@ -319,15 +296,16 @@ async function beginRemoteSetup(
   }
 
   if (adapterMode === 'local') {
-    await clearPendingSetup(agentx);
-    await applyRemoteAdapterConfiguration(agentx, root!, 'local', undefined, { runPreCheck: false });
+    await clearPendingSetup(agentx, root);
+    await applyRemoteAdapterConfiguration(agentx, root, 'local', undefined, { runPreCheck: false });
     response.markdown('Configured **local** mode for this workspace. Remote backlog adapters are now disabled.');
     return {};
   }
 
   if (adapterMode === 'github') {
-    const detectedRepo = await detectGitHubOriginRepo(root!);
+    const detectedRepo = await detectGitHubOriginRepo(root);
     const pending: PendingSetupState = {
+      workspaceRoot: root,
       kind: 'remote-adapter',
       step: 'enter-github-repo',
       prompt,
@@ -339,8 +317,9 @@ async function beginRemoteSetup(
     return {};
   }
 
-  const detectedAdo = await detectAdoOrigin(root!);
+  const detectedAdo = await detectAdoOrigin(root);
   const pending: PendingSetupState = {
+    workspaceRoot: root,
     kind: 'remote-adapter',
     step: 'enter-ado-project',
     prompt,
@@ -357,7 +336,7 @@ export async function tryHandleAdapterSetupRequest(
   response: vscode.ChatResponseStream,
   agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
-  if (/^(?:agentx:\s*)?(?:add llm adapter|switch llm|switch model provider|connect claude|connect claude local|connect claude api|connect openai|setup claude|setup claude local|setup claude api|setup openai|use claude|use claude local|use claude api|use openai|use copilot)$/i.test(userText)) {
+  if (/^(?:frontier:\s*)?(?:add llm adapter|switch llm|switch model provider|connect claude|connect claude local|connect claude api|connect openai|setup claude|setup claude local|setup claude api|setup openai|use claude|use claude local|use claude api|use openai|use copilot)$/i.test(userText)) {
     const normalized = userText.toLowerCase();
     const preferredProvider: LlmAdapterSetupMode | undefined = normalized.includes('openai')
       ? 'openai-api'
@@ -373,7 +352,7 @@ export async function tryHandleAdapterSetupRequest(
     return beginLlmSetup(response, agentx, preferredProvider, userText);
   }
 
-  if (/^(?:agentx:\s*)?(?:add remote adapter|switch adapter|switch remote adapter|connect github|connect ado|connect local|setup github|setup ado|setup local|use github|use ado|use local|use local adapter)$/i.test(userText)) {
+  if (/^(?:frontier:\s*)?(?:add remote adapter|switch adapter|switch remote adapter|connect github|connect ado|connect local|setup github|setup ado|setup local|use github|use ado|use local|use local adapter)$/i.test(userText)) {
     const normalized = userText.toLowerCase();
     const preferredAdapter = normalized.includes('github')
       ? 'github'
@@ -397,10 +376,12 @@ export async function tryHandlePendingSetupRequest(
   if (!pending) {
     return undefined;
   }
+  const root = await agentx.ensureWorkspaceReady(pending.workspaceRoot);
+  agentx = agentx.forWorkspace(root);
 
   const normalized = userText.trim();
   if (/^cancel(?: setup)?$/i.test(normalized)) {
-    await clearPendingSetup(agentx);
+    await clearPendingSetup(agentx, root);
     response.markdown('Cancelled the pending adapter setup flow.');
     return {};
   }
@@ -430,13 +411,6 @@ export async function tryHandlePendingSetupRequest(
     return beginRemoteSetup(response, agentx, adapterMode, pending.prompt);
   }
 
-  const root = getWorkspaceRoot(agentx);
-  if (!hasWorkspaceRuntimeConfig(root)) {
-    await clearPendingSetup(agentx);
-    response.markdown(renderMissingInitializationMessage('adapter'));
-    return {};
-  }
-
   if (pending.step === 'enter-github-repo') {
     const settings = parseGitHubReply(normalized, pending.detectedValue);
     if (!settings) {
@@ -444,8 +418,8 @@ export async function tryHandlePendingSetupRequest(
       return {};
     }
 
-    await clearPendingSetup(agentx);
-    await applyRemoteAdapterConfiguration(agentx, root!, 'github', settings, { runPreCheck: false });
+    await clearPendingSetup(agentx, root);
+    await applyRemoteAdapterConfiguration(agentx, root, 'github', settings, { runPreCheck: false });
     response.markdown(`Configured **GitHub** mode for this workspace using repo \`${settings.repoSlug}\`.`);
     return {};
   }
@@ -457,8 +431,8 @@ export async function tryHandlePendingSetupRequest(
       return {};
     }
 
-    await clearPendingSetup(agentx);
-    await applyRemoteAdapterConfiguration(agentx, root!, 'ado', settings, { runPreCheck: false });
+    await clearPendingSetup(agentx, root);
+    await applyRemoteAdapterConfiguration(agentx, root, 'ado', settings, { runPreCheck: false });
     response.markdown(`Configured **Azure DevOps** mode for this workspace using \`${settings.organization}/${settings.project}\`.`);
     return {};
   }

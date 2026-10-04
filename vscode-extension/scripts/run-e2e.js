@@ -45,7 +45,7 @@ async function main() {
   if (process.platform === 'win32') {
     process.env.PATH = `C:\\Program Files\\PowerShell\\7;${process.env.PATH ?? ''}`;
   }
-  process.env.AGENTX_E2E_WORKSPACE = workspacePath;
+  process.env.FRONTIER_E2E_WORKSPACE = workspacePath;
 
   try {
     const vscodeExecutablePath = await downloadAndUnzipVSCode({
@@ -57,7 +57,7 @@ async function main() {
     await runTests({
       extensionDevelopmentPath,
       extensionTestsPath,
-      extensionTestsEnv: { AGENTX_E2E_RESULT_PATH: resultPath },
+      extensionTestsEnv: { FRONTIER_E2E_RESULT_PATH: resultPath },
       vscodeExecutablePath,
       launchArgs: [
         workspacePath,

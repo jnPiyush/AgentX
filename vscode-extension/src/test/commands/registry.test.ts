@@ -1,9 +1,9 @@
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
+import { FrontierContext } from '../../frontierContext';
 import {
   registerFrontierCommands,
-  registerLegacyCommandAliases,
 } from '../../commands/registry';
 
 describe('registerFrontierCommands', () => {
@@ -21,10 +21,11 @@ describe('registerFrontierCommands', () => {
   it('registers the command surface through the shared facade', () => {
     const context = { subscriptions: [] } as unknown as vscode.ExtensionContext;
 
-    registerFrontierCommands(context, {} as any);
+    registerFrontierCommands(context, sandbox.createStubInstance(FrontierContext));
 
     const registerCommand = vscode.commands.registerCommand as sinon.SinonStub;
     assert.ok(registerCommand.calledWith('frontier.initializeLocalRuntime'));
+    assert.ok(registerCommand.calledWith('frontier.initializeCursor'));
     assert.ok(registerCommand.calledWith('frontier.addRemoteAdapter'));
     assert.ok(registerCommand.calledWith('frontier.addPlugin'));
     assert.ok(registerCommand.calledWith('frontier.showStatus'));
@@ -39,26 +40,17 @@ describe('registerFrontierCommands', () => {
     assert.ok(registerCommand.calledWith('frontier.showTaskBundles'));
     assert.ok(registerCommand.calledWith('frontier.showIssue'));
     assert.ok(registerCommand.calledWith('frontier.showPendingClarification'));
+    assert.ok(registerCommand.calledWith('frontier.refreshRepositoryContext'));
   });
 
-  it('registers hidden legacy aliases that forward to Frontier commands', async () => {
-    const context = {
-      subscriptions: [],
-      extension: {
-        packageJSON: {
-          contributes: { commands: [{ command: 'frontier.showStatus' }] },
-        },
-      },
-    } as unknown as vscode.ExtensionContext;
-    const executeCommand = sandbox.stub(vscode.commands, 'executeCommand').resolves();
-
-    registerLegacyCommandAliases(context);
-
-    const registration = (vscode.commands.registerCommand as sinon.SinonStub)
-      .getCalls()
-      .find((call) => call.args[0] === 'agentx.showStatus');
-    assert.ok(registration, 'legacy alias should be registered without a manifest contribution');
-    await registration.args[1]('argument');
-    assert.ok(executeCommand.calledWith('frontier.showStatus', 'argument'));
+  it('registers only Frontier command IDs without obsolete aliases', () => {
+    const context = { subscriptions: [] } as unknown as vscode.ExtensionContext;
+    registerFrontierCommands(context, sandbox.createStubInstance(FrontierContext));
+    const names = (vscode.commands.registerCommand as sinon.SinonStub).getCalls()
+      .map(call => call.args[0] as string);
+    assert.ok(names.length > 0);
+    assert.ok(names.every(name => name.startsWith('frontier.')));
+    assert.ok(!names.includes('agentx.showStatus'));
+    assert.ok(!names.includes('hve.showStatus'));
   });
 });

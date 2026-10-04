@@ -968,17 +968,18 @@ task_prefix: 'task'
     Assert-True ([int]$loopAfterInvalid.iteration -eq [int]$loopBeforeInvalid.iteration) 'loop iterate does not advance when --passing is invalid'
     Assert-True ((Test-Path $invalidEvidenceA) -and (Test-Path $invalidEvidenceB)) 'loop iterate leaves source evidence in place when --passing validation fails'
 
-    # AGENTX_SKIP_EVIDENCE_GATE=1 bypass: iterate skips evidence requirement but still enforces baseline passing count.
+    # FRONTIER_SKIP_EVIDENCE_GATE=1 bypass: iterate skips evidence requirement but still enforces baseline passing count.
     $loopAfterValid = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $loopIterateBypass = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass', '--passing', '7') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    $loopIterateBypass = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass', '--passing', '7') @{ FRONTIER_SKIP_EVIDENCE_GATE = '1' }
     $loopAfterBypass = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    Assert-True ($loopIterateBypass.Output -notmatch '\[FAIL\]') 'loop iterate emits no [FAIL] when AGENTX_SKIP_EVIDENCE_GATE=1 and baseline passing count is provided'
-    Assert-True ([int]$loopAfterBypass.iteration -eq ([int]$loopAfterValid.iteration + 1)) 'loop iterate advances under AGENTX_SKIP_EVIDENCE_GATE bypass when baseline passing count is satisfied'
+    Assert-True ($loopIterateBypass.Output -notmatch '\[FAIL\]') 'loop iterate emits no [FAIL] when FRONTIER_SKIP_EVIDENCE_GATE=1 and baseline passing count is provided'
+    Assert-True ([int]$loopAfterBypass.iteration -eq ([int]$loopAfterValid.iteration + 1)) 'loop iterate advances under FRONTIER_SKIP_EVIDENCE_GATE bypass when baseline passing count is satisfied'
 
-    $loopIterateBypassMissingPassing = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass missing passing') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    # Tests are deferred to post-loop consent, so an omitted --passing is accepted even with an integer baseline.
+    $loopIterateBypassMissingPassing = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass missing passing') @{ FRONTIER_SKIP_EVIDENCE_GATE = '1' }
     $loopAfterBypassMissingPassing = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    Assert-True ($loopIterateBypassMissingPassing.Output -match 'requires --passing <count>') 'loop iterate still requires --passing when a baseline exists even if AGENTX_SKIP_EVIDENCE_GATE=1'
-    Assert-True ([int]$loopAfterBypassMissingPassing.iteration -eq [int]$loopAfterBypass.iteration) 'loop iterate does not advance under evidence bypass when baseline passing count is missing'
+    Assert-True ($loopIterateBypassMissingPassing.Output -notmatch 'requires --passing') 'loop iterate treats an omitted --passing as deferred tests even when a baseline exists'
+    Assert-True ([int]$loopAfterBypassMissingPassing.iteration -eq ([int]$loopAfterBypass.iteration + 1)) 'loop iterate advances under evidence bypass when tests are deferred'
 
     $adoRoot = New-TestWorkspace 'ado'
     $adoToolsDir = Initialize-AdoMock $adoRoot

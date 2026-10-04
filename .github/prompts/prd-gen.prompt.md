@@ -1,6 +1,6 @@
 ---
 name: "PRD Generation"
-agent: "Frontier Product FDE"
+agent: "Frontier TPM"
 description: Generate comprehensive Product Requirements Document from epic description
 inputs:
  issue_number:

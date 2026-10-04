@@ -19,7 +19,7 @@
   }
 
 .PARAMETER Action
-  generate | verify | list
+  generate | install | verify | list
 
 .PARAMETER ManifestPath
   Override path to the manifest. Defaults to .frontier/runtime/install-manifest.json.
@@ -33,8 +33,9 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)] [ValidateSet('generate','verify','list')] [string]$Action,
+    [Parameter(Mandatory)] [ValidateSet('generate','install','verify','list')] [string]$Action,
     [string]$ManifestPath = '.frontier/runtime/install-manifest.json',
+    [string]$SourceManifest = '',
     # Release gate: also fail when the manifest version is stale or tracked files
     # have drifted. Plain `verify` stays advisory because drift in an installed
     # workspace is expected -- it is how user-modified files are detected.
@@ -56,8 +57,9 @@ function Get-ManifestEntries {
 
     function Add-Group {
         param([string]$Pattern, [string]$Category)
+        $rootPath = (Resolve-Path .).Path.TrimEnd('\', '/')
         $files = Get-ChildItem -Path . -Recurse -File -Filter (Split-Path $Pattern -Leaf) -ErrorAction SilentlyContinue |
-                 Where-Object { ($_.FullName -replace '\\','/') -like ('*' + $Pattern) } |
+                 Where-Object { $_.FullName.Substring($rootPath.Length).TrimStart('\', '/').Replace('\', '/') -like $Pattern } |
                  Where-Object { ($_.FullName -replace '\\','/') -notlike '*/node_modules/*' -and
                                 ($_.FullName -replace '\\','/') -notlike '*/.git/*' -and
                                 ($_.FullName -replace '\\','/') -notlike '*/dist/*' -and
@@ -67,7 +69,6 @@ function Get-ManifestEntries {
                                 # skill, prompt and template.
                                 ($_.FullName -replace '\\','/') -notlike '*/vscode-extension/*' -and
                                 ($_.FullName -replace '\\','/') -notlike '*/coverage/*' }
-        $rootPath = (Resolve-Path .).Path
         foreach ($f in $files) {
             try {
                 $abs = $f.FullName
@@ -102,6 +103,8 @@ function Get-ManifestEntries {
     Add-Group -Pattern 'scripts/*.ps1' -Category 'script'
     Add-Group -Pattern 'scripts/*.js' -Category 'script'
     Add-Group -Pattern 'scripts/modules/*.psm1' -Category 'script'
+    Add-Group -Pattern '.github/skills/*/scripts/*.ps1' -Category 'script'
+    Add-Group -Pattern '.github/skills/*/scripts/*.js' -Category 'script'
     Add-Group -Pattern 'packs/*/manifest.json' -Category 'pack'
     Add-Group -Pattern 'packs/*/install.ps1' -Category 'pack'
     Add-Group -Pattern 'packs/*/install-user.ps1' -Category 'pack'
@@ -110,12 +113,40 @@ function Get-ManifestEntries {
     Add-Group -Pattern 'packs/*/agents/*.agent.md' -Category 'pack'
     Add-Group -Pattern 'packs/*/templates/*.md' -Category 'pack'
     Add-Group -Pattern '.github/security/*.json' -Category 'config'
+    Add-Group -Pattern '.cursor/commands/*.md' -Category 'prompt'
+    Add-Group -Pattern '.cursor/rules/*.mdc' -Category 'instruction'
+    Add-Group -Pattern '.frontier/runtime/cursor-assets/commands/*.md' -Category 'prompt'
+    Add-Group -Pattern '.frontier/runtime/cursor-assets/rules/*.mdc' -Category 'instruction'
 
     $singletons = @(
         @{ path = '.frontier/runtime/frontier.ps1';       category = 'cli' },
         @{ path = '.frontier/runtime/frontier.sh';        category = 'cli' },
         @{ path = '.frontier/runtime/frontier-cli.ps1';   category = 'cli' },
         @{ path = '.frontier/runtime/agentic-runner.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/guided-interaction.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-context.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-symbols.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-retrieval.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-parser-worker.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-process.cs'; category = 'cli' },
+        @{ path = '.frontier/runtime/workspace-sandbox.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/workspace-state.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-parser/index.js'; category = 'cli' },
+        @{ path = '.frontier/runtime/repository-parser/package.json'; category = 'config' },
+        @{ path = '.frontier/runtime/repository-parser/package-lock.json'; category = 'config' },
+        @{ path = '.frontier/runtime/hydrafusion.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/hydrafusion-policy.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/hydrafusion-protocol.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/hydrafusion-workspace.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/cursor.js'; category = 'cli' },
+        @{ path = '.frontier/runtime/cursor-mcp.js'; category = 'cli' },
+        @{ path = '.frontier/runtime/mcp-server/index.js'; category = 'cli' },
+        @{ path = '.frontier/runtime/mcp-server/package.json'; category = 'config' },
+        @{ path = '.frontier/runtime/mcp-server/package-lock.json'; category = 'config' },
+        @{ path = '.cursor/mcp.json'; category = 'config' },
+        @{ path = '.cursor/hooks.json'; category = 'hook' },
+        @{ path = '.frontier/runtime/cursor-assets/mcp.json'; category = 'config' },
+        @{ path = '.frontier/runtime/cursor-assets/hooks.json'; category = 'hook' },
         @{ path = 'AGENTS.md';                 category = 'doc' },
         @{ path = 'CLAUDE.md';                 category = 'doc' },
         @{ path = 'Skills.md';                 category = 'doc' }
@@ -123,7 +154,11 @@ function Get-ManifestEntries {
     foreach ($s in $singletons) {
         if (Test-Path $s.path) {
             $hash = (Get-FileHash -LiteralPath $s.path -Algorithm SHA256).Hash.ToLowerInvariant()
-            $entries.Add([pscustomobject]@{ path = ($s.path -replace '\\','/'); sha256 = $hash; category = $s.category }) | Out-Null
+            $entry = [ordered]@{ path = ($s.path -replace '\\','/'); sha256 = $hash; category = $s.category }
+            if ($s.path -in @('.cursor/mcp.json', '.cursor/hooks.json')) {
+                $entry['shared'] = $true
+            }
+            $entries.Add([pscustomobject]$entry) | Out-Null
         }
     }
 
@@ -131,6 +166,45 @@ function Get-ManifestEntries {
 }
 
 switch ($Action) {
+    'install' {
+        if (-not $SourceManifest -or -not (Test-Path -LiteralPath $SourceManifest -PathType Leaf)) {
+            throw 'Install projection requires the release source manifest.'
+        }
+        $source = Get-Content -LiteralPath $SourceManifest -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
+        if ($source.files -isnot [array] -or $source.version -isnot [string]) {
+            throw 'Invalid release source manifest.'
+        }
+        $mapped = @{}
+        foreach ($entry in $source.files) {
+            $relative = ([string]$entry.path).Replace('\', '/')
+            if ([string]::IsNullOrWhiteSpace($relative) -or [IO.Path]::IsPathRooted($relative) -or
+                $relative -match '^[A-Za-z]:|(^|/)\.\.(/|$)' -or
+                $entry.sha256 -notmatch '^[a-fA-F0-9]{64}$') {
+                throw 'Source manifest contains an invalid path or digest.'
+            }
+            if ($entry.shared -eq $true -and $relative -notin @('.cursor/mcp.json', '.cursor/hooks.json')) {
+                throw 'Only shared Cursor configuration may be omitted from an installed manifest.'
+            }
+            if ($entry.shared -ne $true) {
+                $mapped[$relative] = [ordered]@{ path = $relative; sha256 = $entry.sha256; category = $entry.category }
+            }
+            if ($relative.StartsWith('.cursor/', [StringComparison]::Ordinal)) {
+                $privatePath = '.frontier/runtime/cursor-assets/' + $relative.Substring(8)
+                $mapped[$privatePath] = [ordered]@{ path = $privatePath; sha256 = $entry.sha256; category = $entry.category }
+            }
+        }
+        $manifest = [ordered]@{
+            version = $source.version
+            createdAt = [DateTime]::UtcNow.ToString('o')
+            sourceCreatedAt = $source.createdAt
+            files = @($mapped.Values | Sort-Object { $_.path })
+        }
+        $parent = Split-Path -Parent $ManifestPath
+        if ($parent) { [void][IO.Directory]::CreateDirectory($parent) }
+        $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ManifestPath -Encoding utf8
+        Write-Host "[manifest] Installed layout: $($manifest.files.Count) entries; shared user JSON is excluded and canonical Cursor templates are tracked."
+    }
+
     'generate' {
         $entries = Get-ManifestEntries
         $manifest = [pscustomobject]@{

@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { FrontierContext } from '../../frontierContext';
+import { registerFrontierStateDirectory } from '../../utils/frontierPaths';
 import { registerAddPluginCommand } from '../../commands/plugins';
 import {
   getPublishedPluginSummaryOrThrow,
@@ -116,6 +117,32 @@ describe('runAddPluginCommand', () => {
     sinon.assert.calledOnce(errorStub);
     assert.ok(String(errorStub.firstCall.args[0]).includes('Open a workspace folder first'));
   });
+
+  it('requires explicit repository support before accessing the plugin catalog in private mode', async () => {
+    const initialization = await import('../../commands/initializeInternals');
+    const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugin-private-')));
+    const root = path.join(base, 'source');
+    const state = path.join(base, 'private');
+    try {
+      fs.mkdirSync(root);
+      fs.mkdirSync(state);
+      fs.writeFileSync(path.join(state, 'config.json'), '{}');
+      registerFrontierStateDirectory(root, state);
+      sandbox.stub(initialization, 'promptWorkspaceRoot').resolves(root);
+      const download = sandbox.stub(initialization, 'downloadFile');
+      const warning = sandbox.stub(vscode.window, 'showWarningMessage');
+      const frontier = sandbox.createStubInstance(FrontierContext);
+      Object.defineProperty(frontier, 'workspaceState', {
+        value: { assertAvailable: (value: string) => value, inspect: () => undefined },
+      });
+      await runAddPluginCommand(fakeContext, frontier);
+      sinon.assert.notCalled(download);
+      assert.ok(String(warning.firstCall.args[0]).includes('Initialize Repository Support'));
+    } finally {
+      registerFrontierStateDirectory(root);
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('pluginsCommandInternals helpers', () => {
@@ -215,14 +242,14 @@ describe('pluginsCommandInternals helpers', () => {
             {
               version: '2.0.0',
               artifactUrl: 'https://example.test/2.0.0.zip',
-              engines: { agentx: '>=9.0.0 <10.0.0' },
+              engines: { frontier: '>=9.0.0 <10.0.0' },
             },
             {
               version: '1.0.0',
               artifactUrl: 'https://example.test/1.0.0.zip',
               checksum: 'sha256:abc123',
               pluginPath: '.frontier/runtime/plugins/convert-docs',
-              engines: { agentx: '^8.4.0' },
+              engines: { frontier: '^8.4.0' },
             },
           ],
         },

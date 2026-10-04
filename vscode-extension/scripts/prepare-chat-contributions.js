@@ -17,7 +17,7 @@ const githubDir = path.resolve(repoRoot, '.github');
 // copies .github/ content there for VSIX bundling.
 const PREFIX = './.github/frontier';
 
-// --- Discover chatAgents (visibility is controlled by agent frontmatter) ---
+// --- Discover chatAgents (workspace source preference plus agent visibility) ---
 function discoverAgents() {
     const agentsDir = path.join(githubDir, 'agents');
     if (!fs.existsSync(agentsDir)) { return []; }
@@ -29,7 +29,10 @@ function discoverAgents() {
                 walk(fullPath);
             } else if (entry.name.endsWith('.agent.md')) {
                 const rel = path.relative(agentsDir, fullPath).replace(/\\/g, '/');
-                results.push({ path: PREFIX + '/agents/' + rel });
+                results.push({
+                    path: PREFIX + '/agents/' + rel,
+                    when: 'config.frontier.useBundledAgents',
+                });
             }
         }
     }

@@ -374,13 +374,13 @@ if (Test-Path $seedTree) {
     try {
         Copy-Item -LiteralPath $seedTree -Destination $seedWorkspace -Recurse -Force
         $seeded = Join-Path $seedWorkspace (Split-Path $seedTree -Leaf)
-        $previousRoot = $env:AGENTX_WORKSPACE_ROOT
-        $env:AGENTX_WORKSPACE_ROOT = $seeded
+        $previousRoot = $env:FRONTIER_WORKSPACE_ROOT
+        $env:FRONTIER_WORKSPACE_ROOT = $seeded
         try {
             $refOutput = & pwsh -NoProfile -File (Join-Path $repoRoot 'scripts/validate-references.ps1') -Path '.' 2>&1 | Out-String
         }
         finally {
-            $env:AGENTX_WORKSPACE_ROOT = $previousRoot
+            $env:FRONTIER_WORKSPACE_ROOT = $previousRoot
         }
 
         $seedHigh = [regex]::Matches($refOutput, '\[HIGH\]').Count
@@ -420,13 +420,13 @@ try {
         Assert-True (Test-Path (Join-Path $packWorkspace $required)) "standalone pack installs $required"
     }
 
-    $previousRoot = $env:AGENTX_WORKSPACE_ROOT
-    $env:AGENTX_WORKSPACE_ROOT = $packWorkspace
+    $previousRoot = $env:FRONTIER_WORKSPACE_ROOT
+    $env:FRONTIER_WORKSPACE_ROOT = $packWorkspace
     try {
         $packRefOutput = & pwsh -NoProfile -File (Join-Path $repoRoot 'scripts/validate-references.ps1') -Path '.' 2>&1 | Out-String
     }
     finally {
-        $env:AGENTX_WORKSPACE_ROOT = $previousRoot
+        $env:FRONTIER_WORKSPACE_ROOT = $previousRoot
     }
 
     $packHigh = [regex]::Matches($packRefOutput, '\[HIGH\]').Count

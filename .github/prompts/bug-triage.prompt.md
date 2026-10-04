@@ -1,6 +1,6 @@
 ---
 name: "Bug Triage"
-agent: "Frontier Engineering FDE"
+agent: "Frontier Engineer"
 description: Analyze and triage bug reports for proper classification and routing
 inputs:
  issue_number:

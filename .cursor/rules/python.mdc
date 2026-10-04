@@ -7,7 +7,8 @@ alwaysApply: false
 # Python (Frontier)
 
 Canonical: `.github/instructions/python.instructions.md` and
-`.github/skills/languages/python/SKILL.md` -- read for full standards.
+`.github/skills/languages/python/SKILL.md` -- read through
+`pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor read <canonical-path>`.
 
 - PEP 8; type hints on all signatures; Black 88-col; `ruff` lint/format.
 - Google-style docstrings; pytest (+ pytest-asyncio); name tests

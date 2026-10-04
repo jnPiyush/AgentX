@@ -66,7 +66,7 @@ try {
     Assert-True ((Invoke-Counter @('-Action', 'check', '-BaselineRef', 'missing-revision')).code -eq 2) 'Invalid baseline revision fails, never resets debt'
     Set-Content (Join-Path $workspace '.token-limits.json') -Value '{"defaults":{"**/*.md":-1},"overrides":{}}'
     Assert-True ((Invoke-Counter @('-Action', 'check')).code -eq 2) 'Negative budget is a configuration error'
-    Remove-Item (Join-Path $workspace '.token-limits.json')
+    Remove-Item -LiteralPath (Join-Path $workspace '.token-limits.json') -Force
     $unconfigured = Invoke-Counter @('-Action', 'report')
     Assert-True ($unconfigured.data.status -eq 'unconfigured') 'Missing policy is explicitly unconfigured, never pass'
     Assert-True ((Invoke-Counter @('-Action', 'check', '-Path', 'missing.md')).code -eq 2) 'Missing scan input fails explicitly'

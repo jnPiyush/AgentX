@@ -52,6 +52,11 @@
     the normal scrub pass conservative while allowing release gates to fail on
     duplicate logic, empty catches, generic UI defaults, and AI filler text.
 
+.PARAMETER Advisory
+  Read-only local loop/review mode. Report hygiene candidates as LOW without
+  blocking completion, retaining originalSeverity and strict-gate metadata.
+  Cannot be combined with Fix or Production. Scan errors still fail.
+
 .PARAMETER Quiet
   Suppress non-finding output.
 
@@ -75,10 +80,16 @@ param(
     [switch]$Fix,
     [switch]$Json,
     [switch]$Production,
+    [switch]$Advisory,
     [switch]$Quiet
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($Advisory -and ($Fix -or $Production)) {
+    Write-Error 'Advisory cannot be combined with Fix or Production. Request cleanup approval separately; strict gates remain independent.' -ErrorAction Continue
+    exit 2
+}
 
 $CodeExtensions  = @('.ps1','.psm1','.cs','.ts','.tsx','.js','.jsx','.go','.rs','.py','.java','.kt','.rb','.cpp','.c','.h','.swift','.m')
 $DocExtensions   = @('.md','.mdx','.txt','.rst')
@@ -258,6 +269,7 @@ function Add-Finding {
 }
 
 function Get-BlockingFindings {
+    if ($Advisory) { return @() }
     if ($Production) {
         return @($Findings | Where-Object { $_.productionBlocker })
     }
@@ -866,6 +878,14 @@ try {
     exit 2
 }
 
+if ($Advisory) {
+    foreach ($finding in $Findings) {
+        $finding | Add-Member -NotePropertyName originalSeverity -NotePropertyValue $finding.severity
+        $finding | Add-Member -NotePropertyName advisory -NotePropertyValue $true
+        $finding.severity = 'LOW'
+    }
+}
+
 if ($Fix) {
     $changed = Invoke-SafeFix
     if ($Production) {
@@ -891,6 +911,9 @@ if ($Json) {
 if (-not $Quiet) {
     Write-Host ""
     Write-Host "[scrub] $($Findings.Count) finding(s) across $($files.Count) file(s)." -ForegroundColor Cyan
+    if ($Advisory) {
+        Write-Host '[scrub] Advisory scan only; no fixes applied. A completed scan is not a clean-lint claim.' -ForegroundColor Cyan
+    }
     if ($Findings.Count -gt 0) {
         $byCat = $Findings | Group-Object category | Sort-Object Count -Descending
         foreach ($c in $byCat) {
@@ -911,8 +934,11 @@ if (-not $Quiet) {
             $safeCount = ($Findings | Where-Object { $_.safeFix }).Count
             if ($safeCount -gt 0) {
                 Write-Host ""
-                Write-Host "[scrub] $safeCount finding(s) are safe-fix. Re-run with -Fix to apply." -ForegroundColor Yellow
+                Write-Host "[scrub] $safeCount finding(s) support safe fixes. Obtain explicit user approval before using -Fix." -ForegroundColor Yellow
             }
+        }
+        if ($Advisory) {
+            Write-Host '[scrub] Ask the user: Would you like me to fix these LOW lint/style findings?' -ForegroundColor Yellow
         }
         if ($Production) {
             $blockerCount = (Get-BlockingFindings).Count

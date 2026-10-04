@@ -8,9 +8,6 @@ $ErrorActionPreference = 'Stop'
 $workspaceRoot = if ($env:FRONTIER_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:FRONTIER_WORKSPACE_ROOT -PathType Container)) {
     (Resolve-Path $env:FRONTIER_WORKSPACE_ROOT).Path
 }
-elseif ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) {
-    (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
-}
 else {
     Split-Path $PSScriptRoot -Parent
 }

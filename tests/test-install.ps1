@@ -42,9 +42,13 @@ function Initialize-LocalArchive {
  foreach ($directory in @('.github', '.claude', '.vscode', 'scripts', 'packs', 'docs')) {
   Copy-Item (Join-Path $SCRIPT_ROOT $directory) (Join-Path $archiveRoot $directory) -Recurse -Force
  }
- # Only tracked runtime files ship in a release archive; local .frontier state and
- # untracked installs such as mcp-server/node_modules do not.
- foreach ($relative in @(git -C $SCRIPT_ROOT ls-files -- '.frontier/runtime')) {
+ # Include pending runtime source in this worktree test; ignored dependencies and
+ # local Frontier state are never part of the fixture.
+ $runtimeFiles = @(
+  git -C $SCRIPT_ROOT ls-files -- '.frontier/runtime'
+  git -C $SCRIPT_ROOT ls-files --others --exclude-standard -- '.frontier/runtime'
+ ) | Sort-Object -Unique
+ foreach ($relative in $runtimeFiles) {
   $destination = Join-Path $archiveRoot $relative
   New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
   Copy-Item -LiteralPath (Join-Path $SCRIPT_ROOT $relative) -Destination $destination -Force
@@ -62,8 +66,8 @@ function Invoke-InstallerFile {
   [string]$ArchiveOverride = $LOCAL_ARCHIVE
  )
 
- $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
- $env:AGENTX_INSTALL_ARCHIVE = $ArchiveOverride
+ $previousArchive = $env:FRONTIER_INSTALL_ARCHIVE
+ $env:FRONTIER_INSTALL_ARCHIVE = $ArchiveOverride
  try {
    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
    $startInfo.FileName = 'pwsh'
@@ -98,7 +102,7 @@ function Invoke-InstallerFile {
     throw "Installer exited with code $($process.ExitCode)."
    }
  } finally {
-  $env:AGENTX_INSTALL_ARCHIVE = $previousArchive
+  $env:FRONTIER_INSTALL_ARCHIVE = $previousArchive
  }
 }
 
@@ -108,12 +112,12 @@ function Invoke-InstallerExpression {
   [string]$ArchiveOverride = $LOCAL_ARCHIVE
  )
 
- $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
- $env:AGENTX_INSTALL_ARCHIVE = $ArchiveOverride
+ $previousArchive = $env:FRONTIER_INSTALL_ARCHIVE
+ $env:FRONTIER_INSTALL_ARCHIVE = $ArchiveOverride
  try {
   Invoke-Expression $ScriptText 2>&1 | Out-Null
  } finally {
-  $env:AGENTX_INSTALL_ARCHIVE = $previousArchive
+  $env:FRONTIER_INSTALL_ARCHIVE = $previousArchive
  }
 }
 
@@ -167,7 +171,12 @@ $RUNTIME_FILES = @(
  ".frontier/version.json",
  ".frontier/state/agent-status.json",
  ".frontier/runtime/frontier.ps1",
- ".frontier/runtime/frontier-cli.ps1"
+ ".frontier/runtime/frontier-cli.ps1",
+ ".frontier/runtime/repository-context.ps1",
+ ".frontier/runtime/hydrafusion.ps1",
+ ".frontier/runtime/hydrafusion-policy.ps1",
+ ".frontier/runtime/hydrafusion-protocol.ps1",
+ ".frontier/runtime/hydrafusion-workspace.ps1"
 )
 $GIT_ARTIFACTS = @(".git", ".git/hooks/pre-commit", ".git/hooks/commit-msg")
 $TEMP_FILES = @(".frontier-install-tmp", ".frontier-install-raw", ".frontier-install.zip")
@@ -188,7 +197,7 @@ Write-Host "--- TEST 1: Local mode via iex (piped) ---" -ForegroundColor Cyan
 $dir = New-TestDir "t1-local-iex"
 Push-Location $dir
 try {
- $env:AGENTX_MODE = $null
+ $env:FRONTIER_MODE = $null
  $script = Get-Content $SCRIPT_PATH -Raw
  Invoke-InstallerExpression $script
 
@@ -367,10 +376,10 @@ Push-Location $dir
 try {
  $prevEAP = $ErrorActionPreference
  $ErrorActionPreference = "Continue"
- $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
- $env:AGENTX_INSTALL_ARCHIVE = $LOCAL_ARCHIVE
+ $previousArchive = $env:FRONTIER_INSTALL_ARCHIVE
+ $env:FRONTIER_INSTALL_ARCHIVE = $LOCAL_ARCHIVE
  $errOutput = & $SCRIPT_PATH -Mode "badvalue" -NoSetup 2>&1
- $env:AGENTX_INSTALL_ARCHIVE = $previousArchive
+ $env:FRONTIER_INSTALL_ARCHIVE = $previousArchive
  $ErrorActionPreference = $prevEAP
  $errText = $errOutput | Out-String
 
@@ -476,25 +485,25 @@ try {
 }
 Pop-Location
 
-# -- TEST 10: Env var AGENTX_NOSETUP --------------------------------------
-Write-Host "--- TEST 10: AGENTX_NOSETUP env var ---" -ForegroundColor Cyan
+# -- TEST 10: Env var FRONTIER_NOSETUP --------------------------------------
+Write-Host "--- TEST 10: FRONTIER_NOSETUP env var ---" -ForegroundColor Cyan
 $dir = New-TestDir "t10-nosetup-env"
 Push-Location $dir
 try {
- $env:AGENTX_NOSETUP = "true"
+ $env:FRONTIER_NOSETUP = "true"
  $script = Get-Content $SCRIPT_PATH -Raw
  Invoke-InstallerExpression $script
- $env:AGENTX_NOSETUP = $null
+ $env:FRONTIER_NOSETUP = $null
 
  $r = @()
  $r += Assert-PathExists "AGENTS.md" "install succeeded"
  $r += Assert-PathNotExists ".git" "nosetup: no .git"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
 
- Write-TestReport "AGENTX_NOSETUP env var" $r
+ Write-TestReport "FRONTIER_NOSETUP env var" $r
 } catch {
  Write-Host " CRASH: $($_.Exception.Message)" -ForegroundColor Red
- $global:TestResults += @{ Name="AGENTX_NOSETUP env var"; Pass=0; Fail=1; Total=1; Details=@() }
+ $global:TestResults += @{ Name="FRONTIER_NOSETUP env var"; Pass=0; Fail=1; Total=1; Details=@() }
 }
 Pop-Location
 

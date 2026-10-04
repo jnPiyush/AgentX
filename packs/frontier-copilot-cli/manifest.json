@@ -1,6 +1,6 @@
 {
   "name": "frontier-copilot-cli",
-  "version": "9.6.0",
+  "version": "9.7.0",
   "description": "Frontier Copilot CLI pack -- installs agents, skills, instructions, prompts, templates, schemas and hooks into any workspace for GitHub Copilot CLI usage. Separate from the core Frontier VS Code extension.",
   "maturity": "stable",
   "platform": "copilot-cli",
@@ -83,6 +83,7 @@
       ".github/prompts/devops.prompt.md",
       ".github/prompts/doc-gardener.prompt.md",
       ".github/prompts/evaluation.prompt.md",
+      ".github/prompts/guided-interaction.prompt.md",
       ".github/prompts/prd-gen.prompt.md",
       ".github/prompts/refactor.prompt.md",
       ".github/prompts/roadmap-gen.prompt.md",
@@ -100,6 +101,9 @@
       ".github/schemas/skill-frontmatter.schema.json"
     ],
     "scripts": [
+      ".frontier/runtime/workspace-state.ps1",
+      "scripts/evaluate-repository-context.ps1",
+      "scripts/repository-context-evaluation.ps1",
       "scripts/budget.ps1",
       "scripts/scrub.ps1",
       "scripts/dream.ps1",
@@ -236,6 +240,20 @@
       ".github/frontier/.frontier/runtime/frontier.sh",
       ".github/frontier/.frontier/runtime/frontier-cli.ps1",
       ".github/frontier/.frontier/runtime/agentic-runner.ps1",
+      ".github/frontier/.frontier/runtime/guided-interaction.ps1",
+      ".github/frontier/.frontier/runtime/repository-context.ps1",
+      ".github/frontier/.frontier/runtime/repository-symbols.ps1",
+      ".github/frontier/.frontier/runtime/repository-retrieval.ps1",
+      ".github/frontier/.frontier/runtime/repository-parser-worker.ps1",
+      ".github/frontier/.frontier/runtime/repository-process.cs",
+      ".github/frontier/.frontier/runtime/workspace-sandbox.ps1",
+      ".github/frontier/.frontier/runtime/repository-parser/index.js",
+      ".github/frontier/.frontier/runtime/repository-parser/package.json",
+      ".github/frontier/.frontier/runtime/repository-parser/package-lock.json",
+      ".github/frontier/.frontier/runtime/hydrafusion.ps1",
+      ".github/frontier/.frontier/runtime/hydrafusion-policy.ps1",
+      ".github/frontier/.frontier/runtime/hydrafusion-protocol.ps1",
+      ".github/frontier/.frontier/runtime/hydrafusion-workspace.ps1",
       ".github/frontier/.frontier/runtime/local-issue-manager.ps1",
       ".github/frontier/.frontier/runtime/local-issue-manager.sh"
     ],
@@ -256,8 +274,10 @@
       "docs/QUALITY_SCORE.md",
       "docs/tech-debt-tracker.md",
       "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md",
+      "docs/guides/REPOSITORY-CONTEXT.md",
       "CONTRIBUTING.md",
-      "evaluation/baseline.json"
+      "evaluation/baseline.json",
+      "evaluation/repository-context/queries.json"
     ],
     "hooks": [
       ".github/hooks"

@@ -1,6 +1,6 @@
 ---
 name: "DevOps Pipeline"
-agent: "Frontier DevOps FDE"
+agent: "Frontier DevOps"
 description: Generate CI/CD pipeline and deployment automation
 inputs:
  issue_number:

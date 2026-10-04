@@ -1,12 +1,11 @@
 {
   "name": "@frontier/mcp-server",
-  "version": "9.6.0",
+  "version": "9.7.0",
   "description": "MCP stdio server that exposes Frontier CLI commands (loop, ready, state, workflow, validate, ship, ...) as Model Context Protocol tools so GitHub Copilot CLI, Claude Desktop, or any MCP host can drive Frontier quality gates from chat.",
   "private": true,
   "type": "commonjs",
   "bin": {
-    "frontier-mcp": "./index.js",
-    "agentx-mcp": "./index.js"
+    "frontier-mcp": "./index.js"
   },
   "main": "index.js",
   "engines": {
@@ -18,17 +17,16 @@
   "overrides": {
     "hono": "4.13.7",
     "qs": "6.16.0",
-    "fast-uri": "https://codeload.github.com/fastify/fast-uri/tar.gz/412e40abd4eb8beabfb952d80abf949a2baf27a3"
+    "fast-uri": "3.1.8"
   },
   "scripts": {
     "start": "node index.js",
-    "test": "node --test lifecycle.test.js && node smoke-test.js",
+    "test": "node --test lifecycle.test.js guided-interaction.test.js && node smoke-test.js",
     "audit:runtime": "npm audit --omit=dev --audit-level=high"
   },
   "keywords": [
     "mcp",
     "frontier",
-    "agentx-compatibility",
     "copilot-cli",
     "quality-gate"
   ],

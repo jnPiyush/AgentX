@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import {
  registerFrontierCommands,
- registerLegacyCommandAliases,
 } from './commands/registry';
 import {
  createSidebarProviders,
@@ -12,9 +11,9 @@ import { FrontierContext } from './frontierContext';
 import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
 import { runSetupWizard } from './commands/setupWizard';
-import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './commands/adaptersCommandInternals';
-import { readCliAssetState, refreshCopilotCliSymlinks } from './commands/initializeInternals';
-import { silentVersionSync } from './utils/versionChecker';
+import { registerFrontierMcp } from './runtime/mcpProvider';
+import { findBrokenCopilotCliLinks, refreshCopilotCliSymlinks } from './commands/initializeInternals';
+import { hasRepositoryState, isPrivateFrontierState } from './utils/frontierPaths';
 import { checkCompanionExtensions } from './utils/companionExtensions';
 import {
  enableInAgentsWindow,
@@ -36,6 +35,36 @@ export function activate(context: vscode.ExtensionContext) {
 
  frontierContext = new FrontierContext(context);
  const sidebarProviders = createSidebarProviders(frontierContext);
+ const repairOffered = new Set<string>();
+ const offerCliLinkRepair = async (): Promise<void> => {
+  const root = frontierContext.workspaceRoot;
+  if (!root || !vscode.workspace.isTrusted || repairOffered.has(root)) { return; }
+  frontierContext.workspaceState.inspect(root);
+  if (!hasRepositoryState(root) || isPrivateFrontierState(root)) { return; }
+  const installation = { extensionRoot: context.extensionPath, extensionId: context.extension.id };
+  const broken = findBrokenCopilotCliLinks(root, installation);
+  if (!broken.length) { return; }
+  repairOffered.add(root);
+  const choice = await vscode.window.showWarningMessage(
+   `Frontier CLI links in ${root} target a removed extension version. Repair the managed links?`, 'Repair links');
+  if (choice !== 'Repair links') { return; }
+  frontierContext.workspaceState.assertAvailable(root);
+  frontierContext.workspaceState.inspect(root);
+  if (isPrivateFrontierState(root)) { throw new Error('Storage mode changed before CLI link repair.'); }
+  const current = findBrokenCopilotCliLinks(root, installation);
+  const result = refreshCopilotCliSymlinks(context.extensionPath, root, current);
+  if (result.skipped.length) {
+   void vscode.window.showWarningMessage(`Frontier CLI link repair is incomplete: ${result.skipped.join(', ')}`);
+  } else {
+   void vscode.window.showInformationMessage(`Frontier repaired ${result.refreshed.length} managed CLI links.`);
+  }
+ };
+ const checkCliLinks = () => {
+  void offerCliLinkRepair().catch(error => {
+   const message = error instanceof Error ? error.message : String(error);
+   void vscode.window.showWarningMessage(`Frontier CLI link check failed: ${message}`);
+  });
+ };
 
  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
  statusBar.text = '$(hubot) Frontier';
@@ -45,6 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
  context.subscriptions.push(statusBar);
 
  const updateUiState = async (): Promise<void> => {
+  try {
   const initialized = await frontierContext.checkInitialized();
   const root = frontierContext.workspaceRoot;
   const qualityState = root ? getQualityStateDisplay(root) : 'No workspace';
@@ -60,15 +90,14 @@ export function activate(context: vscode.ExtensionContext) {
   await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', frontierContext.githubConnected);
   await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', frontierContext.adoConnected);
   await vscode.commands.executeCommand('setContext', 'frontier.harnessActive', harnessActive);
- };
-
- const syncAutoAdapters = async (): Promise<void> => {
-   const githubChanged = await syncDetectedGitHubAdapter(frontierContext);
-   const adoChanged = await syncDetectedAdoAdapter(frontierContext);
-   const changed = githubChanged || adoChanged;
-  if (changed) {
-   clearInstructionCache();
-   refreshSidebarProviders(sidebarProviders);
+  } catch (error) {
+   const message = error instanceof Error ? error.message : String(error);
+   statusBar.tooltip = `Frontier workspace state unavailable: ${message}`;
+   await vscode.commands.executeCommand('setContext', 'frontier.initialized', false);
+   await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', false);
+   await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', false);
+   await vscode.commands.executeCommand('setContext', 'frontier.harnessActive', false);
+   void vscode.window.showErrorMessage(`Frontier workspace state unavailable: ${message}`);
   }
  };
 
@@ -77,6 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
 
  // Register commands
  registerFrontierCommands(context, frontierContext);
+ registerFrontierMcp(context, frontierContext);
 
  // Refresh all views
  context.subscriptions.push(
@@ -120,10 +150,6 @@ export function activate(context: vscode.ExtensionContext) {
   }),
  );
 
- // Legacy command IDs remain callable for existing keybindings and automation,
- // but are not contributed to the Command Palette.
- registerLegacyCommandAliases(context);
-
  // Register chat participant (Copilot Chat integration -- only when API available)
  if (typeof vscode.chat?.createChatParticipant === 'function') {
   registerChatParticipant(context, frontierContext);
@@ -132,49 +158,49 @@ export function activate(context: vscode.ExtensionContext) {
  // Auto-discover Frontier when config or MCP files change
  const configWatcher = vscode.workspace.createFileSystemWatcher('**/.frontier/config.json');
  const mcpWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/mcp.json');
- const gitConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.git/config');
+ const privateConfigWatcher = vscode.workspace.createFileSystemWatcher(
+  new vscode.RelativePattern(context.globalStorageUri, 'workspaces/*/{config,workspace-binding}.json'));
 
  // Debounce refreshes. .git/config in particular is touched frequently by
  // VS Code's git extension, gh, and Copilot, which would otherwise trigger
  // a refresh storm (each refresh re-runs `gh issue list`, ~2-5s).
  let refreshTimer: NodeJS.Timeout | undefined;
+ let selectedRoot = frontierContext.workspaceRoot;
  const scheduleRefresh = () => {
   if (refreshTimer) { clearTimeout(refreshTimer); }
   refreshTimer = setTimeout(() => {
    refreshTimer = undefined;
    frontierContext.invalidateCache();
+   selectedRoot = frontierContext.workspaceRoot;
    clearInstructionCache();
    void updateUiState().then(() => {
     if (frontierContext.workspaceRoot) {
      refreshSidebarProviders(sidebarProviders);
     }
    });
+   checkCliLinks();
   }, 500);
  };
 
- // Only refresh on git remote changes when adapter detection actually
- // produced a change. syncAutoAdapters already triggers its own refresh
- // (see line ~57) when it detects a new GitHub/ADO remote.
- const onGitRemoteChange = () => {
-  void syncAutoAdapters().catch(() => { /* ignore */ });
- };
  configWatcher.onDidCreate(scheduleRefresh);
  configWatcher.onDidChange(scheduleRefresh);
  configWatcher.onDidDelete(scheduleRefresh);
  mcpWatcher.onDidCreate(scheduleRefresh);
  mcpWatcher.onDidChange(scheduleRefresh);
  mcpWatcher.onDidDelete(scheduleRefresh);
- gitConfigWatcher.onDidCreate(onGitRemoteChange);
- gitConfigWatcher.onDidChange(onGitRemoteChange);
- gitConfigWatcher.onDidDelete(onGitRemoteChange);
- context.subscriptions.push(configWatcher, mcpWatcher, gitConfigWatcher);
-
- // Silently sync workspace version.json to match extension version (non-blocking)
- silentVersionSync(
-  frontierContext.workspaceRoot ?? '',
-  context.extension.packageJSON.version,
-  context.extensionPath
- ).catch(() => { /* ignore */ });
+ privateConfigWatcher.onDidCreate(scheduleRefresh);
+ privateConfigWatcher.onDidChange(scheduleRefresh);
+ privateConfigWatcher.onDidDelete(scheduleRefresh);
+ context.subscriptions.push(configWatcher, mcpWatcher, privateConfigWatcher,
+  vscode.workspace.onDidGrantWorkspaceTrust(scheduleRefresh),
+  vscode.workspace.onDidChangeWorkspaceFolders(scheduleRefresh),
+  vscode.window.onDidChangeActiveTextEditor(() => {
+   const nextRoot = frontierContext.workspaceRoot;
+   if (nextRoot === selectedRoot) { return; }
+   selectedRoot = nextRoot;
+   scheduleRefresh();
+  }),
+  { dispose: () => { if (refreshTimer) { clearTimeout(refreshTimer); } } });
 
  // Check companion extensions are installed (non-blocking)
  checkCompanionExtensions(frontierContext.workspaceRoot).catch(() => { /* ignore */ });
@@ -186,25 +212,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.extension.packageJSON.version,
  ).catch(() => { /* ignore */ });
 
- // Refresh CLI symlinks if the workspace was initialized in symlink mode.
- // The extension version folder changes on upgrade, so any stale junctions
- // need to be re-pointed at the current bundle.
- try {
-  const wsRoot = frontierContext.workspaceRoot;
-  if (wsRoot) {
-   const cliState = readCliAssetState(wsRoot);
-   if (cliState && cliState.mode === 'symlink') {
-    refreshCopilotCliSymlinks(context.extensionUri.fsPath, wsRoot);
-   }
-  }
- } catch { /* non-fatal */ }
-
  // Set initial context flags
- void syncAutoAdapters()
-  .catch(() => { /* ignore */ })
-  .finally(() => {
-   void updateUiState();
-  });
+ void updateUiState();
+ checkCliLinks();
 
  console.log('Frontier extension activated.');
 }

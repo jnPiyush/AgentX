@@ -107,7 +107,7 @@ az group create --name rg-myapp-prod --location eastus --tags Environment=Produc
 ## AI Services
 
 ### Azure OpenAI Service
-- **Purpose**: LLM hosting (GPT-4o, GPT-3.5-Turbo).
+- **Purpose**: LLM hosting (current GPT model deployments; check regional availability).
 - **Best Practice**: Use **Managed Identity** for authentication. Disable keys.
 - **Networking**: Deploy in Virtual Network with Private Endpoint.
 

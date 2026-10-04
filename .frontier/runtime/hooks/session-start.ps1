@@ -1,8 +1,8 @@
 #!/usr/bin/env pwsh
 [CmdletBinding()]
 param(
-    [string]$Issue = $(if ($env:FRONTIER_ISSUE) { $env:FRONTIER_ISSUE } elseif ($env:HVE_ISSUE) { $env:HVE_ISSUE } else { $env:AGENTX_ISSUE }),
-    [string]$Prompt = $(if ($env:FRONTIER_TASK) { $env:FRONTIER_TASK } elseif ($env:HVE_TASK) { $env:HVE_TASK } else { $env:AGENTX_TASK })
+    [string]$Issue = $env:FRONTIER_ISSUE,
+    [string]$Prompt = $env:FRONTIER_TASK
 )
 
 $ErrorActionPreference = 'Stop'

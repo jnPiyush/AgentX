@@ -11,9 +11,9 @@ trace() {
   printf '{"timestamp":"%s","hook":"post-tool","status":"%s","detail":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" >> "$TRACE_FILE"
 }
 
-SUMMARY=${FRONTIER_ITERATION_SUMMARY:-${HVE_ITERATION_SUMMARY:-${AGENTX_ITERATION_SUMMARY:-}}}
-EVIDENCE=${FRONTIER_EVIDENCE:-${HVE_EVIDENCE:-${AGENTX_EVIDENCE:-}}}
-PASSING=${FRONTIER_PASSING_TESTS:-${HVE_PASSING_TESTS:-${AGENTX_PASSING_TESTS:-}}}
+SUMMARY=${FRONTIER_ITERATION_SUMMARY:-}
+EVIDENCE=${FRONTIER_EVIDENCE:-}
+PASSING=${FRONTIER_PASSING_TESTS:-}
 if [ -z "$SUMMARY" ] || [ -z "$EVIDENCE" ]; then
   trace skipped "Iteration summary or evidence was not provided."
   exit 0

@@ -1,7 +1,7 @@
 ---
-name: Frontier Product FDE
+name: Frontier TPM
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
-model: Claude Opus 5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: true
 hooks:
   PreToolUse:
@@ -21,7 +21,7 @@ hooks:
       timeout: 10
 reasoning:
   mode: adaptive
-  level: high
+  level: medium
 constraints:
   - "MUST follow pipeline phases in prescribed sequence: Research (5 phases) -> Classify Intent -> Model Council Deliberation -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review; MUST NOT write the PRD before completing all research phases and the Model Council deliberation; MUST NOT create Backlog items before the PRD is complete"
   - "MUST read the PRD template and existing artifacts before starting work"
@@ -62,21 +62,21 @@ tools:
   - think
   - agent
 agents:
-  - Frontier Architecture FDE
+  - Frontier Architect
   - Frontier GitHub Ops FDE
   - Frontier ADO Ops FDE
   - Frontier Diagram FDE
 handoffs:
   - label: Continue to Architecture
-    agent: Frontier Architecture FDE
+    agent: Frontier Architect
     prompt: Review the completed PRD and produce the required architecture artifacts for this issue.
     send: false
   - label: Continue to UX
-    agent: Frontier Experience FDE
+    agent: Frontier UX Designer
     prompt: Review the completed PRD and produce the required UX specification and prototype for this issue.
     send: false
   - label: Continue to AI Design
-    agent: Frontier AI Systems FDE
+    agent: Frontier Data Scientist
     prompt: Review the completed PRD and define the AI implementation and evaluation contracts for this issue.
     send: false
 ---
@@ -340,7 +340,7 @@ If requirements are unclear or stakeholder input is needed:
 1. **Clarify first**: Use the clarification loop to request missing info from the user or upstream agent
 2. **Post blocker**: Add `needs:help` label and comment describing what is needed
 3. **Never assume**: Do not fabricate requirements -- ask for clarification
-4. **Timeout rule**: If no response within 15 minutes, document assumptions explicitly and flag for review
+4. **Timeout rule**: If the clarification returns no answer, document assumptions explicitly and flag for review
 
 > **Shared Protocols**: Follow [WORKFLOW.md](../../docs/WORKFLOW.md#handoff-flow) for handoff workflow, progress logs, memory compaction, and agent communication.
 > **Local Mode**: See [GUIDE.md](../../docs/GUIDE.md#local-mode-no-github) for local issue management.
@@ -353,7 +353,7 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

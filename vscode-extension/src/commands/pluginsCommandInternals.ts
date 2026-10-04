@@ -21,7 +21,7 @@ import {
   type PluginTrustDecision,
 } from '../utils/pluginInstallState';
 import { readInstalledVersion } from '../utils/versionChecker';
-import { hasFrontierState, resolveFrontierStatePath } from '../utils/frontierPaths';
+import { hasRepositoryState, isPrivateFrontierState, resolveRepositoryStatePath } from '../utils/frontierPaths';
 import {
  ARCHIVE_URL,
  BRANCH,
@@ -101,7 +101,7 @@ export function resolvePluginTarget(root: string, targetDirName: string): string
     throw new Error(`Unsafe plugin target directory: ${targetDirName}`);
   }
 
-  const pluginsRoot = resolveFrontierStatePath(root, 'plugins');
+  const pluginsRoot = resolveRepositoryStatePath(root, 'plugins');
   const validation = validatePath(path.join(pluginsRoot, targetDirName), root);
   if (!validation.allowed) {
     throw new Error(`Plugin target blocked by path policy: ${validation.reason ?? targetDirName}`);
@@ -118,8 +118,8 @@ export function resolvePluginTarget(root: string, targetDirName: string): string
 
 function buildPluginDescription(summary: PluginCatalogSummary, source: 'archive' | 'registry'): string {
   const versionSuffix = summary.version ? ` v${summary.version}` : '';
-  const compatibilitySuffix = summary.agentxRange
-    ? ` | Frontier ${summary.agentxRange}`
+  const compatibilitySuffix = summary.frontierRange
+    ? ` | Frontier ${summary.frontierRange}`
     : '';
   const sourceSuffix = source === 'registry' ? ' | registry' : '';
   return `${summary.description}${versionSuffix}${compatibilitySuffix}${sourceSuffix}`;
@@ -161,7 +161,7 @@ function buildRegistrySummary(entry: PluginRegistryEntry, hostVersion: string): 
     label: entry.displayName ?? entry.qualifiedId,
     description: entry.description ?? 'Frontier plugin',
     version: release.version,
-    agentxRange: release.engines?.agentx,
+    frontierRange: release.engines?.frontier,
   };
 }
 
@@ -524,16 +524,18 @@ async function installRegistryPlugin(
 
 export async function runAddPluginCommand(
  context: vscode.ExtensionContext,
- _agentx: FrontierContext,
+ agentx: FrontierContext,
 ): Promise<void> {
  const root = await promptWorkspaceRoot('Frontier - Add Plugin');
  if (!root) {
   return;
  }
 
- if (!hasFrontierState(root)) {
+ agentx.workspaceState.assertAvailable(root);
+ agentx.workspaceState.inspect(root, true);
+ if (!hasRepositoryState(root) || isPrivateFrontierState(root)) {
   vscode.window.showWarningMessage(
-   'Frontier plugins require workspace initialization. Run "Frontier: Initialize Local Runtime" first.',
+   'Repository plugins require Frontier: Initialize Repository Support. Private workspace state does not install repository plugins.',
   );
   return;
  }

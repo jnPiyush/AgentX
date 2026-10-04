@@ -1,9 +1,9 @@
 #!/usr/bin/env pwsh
 [CmdletBinding()]
 param(
-    [string]$Summary = $(if ($env:FRONTIER_FINAL_SUMMARY) { $env:FRONTIER_FINAL_SUMMARY } elseif ($env:HVE_FINAL_SUMMARY) { $env:HVE_FINAL_SUMMARY } else { $env:AGENTX_FINAL_SUMMARY }),
-    [string]$Evidence = $(if ($env:FRONTIER_EVIDENCE) { $env:FRONTIER_EVIDENCE } elseif ($env:HVE_EVIDENCE) { $env:HVE_EVIDENCE } else { $env:AGENTX_EVIDENCE }),
-    [string]$Passing = $(if ($env:FRONTIER_PASSING_TESTS) { $env:FRONTIER_PASSING_TESTS } elseif ($env:HVE_PASSING_TESTS) { $env:HVE_PASSING_TESTS } else { $env:AGENTX_PASSING_TESTS })
+    [string]$Summary = $env:FRONTIER_FINAL_SUMMARY,
+    [string]$Evidence = $env:FRONTIER_EVIDENCE,
+    [string]$Passing = $env:FRONTIER_PASSING_TESTS
 )
 
 $ErrorActionPreference = 'Stop'

@@ -250,12 +250,14 @@ try {
     $missingCount = Invoke-IsolatedAgentx -WorkspaceRoot $minimumWorkspace -Arguments @(
         'loop', 'iterate', '-s', 'Missing passing count', '-e', $countEvidence
     )
-    Assert-True ($missingCount.ExitCode -ne 0) 'recorded baseline requires an explicit passing count'
+    Assert-Equal $missingCount.ExitCode 0 'recorded baseline allows omitted counts while test execution is deferred'
+    $regressionEvidence = New-EvidenceFile -WorkspaceRoot $minimumWorkspace -Name 'regressed-count.txt' -Content 'explicit regressed count checks'
     $regressedCount = Invoke-IsolatedAgentx -WorkspaceRoot $minimumWorkspace -Arguments @(
-        'loop', 'iterate', '-s', 'Passing count regressed', '-e', $countEvidence, '--passing', '9'
+        'loop', 'iterate', '-s', 'Passing count regressed', '-e', $regressionEvidence, '--passing', '9'
     )
     Assert-True ($regressedCount.ExitCode -ne 0) 'recorded baseline rejects a lower passing count'
-    Assert-Equal ([int](Read-LoopState $minimumWorkspace).iteration) 0 'rejected passing counts do not advance loop state'
+    Assert-Match $regressedCount.Output 'would regress passing tests' 'explicit count regression is still explained'
+    Assert-Equal ([int](Read-LoopState $minimumWorkspace).iteration) 1 'omitted count advances once; rejected count does not advance'
 } finally {
     Remove-Item -LiteralPath $minimumWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }

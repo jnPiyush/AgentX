@@ -44,6 +44,8 @@ export interface LoopState {
   readonly budgetMinutes?: number;
   /** False after loop complete; set true by post-commit after Git creates the consuming commit. */
   readonly loopConsumed?: boolean;
+  /** Completion follow-up only; this question is not approval to execute tests. */
+  readonly postLoopTestPrompt?: string;
   readonly history: ReadonlyArray<{
     readonly iteration: number;
     readonly timestamp: string;
@@ -129,7 +131,7 @@ export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completion
 
   const role = (state.role ?? '').trim().toLowerCase();
   if (/^(auto-fix-reviewer|auto-fix|reviewer-auto)$/.test(role)) { return 'auto-fix-review'; }
-  if (/^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$/.test(role)) { return 'agent-x'; }
+  if (/^(autonomous|frontier|frontier-auto|frontier orchestration fde|frontier e2e sdlc)$/.test(role)) { return 'agent-x'; }
   if (/^(engineer|implementation)$/.test(role)) { return 'complex-delivery'; }
 
   // Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
@@ -138,7 +140,7 @@ export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completion
   if (/\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b/.test(fingerprint)) {
     return 'auto-fix-review';
   }
-  if (/\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b/.test(fingerprint)) {
+  if (/\b(autonomous|orchestrat|classify.*route)\b/.test(fingerprint)) {
     return 'agent-x';
   }
 

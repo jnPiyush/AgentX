@@ -42,7 +42,31 @@ describe('shell - literal CLI arguments', function () {
         assert.deepEqual(actual, [subcommand, ...values]);
       } finally { fs.rmSync(root, { recursive: true, force: true }); }
     });
+
   }
+
+  describe('shell - explicit protocol exit states', () => {
+    for (const code of [2, 3, 4]) {
+      it(`returns stdout for explicitly allowed exit ${code}`, async () => {
+        const child = Object.assign(new childProcess.ChildProcess(), {
+          stdout: new PassThrough(), stderr: new PassThrough(),
+        });
+        const spawn = sinon.stub(childProcess, 'spawn').returns(child);
+        resetShellCache();
+        const version = sinon.stub(shellInternals, 'detectPwshVersion').returns('7.4.0');
+        try {
+          const result = execShellStreaming('echo fixture', '.', 'pwsh', undefined, undefined,
+            { allowedExitCodes: [0, 2, 3, 4] });
+          child.stdout.write(Buffer.from('{"state":"caf'));
+          child.stdout.write(Buffer.from([0xc3]));
+          child.stdout.write(Buffer.from([0xa9]));
+          child.stdout.write(Buffer.from('"}\n'));
+          child.emit('close', code);
+          assert.equal(await result, '{"state":"caf\u00e9"}');
+        } finally { spawn.restore(); version.restore(); resetShellCache(); }
+      });
+    }
+  });
 
   it('passes the version expression directly to PowerShell without a shell', () => {
     const execute = sinon.stub(childProcess, 'execFileSync').returns(Buffer.from('7.4.0\n'));

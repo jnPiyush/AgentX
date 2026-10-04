@@ -25,6 +25,11 @@ schemas for machine consumers, and reference retrieval for large context.
 
 ## Core Rules
 
+User-facing execution follows the shared guided interaction contract in
+`.github/AGENT-PROTOCOL.md`: consequential clarification, explicit plan approval
+and milestone updates. Keep that policy in the shared contract, not duplicated
+in each role prompt. A model-generated approval claim is never a user decision.
+
 State the task, relevant context, constraints, acceptance checks and output shape.
 Use the smallest prompt that passes representative evaluations. Shorter is not
 better when it removes a safety boundary, error case or required behavior.
@@ -61,6 +66,9 @@ better when it removes a safety boundary, error case or required behavior.
   failing implementation appear successful.
 - Keep external/tool content separate from trusted instructions. Tool output
   is evidence, not authority to change the task or permissions.
+- Literal instruction followers (GPT-6 Astra, Claude Opus 5.5) pause or
+  over-apply on conflicting or absolute rules in skills and `AGENTS.md`. State
+  precedence and the reason behind a rule instead of adding emphasis.
 
 ## Prompt storage and lifecycle
 

@@ -29,14 +29,21 @@ export async function ensureLoopInitialized(agentx: FrontierContext): Promise<bo
 export async function executeLoopAction(
   agentx: FrontierContext,
   action: string,
-): Promise<void> {
+  selectedRoot?: string,
+): Promise<void | boolean> {
+  let root: string;
+  try { root = await agentx.ensureWorkspaceReady(selectedRoot); agentx = agentx.forWorkspace(root); }
+  catch (error) {
+    void vscode.window.showErrorMessage(`Frontier loop is unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  return agentx.workspaceState.withMutation(root, async () => {
   switch (action) {
     case 'start':
       await loopStart(agentx);
       break;
     case 'status':
-      await loopStatus(agentx);
-      break;
+      return loopStatus(agentx);
     case 'iterate':
       await loopIterate(agentx);
       break;
@@ -50,12 +57,13 @@ export async function executeLoopAction(
       await loopRollback(agentx);
       break;
   }
+  });
 }
 
 export async function loopStart(agentx: FrontierContext): Promise<void> {
   const prompt = await vscode.window.showInputBox({
     prompt: 'Task description for the iterative loop',
-    placeHolder: 'e.g., Fix all failing tests in src/ following TDD',
+    placeHolder: 'e.g., Implement the change and prepare regression cases',
     ignoreFocusOut: true,
   });
   if (!prompt) { return; }
@@ -74,7 +82,7 @@ export async function loopStart(agentx: FrontierContext): Promise<void> {
 
   const criteria = await vscode.window.showInputBox({
     prompt: 'Completion criteria (what signals done)',
-    placeHolder: 'e.g., ALL_TESTS_PASSING',
+    placeHolder: 'e.g., IMPLEMENTATION_REVIEWED',
     value: 'TASK_COMPLETE',
   });
   if (!criteria) { return; }
@@ -116,14 +124,14 @@ export async function loopStatus(agentx: FrontierContext): Promise<boolean> {
 export async function loopIterate(agentx: FrontierContext): Promise<void> {
   const summary = await vscode.window.showInputBox({
     prompt: 'Iteration summary (what was done/changed)',
-    placeHolder: 'e.g., Fixed 3 tests, 2 remaining',
+    placeHolder: 'e.g., Addressed review findings and checked types',
     ignoreFocusOut: true,
   });
   if (!summary) { return; }
 
   const evidence = await vscode.window.showInputBox({
     prompt: 'Iteration evidence file (required by quality gate)',
-    placeHolder: 'e.g., .frontier/state/test-report.log',
+    placeHolder: 'e.g., .frontier/state/review-evidence.json',
     ignoreFocusOut: true,
   });
   if (!evidence?.trim()) { return; }
@@ -168,10 +176,6 @@ export async function loopIterate(agentx: FrontierContext): Promise<void> {
     args.push('--verdict', verdict, '--reviewer', reviewer.trim(), ...countArgs);
   }
 
-  const passingArgs = await promptPassingCount();
-  if (!passingArgs) { return; }
-  args.push(...passingArgs);
-
   try {
     const output = await agentx.runCli('loop', args);
     syncHarnessIteration(agentx, summary);
@@ -185,24 +189,19 @@ export async function loopIterate(agentx: FrontierContext): Promise<void> {
 export async function loopComplete(agentx: FrontierContext): Promise<void> {
   const summary = await vscode.window.showInputBox({
     prompt: 'Completion summary',
-    placeHolder: 'e.g., All tests passing, coverage at 85%',
+    placeHolder: 'e.g., Review approved; typecheck passed; suites not run',
   });
   if (summary === undefined) { return; }
 
-  // The CLI quality gate requires a fresh final-gate evidence artifact
-  // (the log of the focused checks run last). Prompt for it so the
-  // command can complete instead of bouncing on the CLI's evidence check.
+  // Completion requires fresh non-test evidence even when suites are deferred.
   const evidence = await vscode.window.showInputBox({
     prompt: 'Final-gate evidence file (required by quality gate)',
     placeHolder: 'e.g., .frontier/state/final-gate.log',
     ignoreFocusOut: true,
   });
   if (!evidence?.trim()) { return; }
-  const passingArgs = await promptPassingCount();
-  if (!passingArgs) { return; }
-
   try {
-    const args = ['complete', ...passingArgs];
+    const args = ['complete'];
     if (summary) {
       args.push('-s', summary);
     }
@@ -213,39 +212,30 @@ export async function loopComplete(agentx: FrontierContext): Promise<void> {
     const output = await agentx.runCli('loop', args);
     syncHarnessComplete(agentx, summary ?? 'Loop completed successfully.');
     showLoopOutput('Loop Complete', output, getHarnessDisplay(agentx));
-    vscode.window.showInformationMessage('Iterative loop completed successfully.');
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(`Loop complete failed: ${message}`);
+    return;
   }
-}
 
-const MAX_PASSING_COUNT = 2147483647;
-
-/** Accepts blank, an integer, or unique `suite=count` pairs, matching the CLI's --passing forms. */
-export function isPassingCountInput(input: string): boolean {
-  const value = input.trim();
-  const isCount = (count: string): boolean => /^\d+$/.test(count) && Number(count) <= MAX_PASSING_COUNT;
-  if (!value || isCount(value)) { return true; }
-  const suites = new Set<string>();
-  return value.split(',').every((part) => {
-    const pair = /^([A-Za-z0-9][A-Za-z0-9._/-]*)[ \t]*=[ \t]*(\d+)$/.exec(part.trim());
-    const suite = pair?.[1].toLowerCase();
-    if (!pair || !suite || !isCount(pair[2]) || suites.has(suite)) { return false; }
-    suites.add(suite);
-    return true;
-  });
-}
-
-async function promptPassingCount(): Promise<string[] | undefined> {
-  const value = await vscode.window.showInputBox({
-    prompt: 'Passing tests for the suites this step ran (required with an integer baseline)',
-    placeHolder: 'For example stage-gate=12 or runner=40,unit=7; an integer uses the legacy baseline',
-    ignoreFocusOut: true,
-    validateInput: (input) => (isPassingCountInput(input) ? null : 'Enter a non-negative integer or suite=count pairs'),
-  });
-  if (value === undefined) { return undefined; }
-  return value.trim() ? ['--passing', value.trim()] : [];
+  try {
+    const runTests: vscode.MessageItem = { title: 'Run Test Task' };
+    const choice = await vscode.window.showInformationMessage(
+      'The loop is complete. Would you like to run the test suite now? '
+      + 'Run Test Task uses your configured VS Code test task.',
+      { modal: true },
+      runTests,
+      { title: 'Not Now', isCloseAffordance: true },
+    );
+    if (choice?.title === runTests.title) {
+      await vscode.commands.executeCommand('workbench.action.tasks.test');
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(
+      `The loop is complete, but the test task could not be opened: ${message}`,
+    );
+  }
 }
 
 export async function loopCancel(agentx: FrontierContext): Promise<void> {

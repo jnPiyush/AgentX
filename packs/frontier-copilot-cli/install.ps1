@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install Frontier Copilot CLI Plugin v9.6.0 into a workspace.
+ Install Frontier Copilot CLI Plugin v9.7.0 into a workspace.
 
 .DESCRIPTION
  Copies Frontier FDEs, skills, instructions, and prompts into a target workspace
@@ -48,6 +48,7 @@ param(
  [string]$Target = (Get-Location).Path,
  [string]$Source = "",
  [switch]$IncludeCli,
+ [switch]$GraphParsers,
  [switch]$Force
 )
 
@@ -82,6 +83,21 @@ $RuntimeBundleFiles = @(
  'frontier.sh',
  'frontier-cli.ps1',
  'agentic-runner.ps1',
+ 'guided-interaction.ps1',
+ 'repository-context.ps1',
+ 'repository-symbols.ps1',
+ 'repository-retrieval.ps1',
+ 'repository-parser-worker.ps1',
+ 'repository-process.cs',
+ 'workspace-sandbox.ps1',
+ 'workspace-state.ps1',
+ 'repository-parser/index.js',
+ 'repository-parser/package.json',
+ 'repository-parser/package-lock.json',
+ 'hydrafusion.ps1',
+ 'hydrafusion-policy.ps1',
+ 'hydrafusion-protocol.ps1',
+ 'hydrafusion-workspace.ps1',
  'local-issue-manager.ps1',
  'local-issue-manager.sh'
 )
@@ -307,7 +323,6 @@ function Get-PowerShellWrapperContent {
   "`$ErrorActionPreference = 'Stop'",
   "`$workspaceRoot = (Resolve-Path (Join-Path `$PSScriptRoot '../..')).Path",
   "`$env:FRONTIER_WORKSPACE_ROOT = `$workspaceRoot",
-  "`$env:AGENTX_WORKSPACE_ROOT = `$workspaceRoot",
   "& (Join-Path `$workspaceRoot '$runtimeRelative') @args",
   "`$succeeded = `$?",
   "`$exitCode = if (Test-Path variable:LASTEXITCODE) { `$LASTEXITCODE } else { 0 }",
@@ -330,7 +345,6 @@ function Get-BashWrapperContent {
   '',
   'workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"',
   'export FRONTIER_WORKSPACE_ROOT="$workspace_root"',
-  'export AGENTX_WORKSPACE_ROOT="$workspace_root"',
   ('exec "$workspace_root/.github/frontier/.frontier/runtime/' + $EntryFile + '" "$@"'),
   ''
  ) -join "`n"
@@ -414,7 +428,7 @@ function Initialize-WorkspaceCliState {
  }
 
  $version = [ordered]@{
-  version = '9.6.0'
+  version = '9.7.0'
   provider = 'local'
   mode = 'local'
   integration = 'local'
@@ -483,7 +497,7 @@ $Target = [System.IO.Path]::GetFullPath($Target)
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "| Frontier Copilot CLI Plugin v9.6.0        |" -ForegroundColor Cyan
+Write-Host "| Frontier Copilot CLI Plugin v9.7.0        |" -ForegroundColor Cyan
 Write-Host "| Standalone plugin for GitHub Copilot CLI |" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
@@ -544,6 +558,15 @@ if ($IncludeCli) {
  $wrapperResult = Install-WorkspaceCliWrappers -TargetRoot $Target
  $totalCopied += $wrapperResult.Copied; $totalSkipped += $wrapperResult.Skipped
  Write-OK "CLI wrappers: $($wrapperResult.Copied) copied, $($wrapperResult.Skipped) skipped"
+ if (-not $WhatIfPreference) {
+  $launcher = Join-Path $Target '.frontier/runtime/frontier.ps1'
+  if ($GraphParsers) {
+   & pwsh -NoProfile -File $launcher context-parsers restore
+   if ($LASTEXITCODE -ne 0) { throw 'Managed graph parser restoration failed.' }
+  }
+  & pwsh -NoProfile -File $launcher context --start-refresh
+  if ($LASTEXITCODE -ne 0) { Write-Warning 'Repository discovery did not start; run frontier context --sync to diagnose.' }
+ }
 }
 
 # -- Write version stamp ----------------------------------------------------
@@ -556,7 +579,7 @@ if (-not (Test-Path $versionDir)) {
 if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
  @{
   plugin = "frontier-copilot-cli"
-    version = "9.6.0"
+    version = "9.7.0"
   installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
   source = $Source
   includeCli = [bool]$IncludeCli
@@ -568,7 +591,7 @@ if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host " Frontier Copilot CLI Plugin v9.6.0 installed" -ForegroundColor Green
+Write-Host " Frontier Copilot CLI Plugin v9.7.0 installed" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " Files copied  : $totalCopied" -ForegroundColor White

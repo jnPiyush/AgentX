@@ -38,18 +38,13 @@ $ErrorActionPreference = 'Stop'
 # Paths
 # ---------------------------------------------------------------------------
 
-$workspaceRootOverride = if ($env:FRONTIER_WORKSPACE_ROOT) {
-    $env:FRONTIER_WORKSPACE_ROOT
-} elseif ($env:HVE_WORKSPACE_ROOT) {
-    $env:HVE_WORKSPACE_ROOT
-} else {
-    $env:AGENTX_WORKSPACE_ROOT
-}
+$workspaceRootOverride = $env:FRONTIER_WORKSPACE_ROOT
 $defaultWorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
 $Script:ROOT = if ($workspaceRootOverride) { $workspaceRootOverride } else { $defaultWorkspaceRoot }
 $Script:INSTALL_ROOT = $defaultWorkspaceRoot
 $Script:INSTALL_RUNTIME_DIR = $PSScriptRoot
-$Script:FRONTIER_STATE_DIR = Join-Path $Script:ROOT '.frontier'
+. (Join-Path $PSScriptRoot 'workspace-state.ps1')
+$Script:FRONTIER_STATE_DIR = Get-FrontierStateRoot $Script:ROOT
 $Script:STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'agent-status.json'
 $Script:LOOP_STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'loop-state.json'
 $Script:LOOP_STALE_AFTER_HOURS = 8
@@ -85,11 +80,7 @@ function Write-CliOutput {
 }
 
 function Get-FrontierEnvironmentValue([string]$Name) {
-    $value = [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
-    if ($value) { return $value }
-    $value = [string][Environment]::GetEnvironmentVariable("HVE_$Name")
-    if ($value) { return $value }
-    return [string][Environment]::GetEnvironmentVariable("AGENTX_$Name")
+    return [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
 }
 
 function Read-JsonFile([string]$p) {
@@ -2064,8 +2055,12 @@ function Get-Flag([string[]]$flags, [string]$default = '') {
 
 function Get-JoinedFlagValue([string[]]$flags) {
     # Every occurrence counts, and an unquoted PowerShell list such as a=1,b=2 arrives as an array.
-    $values = for ($i = 0; $i -lt $Script:SubArgs.Count - 1; $i++) {
-        if ($flags -contains $Script:SubArgs[$i]) { @($Script:SubArgs[$i + 1]) -join ',' }
+    # Keep empty trailing occurrences so count validation rejects incomplete repeated flags.
+    $values = for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
+        if ($flags -contains $Script:SubArgs[$i]) {
+            if (($i + 1) -lt $Script:SubArgs.Count) { @($Script:SubArgs[$i + 1]) -join ',' }
+            else { '' }
+        }
     }
     return @($values) -join ','
 }
@@ -4151,7 +4146,7 @@ function Get-LoopTaskClass {
     if ($State.PSObject.Properties.Name -contains 'role' -and $State.role) {
         switch -Regex (([string]$State.role).Trim().ToLowerInvariant()) {
             '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
-            '^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$' { return 'agent-x' }
+            '^(autonomous|frontier|frontier-auto|frontier orchestration fde|frontier e2e sdlc)$' { return 'agent-x' }
             '^(engineer|implementation)$'                  { return 'complex-delivery' }
         }
     }
@@ -4162,7 +4157,7 @@ function Get-LoopTaskClass {
         return 'auto-fix-review'
     }
 
-    if ($normalized -match '\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b') {
+    if ($normalized -match '\b(autonomous|orchestrat|classify.*route)\b') {
         return 'agent-x'
     }
 
@@ -4298,23 +4293,23 @@ function Get-LoopIterationGuidance {
         'high-risk' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Make it Work: satisfy the in-scope Spec/ADR/PRD acceptance criteria';     gate='Every in-scope criterion maps to a code path; feature functional' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + the checks this change warrants';      gate='Changed-surface checks pass' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: inspect edge cases + lint + non-test checks';              gate='Changed-surface non-test checks pass' }
                 [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets + dependencies + applicable threat checks'; gate='Zero high/critical findings' }
-                [PSCustomObject]@{ n=4; focus='Adversarial: applicable mutation/property/fuzz/negative checks';          gate='Risk-specific adversarial checks pass' }
-                [PSCustomObject]@{ n=5; focus='Independent Review + risk-scoped final evidence';                          gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+                [PSCustomObject]@{ n=4; focus='Adversarial review: inspect failure paths and prepare test cases';       gate='Risks reviewed; test suites deferred for user consent' }
+                [PSCustomObject]@{ n=5; focus='Independent Review + non-test final evidence';                            gate='Zero HIGH/MEDIUM; after completion ask whether to run suites' }
             )
         }
         'complex-delivery' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Make it Work: satisfy the in-scope Spec/ADR/PRD acceptance criteria'; gate='Every in-scope criterion maps to a code path; feature functional' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface security checks';  gate='Changed-surface checks pass' }
-                [PSCustomObject]@{ n=3; focus='Independent Review + risk-scoped final evidence';                      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: inspect edge cases + lint + non-test checks';          gate='Changed-surface non-test checks pass' }
+                [PSCustomObject]@{ n=3; focus='Independent Review + non-test final evidence';                         gate='Zero HIGH/MEDIUM; after completion ask whether to run suites' }
             )
         }
         'auto-fix-review' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Review findings + apply safe fixes + verify the changed surface'; gate='Safe fixes hold on the changed surface' }
-                [PSCustomObject]@{ n=2; focus='Independent decision + risk-scoped final evidence';      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
+                [PSCustomObject]@{ n=2; focus='Independent decision + non-test final evidence';        gate='Zero HIGH/MEDIUM; after completion ask whether to run suites' }
             )
         }
         'agent-x' {
@@ -4656,7 +4651,13 @@ function ConvertFrom-LoopPassingValue([string]$Raw) {
 
 function Get-LoopPassingCount([string]$contextLabel) {
     $raw = Get-JoinedFlagValue @('--passing')
-    if (-not $raw) { return $null }
+    if (-not $raw) {
+        if (Test-Flag @('--passing')) {
+            Write-CliOutput "$($C.r)  [FAIL] $contextLabel requires a value after --passing; omit the flag when tests are deferred.$($C.n)"
+            return '__INVALID__'
+        }
+        return $null
+    }
 
     $parsed = ConvertFrom-LoopPassingValue $raw
     if ($parsed -is [string]) {
@@ -4675,6 +4676,8 @@ function Test-LoopPassingBaseline {
         $CurrentPassing,
         [string]$ContextLabel
     )
+
+    if ($null -eq $CurrentPassing) { return $true }
 
     $hasCount = Test-LoopIntegerBaseline $Baseline
     if ($hasCount -and $CurrentPassing -isnot [int]) {
@@ -4698,8 +4701,7 @@ function Test-LoopPassingBaseline {
             }
         }
     } elseif (-not $hasCount) {
-        $note = if ($null -eq $CurrentPassing) { 'No test counts recorded.' } else { 'An integer count is compared only with an integer baseline (loop baseline -c <count>).' }
-        Write-CliOutput "$($C.d)  $note Add --passing <suite>=<count> for the suites this step ran.$($C.n)"
+        Write-CliOutput "$($C.d)  An integer count is compared only with an integer baseline (loop baseline -c <count>).$($C.n)"
     }
 
     return $true
@@ -4777,8 +4779,8 @@ function Format-LoopPreview([string]$Text, [int]$Max = 160) {
 .DESCRIPTION
   A test is affected when its text names a changed file by file name, path without
   extension, or a distinctive stem (compound, camelCase or 8+ characters, so words
-  such as 'config' or 'API' do not match everything). The list is where an iteration's
-  checks start, not proof of coverage; changed files no test names are reported.
+  such as 'config' or 'API' do not match everything). The list informs the post-loop
+  test offer, not execution or proof of coverage; unmatched files are reported.
 #>
 function Invoke-LoopAffected {
     $scope = Invoke-CodeQualityEvaluator -Mode Scope
@@ -4828,7 +4830,7 @@ function Invoke-LoopAffected {
         return
     }
     if ($changed.Count -eq 0) {
-        Write-CliOutput "$($C.d)  No implementation files changed since loop start; run only the tests you edited.$($C.n)"
+        Write-CliOutput "$($C.d)  No implementation files changed since loop start; include edited tests in the post-loop offer.$($C.n)"
         return
     }
     Write-CliOutput "$($C.c)  Affected tests: $($affected.Count) of $($testFiles.Count) test files cover $($changed.Count) changed file(s).$($C.n)"
@@ -4843,7 +4845,7 @@ function Invoke-LoopAffected {
         Write-CliOutput "$($C.y)  Not named by any test: $(@($untested | Select-Object -First 5) -join ', ')$more$($C.n)"
     }
     if ($skipped -gt 0) { Write-CliOutput "$($C.y)  Skipped $skipped test file(s) that are over 2 MB or unreadable.$($C.n)" }
-    Write-CliOutput "$($C.d)  Record each suite you run: --passing <suite>=<count>[,<suite>=<count>]$($C.n)"
+    Write-CliOutput "$($C.d)  Use these candidates for the post-loop user question. This command does not run suites.$($C.n)"
 }
 
 function Invoke-LoopStart {
@@ -5530,9 +5532,8 @@ function Invoke-LoopComplete {
     if (-not $finalEvidenceAbs -and (Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
         if ($finalEvidence) {
             Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
-            Write-CliOutput "$($C.d)  Provide a fresh log of the final checks for the changed code (see: frontier loop affected):$($C.n)"
-            Write-CliOutput "$($C.d)    e.g.: pwsh tests/<affected-suite>.ps1 > .frontier/state/final-gate.log$($C.n)"
-            Write-CliOutput "$($C.d)    then: frontier loop complete -s '<summary>' -e .frontier/state/final-gate.log --passing <suite>=<count>$($C.n)"
+            Write-CliOutput "$($C.d)  Provide fresh acceptance mapping, independent review and non-test verification evidence.$($C.n)"
+            Write-CliOutput "$($C.d)    then: frontier loop complete -s '<summary>' -e .frontier/state/final-gate.json$($C.n)"
         } else {
             Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., the log of the focused checks you ran last).$($C.n)"
         }
@@ -5561,6 +5562,16 @@ function Invoke-LoopComplete {
     if (-not $codeQualityGate.available -or $codeQualityGate.exitCode -ne 0) {
         Write-CliOutput "$($C.r)  [FAIL] Code-quality verification failed. For a checker timeout/startup error, inspect the checker and retry unchanged inputs. For stale hashes or review findings, rerun the affected checks and independent review.$($C.n)"
         exit 1
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $Script:FRONTIER_STATE_DIR 'state' 'hydrafusion') -PathType Container) {
+        try {
+            . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
+            Assert-HydraFusionLoopDelivery -WorkspaceRoot $Script:ROOT -LoopState $state
+        } catch {
+            Write-CliOutput "$($C.r)  [FAIL] $($_.Exception.Message)$($C.n)"
+            exit 1
+        }
     }
 
     # Archive the final evidence. Copied, never moved -- the caller's artifact must
@@ -5606,6 +5617,8 @@ function Invoke-LoopComplete {
 
     $summary = Get-Flag @('-s', '--summary') 'Criteria met'
     $state.active = $false; $state.status = 'complete'; $state.lastIterationAt = Get-Timestamp
+    $testSuitePrompt = 'Would you like to run the test suite now?'
+    $state | Add-Member -NotePropertyName postLoopTestPrompt -NotePropertyValue $testSuitePrompt -Force
     # Explicitly mark as not yet consumed so the pre-commit gate can reliably
     # detect the completed-but-not-consumed state without relying on field absence.
     # The pre-commit hook (or post-commit hook as a fallback) will flip this to
@@ -5629,6 +5642,8 @@ function Invoke-LoopComplete {
     Write-JsonFile $Script:LOOP_STATE_FILE $state
     Write-CliOutput "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)"
     if ($finalArchivedPath) { Write-CliOutput "$($C.d)  Final evidence archived to: $finalArchivedPath$($C.n)" }
+    Write-CliOutput '  Test suites are separate from loop completion.'
+    Write-CliOutput "  $testSuitePrompt Ask the user and wait for explicit approval."
     Write-CliOutput ''
 }
 
@@ -5660,6 +5675,15 @@ function Invoke-LoopGateCheck {
     if ($consumed) {
         Write-CliOutput 'BLOCK: quality loop was already consumed by a prior commit'
         exit 1
+    }
+    if (Test-Path -LiteralPath (Join-Path $Script:FRONTIER_STATE_DIR 'state' 'hydrafusion') -PathType Container) {
+        try {
+            . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
+            Assert-HydraFusionLoopDelivery -WorkspaceRoot $Script:ROOT -LoopState $state
+        } catch {
+            Write-CliOutput "BLOCK: $($_.Exception.Message)"
+            exit 1
+        }
     }
 
     $loopHealth = Get-LoopStateHealth -State $state
@@ -6054,6 +6078,11 @@ function Invoke-ConfigCmd {
             }
             $key = $Script:SubArgs[1]
             $rawValue = $Script:SubArgs[2]
+            if ($key -eq 'executionEngine' -and $rawValue -notin @('native', 'hydrafusion')) {
+                Write-CliOutput "$($C.r)  [FAIL] executionEngine must be 'native' or 'hydrafusion'.$($C.n)"
+                $global:LASTEXITCODE = 1
+                return
+            }
             # Parse boolean and numeric values
             $value = switch -Regex ($rawValue) {
                 '^true$'  { $true }
@@ -6126,8 +6155,6 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
     $startInfo.ArgumentList.Add('loop')
     $startInfo.ArgumentList.Add('gate')
     $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $workspaceRoot
-    $startInfo.Environment['HVE_WORKSPACE_ROOT'] = $workspaceRoot
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $workspaceRoot
 
     $execution = Invoke-LoopCheckProcess -StartInfo $startInfo
     $output = $execution.output
@@ -6386,12 +6413,152 @@ function Get-HookInputValue($InputObject, [string]$Name) {
     return $null
 }
 
-function Write-HookResponse([string]$Message) {
+function Write-HookResponse([string]$Message, [string]$AdditionalContext = '') {
     $response = [ordered]@{
         continue = $true
         systemMessage = $Message
-    } | ConvertTo-Json -Compress
-    [Console]::Out.WriteLine($response)
+    }
+    if ($AdditionalContext) {
+        $response.hookSpecificOutput = @{
+            hookEventName = 'SessionStart'
+            additionalContext = $AdditionalContext
+        }
+    }
+    [Console]::Out.WriteLine(($response | ConvertTo-Json -Depth 5 -Compress))
+}
+
+function Get-RepositorySessionContext($HookInput) {
+    # Session startup never runs discovery inline: it reads the small primer, schedules a
+    # detached refresh when stale, and injects at most once per session and graph version.
+    if (-not (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf)) { return '' }
+    . (Join-Path $PSScriptRoot 'repository-context.ps1')
+    $state = Get-FrontierRepositoryPrimer $Script:ROOT
+    $scheduled = $false
+    try { $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -State $state }
+    catch { [Console]::Error.WriteLine("[frontier-context] Background refresh not started: $($_.Exception.Message)") }
+    $context = Format-FrontierRepositoryPrimer $state $scheduled
+    $fingerprint = if ($null -ne $state.primer) { [string]$state.primer['fingerprint'] } else { 'pending' }
+    $session = [string](Get-HookInputValue $HookInput 'session_id')
+    if (-not $session) { $session = [string](Get-HookInputValue $HookInput 'sessionId') }
+    $source = [string](Get-HookInputValue $HookInput 'source')
+    $resetContext = $source -in @('resume', 'compact', 'clear')
+    if (-not $session -or -not $state.directory) { return $context }
+
+    $claimPath = Join-Path $state.directory 'session-context.json'
+    $claimItem = Get-Item -LiteralPath $claimPath -Force -ErrorAction SilentlyContinue
+    if ($claimItem -and ($claimItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw 'Repository context session record must not be a symbolic link.'
+    }
+    $key = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($session)))
+    return Invoke-WithJsonLock -jsonPath $claimPath -agent 'repository-context' -fn {
+        $record = if (Test-Path -LiteralPath $claimPath) {
+            Get-Content -LiteralPath $claimPath -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable -Depth 5
+        } else { @{ schemaVersion = 1; sessions = @{} } }
+        if ($record -isnot [System.Collections.IDictionary] -or $record['schemaVersion'] -ne 1 -or $record['sessions'] -isnot [System.Collections.IDictionary]) {
+            throw 'Invalid repository context session record; existing data was preserved.'
+        }
+        $claims = $record['sessions']
+        if (-not $resetContext -and $claims.Contains($key) -and $claims[$key].fingerprint -eq $fingerprint) { return '' }
+        $claims[$key] = @{ fingerprint = $fingerprint; at = [DateTime]::UtcNow.ToString('o') }
+        if ($claims.Count -gt 64) {
+            foreach ($old in @($claims.Keys | Sort-Object { [datetime]$claims[$_].at } | Select-Object -First ($claims.Count - 64))) {
+                [void]$claims.Remove($old)
+            }
+        }
+        $temporary = "$claimPath.$([guid]::NewGuid().ToString('N')).tmp"
+        try {
+            Write-JsonFile $temporary $record
+            [IO.File]::Move($temporary, $claimPath, $true)
+        } finally {
+            if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+        }
+        return $context
+    }
+}
+
+function Invoke-RepositoryContextCmd {
+    $valueFlags = @('-q', '--query', '--query64', '-a', '--agent', '--max-chars', '--tokens', '--detail', '--hops', '--subsystem', '--subsystem64')
+    $switchFlags = @('--hook', '--start-refresh', '--refresh', '--sync', '--json')
+    for ($index = 0; $index -lt $Script:SubArgs.Count; $index++) {
+        $flag = [string]$Script:SubArgs[$index]
+        if ($flag -in $valueFlags) {
+            if (++$index -ge $Script:SubArgs.Count) { throw "Missing value for $flag." }
+            if ($flag -in @('--max-chars', '--tokens', '--hops')) {
+                $integer = 0
+                if (-not [int]::TryParse([string]$Script:SubArgs[$index], [ref]$integer)) { throw "$flag requires an integer." }
+            }
+        } elseif ($flag -notin $switchFlags) { throw "Unsupported repository context argument '$flag'." }
+    }
+    if (Test-Flag @('--hook')) {
+        $hookInput = [Console]::In.ReadToEnd() | ConvertFrom-Json -Depth 10
+        if ($hookInput -isnot [PSCustomObject]) { throw 'Repository-context hooks require a JSON object on stdin.' }
+        $context = Get-RepositorySessionContext $hookInput
+        if (Get-HookInputValue $hookInput 'hook_event_name') {
+            Write-HookResponse -Message '' -AdditionalContext $context
+        } else {
+            [Console]::Out.WriteLine((@{ additionalContext = $context } | ConvertTo-Json -Compress))
+        }
+        return
+    }
+    if (-not (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf)) {
+        throw "Repository context is a Frontier workspace capability; $Script:ROOT is not initialized. Run 'Frontier: Initialize Local Runtime' or the Frontier workspace installer first."
+    }
+    . (Join-Path $PSScriptRoot 'repository-context.ps1')
+    if (Test-Flag @('--start-refresh')) {
+        $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -Force
+        if ($Script:JsonOutput) { [Console]::Out.WriteLine((@{ scheduled = $scheduled } | ConvertTo-Json -Compress)) }
+        else { Write-CliOutput $(if ($scheduled) { 'Repository context refresh started in the background.' } else { 'Repository context refresh was not started.' }) }
+        return
+    }
+    $query = Get-DecodedFlag @('-q', '--query') @('--query64') ''
+    $agent = Get-Flag @('-a', '--agent') ''
+    $tokenBudget = Get-Flag @('--tokens') ''
+    $maxChars = [int](Get-Flag @('--max-chars') $(if ($tokenBudget) { '16000' } else { '4000' }))
+    $contextParameters = @{
+        WorkspaceRoot = $Script:ROOT; Query = $query; Agent = $agent; MaxChars = $maxChars
+        Detail = Get-Flag @('--detail') 'map'
+        GraphHops = [int](Get-Flag @('--hops') '1')
+        Subsystem = Get-DecodedFlag @('--subsystem') @('--subsystem64') ''
+    }
+    if ($tokenBudget) { $contextParameters.TokenBudget = [int]$tokenBudget }
+    $refresh = Test-Flag @('--refresh')
+    if ($refresh -or (Test-Flag @('--sync'))) {
+        $packet = Get-FrontierRepositoryContext @contextParameters -Refresh:$refresh
+    } else {
+        # Default reads never block on discovery; a debounced background worker keeps the graph current.
+        $packet = Get-FrontierRepositoryContext @contextParameters -Cached
+        $state = Get-FrontierRepositoryPrimer $Script:ROOT
+        $scheduled = $false
+        try { if ($packet.status -ne 'incompatible') { $scheduled = Start-FrontierRepositoryContextRefresh -WorkspaceRoot $Script:ROOT -State $state -Stale:($packet.status -eq 'stale') } }
+        catch { [Console]::Error.WriteLine("[frontier-context] Background refresh not started: $($_.Exception.Message)") }
+        $packet | Add-Member -NotePropertyName refreshScheduled -NotePropertyValue $scheduled
+        $checkedAt = if ($null -ne $state.primer) { (ConvertTo-FrontierRepositoryUtc $state.primer['checkedAt']).ToString('o') } else { $null }
+        $packet | Add-Member -NotePropertyName checkedAt -NotePropertyValue $checkedAt
+        if ($packet.status -eq 'missing') {
+            Set-FrontierRepositoryRefreshNotice -Packet $packet -State $state -Scheduled $scheduled -MaxChars $maxChars
+        }
+    }
+    if ($Script:JsonOutput) {
+        [Console]::Out.WriteLine(($packet | ConvertTo-Json -Depth 8 -Compress))
+    } else {
+        Write-CliOutput $packet.context
+    }
+}
+
+function Invoke-ContextParsersCmd {
+    . (Join-Path $PSScriptRoot 'repository-symbols.ps1')
+    $action = if ($Script:SubArgs.Count) { $Script:SubArgs[0] } else { 'status' }
+    if (@($Script:SubArgs | Where-Object { $_ -ne '--json' }).Count -gt 1) {
+        throw 'Usage: frontier context-parsers status|restore'
+    }
+    if ($action -notin @('status', 'restore')) { throw 'Usage: frontier context-parsers status|restore' }
+    if ($action -eq 'restore') {
+        $npm = Get-Command npm -ErrorAction Stop
+        & $npm.Source ci --prefix (Join-Path $PSScriptRoot 'repository-parser') --ignore-scripts --omit=dev --no-fund
+        if ($LASTEXITCODE -ne 0) { throw 'Managed graph parser restore failed; no parser capability is assumed.' }
+    }
+    $capabilities = Get-FrontierRepositoryParserCapabilities $Script:ROOT
+    [Console]::Out.WriteLine(($capabilities | ConvertTo-Json -Depth 6 -Compress))
 }
 
 function Stop-HookToolCall([string]$Message) {
@@ -6420,7 +6587,7 @@ function ConvertTo-HookPathCandidate([string]$Candidate) {
     $normalized = [regex]::Replace($normalized, '`(.)', '$1')
     $normalized = $normalized -replace '(?i)^(?:Microsoft\.PowerShell\.Core\\)?FileSystem::', ''
     $canonicalRoot = [IO.Path]::GetFullPath($Script:ROOT).TrimEnd('\', '/')
-    foreach ($workspaceToken in @('${env:FRONTIER_WORKSPACE_ROOT}', '$env:FRONTIER_WORKSPACE_ROOT', '${env:HVE_WORKSPACE_ROOT}', '$env:HVE_WORKSPACE_ROOT', '${env:AGENTX_WORKSPACE_ROOT}', '$env:AGENTX_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
+    foreach ($workspaceToken in @('${env:FRONTIER_WORKSPACE_ROOT}', '$env:FRONTIER_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
         $normalized = $normalized.Replace($workspaceToken, $canonicalRoot, [StringComparison]::OrdinalIgnoreCase)
     }
     if ($normalized -match '\$' -and $normalized -match '(?i)(?:^|[\\/])\.frontier(?:[\\/]|$)') {
@@ -6493,13 +6660,13 @@ function ConvertFrom-HookPathExpression($Expression) {
             if ($nestedExpression -isnot [Management.Automation.Language.VariableExpressionAst]) {
                 return [PSCustomObject]@{ Safe = $false; Value = $null }
             }
-            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
+            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT')) {
                 return [PSCustomObject]@{ Safe = $false; Value = $null }
             }
         }
         return [PSCustomObject]@{ Safe = $true; Value = (ConvertTo-HookPathCandidate $Expression.Extent.Text.Trim('"', "'")) }
     }
-    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
+    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:FRONTIER_WORKSPACE_ROOT')) {
         return [PSCustomObject]@{ Safe = $true; Value = [IO.Path]::GetFullPath($Script:ROOT) }
     }
     return [PSCustomObject]@{ Safe = $false; Value = $null }
@@ -6510,7 +6677,7 @@ function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[str
         $unsupportedDynamic = @($element.FindAll({
             param($node)
             ($node -is [Management.Automation.Language.VariableExpressionAst] -and
-                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) -or
+                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT')) -or
             $node -is [Management.Automation.Language.SubExpressionAst]
         }, $true)).Count -gt 0
         if ($unsupportedDynamic) { return $false }
@@ -6541,16 +6708,29 @@ function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[str
     return $true
 }
 
-function Test-TrustedLoopStartCommand([string]$Command) {
+function Test-TrustedFrontierCommand {
+    param(
+        [string]$Command,
+        [ValidateSet('loop-start', 'repository-context', 'cursor-read')][string]$Operation = 'loop-start'
+    )
     $tokens = $null
     $parseErrors = $null
     $ast = [Management.Automation.Language.Parser]::ParseInput($Command, [ref]$tokens, [ref]$parseErrors)
     if (@($parseErrors).Count -gt 0) { return $false }
+    if ($ast.BeginBlock -or $ast.ProcessBlock -or -not $ast.EndBlock -or $ast.EndBlock.Statements.Count -ne 1) { return $false }
+    $statement = $ast.EndBlock.Statements[0]
+    if ($statement -isnot [Management.Automation.Language.PipelineAst] -or $statement.PipelineElements.Count -ne 1) { return $false }
     $commands = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true))
     if ($commands.Count -ne 1 -or @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FileRedirectionAst] }, $true)).Count -gt 0) {
         return $false
     }
     $commandAst = $commands[0]
+    foreach ($element in $commandAst.CommandElements) {
+        if ($element -is [Management.Automation.Language.StringConstantExpressionAst]) { continue }
+        if ($element -is [Management.Automation.Language.ConstantExpressionAst] -and $element.Value -is [ValueType]) { continue }
+        if ($element -is [Management.Automation.Language.CommandParameterAst] -and $null -eq $element.Argument) { continue }
+        return $false
+    }
     if (@($commandAst.CommandElements | Where-Object {
         @($_.FindAll({
             param($node)
@@ -6565,18 +6745,26 @@ function Test-TrustedLoopStartCommand([string]$Command) {
     })
     $commandName = [string]$commandAst.GetCommandName()
     $launcherIndex = 0
-    if (($commandName -split '\\')[-1] -match '(?i)^pwsh(?:\.exe)?$') {
+    if (($commandName -split '[\\/]')[-1] -match '(?i)^pwsh(?:\.exe)?$') {
+        $wrapper = Get-Command -Name $commandName -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $wrapper -or $wrapper.CommandType -ne [Management.Automation.CommandTypes]::Application) { return $false }
+        $wrapperFile = Get-Item -LiteralPath $wrapper.Source -Force
+        if ($wrapperFile.Attributes -band [IO.FileAttributes]::ReparsePoint) { $wrapperFile = $wrapperFile.ResolveLinkTarget($true) }
+        $expectedWrapper = Join-Path $PSHOME $(if ($IsWindows) { 'pwsh.exe' } else { 'pwsh' })
+        $wrapperComparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+        if (-not $wrapperFile.FullName.Equals([IO.Path]::GetFullPath($expectedWrapper), $wrapperComparison)) { return $false }
         $fileIndexes = @(for ($index = 1; $index -lt $elements.Count; $index++) {
             if ($elements[$index] -match '(?i)^-File$') { $index }
         })
         if ($fileIndexes.Count -ne 1) { return $false }
         $fileIndex = $fileIndexes[0]
-        if ($fileIndex -lt 0 -or $fileIndex + 3 -ge $elements.Count) { return $false }
+        if ($fileIndex -lt 0 -or $fileIndex + 2 -ge $elements.Count) { return $false }
         $safeWrapperSwitches = @('-NoProfile', '-NonInteractive', '-NoLogo')
         if ($fileIndex -gt 1 -and @($elements[1..($fileIndex - 1)] | Where-Object { $_ -notin $safeWrapperSwitches }).Count -gt 0) { return $false }
         $launcherIndex = $fileIndex + 1
     }
-    if ($launcherIndex + 2 -ge $elements.Count) { return $false }
+    $argumentCount = if ($Operation -in @('loop-start', 'cursor-read')) { 2 } else { 1 }
+    if ($launcherIndex + $argumentCount -ge $elements.Count) { return $false }
     try {
         $launcher = if ([IO.Path]::IsPathRooted($elements[$launcherIndex])) {
             [IO.Path]::GetFullPath($elements[$launcherIndex])
@@ -6589,9 +6777,15 @@ function Test-TrustedLoopStartCommand([string]$Command) {
     } catch {
         return $false
     }
-    return @($trustedLaunchers | Where-Object { $launcher.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0 -and
-        $elements[$launcherIndex + 1] -ceq 'loop' -and
-        $elements[$launcherIndex + 2] -ceq 'start'
+    $comparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+    if (@($trustedLaunchers | Where-Object { $launcher.Equals($_, $comparison) }).Count -eq 0) { return $false }
+    if ($Operation -eq 'repository-context') { return $elements[$launcherIndex + 1] -ceq 'context' }
+    if ($Operation -eq 'cursor-read') {
+        if ($elements[$launcherIndex + 1] -cne 'cursor') { return $false }
+        return ($elements.Count -eq $launcherIndex + 4 -and $elements[$launcherIndex + 2] -ceq 'read') -or
+            ($elements.Count -eq $launcherIndex + 3 -and $elements[$launcherIndex + 2] -cin @('status', 'runtime'))
+    }
+    return $elements[$launcherIndex + 1] -ceq 'loop' -and $elements[$launcherIndex + 2] -ceq 'start'
 }
 
 function Get-TerminalHookPathAnalysis([string]$Command) {
@@ -6694,6 +6888,7 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
     $protectedRelativePaths = foreach ($fileName in @('loop-state.json', 'tests-baseline.json', 'code-quality-baseline.json')) {
         ".frontier/state/$fileName"
     }
+    $protectedRelativePaths += '.frontier/sessions'
 
     foreach ($relativePath in $protectedRelativePaths) {
         $protectedPath = Join-Path $Script:ROOT $relativePath
@@ -6731,6 +6926,8 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
                     }
                     $fullCandidate = [IO.Path]::GetFullPath($resolvedCandidatePath)
                     if ($fullCandidate.Equals($fullAlias, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                    if ($relativePath -eq '.frontier/sessions' -and
+                        $fullCandidate.StartsWith($fullAlias.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { return $true }
                     $candidatePrefix = $fullCandidate.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
                     if ($fullAlias.StartsWith($candidatePrefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
                     $candidateItem = Get-Item -LiteralPath $candidatePath -Force -ErrorAction SilentlyContinue
@@ -6783,9 +6980,15 @@ function Invoke-PolicyHookCmd {
         }
         if ($isTerminalTool) {
             $command = [string](Get-HookInputValue $toolInput 'command')
-            $isTrustedLoopStart = Test-TrustedLoopStartCommand $command
+            if ($command -match '(?i)\bfrontier(?:-cli)?(?:\.ps1|\.sh)?\b' -and
+                $command -match '(?i)--(?:input-decision|input-id|plan-version|plan-digest|interaction|autonomous)\b') {
+                Stop-HookToolCall 'Frontier input decisions and autonomous authorization belong to the user or a trusted host input channel, not an agent terminal tool.'
+            }
+            $isTrustedLoopStart = Test-TrustedFrontierCommand $command
+            $isTrustedContext = (Test-TrustedFrontierCommand $command -Operation 'repository-context') -or
+                (Test-TrustedFrontierCommand $command -Operation 'cursor-read')
             $pathAnalysis = Get-TerminalHookPathAnalysis $command
-            if ((-not $isTrustedLoopStart -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
+            if ((-not $isTrustedLoopStart -and -not $isTrustedContext -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
                 Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use frontier loop commands instead.'
             }
             $readOnlyCommandPattern = '(?i)^\s*(Get-(Content|ChildItem|Item|Location|FileHash|Command)(\s+.*)?|Test-Path(\s+.*)?|Select-String(\s+.*)?|Resolve-Path(\s+.*)?|rg(\s+.*)?|cat(\s+.*)?|ls(\s+.*)?|head(\s+.*)?|tail(\s+.*)?|pwd\s*|stat(\s+.*)?|node\s+--version|npm\s+--version|python(?:3)?\s+--version|py\s+--version|dotnet\s+--version|pwsh\s+--version)\s*$'
@@ -6794,7 +6997,7 @@ function Invoke-PolicyHookCmd {
                 $command -match '(?i)(^|\s)--output(?:=|\s)' -or
                 $command -match '(?i)(^|\s)--(?:pre|hostname-bin)(?:=|\s|$)' -or
                 $command -match '(?i)^\s*git\s+(?:diff|log|show)\b.*(?:^|\s)--(?:no-)?(?:ext|textc)[a-z-]*(?:=|\s|$)'
-            $isFileMutation = $hasShellComposition -or $command -notmatch $readOnlyCommandPattern
+            $isFileMutation = -not $isTrustedContext -and ($hasShellComposition -or $command -notmatch $readOnlyCommandPattern)
         }
         if (-not $isFileMutation) { return }
         if (-not $loopState) {
@@ -6813,10 +7016,15 @@ function Invoke-PolicyHookCmd {
         return
     }
     if ($eventName -eq 'SessionStart') {
+        $message = ''
         if ($loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
             $issue = Get-HookInputValue $loopState 'issueNumber'
-            Write-HookResponse "Frontier resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
+            $message = "Frontier resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
         }
+        $context = ''
+        try { $context = Get-RepositorySessionContext $hookInput }
+        catch { $message += " Repository context unavailable: $($_.Exception.Message). Run frontier context to diagnose." }
+        if ($message -or $context) { Write-HookResponse -Message $message.Trim() -AdditionalContext $context }
         return
     }
     if ($eventName -eq 'Stop' -and $loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
@@ -6892,10 +7100,79 @@ function Invoke-AgentHookCmd {
 }
 
 # ---------------------------------------------------------------------------
+# ENGINE: execution engine selection and HydraFusion readiness
+# ---------------------------------------------------------------------------
+
+function Invoke-EngineCmd {
+    . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
+    $global:LASTEXITCODE = 0
+    $action = if ($Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') { $Script:SubArgs[0] } else { 'status' }
+    if ($action -in @('inspect', 'accept', 'discard', 'recover')) {
+        try {
+            if ($Script:SubArgs.Count -lt 2) { throw "engine $action requires a candidate ID." }
+            $id = $Script:SubArgs[1]
+            if ($action -eq 'accept') {
+                $review = Get-Flag @('--review') ''
+                if (-not $review) { throw 'engine accept requires --review <independently-recorded-report.json>.' }
+                $run = Complete-HydraFusionCandidate -WorkspaceRoot $Script:ROOT -RunId $id -ReviewPath $review
+                $global:LASTEXITCODE = 3
+            } elseif ($action -eq 'discard') {
+                $run = Remove-HydraFusionCandidate $Script:ROOT $id
+            } elseif ($action -eq 'recover') {
+                $run = Repair-HydraFusionInterruptedRun $Script:ROOT $id
+            } else { $run = Get-HydraFusionRun $Script:ROOT $id }
+            if ($Script:JsonOutput) { [Console]::Out.WriteLine((ConvertTo-Json -InputObject $run -Depth 30 -Compress)) }
+            else {
+                Write-CliOutput "  Candidate ${id}: $($run['status'])"
+                Write-CliOutput "  Artifacts: $($run['scratch'])"
+                Write-CliOutput '  Candidate acceptance does not complete the owner quality loop.'
+            }
+        } catch {
+            $global:LASTEXITCODE = 1
+            if ($Script:JsonOutput) { [Console]::Out.WriteLine((@{ status = 'error'; message = $_.Exception.Message } | ConvertTo-Json -Compress)) }
+            else { Write-CliOutput "  [FAIL] $($_.Exception.Message)" }
+        }
+        return
+    }
+    if ($action -ne 'status') { throw 'engine supports status, inspect, accept, discard and recover.' }
+    $cfg = Get-FrontierConfig
+    $choice = $null
+    $problem = ''
+    try { $choice = Resolve-FrontierExecutionEngine -Requested '' -Config $cfg } catch { $problem = $_.Exception.Message }
+    $readiness = [ordered]@{ ready = $false; cliPath = ''; cliVersion = ''; minimumVersion = [string]$Script:HydraFusionMinimumCliVersion; reason = '' }
+    try {
+        $cli = Resolve-HydraFusionCli -WorkspaceRoot $Script:ROOT
+        $readiness.ready = $true
+        $readiness.cliPath = $cli.path
+        $readiness.cliVersion = [string]$cli.version
+    } catch { $readiness.reason = $_.Exception.Message }
+    $report = [ordered]@{
+        engine = $(if ($choice) { $choice.engine } else { '' }); source = $(if ($choice) { $choice.source } else { '' })
+        configError = $problem; hydraFusion = $readiness
+    }
+    if ($Script:JsonOutput) {
+        [Console]::Out.WriteLine(($report | ConvertTo-Json -Depth 5 -Compress))
+    } else {
+        Write-CliOutput "$($C.c)  Frontier Execution Engine$($C.n)"
+        if ($problem) { Write-CliOutput "$($C.r)  [FAIL] $problem$($C.n)" }
+        else { Write-CliOutput "  engine = $($report.engine) ($($report.source))" }
+        if ($readiness.ready) {
+            Write-CliOutput "$($C.g)  [PASS] Required CLI capabilities found: $($readiness.cliVersion) at $($readiness.cliPath)$($C.n)"
+        } else {
+            Write-CliOutput "$($C.y)  [WARN] HydraFusion unavailable: $($readiness.reason)$($C.n)"
+        }
+        Write-CliOutput "$($C.d)  Select a preauthorized candidate with 'frontier run <agent> <prompt> --engine hydrafusion --interaction autonomous'. Setting executionEngine alone does not authorize automation.$($C.n)"
+        Write-CliOutput "$($C.d)  This does not verify account entitlement; execution also requires an active owner loop and an explicit credit budget.$($C.n)"
+    }
+    if ($problem) { $global:LASTEXITCODE = 1 }
+}
+
+# ---------------------------------------------------------------------------
 # RUN: Agentic loop execution (LLM + tools via GitHub Models API)
 # ---------------------------------------------------------------------------
 
 function Invoke-RunCmd {
+    $global:LASTEXITCODE = 0
     # Dot-source the agentic runner module
     . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
 
@@ -6906,6 +7183,30 @@ function Invoke-RunCmd {
     $issue = [int](Get-Flag @('-i', '--issue') '0')
     $resumeSession = Get-Flag @('--resume-session')
     $clarificationResponse = Get-Flag @('--clarification-response')
+    $inputDecision = Get-Flag @('--input-decision') ''
+    $inputId = Get-Flag @('--input-id') ''
+    $planVersion = [int](Get-Flag @('--plan-version') '0')
+    $planDigest = Get-Flag @('--plan-digest') ''
+    $interactionMode = Get-Flag @('--interaction') ''
+    $sessionInfo = Get-Flag @('--session-info') ''
+    if ($sessionInfo) {
+        $infoSession = Read-Session $sessionInfo $Script:ROOT
+        if (-not $infoSession) { throw "Session '$sessionInfo' not found." }
+        $storedInteraction = Get-MessageFieldValue $infoSession.meta 'interaction'
+        if ($storedInteraction) {
+            $state = ConvertFrom-RunnerInteraction $storedInteraction $sessionInfo $Script:ROOT ([string]$infoSession.meta.agentName)
+            $info = @{
+                sessionId = $sessionInfo; agent = $state.agent; mode = $state.mode; phase = $state.phase
+                planVersion = $state.planVersion; digest = $state.digest
+                progress = @($state.progress)
+                pendingInteraction = Get-InteractionPendingView $state
+            }
+        } else {
+            $info = @{ sessionId = $sessionInfo; agent = $infoSession.meta.agentName; phase = 'legacy_clarification'; pendingInteraction = $null }
+        }
+        [Console]::Out.WriteLine(($info | ConvertTo-Json -Depth 20 -Compress))
+        return
+    }
 
     if (-not $agent -and $Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') {
         $agent = $Script:SubArgs[0]
@@ -6930,7 +7231,16 @@ function Invoke-RunCmd {
         Write-CliOutput '  frontier run -a engineer -p "Fix the failing tests"'
         Write-CliOutput '  frontier run architect "Design the auth system" -i 42'
         Write-CliOutput '  frontier run engineer "Implement login" --max 20 -m gpt-4.1'
+        Write-CliOutput '  frontier run engineer "Preauthorized bounded task" --interaction autonomous'
+        Write-CliOutput '  frontier run --session-info <session-id> --json'
+        Write-CliOutput '  frontier run --resume-session <id> --input-id <input-id> --input-decision approve --plan-version 1 --plan-digest <sha256>'
+        Write-CliOutput '  frontier run --resume-session <id> --input-id <input-id> --input-decision revise --plan-version 1 --plan-digest <sha256> --clarification-response "Requested changes"'
+        Write-CliOutput '  frontier run --resume-session <id> --input-id <input-id> --input-decision answer --clarification-response "Your answer"'
+        Write-CliOutput '  frontier run --resume-session <id> --input-decision continue --plan-version <version> --plan-digest <sha256>'
+        Write-CliOutput '  frontier run engineer "Smoke prompt" --no-loop-sync   (do not record into the active quality loop)'
+        Write-CliOutput '  frontier run engineer "Bounded candidate" --engine hydrafusion --interaction autonomous'
         Write-CliOutput '  frontier run --resume-session <session-id> --clarification-response "Use the existing auth flow"'
+        Write-CliOutput '  Exit codes: 0 execution finished, 1 error/incomplete, 2 awaiting input, 3 candidate pending review, 4 cancelled.'
         Write-CliOutput "`n$($C.w)  Available agents:$($C.n)"
         foreach ($agentFilePath in (Get-AgentDefinitionFiles)) {
             $f = Get-Item $agentFilePath
@@ -6953,7 +7263,7 @@ function Invoke-RunCmd {
             $agent = [string]$session.meta.agentName
         }
 
-        if (-not $clarificationResponse) {
+        if (-not $clarificationResponse -and -not $inputDecision) {
             Write-CliOutput "$($C.r)  [FAIL] Clarification response required. Use: frontier run --resume-session $resumeSession --clarification-response \"your guidance\"$($C.n)"
             $global:LASTEXITCODE = 1
             return
@@ -6972,30 +7282,52 @@ function Invoke-RunCmd {
 
     $params = @{
         Agent = $agent
-        MaxIterations = $max
         WorkspaceRoot = $Script:ROOT
     }
+    if (-not $resumeSession -or (Test-Flag @('--max', '-n'))) { $params['MaxIterations'] = $max }
     if ($resumeSession) {
         $params['ResumeSessionId'] = $resumeSession
         $params['HumanClarificationResponse'] = $clarificationResponse
+        $params['InputDecision'] = $inputDecision
+        $params['InputId'] = $inputId
+        $params['PlanVersion'] = $planVersion
+        $params['PlanDigest'] = $planDigest
     } else {
+        if ($inputDecision -or $inputId -or $planVersion -or $planDigest) { throw 'Input decisions require --resume-session.' }
         $params['Prompt'] = $prompt
     }
+    if ($interactionMode) { $params['InteractionMode'] = $interactionMode }
     if ($issue) { $params['IssueNumber'] = $issue }
     if ($model) { $params['Model'] = $model }
+    $engine = Get-Flag @('--engine')
+    if ($resumeSession -and -not $engine) { $engine = 'native' }
+    if ($engine) { $params['Engine'] = $engine }
+    if (Test-Flag @('--allow-tool')) {
+        Write-CliOutput '  [FAIL] --allow-tool is not supported by Frontier run; use the role tool contract, not additional grants.'
+        $global:LASTEXITCODE = 1
+        return
+    }
+    $feedback = Get-Flag @('--feedback')
+    if ($feedback) { $params['FeedbackPath'] = $feedback }
+    # Smoke and diagnostic runs must not record iterations into the developer's active quality loop.
+    if (Test-Flag @('--no-loop-sync')) { $params['SkipLoopStateSync'] = $true }
 
     $result = Invoke-AgenticLoop @params
 
     if (Test-AgenticLoopResultSucceeded -Result $result) {
         $global:LASTEXITCODE = 0
+    } elseif ($result -and ([string]$result.exitReason -ceq 'candidate_ready')) {
+        $global:LASTEXITCODE = 3
     } elseif ($result -and ([string]$result.exitReason -ceq 'human_required')) {
         $global:LASTEXITCODE = 2
+    } elseif ($result -and ([string]$result.exitReason -ceq 'cancelled')) {
+        $global:LASTEXITCODE = 4
     } else {
         $global:LASTEXITCODE = 1
     }
 
     if ($Script:JsonOutput -and $result) {
-        $result | ConvertTo-Json -Depth 5
+        [Console]::Out.WriteLine(($result | ConvertTo-Json -Depth 25 -Compress))
     }
 }
 
@@ -7835,9 +8167,26 @@ $($C.w)  Commands:$($C.n)
   deps <issue>                     Check dependencies for an issue
     audit harness                    Run deterministic harness audit checks
   digest                           Generate weekly digest
+  context [-q task] [-a role]       Bounded context from the repository graph (Frontier workspaces only)
+    --tokens N --detail map|evidence --hops 0|1|2 --subsystem path
+  context-parsers status|restore    Inspect or explicitly restore managed offline language parsers
+    --max-chars <512..16000>        Context size limit (default 4000); --json includes cache metrics
+    --sync                         Update the graph incrementally before answering (default reads the cache)
+    --refresh                      Rebuild extraction while preserving curated map notes
+    --start-refresh                Start a detached background refresh and return immediately
+  cursor setup [--restore-mcp]      Configure Cursor commands, native hooks and ready MCP
+  cursor read <canonical-path>     Read a framework contract from the installed runtime
+  cursor status                   Inspect Cursor dependencies and the selected runtime
     workflow [agent-name]            List/show workflow steps for an agent
   loop <start|status|affected|iterate|complete|cancel|rollback>  Iterative refinement; affected = tests naming changed code
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
+    --engine <native|hydrafusion>    Execution engine (default: config executionEngine, else native)
+    --feedback <report.json>         HydraFusion: independently recorded changes-requested feedback
+  engine [status]                   Show the execution engine and CLI capabilities (no model calls)
+  engine inspect <candidate>        Inspect an isolated candidate and its hashes
+  engine accept <candidate> --review <report.json>  Apply a bound, independently approved candidate
+  engine discard <candidate>        Remove an owned, stopped candidate workspace
+  engine recover <candidate>        Stop a recorded interrupted child and reconcile its durable ledger
   hire <name>                      Scaffold a new custom agent definition
     watch [--execute] [--once]       Poll backlog; --once runs one deterministic cycle
   validate <issue> <role>          Pre-handoff validation
@@ -8131,10 +8480,21 @@ function Invoke-WatchCmd {
                                 WorkspaceRoot = $Script:ROOT
                                 IssueNumber = [int]$item.number
                             }
+                            if (Test-Flag @('--autonomous')) { $params.InteractionMode = 'autonomous' }
                             $result = Invoke-AgenticLoop @params
                             if (Test-AgenticLoopResultSucceeded -Result $result) {
                                 $watchState.itemsExecuted++
                                 Write-CliOutput "$($C.g)    [PASS] #$($item.number) completed ($($result.exitReason))$($C.n)"
+                            } elseif ($result -and $result.exitReason -eq 'candidate_ready') {
+                                Write-CliOutput "    [PENDING] #$($item.number): candidate $($result.sessionId) awaits independent acceptance."
+                                $global:LASTEXITCODE = 3
+                                Write-JsonFile $watchStateFile $watchState
+                                return
+                            } elseif ($result -and $result.exitReason -eq 'human_required') {
+                                Write-CliOutput "    [PENDING] #$($item.number): session $($result.sessionId) awaits user input; watch is paused."
+                                $global:LASTEXITCODE = 2
+                                Write-JsonFile $watchStateFile $watchState
+                                return
                             } else {
                                 $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
                                 Write-CliOutput "$($C.r)    [FAIL] #$($item.number) did not complete ($exitReason)$($C.n)"
@@ -8981,10 +9341,19 @@ function Invoke-SprintCmd {
                         MaxIterations = 10
                         WorkspaceRoot = $Script:ROOT
                     }
+                    if (Test-Flag @('--autonomous')) { $params.InteractionMode = 'autonomous' }
                     if ($issueNumber) { $params.IssueNumber = [int]$issueNumber }
                     $result = Invoke-AgenticLoop @params
                     if (Test-AgenticLoopResultSucceeded -Result $result) {
                         Write-CliOutput "    $($C.g)[PASS]$($C.n) Build completed ($($result.exitReason))"
+                    } elseif ($result -and $result.exitReason -eq 'candidate_ready') {
+                        Write-CliOutput "    [PENDING] Candidate $($result.sessionId) requires review and explicit acceptance; ship is paused."
+                        $global:LASTEXITCODE = 3
+                        return
+                    } elseif ($result -and $result.exitReason -eq 'human_required') {
+                        Write-CliOutput "    [PENDING] Session $($result.sessionId) awaits user input; sprint is paused."
+                        $global:LASTEXITCODE = 2
+                        return
                     } else {
                         $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
                         Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build did not complete ($exitReason)"
@@ -9007,11 +9376,16 @@ function Invoke-SprintCmd {
                         Prompt = if ($issueNumber) { "Review changes for $sprintScope" } else { "Review changes for: $description" }
                         MaxIterations = 5
                         WorkspaceRoot = $Script:ROOT
+                        InteractionMode = 'autonomous'
                     }
                     if ($issueNumber) { $reviewParams.IssueNumber = [int]$issueNumber }
                     $reviewResult = Invoke-AgenticLoop @reviewParams
                     if (Test-AgenticLoopResultSucceeded -Result $reviewResult) {
                         Write-CliOutput "    $($C.g)[PASS]$($C.n) Review completed ($($reviewResult.exitReason))"
+                    } elseif ($reviewResult -and $reviewResult.exitReason -eq 'candidate_ready') {
+                        Write-CliOutput "    [PENDING] Review result $($reviewResult.sessionId) requires independent acceptance."
+                        $global:LASTEXITCODE = 3
+                        return
                     } else {
                         $exitReason = if ($reviewResult) { [string]$reviewResult.exitReason } else { 'no-result' }
                         Write-CliOutput "    $($C.r)[FAIL]$($C.n) Review did not complete ($exitReason)"
@@ -9060,6 +9434,9 @@ function Invoke-SprintCmd {
         Write-CliOutput "$($C.d)  Issue: #${issueNumber}$($C.n)"
     }
     Write-CliOutput "$($C.d)  Stages: $($stages.Count) executed$($C.n)`n"
+    # Advisory discovery may run Git probes that fail in a new or non-Git workspace.
+    # Reaching this point, rather than the last auxiliary native exit, defines success.
+    $global:LASTEXITCODE = 0
 }
 
 # ---------------------------------------------------------------------------
@@ -9068,11 +9445,12 @@ function Invoke-SprintCmd {
 
 function Invoke-ScriptWrapper {
     param([string]$ScriptRelPath, [string]$Label)
-    # Prefer the workspace copy (repo dev / packs install). Fall back to the
-    # bundled extension runtime so these commands still work after an
-    # extension-only "Initialize Local Runtime", which does not seed scripts/
-    # into the workspace (zero-copy runtime).
-    $full = Join-Path $Script:ROOT $ScriptRelPath
+    # Private profiles execute installed framework scripts. Explicit repository
+    # setups retain workspace overrides with the installed runtime as fallback.
+    $scriptRoot = if ((Get-FrontierStateBinding $Script:ROOT).mode -eq 'private') {
+        $Script:INSTALL_ROOT
+    } else { $Script:ROOT }
+    $full = Join-Path $scriptRoot $ScriptRelPath
     if (-not (Test-Path $full)) {
         $bundled = Join-Path $Script:INSTALL_ROOT $ScriptRelPath
         if (Test-Path $bundled) { $full = $bundled }
@@ -9083,11 +9461,27 @@ function Invoke-ScriptWrapper {
     }
     $extra = @()
     if ($Script:SubArgs -and $Script:SubArgs.Count -gt 0) { $extra = @($Script:SubArgs) }
-    & pwsh -NoProfile -File $full @extra
-    exit $LASTEXITCODE
+    Push-Location -LiteralPath $Script:ROOT
+    try { & pwsh -NoProfile -File $full @extra; $code = $LASTEXITCODE }
+    finally { Pop-Location }
+    exit $code
 }
 
 function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scrub.ps1'             -Label 'scrub' }
+function Invoke-CursorCmd {
+    if ($IsWindows) {
+        $extensions = @($env:PATHEXT -split ';' | Where-Object { $_ })
+        $missing = @('.EXE', '.CMD' | Where-Object { $extensions -notcontains $_ })
+        if ($missing.Count -gt 0) {
+            [Console]::Error.WriteLine('[frontier-cursor] Restoring process-local Windows executable extensions for the restricted host environment.')
+            $env:PATHEXT = (@($extensions) + @($missing)) -join ';'
+        }
+    }
+    $nodeName = if ($IsWindows) { 'node.exe' } else { 'node' }
+    $node = Get-Command $nodeName -CommandType Application -ErrorAction Stop | Select-Object -First 1
+    & $node.Source (Join-Path $PSScriptRoot 'cursor.js') --workspace $Script:ROOT @Script:SubArgs
+    exit $LASTEXITCODE
+}
 function Invoke-DreamCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/dream.ps1'             -Label 'dream' }
 function Invoke-ResearchCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/research.ps1'          -Label 'research' }
 function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
@@ -9105,18 +9499,38 @@ function Invoke-BudgetCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/
 # Main router
 # ---------------------------------------------------------------------------
 
+$stateLease = if ($Script:Command -eq 'workspace-state') { $null } else { Enter-FrontierStateLease $Script:ROOT }
+try {
 switch ($Script:Command) {
+    'workspace-state' {
+        if ($Script:SubArgs.Count -ne 1 -or $Script:SubArgs[0] -notin @('info', 'check-transition', 'use-repository')) {
+            throw 'Usage: frontier workspace-state info|check-transition|use-repository'
+        }
+        if ($Script:SubArgs[0] -eq 'info') {
+            $binding = Get-FrontierStateBinding $Script:ROOT
+            $result = @{ workspaceRoot = $Script:ROOT; stateRoot = $binding.root; storageMode = $binding.mode
+                authority = $binding.authority; runtimeRoot = $Script:INSTALL_RUNTIME_DIR
+                repositoryContextEnabled = (Test-FrontierRepositoryContextEnabled $Script:ROOT)
+                hostToolEnforcement = 'Host-owned tools retain host permissions; Frontier gates cover Frontier-owned workflows.' }
+        } else {
+            $result = Set-FrontierRepositoryStateMode $Script:ROOT -ValidateOnly:($Script:SubArgs[0] -eq 'check-transition')
+        }
+        Write-CliOutput ($result | ConvertTo-Json -Compress)
+    }
     'ready'    { Invoke-ReadyCmd }
     'state'    { Invoke-StateCmd }
     'deps'     { Invoke-DepsCmd }
     'audit'    { Invoke-AuditCmd }
     'digest'   { Invoke-DigestCmd }
+    'context'  { Invoke-RepositoryContextCmd }
+    'context-parsers' { Invoke-ContextParsersCmd }
     'workflow'  { Invoke-WorkflowCmd }
     'loop'     { Invoke-LoopCmd }
     'validate'  { Invoke-ValidateCmd }
     'hook'     { Invoke-AgentHookCmd }
     'hooks'    { Invoke-HooksCmd }
     'policy-hook' { Invoke-PolicyHookCmd }
+    'cursor' { Invoke-CursorCmd }
     'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
     'bundle'   { Invoke-BundleCmd }
@@ -9124,16 +9538,17 @@ switch ($Script:Command) {
     'backlog-sync' { Invoke-BacklogSyncCmd }
     'lessons'  { Invoke-LessonsCmd }
     'git-sync' { Invoke-GitSyncCmd }
-    'run'      { Invoke-RunCmd }
+    'run'      { Invoke-RunCmd; exit $global:LASTEXITCODE }
+    'engine'   { Invoke-EngineCmd; exit $global:LASTEXITCODE }
     'hire'     { Invoke-HireCmd }
-    'watch'    { Invoke-WatchCmd }
+    'watch'    { $global:LASTEXITCODE = 0; Invoke-WatchCmd; if ($global:LASTEXITCODE -in @(2, 3)) { exit $global:LASTEXITCODE } }
     'tokens'   { Invoke-TokensCmd }
     'stage-gate' { Invoke-StageGateCmd }
     'budget'   { Invoke-BudgetCmd }
     'score'    { Invoke-ScoreCmd }
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }
-    'sprint'   { Invoke-SprintCmd }
+    'sprint'   { $global:LASTEXITCODE = 0; Invoke-SprintCmd; exit $global:LASTEXITCODE }
     'scrub'    { Invoke-ScrubCmd }
     'deslop'   { Invoke-ScrubCmd }
     'antislop' { Invoke-ScrubCmd }
@@ -9162,3 +9577,4 @@ switch ($Script:Command) {
         exit 1
     }
 }
+} finally { if ($stateLease) { $stateLease.Dispose() } }

@@ -10,6 +10,7 @@ import {
   __clearConfig,
 } from './mocks/vscode';
 import { FrontierContext } from '../frontierContext';
+let testExtensionRoot: string;
 
 /**
  * Create a temporary directory that looks like a Frontier project root
@@ -27,8 +28,8 @@ function createFrontierRoot(dir: string): void {
 function fakeExtensionContext(): any {
   return {
     subscriptions: [],
-    extensionPath: __dirname,
-    extensionUri: { fsPath: __dirname },
+    extensionPath: testExtensionRoot,
+    extensionUri: { fsPath: testExtensionRoot },
     globalState: { get: () => undefined, update: async () => {} },
     workspaceState: { get: () => undefined, update: async () => {} },
   };
@@ -39,6 +40,11 @@ describe('FrontierContext', () => {
 
   beforeEach(() => {
     tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ctx-'));
+    testExtensionRoot = path.join(tmpBase, 'extension');
+    const runtime = path.join(testExtensionRoot, '.github', 'frontier', '.frontier', 'runtime');
+    fs.mkdirSync(runtime, { recursive: true });
+    fs.writeFileSync(path.join(runtime, 'frontier.ps1'), '# fixture');
+    fs.writeFileSync(path.join(runtime, 'frontier.sh'), '# fixture');
     __clearConfig();
     __setWorkspaceFolders(undefined);
   });
@@ -48,6 +54,44 @@ describe('FrontierContext', () => {
     fs.rmSync(tmpBase, { recursive: true, force: true });
     __clearConfig();
     __setWorkspaceFolders(undefined);
+  });
+
+  it('uses Frontier settings without AgentX or HVE fallback', () => {
+    const root = path.join(tmpBase, 'current');
+    const old = path.join(tmpBase, 'obsolete');
+    createFrontierRoot(root);
+    createFrontierRoot(old);
+    __setWorkspaceFolders([{ path: root }]);
+    __setConfig('agentx.rootPath', old);
+    __setConfig('hve.rootPath', old);
+    __setConfig('agentx.shell', 'bash');
+    __setConfig('hve.shell', 'bash');
+    const context = new FrontierContext(fakeExtensionContext());
+    assert.equal(context.workspaceRoot, root);
+    assert.equal(context.getShell(), 'auto');
+    __setConfig('frontier.shell', 'pwsh');
+    assert.equal(context.getShell(), 'pwsh');
+  });
+
+  it('does not read, migrate or delete secrets in obsolete product namespaces', async () => {
+    const root = path.join(tmpBase, 'secrets');
+    createFrontierRoot(root);
+    __setWorkspaceFolders([{ path: root }]);
+    const requested: string[] = [];
+    const removed: string[] = [];
+    const extension = fakeExtensionContext();
+    extension.secrets = {
+      get: async (key: string) => {
+        requested.push(key);
+        return /^(agentx|hve)\./.test(key) ? 'obsolete-value' : undefined;
+      },
+      delete: async (key: string) => { removed.push(key); },
+    };
+    const context = new FrontierContext(extension);
+    assert.equal(await context.hasWorkspaceLlmSecret('openai-api', root), false);
+    await context.deleteWorkspaceLlmSecret('openai-api', root);
+    assert.ok(requested.length > 0 && removed.length > 0);
+    assert.ok([...requested, ...removed].every(key => key.startsWith('frontier.')));
   });
 
   it('isolates selected-root secrets and forwards agent execution lifecycle options', async () => {
@@ -86,6 +130,17 @@ describe('FrontierContext', () => {
     assert.equal(stream.secondCall.args[5]?.timeoutMs, undefined);
   });
 
+  it('gives explicit graph rebuilds a bounded deadline beyond ordinary commands', async () => {
+    createFrontierRoot(tmpBase);
+    __setWorkspaceFolders([{ path: tmpBase }]);
+    const context = new FrontierContext(fakeExtensionContext());
+    const execute = sinon.stub(context, 'runCliStreaming').resolves('graph updated');
+    const result = await context.runCli('context', ['--sync'], tmpBase);
+    assert.equal(result, 'graph updated');
+    assert.equal(execute.firstCall.args[4], tmpBase);
+    assert.equal(execute.firstCall.args[5]?.timeoutMs, 10 * 60_000);
+  });
+
   // --- workspaceRoot detection ------------------------------------------
 
   describe('workspaceRoot', () => {
@@ -114,7 +169,7 @@ describe('FrontierContext', () => {
       assert.equal(ctx.workspaceRoot, noRoot);
     });
 
-    it('should search subdirectories up to configured depth', () => {
+    it('does not switch to a nested initialized repository during root selection', () => {
       const wsRoot = path.join(tmpBase, 'workspace');
       const nested = path.join(wsRoot, 'subdir', 'myproject');
       fs.mkdirSync(nested, { recursive: true });
@@ -123,7 +178,7 @@ describe('FrontierContext', () => {
       __setConfig('frontier.searchDepth', 2);
 
       const ctx = new FrontierContext(fakeExtensionContext());
-      assert.equal(ctx.workspaceRoot, nested);
+      assert.equal(ctx.workspaceRoot, wsRoot);
     });
 
     it('should honor explicit frontier.rootPath setting', () => {
@@ -247,6 +302,7 @@ describe('FrontierContext', () => {
       });
 
       assert.deepEqual(await ctx.getPendingClarification(), {
+        workspaceRoot: root,
         sessionId: 'session-1',
         agentName: 'engineer',
         prompt: 'fix login',

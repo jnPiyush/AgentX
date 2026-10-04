@@ -20,7 +20,7 @@ const rootDirs = [
     { src: path.join(repoRoot, '.github', 'hooks'), dest: path.join('.github', 'hooks') },
     { src: path.join(repoRoot, '.frontier', 'runtime', 'templates'), dest: path.join('.frontier', 'runtime', 'templates') },
     { src: path.join(repoRoot, '.frontier', 'runtime', 'plugins'), dest: path.join('.frontier', 'runtime', 'plugins') },
-    { src: path.join(repoRoot, '.cursor'), dest: '.cursor' },
+    { src: path.join(repoRoot, '.cursor'), dest: path.join('.frontier', 'runtime', 'cursor-assets') },
     { src: path.join(repoRoot, 'packs'), dest: 'packs' },
 ];
 
@@ -48,6 +48,8 @@ const runtimeScriptFiles = [
     'score-output.ps1',
     'generate-registries.ps1',
     'token-counter.ps1',
+    'evaluate-repository-context.ps1',
+    'repository-context-evaluation.ps1',
     'score-code-quality.ps1',
     'score-stage-gate.ps1',
     'score-skill.ps1',
@@ -71,6 +73,24 @@ const rootRuntimeFiles = [
     'frontier.sh',
     'frontier-cli.ps1',
     'agentic-runner.ps1',
+    'guided-interaction.ps1',
+    'repository-context.ps1',
+    'repository-symbols.ps1',
+    'repository-retrieval.ps1',
+    'repository-parser-worker.ps1',
+    'repository-process.cs',
+    'workspace-sandbox.ps1',
+    'workspace-state.ps1',
+    'hydrafusion.ps1',
+    'hydrafusion-policy.ps1',
+    'hydrafusion-protocol.ps1',
+    'hydrafusion-workspace.ps1',
+    'cursor.js',
+    'cursor-mcp.js',
+    'mcp-server/index.js',
+    'mcp-server/package.json',
+    'mcp-server/package-lock.json',
+    'mcp-server/README.md',
     'local-issue-manager.ps1',
     'local-issue-manager.sh',
 ].map((file) => ({
@@ -91,12 +111,23 @@ const artifactDocFiles = [
     'evaluation/rubrics/stage-gates.md',
     'evaluation/rubrics/README.md',
     'evaluation/baseline.json',
+    'evaluation/repository-context/queries.json',
 ].map((relativePath) => ({
     src: path.join(repoRoot, ...relativePath.split('/')),
     dest: path.join(...relativePath.split('/')),
 }));
 
+// The extension README is not part of bundled or seeded docs; point GUIDE links at GitHub.
+const guideExtensionReadmeLink = '](../vscode-extension/README.md#minimal-workspace-setup)';
+const guideExtensionReadmeUrl = '](https://github.com/jnPiyush/AgentX/blob/master/vscode-extension/README.md#minimal-workspace-setup)';
+
 const bundledMarkdownRewrites = [
+    {
+        relativePath: path.join('docs', 'GUIDE.md'),
+        replacements: [
+            [guideExtensionReadmeLink, guideExtensionReadmeUrl],
+        ],
+    },
     {
         relativePath: 'AGENT-PROTOCOL.md',
         replacements: [
@@ -358,6 +389,21 @@ if (runtimeFileCount > 0) {
     console.log('  Copied ' + runtimeFileCount + ' runtime files');
 }
 
+const parserSource = path.join(repoRoot, '.frontier', 'runtime', 'repository-parser');
+const parserDestination = path.join(destRoot, '.frontier', 'runtime', 'repository-parser');
+for (const dependency of ['typescript', '@vscode/tree-sitter-wasm']) {
+    if (!fs.existsSync(path.join(parserSource, 'node_modules', dependency, 'package.json'))) {
+        throw new Error('Missing managed graph parser dependency: ' + dependency
+            + '. Run npm ci --prefix .frontier/runtime/repository-parser --ignore-scripts.');
+    }
+}
+fs.cpSync(parserSource, parserDestination, {
+    recursive: true,
+    filter: file => !file.endsWith('.test.cjs') && !file.endsWith('.test.js'),
+});
+totalFiles += countFiles(parserDestination);
+console.log('  Copied managed offline repository parser and pinned dependencies');
+
 // Copy docs/ reference files to docs/ subdirectory
 const docsDestDir = path.join(destRoot, 'docs');
 if (!fs.existsSync(docsDestDir)) {
@@ -482,6 +528,8 @@ function buildCopilotCliSeedTree() {
     for (const file of [...runtimeScriptFiles, 'validate-handoff.ps1', 'score-output.ps1']) {
         copyFile(path.join(repoRoot, 'scripts', file), path.join('scripts', file));
     }
+    copyFile(path.join(repoRoot, '.frontier', 'runtime', 'workspace-state.ps1'),
+        path.join('.frontier', 'runtime', 'workspace-state.ps1'));
 
     // Trees referenced by individual agents.
     copyTree(path.join(repoRoot, 'packs'), 'packs');
@@ -505,6 +553,7 @@ function applySeedRewrites(seedRoot) {
             relativePath: path.join('docs', 'GUIDE.md'),
             replacements: [
                 ['](../CONTRIBUTING.md)', '](https://github.com/jnPiyush/AgentX/blob/master/CONTRIBUTING.md)'],
+                [guideExtensionReadmeLink, guideExtensionReadmeUrl],
             ],
         },
     ];

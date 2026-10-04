@@ -11,8 +11,10 @@ const { createCliRunner, createServer } = require('./index');
 
 async function main() {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mcp-smoke-'));
+  let invocations = 0;
   const runner = createCliRunner(workspace, {
     spawn: () => {
+      invocations++;
       const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
       setImmediate(() => {
         child.stdout.emit('data', 'No active loop. (mock fixture)');
@@ -35,11 +37,14 @@ async function main() {
     if (!tools.tools.some((tool) => tool.name === 'frontier_loop_status')) {
       throw new Error('frontier_loop_status was not advertised');
     }
-    if (tools.tools.some((tool) => tool.name.startsWith('agentx_'))) {
-      throw new Error('legacy Frontier tools must not be advertised');
+    if (tools.tools.some((tool) => !tool.name.startsWith('frontier_'))) {
+      throw new Error('only Frontier tools may be advertised');
     }
-    if (tools.tools.length !== 19) {
-      throw new Error(`expected exactly 19 tools, received ${tools.tools.length}`);
+    if (!tools.tools.some((tool) => tool.name === 'frontier_context')) {
+      throw new Error('frontier_context was not advertised');
+    }
+    if (tools.tools.length !== 23) {
+      throw new Error(`expected exactly 23 tools, received ${tools.tools.length}`);
     }
 
     const result = await client.callTool({ name: 'frontier_loop_status', arguments: {} });
@@ -51,10 +56,13 @@ async function main() {
       throw new Error(`loop status call failed: ${text || '(no text)'}`);
     }
 
-    const legacyResult = await client.callTool({ name: 'agentx_loop_status', arguments: {} });
-    if (legacyResult.isError) {
-      throw new Error('legacy tool alias did not forward to frontier_loop_status');
+    for (const name of ['agentx_loop_status', 'hve_loop_status']) {
+      const obsolete = await client.callTool({ name, arguments: {} });
+      if (!obsolete.isError || !obsolete.content?.some(item => item.type === 'text' && item.text.includes('Unknown tool'))) {
+        throw new Error(`obsolete tool alias was accepted: ${name}`);
+      }
     }
+    if (invocations !== 1) throw new Error('obsolete aliases reached the runtime');
 
     process.stdout.write(`[PASS] MCP in-memory smoke: tools=${tools.tools.length}; mocked loop status exit=0; no runtime invoked\n`);
   } finally {

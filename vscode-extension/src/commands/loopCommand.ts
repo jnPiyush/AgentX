@@ -4,12 +4,6 @@ import {
   ensureLoopInitialized,
   executeLoopAction,
   LOOP_ACTION_ITEMS,
-  loopCancel,
-  loopComplete,
-  loopIterate,
-  loopRollback,
-  loopStart,
-  loopStatus,
 } from './loopCommandInternals';
 
 /**
@@ -37,46 +31,46 @@ export function registerLoopCommand(
   await executeLoopAction(agentx, action.label);
  });
 
- const loopStartCmd = vscode.commands.registerCommand('frontier.loopStart', async () => {
+ const loopStartCmd = vscode.commands.registerCommand('frontier.loopStart', async (root?: string) => {
   if (!await ensureInitialized()) {
    return;
   }
-  await loopStart(agentx);
+  await executeLoopAction(agentx, 'start', root);
  });
 
  const loopStatusCmd = vscode.commands.registerCommand('frontier.loopStatus', async () => {
   if (!await ensureInitialized()) {
   return false;
   }
-  return loopStatus(agentx);
+  return executeLoopAction(agentx, 'status');
  });
 
  const loopIterateCmd = vscode.commands.registerCommand('frontier.loopIterate', async () => {
   if (!await ensureInitialized()) {
    return;
   }
-  await loopIterate(agentx);
+  await executeLoopAction(agentx, 'iterate');
  });
 
  const loopCompleteCmd = vscode.commands.registerCommand('frontier.loopComplete', async () => {
   if (!await ensureInitialized()) {
    return;
   }
-  await loopComplete(agentx);
+  await executeLoopAction(agentx, 'complete');
  });
 
  const loopCancelCmd = vscode.commands.registerCommand('frontier.loopCancel', async () => {
   if (!await ensureInitialized()) {
    return;
   }
-  await loopCancel(agentx);
+  await executeLoopAction(agentx, 'cancel');
  });
 
  const loopRollbackCmd = vscode.commands.registerCommand('frontier.loopRollback', async () => {
   if (!await ensureInitialized()) {
    return;
   }
-  await loopRollback(agentx);
+  await executeLoopAction(agentx, 'rollback');
  });
 
  context.subscriptions.push(

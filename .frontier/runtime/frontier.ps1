@@ -5,13 +5,7 @@ $global:LASTEXITCODE = 0
 $launcherWorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $launcherParentDir = Split-Path -Parent $launcherWorkspaceRoot
 $isBundledLauncher = ((Split-Path -Leaf $launcherWorkspaceRoot) -eq 'frontier') -and $launcherParentDir -and ((Split-Path -Leaf $launcherParentDir) -eq '.github')
-$workspaceRootOverride = if ($env:FRONTIER_WORKSPACE_ROOT) {
-    $env:FRONTIER_WORKSPACE_ROOT
-} elseif ($env:HVE_WORKSPACE_ROOT) {
-    $env:HVE_WORKSPACE_ROOT
-} else {
-    $env:AGENTX_WORKSPACE_ROOT
-}
+$workspaceRootOverride = $env:FRONTIER_WORKSPACE_ROOT
 if ($isBundledLauncher) {
     if (-not $workspaceRootOverride -or -not (Test-Path -LiteralPath $workspaceRootOverride -PathType Container)) {
         $workspaceRootOverride = $launcherWorkspaceRoot
@@ -20,7 +14,6 @@ if ($isBundledLauncher) {
     $workspaceRootOverride = $launcherWorkspaceRoot
 }
 $env:FRONTIER_WORKSPACE_ROOT = $workspaceRootOverride
-$env:AGENTX_WORKSPACE_ROOT = $workspaceRootOverride
 Push-Location -LiteralPath $workspaceRootOverride
 $succeeded = $true
 try {

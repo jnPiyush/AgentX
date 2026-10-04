@@ -53,8 +53,8 @@ foreach ($failedExitReason in @('self_review_failed', 'error', 'empty_response',
 }
 Assert-True (-not (Test-AgenticLoopResultSucceeded $null)) 'agentic result helper rejects missing results'
 
-$originalLlmProviderEnv = $env:AGENTX_LLM_PROVIDER
-$originalReadinessModeEnv = $env:AGENTX_LLM_READINESS_MODE
+$originalLlmProviderEnv = $env:FRONTIER_LLM_PROVIDER
+$originalReadinessModeEnv = $env:FRONTIER_LLM_READINESS_MODE
 
 try {
     Assert-Equal (ConvertTo-RunnerProviderId 'models') 'github-models' 'ConvertTo-RunnerProviderId normalizes models alias'
@@ -65,8 +65,8 @@ try {
     Assert-Equal (ConvertTo-RunnerProviderId 'anthropic') 'anthropic-api' 'ConvertTo-RunnerProviderId normalizes anthropic alias'
     Assert-Equal (ConvertTo-RunnerProviderId 'openai') 'openai-api' 'ConvertTo-RunnerProviderId normalizes openai alias'
 
-    $env:AGENTX_LLM_PROVIDER = ''
-    $env:AGENTX_LLM_READINESS_MODE = ''
+    $env:FRONTIER_LLM_PROVIDER = ''
+    $env:FRONTIER_LLM_READINESS_MODE = ''
     $defaultPreference = Get-RunnerProviderPreference @{ }
     Assert-Equal $defaultPreference.providerId 'auto' 'Get-RunnerProviderPreference defaults to auto when unset'
     Assert-Equal $defaultPreference.source 'default' 'Get-RunnerProviderPreference reports default source when unset'
@@ -75,11 +75,11 @@ try {
     Assert-Equal $configPreference.providerId 'copilot' 'Get-RunnerProviderPreference reads llmProvider from config'
     Assert-Equal $configPreference.source 'config' 'Get-RunnerProviderPreference reports config source'
 
-    $env:AGENTX_LLM_PROVIDER = 'github-models'
+    $env:FRONTIER_LLM_PROVIDER = 'github-models'
     $envPreference = Get-RunnerProviderPreference ([PSCustomObject]@{ llmProvider = 'copilot' })
     Assert-Equal $envPreference.providerId 'github-models' 'Get-RunnerProviderPreference lets env override config'
     Assert-Equal $envPreference.source 'env' 'Get-RunnerProviderPreference reports env source'
-    $env:AGENTX_LLM_PROVIDER = ''
+    $env:FRONTIER_LLM_PROVIDER = ''
 
     Assert-Equal (Get-RunnerReadinessMode -Config ([PSCustomObject]@{ }) -PreferredProviderId 'copilot') 'strict' 'Get-RunnerReadinessMode defaults explicit providers to strict mode'
     Assert-Equal (Get-RunnerReadinessMode -Config ([PSCustomObject]@{ }) -PreferredProviderId 'auto') 'advisory' 'Get-RunnerReadinessMode keeps auto selection advisory by default'
@@ -119,8 +119,8 @@ try {
 
     $providerRegistry['copilot'].ready = $true
 } finally {
-    $env:AGENTX_LLM_PROVIDER = $originalLlmProviderEnv
-    $env:AGENTX_LLM_READINESS_MODE = $originalReadinessModeEnv
+    $env:FRONTIER_LLM_PROVIDER = $originalLlmProviderEnv
+    $env:FRONTIER_LLM_READINESS_MODE = $originalReadinessModeEnv
 }
 
 $originalTestRunnerCommandAvailable = ${function:Test-RunnerCommandAvailable}
@@ -264,7 +264,7 @@ $validCandidates = @(Get-ModelCandidateList 'GPT-5.6 Sol (copilot)' 'unknown-fal
 Assert-Equal $validCandidates[0] 'gpt-5.6-sol' 'An invalid fallback does not discard a valid primary model'
 $Script:ActiveProvider = $null
 
-# Opus 5 is the declared frontmatter label for 9 agents. Without an explicit alias
+# Opus 5 remains a selectable label for custom agents. Without an explicit alias
 # key it would fall through to the provider default, so pin the resolution per
 # provider and assert the older Opus aliases still win their own longest match.
 $opus5Capability = Get-RunnerModelCapability 'claude-opus-5'
@@ -281,7 +281,79 @@ $Script:ActiveProvider = [PSCustomObject]@{ id = 'github-models' }
 Assert-Equal (Resolve-ModelId 'Claude Opus 5 (copilot)') 'gpt-4.1' 'GitHub Models downgrades the Opus 5 label to a supported GPT model'
 $Script:ActiveProvider = $null
 
-# Sonnet 5 is the declared frontmatter label for 7 agents. Pin its provider
+# Opus 5.5 uses different IDs per provider, keeps thinking adaptive, and rejects
+# non-default sampling values, so pin resolution and request shaping.
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'claude-opus-5.5' 'Resolve-ModelId maps the Opus 5.5 label for copilot'
+Assert-Equal (Resolve-ModelId 'Claude Opus 5 (copilot)') 'claude-opus-5' 'Opus 5.5 aliases do not shadow the Opus 5 label'
+Assert-True (Test-RunnerModelSupportedByProvider 'copilot' 'claude-opus-5.5') 'Copilot supports the Opus 5.5 catalog ID'
+$opus55Reasoning = Get-ReasoningRequestConfig @{ reasoningMode = 'enabled'; reasoningLevel = 'medium' } 'claude-opus-5.5'
+Assert-Equal $opus55Reasoning.thinking.type 'adaptive' 'Opus 5.5 never receives the rejected enabled thinking type'
+Assert-Equal $opus55Reasoning.output_config.effort 'medium' 'Opus 5.5 receives the requested effort level'
+$opus55Disabled = Get-ReasoningRequestConfig @{ reasoningMode = 'disabled'; reasoningLevel = 'low' } 'claude-opus-5.5'
+Assert-Equal $opus55Disabled.thinking.type 'adaptive' 'Opus 5.5 keeps adaptive thinking when a disabled mode is requested'
+Assert-Equal $opus55Disabled.output_config.effort 'low' 'Opus 5.5 keeps the requested effort when a disabled mode is requested'
+$opus5Disabled = Get-ReasoningRequestConfig @{ reasoningMode = 'disabled'; reasoningLevel = 'low' } 'claude-opus-5'
+Assert-Equal $opus5Disabled.Count 0 'Opus 5 still honors a disabled thinking mode'
+Assert-True ((Get-RunnerModelCapability 'claude-opus-5.5')['fixedSampling']) 'Opus 5.5 capability marks sampling parameters as fixed'
+Assert-True (-not (Get-RunnerModelCapability 'claude-opus-5')['fixedSampling']) 'Opus 5 keeps configurable sampling'
+foreach ($providerId in @('anthropic-api', 'claude-code')) {
+    $Script:ActiveProvider = [PSCustomObject]@{ id = $providerId }
+    Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'claude-opus-5-5' "Resolve-ModelId maps the Opus 5.5 label for $providerId"
+    Assert-True (Test-RunnerModelSupportedByProvider $providerId 'claude-opus-5-5') "$providerId supports the Anthropic Opus 5.5 ID"
+}
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'anthropic-api' }
+$anthropicOpus55Reasoning = Get-ReasoningRequestConfig @{ reasoningLevel = 'high' } 'claude-opus-5-5'
+Assert-Equal $anthropicOpus55Reasoning.output_config.effort 'high' 'Anthropic API Opus 5.5 receives the requested effort'
+Assert-Equal (Get-ReasoningRequestConfig @{ reasoningLevel = 'high' } 'claude-opus-4.8').Count 0 'Anthropic API keeps the existing request shape for older Claude models'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'github-models' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'gpt-4.1' 'GitHub Models downgrades the Opus 5.5 label to a supported GPT model'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'openai-api' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'gpt-5.6-sol' 'OpenAI API downgrades the Opus 5.5 label to a supported GPT model'
+
+$script:capturedRequestBodies = @{}
+function Invoke-RestMethod {
+    param($Uri, $Method, $Headers, $Body, $TimeoutSec, $ErrorAction)
+    $parsed = $Body | ConvertFrom-Json -AsHashtable
+    $script:capturedRequestBodies["$($Script:ActiveProvider.id)/$($parsed.model)"] = $parsed
+    return [PSCustomObject]@{
+        content = @([PSCustomObject]@{ type = 'text'; text = 'Fixture response' })
+        stop_reason = 'end_turn'
+        choices = @([PSCustomObject]@{ message = [PSCustomObject]@{ role = 'assistant'; content = 'Fixture response'; tool_calls = @() } })
+    }
+}
+$opusRequestCases = @(@('anthropic-api', 'claude-opus-5-5'), @('anthropic-api', 'claude-opus-5'), @('copilot', 'claude-opus-5.5'))
+try {
+    foreach ($request in $opusRequestCases) {
+        $Script:ActiveProvider = [PSCustomObject]@{ id = $request[0] }
+        $requestOptions = Get-ReasoningRequestConfig @{ reasoningLevel = 'medium' } $request[1]
+        $null = Invoke-LlmChat -token 'test' -modelId $request[1] -messages @(@{ role = 'user'; content = 'hi' }) -tools @() -RequestOptions $requestOptions
+    }
+    $anthropicOpus55Body = $script:capturedRequestBodies['anthropic-api/claude-opus-5-5']
+    $anthropicOpus5Body = $script:capturedRequestBodies['anthropic-api/claude-opus-5']
+    $copilotOpus55Body = $script:capturedRequestBodies['copilot/claude-opus-5.5']
+    Assert-True ($anthropicOpus55Body -and -not $anthropicOpus55Body.ContainsKey('temperature')) 'Anthropic Opus 5.5 requests omit the rejected temperature value'
+    Assert-True ($anthropicOpus55Body -and $anthropicOpus55Body['thinking'] -and $anthropicOpus55Body['thinking']['type'] -eq 'adaptive' -and $anthropicOpus55Body['output_config'] -and $anthropicOpus55Body['output_config']['effort'] -eq 'medium') 'Anthropic Opus 5.5 requests carry adaptive thinking and effort'
+    Assert-True ($anthropicOpus5Body -and $anthropicOpus5Body.temperature -eq 0.1 -and -not $anthropicOpus5Body.ContainsKey('thinking')) 'Anthropic Opus 5 requests keep their existing shape'
+    Assert-Equal $anthropicOpus55Body['max_tokens'] 16384 'Anthropic Opus 5.5 uses a larger default when maxTokens is omitted'
+    Assert-Equal $copilotOpus55Body['max_tokens'] 16384 'Copilot Opus 5.5 uses a larger default when maxTokens is omitted'
+    Assert-Equal $anthropicOpus5Body['max_tokens'] 4096 'Opus 5 retains its previous default output limit'
+    Assert-True ($copilotOpus55Body -and -not $copilotOpus55Body.ContainsKey('temperature')) 'Copilot Opus 5.5 requests omit the rejected temperature value'
+    foreach ($request in $opusRequestCases) {
+        $Script:ActiveProvider = [PSCustomObject]@{ id = $request[0] }
+        $requestOptions = Get-ReasoningRequestConfig @{ reasoningLevel = 'medium' } $request[1]
+        foreach ($limit in @(512, 700, 4096, 32768)) {
+            $null = Invoke-LlmChat -token 'test' -modelId $request[1] -messages @(@{ role = 'user'; content = 'hi' }) -tools @() -RequestOptions $requestOptions -maxTokens $limit
+            $body = $script:capturedRequestBodies["$($request[0])/$($request[1])"]
+            Assert-Equal $body['max_tokens'] $limit "$($request[0])/$($request[1]) preserves the explicit $limit-token cap"
+        }
+    }
+} finally {
+    Remove-Item Function:Invoke-RestMethod -ErrorAction SilentlyContinue
+}
+$Script:ActiveProvider = $null
+
+# Sonnet 5 remains a selectable custom-agent label. Pin its provider
 # resolution and ensure the generic Sonnet alias cannot shadow it.
 $sonnet5Capability = Get-RunnerModelCapability 'claude-sonnet-5'
 Assert-True ($null -ne $sonnet5Capability) 'Get-RunnerModelCapability exposes claude-sonnet-5'
@@ -322,6 +394,27 @@ $anthropicResponse = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
 })
 Assert-Equal $anthropicResponse.choices[0].message.content 'Need to inspect the workspace.' 'ConvertFrom-AnthropicResponse preserves text content'
 Assert-Equal $anthropicResponse.choices[0].message.tool_calls[0].function.name 'list_dir' 'ConvertFrom-AnthropicResponse normalizes Anthropic tool use blocks'
+Assert-True ($null -eq (Get-MessageFieldValue $anthropicResponse.choices[0].message 'response_items')) 'Responses without thinking keep the existing normalized message shape'
+
+# Opus 5.5 always thinks; signed thinking blocks must be replayed unmodified before tool results.
+$thinkingResponse = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
+    stop_reason = 'tool_use'
+    content = @(
+        [PSCustomObject]@{ type = 'thinking'; thinking = ''; signature = 'sig-abc' },
+        [PSCustomObject]@{ type = 'tool_use'; id = 'toolu_456'; name = 'list_dir'; input = @{ dirPath = 'src' } }
+    )
+})
+$thinkingMessage = $thinkingResponse.choices[0].message
+Assert-Equal $thinkingMessage.response_items_transport 'anthropic' 'Anthropic replay is explicitly tagged with its transport'
+$replayHistory = ConvertTo-AnthropicMessage -Messages @(
+    @{ role = 'user'; content = 'inspect src' },
+    @{ role = 'assistant'; content = ''; tool_calls = @($thinkingMessage.tool_calls); response_items = @(Get-MessageFieldValue $thinkingMessage 'response_items') },
+    @{ role = 'tool'; tool_call_id = 'toolu_456'; content = 'README.md' }
+)
+$replayedBlocks = @($replayHistory.messages[1].content)
+Assert-Equal ((@($replayedBlocks | ForEach-Object { $_.type })) -join ',') 'thinking,tool_use' 'ConvertTo-AnthropicMessage replays thinking and tool_use blocks in order'
+Assert-Equal $replayedBlocks[0].signature 'sig-abc' 'ConvertTo-AnthropicMessage preserves the thinking signature'
+Assert-Equal $replayHistory.messages[2].content[0].tool_use_id 'toolu_456' 'Tool results still follow the replayed assistant turn'
 
 Assert-Equal (ConvertTo-ClaudeCodeModelId 'claude-opus-4.8') 'claude-opus-4-8' 'ConvertTo-ClaudeCodeModelId normalizes dot-version Claude model ids for CLI usage'
 
@@ -641,9 +734,14 @@ Assert-True ($consultingResearchDef.canModify -contains 'docs/coaching/**') 'Rea
 Assert-True ($consultingResearchDef.cannotModify -contains 'src/**') 'Read-AgentDef parses nested cannot_modify boundaries'
 
 $architectDef = Read-AgentDef -agentName 'architect' -root $script:repoRoot
-Assert-True ($architectDef.agents -contains 'Frontier Product FDE') 'Read-AgentDef parses multiline collaborator agents from frontmatter'
+Assert-True ($architectDef.agents -contains 'Frontier TPM') 'Read-AgentDef parses multiline collaborator agents from frontmatter'
 $architectClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $architectDef)
 Assert-True ($architectClarifyTargets -contains 'product-manager') 'Resolve-ClarificationTargetList maps Architect collaborators to runtime agent IDs'
+foreach ($agentFile in Get-ChildItem -LiteralPath (Join-Path $script:repoRoot '.github/agents') -Recurse -Filter '*.agent.md') {
+    $agentId = $agentFile.Name -replace '\.agent\.md$', ''
+    $displayName = ((Select-String -LiteralPath $agentFile.FullName -Pattern '^name:\s*(.+)$' | Select-Object -First 1).Matches.Groups[1].Value).Trim().Trim("'", '"')
+    Assert-Equal (Resolve-AgentReference $displayName) $agentId "Resolve-AgentReference maps display name '$displayName' to its runtime agent ID"
+}
 
 $engineerDef = Read-AgentDef -agentName 'engineer' -root $script:repoRoot
 Assert-Equal $engineerDef.constraints.Count 22 'Read-AgentDef stops constraints at the next top-level key'
@@ -775,7 +873,7 @@ try {
     $brainstormId = Save-ClarificationRecord `
         -WorkspaceRoot $ledgerRoot `
         -IssueNumber 42 `
-        -FromAgent 'agent-x' `
+        -FromAgent 'frontier' `
         -TargetAgent 'architect' `
         -Topic 'scaling approach brainstorm' `
         -Exchanges @(
@@ -887,7 +985,7 @@ try {
         )
     } | ConvertTo-Json -Depth 6 | Set-Content -Path $loopStatePath -Encoding UTF8
 
-    $result = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $result = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $syncedLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $result.exitReason 'text_response' 'Invoke-AgenticLoop exits normally after one approved internal self-review'
@@ -933,7 +1031,7 @@ try {
 
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
-    $bugResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Fix bug in login redirect handling' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $bugResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Fix bug in login redirect handling' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $bugLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $bugResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully for standard bug work'
@@ -965,7 +1063,7 @@ try {
 
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
-    $skipResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Answer the clarification request' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -SkipLoopStateSync
+    $skipResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Answer the clarification request' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -SkipLoopStateSync -InteractionMode autonomous
     $unsyncedLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $skipResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully when loop-state sync is skipped'
@@ -977,7 +1075,7 @@ try {
     Remove-Item $loopStatePath -ErrorAction SilentlyContinue
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
-    $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
 
     Assert-Equal $configuredResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully with self-review config overrides'
     Assert-Equal $script:selfReviewCalls 2 'Invoke-AgenticLoop honors an explicit higher internal-review minimum'
@@ -999,7 +1097,7 @@ try {
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
     $script:selfReviewApproved = $false
-    $failedReviewResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement a still-broken change' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $failedReviewResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement a still-broken change' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $failedReviewState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $failedReviewResult.exitReason 'self_review_failed' 'self-review exhaustion exits as failure rather than text_response'
@@ -1091,7 +1189,8 @@ try {
     Assert-True (-not (Test-SandboxPath -Path '.git/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'git hooks directory is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.git/config' -WorkspaceRoot $sandboxRoot).allowed) 'git config is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.frontier/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'gate-bearing loop state is blocked'
-    foreach ($protectedPath in @('.frontier/state/tests-baseline.json', '.frontier/runtime/frontier.ps1', '.frontier/runtime/frontier.sh', '.frontier/runtime/agentic-runner.ps1')) {
+    foreach ($protectedPath in @('.frontier/state/tests-baseline.json', '.frontier/runtime/frontier.ps1', '.frontier/runtime/frontier.sh', '.frontier/runtime/agentic-runner.ps1',
+        '.frontier/runtime/hydrafusion.ps1', '.frontier/runtime/hydrafusion-policy.ps1', '.frontier/runtime/hydrafusion-protocol.ps1', '.frontier/runtime/hydrafusion-workspace.ps1')) {
         Assert-True (-not (Test-SandboxPath -Path $protectedPath -WorkspaceRoot $sandboxRoot).allowed) "$protectedPath is protected"
         $protectedWrite = Invoke-Tool 'file_write' @{ filePath = $protectedPath; content = 'tampered' } $sandboxRoot
         Assert-True $protectedWrite.error "file_write rejects $protectedPath"
@@ -1325,6 +1424,7 @@ $responseFixture = [PSCustomObject]@{
     usage=[PSCustomObject]@{input_tokens=10;output_tokens=20;total_tokens=30}
 }
 $translated = ConvertFrom-ResponsesResponse -Response $responseFixture -ModelId 'gpt-5.6-sol'
+Assert-Equal $translated.choices[0].message.response_items_transport 'responses' 'Responses replay is explicitly tagged with its transport'
 Assert-Equal $translated.choices[0].message.tool_calls[0].id 'call_fixture' 'Responses call IDs map to runner tool calls'
 Assert-Equal $translated.choices[0].message.content 'Inspecting files' 'Responses text is normalized'
 Assert-Equal $translated.usage.prompt_tokens 10 'Responses token accounting is preserved'
@@ -1342,6 +1442,72 @@ Assert-Equal $responseBody.input[-1].type 'function_call_output' 'Tool results u
 Assert-Equal $responseBody.tools[0].name 'list_dir' 'Responses function schema is flattened'
 Assert-Equal $responseBody.reasoning.effort 'high' 'Role-specific reasoning effort is preserved'
 Assert-Equal $responseBody.store $false 'Responses storage is disabled'
+
+$transportRoot = Join-Path ([IO.Path]::GetTempPath()) ('frontier-replay-transport-' + [guid]::NewGuid().ToString('N'))
+try {
+    foreach ($thinkingType in @('thinking', 'redacted_thinking')) {
+        $thinkingBlock = if ($thinkingType -eq 'thinking') {
+            [PSCustomObject]@{ type = 'thinking'; thinking = ''; signature = 'opaque-signature' }
+        } else {
+            [PSCustomObject]@{ type = 'redacted_thinking'; data = 'opaque-redacted' }
+        }
+        $anthropicFixture = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
+            stop_reason = 'tool_use'
+            content = @(
+                $thinkingBlock,
+                [PSCustomObject]@{ type = 'text'; text = 'Inspecting source' },
+                [PSCustomObject]@{ type = 'tool_use'; id = 'call_native'; name = 'list_dir'; input = @{ dirPath = 'src' } }
+            )
+        })
+        foreach ($tagged in @($true, $false)) {
+            $assistant = $anthropicFixture.choices[0].message | ConvertTo-Json -Depth 15 | ConvertFrom-Json -Depth 20
+            if (-not $tagged) { $assistant.PSObject.Properties.Remove('response_items_transport') }
+            $originalBlocks = ConvertTo-Json -InputObject @($assistant.response_items) -Depth 15 -Compress
+            $history = @(
+                @{ role = 'user'; content = 'Inspect source' },
+                $assistant,
+                @{ role = 'tool'; tool_call_id = 'call_native'; content = 'source.txt' }
+            )
+            Save-Session -sessionId 'anthropic-replay' -messages $history -meta @{} -root $transportRoot
+            $restored = Read-Session -sessionId 'anthropic-replay' -root $transportRoot
+            $native = ConvertTo-AnthropicMessage -Messages @($restored.messages)
+            $nativeBlocks = ConvertTo-Json -InputObject @($native.messages[1].content) -Depth 15 -Compress
+            Assert-Equal $nativeBlocks $originalBlocks "$thinkingType replay survives session storage unchanged (tagged=$tagged)"
+            Assert-Equal $native.messages[2].content[0].tool_use_id 'call_native' 'Anthropic tool-result correlation survives replay'
+
+            $foreign = ConvertTo-ResponsesBody -Messages @($restored.messages) -ModelId 'gpt-5.6-sol' -Tools @() -RequestOptions @{} -MaxTokens 4096
+            Assert-Equal $foreign.input.Count 4 'An Anthropic history becomes two messages, a function call and its result on Responses'
+            Assert-Equal $foreign.input[1].content 'Inspecting source' 'Provider switches preserve normalized assistant text'
+            Assert-Equal $foreign.input[2].type 'function_call' 'Anthropic tool_use is translated to a Responses function call'
+            Assert-Equal $foreign.input[2].name 'list_dir' 'Provider switches preserve the tool name'
+            Assert-Equal ($foreign.input[2].arguments | ConvertFrom-Json).dirPath 'src' 'Provider switches preserve tool arguments'
+            Assert-Equal $foreign.input[2].call_id 'call_native' 'Provider switches preserve the tool-call ID'
+            Assert-Equal $foreign.input[3].type 'function_call_output' 'Provider switches translate tool results to the target transport'
+            Assert-Equal $foreign.input[3].call_id 'call_native' 'Translated tool results still match their tool call'
+            Assert-Equal $foreign.input[3].output 'source.txt' 'Provider switches preserve the tool output'
+            Assert-True (($foreign | ConvertTo-Json -Depth 20) -notmatch 'opaque-signature|opaque-redacted|redacted_thinking|tool_use') 'Responses excludes foreign opaque replay blocks'
+            Assert-Equal (ConvertTo-Json -InputObject @($restored.messages[1].response_items) -Depth 15 -Compress) $originalBlocks 'Transport conversion does not mutate stored Anthropic replay'
+        }
+    }
+    foreach ($tagged in @($true, $false)) {
+        $history = $conversation | ConvertTo-Json -Depth 15 | ConvertFrom-Json -Depth 20
+        if (-not $tagged) { $history[2].PSObject.Properties.Remove('response_items_transport') }
+        Save-Session -sessionId 'responses-replay' -messages @($history) -meta @{} -root $transportRoot
+        $restored = Read-Session -sessionId 'responses-replay' -root $transportRoot
+        $native = ConvertTo-ResponsesBody -Messages @($restored.messages) -ModelId 'gpt-5.6-sol' -Tools @() -RequestOptions @{} -MaxTokens 4096
+        Assert-Equal $native.input[2].encrypted_content 'opaque-fixture' "Responses reasoning survives session storage (tagged=$tagged)"
+        Assert-Equal $native.input[3].phase 'commentary' 'Responses assistant phase survives session storage'
+        $foreign = ConvertTo-AnthropicMessage -Messages @($restored.messages)
+        Assert-Equal $foreign.messages[1].content[0].text 'Inspecting files' 'Responses-to-Anthropic conversion preserves assistant text'
+        Assert-Equal $foreign.messages[1].content[1].type 'tool_use' 'Responses-to-Anthropic conversion translates tool calls'
+        Assert-Equal $foreign.messages[1].content[1].id 'call_fixture' 'Responses-to-Anthropic conversion preserves tool-call IDs'
+        Assert-Equal $foreign.messages[2].content[0].tool_use_id 'call_fixture' 'Responses-to-Anthropic conversion preserves result correlation'
+        Assert-True (($foreign | ConvertTo-Json -Depth 20) -notmatch 'opaque-fixture|encrypted_content|response_items_transport') 'Anthropic excludes foreign replay blocks and internal metadata'
+    }
+} finally {
+    if (Test-Path -LiteralPath $transportRoot) { Remove-Item -LiteralPath $transportRoot -Recurse -Force }
+}
+
 foreach ($status in @('failed','incomplete','cancelled','queued')) {
     $responseFixture.status = $status
     $rejected = $false
@@ -1397,9 +1563,9 @@ try {
 
     $allTools = @(Get-ToolSchemaList)
     $functionalTools = @(Get-AgentProviderToolSchema -AgentName 'functional-reviewer' -Tools $allTools)
-    Assert-Equal (($functionalTools.function.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'report-only schema advertises only declared read capabilities'
+    Assert-Equal (($functionalTools.function.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,repository_context' 'report-only schema advertises only declared read and navigation capabilities'
     $engineerTools = @(Get-AgentProviderToolSchema -AgentName 'engineer' -Tools $allTools)
-    Assert-Equal (($engineerTools.function.name | Sort-Object) -join ',') 'file_edit,file_read,file_write,grep_search,list_dir' 'engineer schema retains guarded editing capabilities'
+    Assert-Equal (($engineerTools.function.name | Sort-Object) -join ',') 'file_edit,file_read,file_write,grep_search,list_dir,repository_context' 'engineer schema retains guarded editing and navigation capabilities'
     Assert-Equal @(Get-AgentProviderToolSchema -AgentName 'missing-role-fixture' -Tools $allTools).Count 0 'unknown roles receive no advertised capabilities'
 
     $fixturePath = Join-Path $repairRoot 'src/fixture.txt'
@@ -1470,12 +1636,16 @@ try {
         return [PSCustomObject]@{ stop_reason = 'end_turn'; content = @([PSCustomObject]@{ type = 'text'; text = $(if ($isReview) { $script:repairVerdict } else { 'Offline adapter answer' }) }) }
     }
     $script:repairProvider = 'anthropic-api'
+    # Repository context is a Frontier workspace capability: seed an initialized fixture with a built graph.
+    [IO.Directory]::CreateDirectory((Join-Path $repairRoot '.frontier')) | Out-Null
+    Set-Content -LiteralPath (Join-Path $repairRoot '.frontier/config.json') -Value '{"mode":"local"}'
+    $null = Get-FrontierRepositoryContext -WorkspaceRoot $repairRoot
     foreach ($roleName in @('engineer', 'functional-reviewer')) {
         Set-Content -LiteralPath $fixturePath -Value 'original fixture' -NoNewline
         $adapterPath = Join-Path $repairRoot 'src/adapter/nested.txt'
         if (Test-Path -LiteralPath $adapterPath) { Remove-Item -LiteralPath $adapterPath -Force }
         $script:repairRequests = [Collections.Generic.List[object]]::new()
-        $adapterResult = Invoke-AgenticLoop -Agent $roleName -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 3 -SkipLoopStateSync
+        $adapterResult = Invoke-AgenticLoop -Agent $roleName -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 3 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $adapterResult.exitReason 'text_response' "Anthropic $roleName completes the real mocked loop"
         Assert-Equal $adapterResult.toolCalls 3 "Anthropic $roleName processes normalized tool calls"
         Assert-Equal $script:repairRequests.Count 4 "Anthropic $roleName executes main and read-only self-review tool turns"
@@ -1484,13 +1654,15 @@ try {
         Assert-Equal (Get-Content -LiteralPath $fixturePath -Raw) $(if ($roleName -eq 'engineer') { 'edited fixture' } else { 'original fixture' }) "Anthropic $roleName enforces edit permissions in loop dispatch"
         Assert-True (-not (Test-Path -LiteralPath (Join-Path $repairRoot 'src/review-forbidden.txt'))) 'internal self-review cannot create files'
         if ($script:repairRequests.Count -eq 4) {
+            Assert-True (($script:repairRequests[0].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:') 'Native agent work receives a current repository-context slice'
+            Assert-True (($script:repairRequests[2].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:') 'Internal review receives its own repository-context slice'
             $mainReply = $script:repairRequests[1].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
             Assert-Equal (($mainReply.tool_use_id | Sort-Object) -join ',') 'edit-fixture,read-fixture,write-fixture' 'Anthropic replay preserves every tool-result ID'
             $reviewReply = $script:repairRequests[3].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
             Assert-Equal @($reviewReply | Where-Object { $_.content -match 'not available in review mode' }).Count 2 'internal self-review rejects both write and edit attempts'
-            Assert-Equal (($script:repairRequests[2].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'self-review wire schema remains read-only'
+            Assert-Equal (($script:repairRequests[2].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,repository_context' 'self-review wire schema remains source-read-only with managed navigation context'
             if ($roleName -eq 'functional-reviewer') {
-                Assert-Equal (($script:repairRequests[0].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'report-only Anthropic wire schema remains read-only'
+                Assert-Equal (($script:repairRequests[0].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir,propose_plan,report_progress,repository_context,request_user_input' 'report-only Anthropic schema remains source-read-only while supporting guided input and progress'
                 Assert-Equal @($mainReply | Where-Object { $_.content -match 'BLOCKED' }).Count 2 'unsolicited report-only writes return tool errors'
             }
         }
@@ -1508,7 +1680,7 @@ try {
     foreach ($rawResponse in @($false, $true)) {
         $script:repairClaudeCalls = 0
         $script:repairClaudeRaw = $rawResponse
-        $claudeLoop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 2 -SkipLoopStateSync
+        $claudeLoop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 2 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $claudeLoop.exitReason 'text_response' "Claude raw=$rawResponse completes the real mocked loop"
         Assert-Equal $script:repairClaudeCalls 2 "Claude raw=$rawResponse reaches internal self-review"
         Assert-True ($claudeLoop.finalText -match 'Offline adapter answer') "Claude raw=$rawResponse preserves final content"
@@ -1642,7 +1814,7 @@ try {
     $script:ledgerClarify = $false
     # A ledger left open by an earlier run that threw must not become this run's parent.
     $Script:CurrentUsageLedger = [PSCustomObject]@{ parent = $null; tokenBudget = 1; calls = [System.Collections.Generic.List[object]]::new() }
-    $ledgerRun = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 3 -SkipLoopStateSync
+    $ledgerRun = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 3 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $ledgerRun.exitReason 'text_response' 'Metered run completes normally'
     Assert-True ($null -eq $Script:CurrentUsageLedger) 'A top-level run replaces a stale ledger and closes its own'
     Assert-Equal $ledgerRun.usage.calls 2 'Metered run records the main and self-review calls'
@@ -1654,24 +1826,24 @@ try {
 
     $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 50 } }
     $script:ledgerUseTool = $true
-    $budgetStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    $budgetStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $budgetStop.exitReason 'token_budget' 'A tool-call run stops at the next iteration once the token budget is spent'
     Assert-Equal $budgetStop.iterations 1 'Token budget stop does not count an unexecuted iteration'
     Assert-True ($budgetStop.finalText -match '120 of 50') 'Token budget stop reports spend against the budget'
 
     $script:ledgerUseTool = $false
-    $textStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    $textStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $textStop.exitReason 'token_budget' 'A text response over budget ends the run before self-review'
     Assert-Equal $textStop.usage.calls 1 'No self-review call is made once the budget is spent'
     Assert-True ($textStop.finalText -match 'Ledger fixture answer' -and $textStop.finalText -match 'before review or clarification') 'The unreviewed response is returned with the budget note'
 
     $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 200 } }
     $script:ledgerReviewUsesTool = $true
-    $reviewStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    $reviewStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $reviewStop.exitReason 'token_budget' 'Self-review stops before its next call once the budget is spent'
     Assert-Equal $reviewStop.usage.byPurpose.'self-review'.calls 1 'The reviewer makes no call after the budget is spent'
     Assert-Equal $reviewStop.usage.calls 2 'A budget stop inside self-review makes no further calls'
-    $reviewStopLast = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 1 -SkipLoopStateSync
+    $reviewStopLast = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 1 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $reviewStopLast.exitReason 'token_budget' 'A reviewer budget stop on the last iteration reports token_budget'
     Assert-True ($reviewStopLast.finalText -match 'Ledger fixture answer' -and $reviewStopLast.finalText -match 'during self-review') 'The unreviewed response is returned when self-review runs out of budget'
     $script:ledgerReviewUsesTool = $false
@@ -1683,7 +1855,7 @@ try {
         $script:ledgerConfig = @{ researchFirstMode = 'off' }
         $usageDir = Join-Path $ledgerRoot '.frontier/sessions'
         $usageFilesBefore = @(Get-ChildItem -LiteralPath $usageDir -Filter '*.usage.json' -ErrorAction SilentlyContinue).Count
-        $clarified = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+        $clarified = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $clarified.exitReason 'text_response' 'A delegated clarification completes end to end'
         Assert-Equal $clarified.usage.byPurpose.agent.calls 3 'Clarification responder calls merge into the requesting run ledger'
         $usageFilesAfter = @(Get-ChildItem -LiteralPath $usageDir -Filter '*.usage.json' -ErrorAction SilentlyContinue).Count
@@ -1696,7 +1868,7 @@ try {
 
         $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 150 } }
         $script:ledgerResponderUsesTool = $true
-        $clarifyStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+        $clarifyStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $clarifyStop.exitReason 'token_budget' 'A budget stop inside a delegated clarification ends the requesting run'
         Assert-Equal $clarifyStop.usage.calls 2 'No further clarification rounds run after the budget is spent'
         Assert-True ($clarifyStop.finalText -match 'during clarification: 240 of 150') 'The budget stop names the clarification stage'

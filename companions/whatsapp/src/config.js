@@ -87,7 +87,7 @@ function loadConfig({ env = process.env, configPath } = {}) {
   optionalBoolean(fileConfig.voiceAutoExecuteReadOnly, 'voiceAutoExecuteReadOnly');
   optionalBoolean(fileConfig.logMessageContent, 'logMessageContent');
 
-  const envAllowed = String(env.AGENTX_WA_ALLOWED || '').split(',').map((value) => value.trim()).filter(Boolean);
+  const envAllowed = String(env.FRONTIER_WA_ALLOWED || '').split(',').map((value) => value.trim()).filter(Boolean);
   const allowedNumbers = unique((envAllowed.length ? envAllowed : fileConfig.allowedNumbers || [])
     .map((value) => normalizeNumber(value, 'allowedNumbers')));
   if (!allowedNumbers.length) throw new Error('At least one allowedNumbers entry is required.');
@@ -110,7 +110,7 @@ function loadConfig({ env = process.env, configPath } = {}) {
   optionalArray(notificationsConfig.targets, 'notifications.targets');
   optionalArray(notificationsConfig.events, 'notifications.events');
 
-  const repoPath = path.resolve(env.AGENTX_REPO || fileConfig.repoPath || path.resolve(root, '..', '..'));
+  const repoPath = path.resolve(env.FRONTIER_REPO || fileConfig.repoPath || path.resolve(root, '..', '..'));
   if (!fs.existsSync(repoPath) || !fs.statSync(repoPath).isDirectory()) {
     throw new Error(`repoPath does not exist or is not a directory: ${repoPath}`);
   }

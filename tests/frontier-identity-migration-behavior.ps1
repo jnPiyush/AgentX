@@ -45,21 +45,21 @@ function Invoke-ConfigShow([string]$FrontierRoot, [string]$TransitionalRoot, [st
 }
 
 $expectedAgents = [ordered]@{
-    'frontier.agent.md'                       = 'Frontier Orchestration FDE'
-    'product-manager.agent.md'                = 'Frontier Product FDE'
-    'ux-designer.agent.md'                    = 'Frontier Experience FDE'
-    'architect.agent.md'                      = 'Frontier Architecture FDE'
-    'engineer.agent.md'                       = 'Frontier Engineering FDE'
-    'reviewer.agent.md'                       = 'Frontier Review FDE'
-    'reviewer-auto.agent.md'                  = 'Frontier Auto-Fix FDE'
-    'devops.agent.md'                         = 'Frontier DevOps FDE'
-    'data-scientist.agent.md'                 = 'Frontier AI Systems FDE'
-    'tester.agent.md'                         = 'Frontier Test FDE'
-    'fabric-engineer.agent.md'                = 'Frontier Fabric FDE'
-    'power-platform-builder.agent.md'         = 'Frontier Power Platform FDE'
-    'powerbi-analyst.agent.md'                = 'Frontier Power BI FDE'
-    'consulting-research.agent.md'            = 'Frontier Research FDE'
-    'agile-coach.agent.md'                    = 'Frontier Agile FDE'
+    'frontier.agent.md'                       = 'Frontier E2E SDLC'
+    'product-manager.agent.md'                = 'Frontier TPM'
+    'ux-designer.agent.md'                    = 'Frontier UX Designer'
+    'architect.agent.md'                      = 'Frontier Architect'
+    'engineer.agent.md'                       = 'Frontier Engineer'
+    'reviewer.agent.md'                       = 'Frontier Reviewer'
+    'reviewer-auto.agent.md'                  = 'Frontier Auto-Fix Reviewer'
+    'devops.agent.md'                         = 'Frontier DevOps'
+    'data-scientist.agent.md'                 = 'Frontier Data Scientist'
+    'tester.agent.md'                         = 'Frontier Tester'
+    'fabric-engineer.agent.md'                = 'Frontier Fabric Engineer'
+    'power-platform-builder.agent.md'         = 'Frontier Power Platform Engineer'
+    'powerbi-analyst.agent.md'                = 'Frontier Power BI Analyst'
+    'consulting-research.agent.md'            = 'Frontier Researcher'
+    'agile-coach.agent.md'                    = 'Frontier Agile Coach'
     'internal/github-ops.agent.md'            = 'Frontier GitHub Ops FDE'
     'internal/ado-ops.agent.md'               = 'Frontier ADO Ops FDE'
     'internal/ado-prd-to-wit.agent.md'        = 'Frontier ADO Planning FDE'
@@ -116,6 +116,7 @@ try {
     $parseErrors = $null
     $runnerSyntax = [Management.Automation.Language.Parser]::ParseFile($runnerPath, [ref]$tokens, [ref]$parseErrors)
     $stateFunction = $runnerSyntax.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-FrontierStateDirectory' }, $false)
+    . (Join-Path $repoRoot '.frontier/runtime/workspace-state.ps1')
     . ([scriptblock]::Create($stateFunction.Extent.Text))
     $runnerWorkspace = Join-Path $tempRoot 'runner-workspace'
     New-Item -ItemType Directory -Path (Join-Path $runnerWorkspace '.agentx/state') -Force | Out-Null
@@ -137,8 +138,11 @@ try {
     New-Item -ItemType Directory -Path (Join-Path $frontierWorkspace '.frontier'), (Join-Path $frontierWorkspace '.agentx') -Force | Out-Null
     '{"provider":"ado"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.frontier/config.json') -Encoding utf8
     '{"provider":"github"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.agentx/config.json') -Encoding utf8
-    $frontierOutput = Invoke-ConfigShow -FrontierRoot $frontierWorkspace -TransitionalRoot '' -AgentXRoot ''
+    $frontierOutput = Invoke-ConfigShow -FrontierRoot $frontierWorkspace -TransitionalRoot $legacyOnlyWorkspace -AgentXRoot $legacyOnlyWorkspace
     Assert-True ($frontierOutput -match 'provider\s*=\s*ado') '.frontier/config.json is the only configuration source'
+    $withoutAliases = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot '' -AgentXRoot ''
+    $withAliases = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot $frontierWorkspace -AgentXRoot $legacyOnlyWorkspace
+    Assert-True ($withAliases -ceq $withoutAliases) 'Obsolete workspace environment variables do not change default runtime selection'
 
     $scanWorkspace = Join-Path $tempRoot 'scan-workspace'
     New-Item -ItemType Directory -Path (Join-Path $scanWorkspace '.frontier/state') -Force | Out-Null

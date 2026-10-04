@@ -216,6 +216,18 @@ function syncBundledAssets(version) {
       label: 'bundled agentic runner',
     },
     {
+      relativePath: 'vscode-extension/.github/frontier/.frontier/runtime/cursor.js',
+      label: 'bundled Cursor adapter',
+    },
+    {
+      relativePath: 'vscode-extension/.github/frontier/.frontier/runtime/mcp-server/index.js',
+      label: 'bundled MCP server',
+    },
+    {
+      relativePath: 'vscode-extension/.github/frontier/.frontier/runtime/cursor-assets/hooks.json',
+      label: 'Cursor native hook configuration',
+    },
+    {
       relativePath: 'vscode-extension/.github/frontier/docs/QUALITY_SCORE.md',
       label: 'bundled quality score doc',
     },

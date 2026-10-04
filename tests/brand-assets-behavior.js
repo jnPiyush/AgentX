@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { before, test } = require('node:test');
+const { ReadmeProcessor } = require('../vscode-extension/node_modules/@vscode/vsce/out/package');
+const { patchOptionsWithManifest } = require('../vscode-extension/node_modules/@vscode/vsce/out/util');
 
 const root = path.resolve(__dirname, '..');
 const resources = path.join(root, 'vscode-extension', 'resources');
@@ -48,8 +50,73 @@ test('documentation and landing copies match the canonical coloured SVG', () => 
   const master = fs.readFileSync(path.join(resources, colourName));
   assert.deepEqual(fs.readFileSync(path.join(root, 'docs/assets/frontier-logo.svg')), master);
   assert.deepEqual(fs.readFileSync(path.join(root, 'public/assets/frontier-logo.svg')), master);
-  assert.match(read('README.md'), /src="docs\/assets\/frontier-logo\.svg"/);
+  assert.match(read('README.md'), /src="vscode-extension\/resources\/frontier-ai-coding-harness\.png"/);
   assert.match(read('vscode-extension/README.md'), /src="resources\/frontier-ai-coding-harness\.png"/);
+});
+
+test('packaged README resolves images from the extension directory, not the repository root', async () => {
+  const manifest = JSON.parse(read('vscode-extension/package.json'));
+  const options = {};
+  patchOptionsWithManifest(options, manifest);
+  const processor = new ReadmeProcessor(manifest, options);
+  const processed = await processor.processFile({
+    path: 'extension/readme.md',
+    contents: read('vscode-extension/README.md'),
+  });
+  const markdown = processed.contents.toString('utf8');
+  assert.match(markdown,
+    /src="https:\/\/github\.com\/jnPiyush\/AgentX\/raw\/master\/vscode-extension\/resources\/frontier-ai-coding-harness\.png"/);
+  assert.doesNotMatch(markdown, /\/raw\/HEAD\/resources\//);
+  for (const name of ['architecture-flow', 'delivery-flow']) {
+    assert.ok(markdown.includes(
+      `https://github.com/jnPiyush/AgentX/raw/master/vscode-extension/resources/diagrams/${name}.png`,
+    ));
+  }
+  const setupLink = markdown.match(/\]\((https:\/\/[^)]+GUIDE\.md#using-frontier[^)]+)\)/);
+  assert.ok(setupLink);
+  assert.equal(new URL(setupLink[1]).href,
+    'https://github.com/jnPiyush/AgentX/blob/master/docs/GUIDE.md#using-frontier-with-github-copilot-cli-and-the-agents-window');
+});
+
+test('README diagrams have portable PNG exports and editable Mermaid sources', () => {
+  const diagrams = [
+    ['README.md', 'core-flow'],
+    ['vscode-extension/README.md', 'architecture-flow'],
+    ['vscode-extension/README.md', 'delivery-flow'],
+  ];
+  for (const [readme, name] of diagrams) {
+    const markdown = read(readme);
+    assert.doesNotMatch(markdown, /^```mermaid\b/m);
+    assert.ok(markdown.includes(`resources/diagrams/${name}.png`), name);
+    const source = fs.readFileSync(path.join(resources, 'diagrams', `${name}.mmd`), 'utf8');
+    assert.match(source, /flowchart /);
+    assert.match(source, /accTitle:/);
+    const png = fs.readFileSync(path.join(resources, 'diagrams', `${name}.png`));
+    assert.deepEqual(png.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    assert.ok(png.readUInt32BE(16) > 100 && png.readUInt32BE(20) > 100, name);
+  }
+});
+
+test('portable diagram sources retain the README workflow relationships', () => {
+  const source = name => fs.readFileSync(
+    path.join(resources, 'diagrams', `${name}.mmd`), 'utf8');
+  const core = source('core-flow');
+  assert.match(core, /Intent\[.+\] --> Route\[/);
+  for (const edge of ['Route --> Plan', 'Plan --> Build', 'Build --> Verify',
+    'Verify -->|"findings"| Build', 'Verify --> Capture', 'Capture --> Done']) {
+    assert.ok(core.includes(edge), edge);
+  }
+  const architecture = source('architecture-flow');
+  for (const edge of ['Chat["Copilot Chat"] --> Context["Frontier Context"] --> Engine',
+    'Engine --> View', 'Engine --> File', 'View -.->|"Queues and Workflows"| UI',
+    'File -.->|"Skills and Templates"| Workspace']) {
+    assert.ok(architecture.includes(edge), edge);
+  }
+  const delivery = source('delivery-flow');
+  for (const edge of ['I["Install Extension"] --> W', 'W --> R', 'R --> B', 'B --> E',
+    'E --> V', 'V --> C']) {
+    assert.ok(delivery.includes(edge), edge);
+  }
 });
 
 test('prototype and built landing resolve the new header icon and favicon', () => {

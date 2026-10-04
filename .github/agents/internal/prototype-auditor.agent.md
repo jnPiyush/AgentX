@@ -2,7 +2,7 @@
 name: Frontier Prototype Audit FDE
 description: 'Audit UX prototypes through ten evidence-backed passes, including design-language conformance and anti-slop critique. Spawned by UX Designer and Reviewer for prototype or needs:ux work.'
 visibility: internal
-model: Claude Opus 5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: false
 disable-model-invocation: false
 hooks:

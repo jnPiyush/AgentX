@@ -1,6 +1,6 @@
 ---
 name: "scrub"
-description: "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
+description: "Inspect code hygiene without automatic cleanup. Use advisory mode in local loops/reviews, report cosmetic findings as LOW, and request explicit user approval before safe fixes. Preserve independent strict gates."
 user-invocable: false
 metadata:
   author: "Frontier"
@@ -15,7 +15,14 @@ compatibility:
 
 ## Core Rules
 
-Presentation only, never behavior: comment rot, over-abstraction, generic design defaults, AI filler, and duplicate logic (single-file and cross-file) are in scope; anything that changes runtime semantics is not. **MANDATORY** on every Frontier run that changes files (`... -> implement -> scrub -> test -> review -> ship`); `ship.ps1` always runs it and ignores `-SkipScrub`. See `.github/instructions/project-conventions.instructions.md`.
+Local loop/review scrubs are read-only advisory scans. Cosmetic lint/style
+findings are LOW and are not Done Criteria. Report them and explicitly ask the
+user before cleanup; no answer is not approval. Use `-Advisory`, never `-Fix`
+during the unapproved scan. See `.github/AGENT-PROTOCOL.md` section 4.
+
+Do not reclassify real build, correctness, security, reliability or accessibility
+defects as cosmetic lint. Independent default/production, CI and commit gates
+remain unchanged; report their failures rather than claiming they passed.
 
 ## When to Use / Not Use
 
@@ -32,7 +39,7 @@ Use after generation, refactor, or a large patch; before a PR or review handoff;
 
 ## What Counts As Slop
 
-| Category | Examples | Action |
+| Category | Examples | Proposed cleanup after approval |
 |----------|----------|--------|
 | Comment rot | `// This function handles the logic for X`, `// Helper to do thing`, naked `// TODO` | Delete |
 | Restating the obvious | `// Increment counter` above `counter++` | Delete |
@@ -55,7 +62,7 @@ Recent diff contains machine-generated text?
 +- No -> skip
 +- Yes -> run scanner
    +- Findings, all in flag categories -> human triage required
-   +- Findings, some in safe-fix categories -> run with --fix, review the diff
+   +- Cosmetic findings -> LOW report; explicitly ask before cleanup
    +- No findings -> done
 ```
 
@@ -68,24 +75,24 @@ Recent diff contains machine-generated text?
 Run the scanner over the directory or files that changed. Invoke it through the Frontier CLI so it resolves the bundled scanner in zero-copy workspaces (a literal `scripts/scrub.ps1` path does not exist there):
 
 ```pwsh
-pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components
+pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components -Advisory
 ```
 
-For production-release readiness, use the stricter production gate. It keeps
-normal scrub behavior advisory for MEDIUM/LOW findings, but blocks release on
-categories that commonly turn generated code into production maintenance risk:
+Advisory mode preserves `originalSeverity`, `safeFix` capability and
+`productionBlocker` metadata. It reports local candidates as LOW and exits
+successfully after a complete scan, not because the code is lint-clean.
+Missing/unreadable targets still fail. `-Advisory` rejects `-Fix` and
+`-Production` combinations.
+
+Separate production checks retain their stricter behavior:
 
 ```pwsh
 pwsh .frontier/runtime/frontier.ps1 deslop -Path src/components -Production
 pwsh .frontier/runtime/frontier.ps1 antislop -Path src/components -Production
 ```
 
-`deslop` and `antislop` are CLI aliases for the same scanner. Use `deslop` when
-the main concern is production code hygiene, and `antislop` when the1. **Scan** via the CLI so it resolves in zero-copy workspaces: `pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components`. Production gate (blocks release): `pwsh .frontier/runtime/frontier.ps1 deslop -Path src/components -Production` (`antislop` is the same alias).
-2. **Triage**: each finding has file/line, category, severity (HIGH auto-fixable, MEDIUM opinionated fix, LOW manual review), snippet, safe-fix flag, and for `duplicate-logic` the original location. `-Production` also blocks on `empty-catch`, `generic-gradient`, and `ai-filler`.
-3. **Fix safe categories**: `pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components -Fix` applies comment rot, obvious restatement, stale headers, and dead code. Everything else stays flag-only, requiring manual judgment.
- findings plus these
-production-blocking advisory categories:
+`deslop` and `antislop` are aliases for the same scanner. Preserve the original
+strict-gate result in reports. `-Production` retains these blocking categories:
 
 | Category | Why It Blocks Production |
 |----------|--------------------------|
@@ -94,9 +101,18 @@ production-blocking advisory categories:
 | `generic-gradient` | AI-default UI styling is not release-ready without product/design intent. |
 | `ai-filler` | Filler copy in release docs or product surfaces weakens operator trust. |
 
+### 2. Report and Ask
+
+Report LOW cosmetic findings with their locations and original tool severities.
+Exclude intentional fixtures and false positives from cleanup recommendations.
+Ask, "Would you like me to fix these lint/style findings?" and name the proposed
+scope. Do not make cleanup a prerequisite for the completed implementation.
+No response or a decline leaves the findings unchanged.
+
 ### 3. Apply Safe Fixes
 
-Only after reading the report, run with `-Fix` to apply the auto-safe categories:
+Only after reporting findings and receiving explicit user approval for the
+specific cleanup scope, run `-Fix` in a separate bounded task:
 
 ```pwsh
 pwsh .frontier/runtime/frontier.ps1 scrub -Path src/components -Fix
@@ -120,7 +136,8 @@ Unsafe categories require manual edits and are flag-only:
 
 After fixes:
 
-- Run the test suite. Behavior must not change.
+- Use non-test verification during the cleanup loop; offer suites only after
+  completion and separate approval under the test-consent policy.
 - Re-run the scanner. The remaining findings are the manual-triage list.
 - For release candidates, re-run with `-Production` and clear or justify every production blocker.
 - Commit fixes as a single change with `chore: scrub <area>`.
@@ -129,9 +146,10 @@ After fixes:
 
 ## Done Criteria
 
-- Scanner reports zero HIGH findings, or every HIGH finding has been addressed or explicitly justified
+- Local advisory scan is complete and findings are reported; cosmetic cleanup
+  is not required for local completion
 - Production-release runs report zero production blockers, or every blocker has a documented release-owner waiver
-- Tests still pass after fixes
+- No cleanup occurred without approval; unexecuted tests remain not run
 - Diff from `--fix` is small, mechanical, and reviewable line-by-line
 - No behavior change introduced
 
@@ -139,8 +157,8 @@ After fixes:
 
 ## Anti-Patterns
 
-- Running `--fix` without reading the scan report first
-- Suppressing findings instead of fixing them
+- Running `--fix` or a formatter without explicit cleanup approval
+- Hiding findings or reporting an advisory exit code as clean lint
 - Using scrub to refactor logic -- it is a presentation pass only
 - Treating LOW findings as required fixes -- they are signals, not gates
 

@@ -10,6 +10,7 @@ export function registerDepsCommand(
  agentx: FrontierContext
 ) {
  const cmd = vscode.commands.registerCommand('frontier.checkDeps', async (providedIssueNumber?: string) => {
+ const root = agentx.workspaceRoot;
  if (!await agentx.checkInitialized()) {
  vscode.window.showWarningMessage('Frontier is not initialized.');
  return;
@@ -23,7 +24,7 @@ export function registerDepsCommand(
  if (!issueNumber) { return; }
 
  try {
-    const output = await agentx.runCli('deps', [issueNumber]);
+    const output = await agentx.runCli('deps', [issueNumber], root);
  const channel = vscode.window.createOutputChannel('Frontier Dependencies');
  channel.clear();
  channel.appendLine(`=== Frontier Dependencies: Issue #${issueNumber} ===\n`);

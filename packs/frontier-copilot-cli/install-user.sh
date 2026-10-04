@@ -139,7 +139,6 @@ if (fs.existsSync(cfgPath)) {
   catch (e) { console.error('[FAIL] Existing ' + cfgPath + ' is not valid JSON.'); process.exit(1); }
 }
 if (!cfg.mcpServers) cfg.mcpServers = {};
-delete cfg.mcpServers.agentx;
 cfg.mcpServers.frontier = {
   command: 'node',
   args: [path.join(repo, '.frontier', 'runtime', 'mcp-server', 'index.js')],
@@ -211,7 +210,7 @@ if [ $DRY_RUN -ne 1 ]; then
   cat > "$COPILOT_DIR/.frontier-version.json" <<JSON
 {
   "plugin": "frontier-copilot-cli-user",
-  "version": "9.6.0",
+  "version": "9.7.0",
   "installedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "source": "$SOURCE",
   "mcpRegistered": $([ $REGISTER_MCP -eq 1 ] && echo true || echo false)

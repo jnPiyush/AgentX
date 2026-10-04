@@ -38,11 +38,15 @@ import {
   renderBoundedParallelRunsText,
 } from '../parallel/parallel-delivery';
 import { stripAnsi } from '../utils/stripAnsi';
+import { PendingInteraction } from '../frontierContextTypes';
+import {
+  buildInteractionResumeArgs, readPendingInteraction, renderPendingInteraction,
+} from './guidedInteraction';
 
 const CHAT_OUTPUT_CHANNEL_NAME = 'Frontier Chat';
 const CHAT_OUTPUT_INLINE_LIMIT = 4000;
 const CHAT_OUTPUT_PREVIEW_LINES = 8;
-const LIVE_STATUS_PATTERN = /\[(?:COMPACTION|CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|SELF-REVIEW(?: SUMMARY)?|EXECUTION SUMMARY|MODEL FALLBACK|LOOP WARNING|CIRCUIT BREAKER|TOOL ERROR|BOUNDARY BLOCKED|FAIL|WARN|PASS|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE|HUMAN REQUIRED SESSION)\]|^\s*Iteration \d+\/\d+|^\s*Tool:/i;
+const LIVE_STATUS_PATTERN = /\[(?:MILESTONE|COMPACTION|CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|SELF-REVIEW(?: SUMMARY)?|EXECUTION SUMMARY|MODEL FALLBACK|LOOP WARNING|CIRCUIT BREAKER|TOOL ERROR|BOUNDARY BLOCKED|FAIL|WARN|PASS|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE|HUMAN REQUIRED SESSION)\]|^\s*Iteration \d+\/\d+|^\s*Tool:/i;
 const CHAT_VISIBLE_DISCUSSION_PATTERN = /^\[(?:CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE)\]/i;
 const HUMAN_REQUIRED_SESSION_PATTERN = /\[HUMAN REQUIRED SESSION\]\s+(.+)$/i;
 const EXECUTION_SUMMARY_PATTERN = /^\[EXECUTION SUMMARY\].*$/gim;
@@ -52,22 +56,12 @@ export type PendingClarification = NonNullable<
   Awaited<ReturnType<FrontierContext['getPendingClarification']>>
 >;
 
+interface RunResponse {
+  markdown(value: string): void;
+  progress(value: string): void;
+}
+
 let chatOutputChannel: vscode.OutputChannel | undefined;
-
-function hasWorkspaceCliRuntime(agentx: FrontierContext): boolean {
-  return typeof (agentx as FrontierContext & { hasCliRuntime?: () => boolean }).hasCliRuntime !== 'function'
-    || (agentx as FrontierContext & { hasCliRuntime: () => boolean }).hasCliRuntime();
-}
-
-function renderMissingRuntimeMessage(): string {
-  return [
-    '**Frontier workspace initialization is not available in this workspace.**',
-    '',
-    'This workspace has an open folder, but it has not been initialized with the `.frontier` state and artifact folders needed for `run`, loop execution, or clarification resume.',
-    '',
-    'To enable formal Frontier execution in this repo, run **Frontier: Initialize Local Runtime** first.',
-  ].join('\n');
-}
 
 function renderPlainTextMarkdown(title: string, body: string, followup?: ReadonlyArray<string>): string {
   const lines = [
@@ -90,25 +84,22 @@ export function resetChatRouterInternalStateForTests(): void {
 }
 
 export async function runAgentCommand(
-  response: vscode.ChatResponseStream,
+  response: RunResponse,
   agentx: FrontierContext,
   agentName: string,
   task: string,
   signal?: AbortSignal,
 ): Promise<vscode.ChatResult> {
   if (signal?.aborted) { return {}; }
-  if (!hasWorkspaceCliRuntime(agentx)) {
-    response.markdown(renderMissingRuntimeMessage());
-    return {};
-  }
-
   try {
+    const root = await agentx.ensureWorkspaceReady();
+    if (signal?.aborted) { return {}; }
     response.progress(`Running ${agentName} agent...`);
     let pendingSessionId = '';
     const visibleDiscussionLines: string[] = [];
     const output = await agentx.runCliStreaming(
       'run',
-      [agentName, task],
+      [agentName, task, '--json'],
       (line) => {
         const normalized = normalizeCliLine(line);
         const sessionMatch = normalized.match(HUMAN_REQUIRED_SESSION_PATTERN);
@@ -122,16 +113,26 @@ export async function runAgentCommand(
           visibleDiscussionLines.push(normalized);
         }
       },
-      { AGENTX_NONINTERACTIVE_HUMAN: '1' },
-      agentx.workspaceRoot,
+      { FRONTIER_NONINTERACTIVE_HUMAN: '1' },
+      root,
       { signal },
     );
 
     writeOutputToChannel(`Frontier Chat Run: ${agentName}`, output);
+    const interaction = readPendingInteraction(output);
+    if (interaction) {
+      await updatePendingClarification(agentx, {
+        workspaceRoot: root, sessionId: interaction.sessionId, agentName, prompt: task, interaction,
+        humanPrompt: renderPendingInteraction(interaction),
+      });
+      response.markdown(renderPendingInteraction(interaction));
+      return {};
+    }
 
     if (pendingSessionId) {
       await updatePendingClarification(agentx, {
         sessionId: pendingSessionId,
+        workspaceRoot: root,
         agentName,
         prompt: task,
         humanPrompt: stripAnsi(output),
@@ -140,7 +141,7 @@ export async function runAgentCommand(
       return {};
     }
 
-    await clearPendingClarification(agentx);
+    await clearPendingClarification(agentx, root);
     response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'AbortError') { return {}; }
@@ -152,28 +153,44 @@ export async function runAgentCommand(
 }
 
 export async function resumePendingClarification(
-  response: vscode.ChatResponseStream,
+  response: RunResponse,
   agentx: FrontierContext,
   pending: PendingClarification,
   guidance: string,
   signal?: AbortSignal,
 ): Promise<vscode.ChatResult> {
   if (signal?.aborted) { return {}; }
-  if (!hasWorkspaceCliRuntime(agentx)) {
-    response.markdown(renderMissingRuntimeMessage());
-    return {};
-  }
-
   try {
+    const root = await agentx.ensureWorkspaceReady(pending.workspaceRoot);
+    if (signal?.aborted) { return {}; }
+    let resumeArgs = [
+      '--resume-session', pending.sessionId, '--clarification-response', guidance,
+    ];
+    if (pending.interaction) {
+      const current = readPendingInteraction(await agentx.runCli('run',
+        ['--session-info', pending.sessionId, '--json'], root));
+      if (!current) {
+        await clearPendingClarification(agentx, root);
+        response.markdown('This session no longer has pending input. No decision was applied.');
+        return {};
+      }
+      if (current.inputId !== pending.interaction.inputId
+        || (current.kind === 'plan' && pending.interaction.kind === 'plan'
+          && current.digest !== pending.interaction.digest)) {
+        await updatePendingClarification(agentx, {
+          ...pending, workspaceRoot: root, interaction: current, humanPrompt: renderPendingInteraction(current),
+        });
+        response.markdown(`The pending input changed. Review the current version before responding.\n\n${renderPendingInteraction(current)}`);
+        return {};
+      }
+      resumeArgs = buildInteractionResumeArgs(current, guidance);
+    }
     response.progress(`Resuming ${pending.agentName} agent...`);
     let nextPendingSessionId = '';
     const visibleDiscussionLines: string[] = [];
     const output = await agentx.runCliStreaming(
       'run',
-      [
-        '--resume-session', pending.sessionId,
-        '--clarification-response', guidance,
-      ],
+      resumeArgs,
       (line) => {
         const normalized = normalizeCliLine(line);
         const sessionMatch = normalized.match(HUMAN_REQUIRED_SESSION_PATTERN);
@@ -187,16 +204,26 @@ export async function resumePendingClarification(
           visibleDiscussionLines.push(normalized);
         }
       },
-      { AGENTX_NONINTERACTIVE_HUMAN: '1' },
-      agentx.workspaceRoot,
+      { FRONTIER_NONINTERACTIVE_HUMAN: '1' },
+      root,
       { signal },
     );
 
     writeOutputToChannel(`Frontier Chat Resume: ${pending.agentName}`, output);
+    const interaction = readPendingInteraction(output);
+    if (interaction) {
+      await updatePendingClarification(agentx, {
+        workspaceRoot: root, sessionId: interaction.sessionId, agentName: pending.agentName,
+        prompt: pending.prompt, interaction, humanPrompt: renderPendingInteraction(interaction),
+      });
+      response.markdown(renderPendingInteraction(interaction));
+      return {};
+    }
 
     if (nextPendingSessionId) {
       await updatePendingClarification(agentx, {
         sessionId: nextPendingSessionId,
+        workspaceRoot: root,
         agentName: pending.agentName,
         prompt: pending.prompt,
         humanPrompt: stripAnsi(output),
@@ -205,7 +232,7 @@ export async function resumePendingClarification(
       return {};
     }
 
-    await clearPendingClarification(agentx);
+    await clearPendingClarification(agentx, root);
     response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'AbortError') { return {}; }
@@ -226,6 +253,7 @@ export async function getPendingClarification(
 
 export function buildPendingClarificationMessage(
   pending: {
+    workspaceRoot?: string;
     agentName: string;
     prompt: string;
     humanPrompt?: string;
@@ -234,8 +262,10 @@ export function buildPendingClarificationMessage(
     topic?: string;
     status?: string;
     exchangeCount?: number;
+    interaction?: PendingInteraction;
   },
 ): string {
+  if (pending.interaction) { return renderPendingInteraction(pending.interaction); }
   const lines = [
     `**Pending clarification for ${pending.agentName}**`,
     '',
@@ -308,15 +338,14 @@ export function renderUsageGuidance(): string {
 
 /**
  * Match natural-language intents to initialize the Frontier local runtime in the
- * current workspace. Tolerates Frontier and legacy AgentX phrasings plus the
+ * current workspace. Tolerates Frontier phrasings plus the
  * common typo "initalize".
  */
 export function matchesInitializeIntent(userText: string): boolean {
   const normalized = userText
     .toLowerCase()
     .replace(/^(?:please|can you|could you)\s+/i, '')
-    .replace(/^(?:frontier|agentx)[:,\s]+/i, '')
-    .replace(/\bagent\s*x\b/gi, 'agentx')
+    .replace(/^frontier[:,\s]+/i, '')
     .replace(/[?!.]+$/g, '')
     .trim();
 
@@ -325,14 +354,14 @@ export function matchesInitializeIntent(userText: string): boolean {
   }
 
   const initVerb = '(?:initialize|initialise|initalize|init|setup|set\\s*up|configure|bootstrap)';
-  const target = '(?:local\\s*runtime|workspace|project|repo|repository|frontier|agentx)';
+  const target = '(?:local\\s*runtime|repository\\s+support|workspace|project|repo|repository|frontier)';
 
   const patterns: RegExp[] = [
     new RegExp(`^${initVerb}$`),
     new RegExp(`^${initVerb}\\s+(?:the\\s+)?${target}(?:\\s+(?:in|for)\\s+(?:this|the)\\s+(?:workspace|repo|repository|project))?$`),
-    new RegExp(`^(?:frontier|agentx)\\s+${initVerb}(?:\\s+${target})?$`),
+    new RegExp(`^frontier\\s+${initVerb}(?:\\s+${target})?$`),
     new RegExp(`^${target}\\s+${initVerb}$`),
-    new RegExp(`^run\\s+(?:the\\s+)?(?:frontier|agentx)\\s+${initVerb}(?:\\s+command)?$`),
+    new RegExp(`^run\\s+(?:the\\s+)?frontier\\s+${initVerb}(?:\\s+command)?$`),
   ];
 
   return patterns.some((pattern) => pattern.test(normalized));
@@ -353,7 +382,7 @@ export async function tryHandleWorkspaceSetupRequest(
     return {};
   }
 
-  if (/^(?:agentx:\s*)?(?:add plugin|install plugin)$/i.test(userText)) {
+  if (/^(?:frontier:\s*)?(?:add plugin|install plugin)$/i.test(userText)) {
     try {
       await vscode.commands.executeCommand('frontier.addPlugin');
       response.markdown('Opened **Frontier: Add Plugin** for this workspace.');
@@ -510,7 +539,7 @@ export async function tryHandleClarificationStatusRequest(
   response: vscode.ChatResponseStream,
   pending: PendingClarification | undefined,
 ): Promise<vscode.ChatResult | undefined> {
-  if (!/^(clarification status|pending clarification)$/i.test(userText)) {
+  if (!/^(clarification status|pending clarification|plan status|pending plan|pending input)$/i.test(userText)) {
     return undefined;
   }
 
@@ -643,10 +672,7 @@ export async function tryHandleTaskBundleRequest(
     return {};
   }
 
-  if (!hasWorkspaceCliRuntime(agentx)) {
-    response.markdown(renderMissingRuntimeMessage());
-    return {};
-  }
+  await agentx.ensureWorkspaceReady();
 
   const bundles = await listTaskBundles(agentx, { all: true });
   response.markdown(renderPlainTextMarkdown(
@@ -676,10 +702,7 @@ export async function tryHandleBoundedParallelRequest(
     return {};
   }
 
-  if (!hasWorkspaceCliRuntime(agentx)) {
-    response.markdown(renderMissingRuntimeMessage());
-    return {};
-  }
+  await agentx.ensureWorkspaceReady();
 
   const runs = await listBoundedParallelRuns(agentx);
   response.markdown(renderPlainTextMarkdown(
@@ -929,7 +952,11 @@ function writeOutputToChannel(title: string, output: string): void {
 
 async function updatePendingClarification(
   agentx: FrontierContext,
-  pending: { sessionId: string; agentName: string; prompt: string; humanPrompt?: string },
+  pending: {
+    workspaceRoot?: string;
+    sessionId: string; agentName: string; prompt: string;
+    humanPrompt?: string; interaction?: PendingInteraction;
+  },
 ): Promise<void> {
   if (typeof agentx.setPendingClarification === 'function') {
     await agentx.setPendingClarification({
@@ -939,8 +966,8 @@ async function updatePendingClarification(
   }
 }
 
-async function clearPendingClarification(agentx: FrontierContext): Promise<void> {
+async function clearPendingClarification(agentx: FrontierContext, root: string): Promise<void> {
   if (typeof agentx.clearPendingClarification === 'function') {
-    await agentx.clearPendingClarification();
+    await agentx.clearPendingClarification(root);
   }
 }

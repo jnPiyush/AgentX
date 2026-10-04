@@ -15,8 +15,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$ROOT = if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) {
-    (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
+$ROOT = if ($env:FRONTIER_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:FRONTIER_WORKSPACE_ROOT -PathType Container)) {
+    (Resolve-Path $env:FRONTIER_WORKSPACE_ROOT).Path
 }
 else {
     (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
