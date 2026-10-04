@@ -26,6 +26,9 @@ describe('registerLoopCommand', () => {
     fakeAgentx = {
       checkInitialized: sandbox.stub(),
       runCli: sandbox.stub(),
+      ensureWorkspaceReady: sandbox.stub().resolves('fixture'),
+      forWorkspace: () => fakeAgentx,
+      workspaceState: { withMutation: async <T>(_root: string, action: () => Promise<T>) => action() },
     } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     infoStub = sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);

@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 [CmdletBinding()]
-param([string]$Path = $(if ($env:FRONTIER_CHANGED_PATH) { $env:FRONTIER_CHANGED_PATH } elseif ($env:HVE_CHANGED_PATH) { $env:HVE_CHANGED_PATH } else { $env:AGENTX_CHANGED_PATH }))
+param([string]$Path = $env:FRONTIER_CHANGED_PATH)
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..' '..' '..')).Path

@@ -40,7 +40,7 @@
 [CmdletBinding()]
 param(
   [string]$Path = $(
-    $workspaceRoot = @($env:FRONTIER_WORKSPACE_ROOT, $env:HVE_WORKSPACE_ROOT, $env:AGENTX_WORKSPACE_ROOT) |
+    $workspaceRoot = @($env:FRONTIER_WORKSPACE_ROOT) |
       Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Container) } |
       Select-Object -First 1
     if ($workspaceRoot) { $workspaceRoot } else { Split-Path $PSScriptRoot -Parent }
@@ -55,6 +55,7 @@ $ErrorActionPreference = 'Stop'
 
 $ROOT = (Resolve-Path $Path).Path
 $INSTALL_ROOT = (Resolve-Path (Split-Path $PSScriptRoot -Parent)).Path
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
 $findings = New-Object System.Collections.Generic.List[object]
 
 function Add-Finding {
@@ -137,7 +138,7 @@ $secretPatterns = @(
 $excludeDirs = @('.git','node_modules','out','dist','coverage','build','.vscode-test')
 $extensions  = @('.ts','.tsx','.js','.jsx','.ps1','.psm1','.sh','.py','.cs','.json','.yml','.yaml','.md','.env','.cfg','.config','.ini','.toml')
 $runtimeStateRoots = @(foreach ($dataDirectory in @('state', 'issues', 'digests', 'sessions', 'memory', 'handoffs', 'signals', 'patterns', 'dreams')) {
-  Join-Path $ROOT '.frontier' $dataDirectory
+  Join-FrontierStatePath $ROOT @($dataDirectory)
 })
 
 # Files that legitimately contain secret-shaped patterns (scanner regexes,
@@ -262,4 +263,3 @@ if ($counts.CRITICAL -gt 0) { exit 2 }
 if ($Strict -and $counts.MEDIUM -gt 0) { exit 2 }
 if ($counts.HIGH -gt 0 -or $counts.MEDIUM -gt 0) { exit 1 }
 exit 0
-

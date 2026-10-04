@@ -412,7 +412,7 @@ describe('replaceRoleBlock', () => {
     // ONLY surviving copy of the per-role instruction.
     assert.ok(!updated.includes('Role instruction: Argue against the front-runner'));
     // The sentinel marker must be present in the file.
-    assert.match(updated, /<!-- agentx:role-instruction:base64 [A-Za-z0-9+/=]+ -->/);
+    assert.match(updated, /<!-- frontier:role-instruction:base64 [A-Za-z0-9+/=]+ -->/);
 
     // parseCouncilBrief on the updated content must recover the same
     // instruction, even though `--` in the original text would have broken
@@ -430,15 +430,15 @@ describe('replaceRoleBlock', () => {
 
   it('omits the instruction marker when no instruction is provided', () => {
     const updated = replaceRoleBlock(SAMPLE_BRIEF, 'Analyst', 'PLAIN BODY');
-    assert.ok(!/agentx:role-instruction/.test(updated));
+    assert.ok(!/frontier:role-instruction/.test(updated));
     assert.ok(updated.includes('PLAIN BODY'));
   });
 
   it('omits the instruction marker for empty/whitespace instruction', () => {
     const a = replaceRoleBlock(SAMPLE_BRIEF, 'Analyst', 'X', '');
-    assert.ok(!/agentx:role-instruction/.test(a));
+    assert.ok(!/frontier:role-instruction/.test(a));
     const b = replaceRoleBlock(SAMPLE_BRIEF, 'Analyst', 'X', '   ');
-    assert.ok(!/agentx:role-instruction/.test(b));
+    assert.ok(!/frontier:role-instruction/.test(b));
   });
 
   it('round-trips even when the instruction contains characters hostile to HTML comments', () => {
@@ -1026,4 +1026,3 @@ describe('registerRunCouncilCommand - orchestration', () => {
     );
   });
 });
-

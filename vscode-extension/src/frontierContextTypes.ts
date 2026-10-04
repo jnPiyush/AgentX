@@ -34,6 +34,7 @@ export type PendingInteraction =
   });
 
 export interface PendingClarificationState {
+  workspaceRoot?: string;
   sessionId: string;
   agentName: string;
   prompt: string;
@@ -47,6 +48,7 @@ export interface PendingClarificationState {
 }
 
 export interface PendingSetupState {
+  workspaceRoot?: string;
   kind: 'llm-adapter' | 'remote-adapter';
   step: 'choose-llm-provider' | 'choose-remote-adapter' | 'enter-github-repo' | 'enter-ado-project';
   prompt: string;

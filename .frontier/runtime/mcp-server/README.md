@@ -1,4 +1,7 @@
-# Frontier MCP Server
+---
+title: Frontier MCP Server
+description: Bound local runtime tools for Frontier execution and repository context.
+---
 
 A Model Context Protocol (MCP) stdio server that exposes the Frontier CLI as first-class tools to any MCP host: GitHub Copilot CLI, Claude Desktop, Cursor, VS Code MCP, Continue, etc.
 
@@ -6,11 +9,12 @@ Instead of asking the model to type `pwsh .frontier/runtime/frontier-cli.ps1 loo
 
 ## Tools Exposed
 
-The server advertises 22 `frontier_*` tools. Legacy `agentx_*` names remain
-accepted aliases with the same arguments.
+The server advertises 23 `frontier_*` tools. AgentX/HVE tool aliases are not
+accepted; callers must use the advertised Frontier names.
 
 | Tool | Wraps | Purpose |
 |------|-------|---------|
+| `frontier_workspace` | `workspace-state info` | Report source, runtime, selected state and host-enforcement boundary |
 | `frontier_loop_start` | `loop start -p "<task>" [-i <issue>]` | Open the mandatory quality loop before any edit |
 | `frontier_loop_iterate` | `loop iterate -s "..." [-e <evidence>]` | Record an iteration |
 | `frontier_loop_complete` | `loop complete -s "..." [-e <evidence>]` | Close the loop (risk-based minimum 1/2/3/5 iterations, final approved reviewer verdict, zero HIGH/MEDIUM) |
@@ -38,7 +42,15 @@ accepted aliases with the same arguments.
 
 - Node.js >= 18 (for the MCP SDK)
 - PowerShell 7.4+ (`pwsh` on PATH) -- required by Frontier itself
-- A Frontier checkout or initialized consumer workspace selected by `FRONTIER_REPO_ROOT`, `HVE_REPO_ROOT`, `AGENTX_REPO_ROOT`, or auto-discovery. Consumers can use the zero-copy `frontier.ps1` wrapper. An explicitly set invalid or empty root fails; it does not fall back to an ancestor repository.
+- A Frontier checkout or initialized consumer workspace selected by `FRONTIER_REPO_ROOT` or auto-discovery. AgentX/HVE environment aliases are ignored. Consumers can use the zero-copy `frontier.ps1` wrapper. An explicitly set invalid or empty Frontier root fails; it does not fall back to an ancestor repository.
+
+VS Code registers a workspace-specific server provider without writing project
+MCP JSON. Definition discovery is passive; explicit start checks trust and
+provisions state without scanning. `FRONTIER_REPO_ROOT` selects installed assets,
+while `FRONTIER_WORKSPACE_ROOT` selects source. Private invocations also carry
+`FRONTIER_STATE_ROOT`, `FRONTIER_STATE_WORKSPACE` and `FRONTIER_STATE_AUTHORITY`;
+the runtime verifies their binding before accepting operations. Do not construct
+those values from model output or reuse them for another workspace.
 
 Repository context accepts `detail: map|evidence`, `tokenBudget: 256..8000`,
 `graphHops: 0..2`, and a repository-relative `subsystem`. Default output remains
@@ -64,7 +76,7 @@ Verify it starts:
 
 ```bash
 node index.js
-# Expect a ready message on stderr with the repository and 22 tools.
+# Expect a ready message on stderr with the repository and 23 tools.
 # Then it blocks waiting for MCP requests on stdin. Ctrl+C to exit.
 ```
 
@@ -177,7 +189,7 @@ The model emits `frontier_loop_start({ prompt: "auth refactor", issue: 42 })`, F
 ## Limitations
 
 - Commands have a ten-minute deadline and a combined 1 MiB stdout/stderr limit. MCP request cancellation and transport shutdown terminate the owned process tree. Termination waits for child closure with a bounded deadline; failure to confirm closure is an error and prevents another writer from starting. Host deadlines may be shorter.
-- `npm test` checks lifecycle/guided behavior and a 22-tool smoke fixture, including a real-process pending-input check. It does not execute a live model or certify every CLI tool end to end.
+- `npm test` checks lifecycle/guided behavior and a 23-tool smoke fixture, including rejected obsolete aliases and a real-process pending-input check. It does not execute a live model or certify every CLI tool end to end.
 - Console stdin prompts are not supported. Guided run/resume uses MCP client form elicitation or leaves the task pending for a trusted CLI reply.
 - The MCP server itself does not enforce the Frontier pre-edit gate; that enforcement lives in the hooks and pre-commit, exactly as in CLI-only flows.
 

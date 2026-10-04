@@ -282,6 +282,31 @@ Configuration, issues, state, sessions, memory and digests are preserved under
 those folders and leaves them untouched. Copy anything you still need out of them
 manually, then delete them.
 
+### Frontier-only interfaces
+
+AgentX/HVE compatibility aliases are no longer supported. Update automation and
+configuration to current names before using the runtime:
+
+- Use `frontier.*` editor settings and commands and `frontier_*` MCP tools.
+- Use `FRONTIER_WORKSPACE_ROOT`, `FRONTIER_REPO_ROOT` and
+  `FRONTIER_EXTENSION_ROOT` for workspace, server and launcher configuration.
+  Old `AGENTX_*` and `HVE_*` variables are ignored.
+- Use `FRONTIER_*` provider options, such as `FRONTIER_LLM_PROVIDER` and
+  `FRONTIER_OPENAI_BASE_URL`. Provider-standard secrets such as `OPENAI_API_KEY`
+  and `ANTHROPIC_API_KEY` retain their meaning.
+- Installer overrides use `FRONTIER_MODE`, `FRONTIER_PATH`, `FRONTIER_AZURE`,
+  `FRONTIER_NOSETUP` and `FRONTIER_INSTALL_ARCHIVE`.
+- Re-enter editor credentials under the Frontier namespace if they were saved
+  only under AgentX/HVE keys. Those old secrets are not read, migrated or deleted.
+- Plugin manifests and registry entries use `engines.frontier`, not
+  `engines.agentx` or `engines.hve`. Version ranges are not changed automatically.
+- Use the `frontier` orchestration role ID in native requests and handoffs.
+
+The published `jnPiyush.agentx` extension ID and `jnPiyush/AgentX` repository
+coordinate remain unchanged. Current Frontier version upgrades, state modes and
+ownership checks remain supported; retiring old product aliases does not remove
+their safety checks.
+
 ### Install Profiles
 
 Control what gets installed with the `-Profile` flag:
@@ -344,7 +369,9 @@ For the smallest initial scaffold, configure:
 }
 ```
 
-Run `Frontier: Initialize Local Runtime`, not `Initialize CLI`. The generated
+Ordinary extension use now provisions private state lazily; repository setup is
+optional. For these portable launchers run `Frontier: Initialize Repository
+Support`, not `Initialize CLI`. The generated
 launchers also support Frontier terminal commands:
 
 ```powershell
@@ -417,7 +444,7 @@ Two modes are available via the `frontier.cliAssetMode` setting:
 | Mode | Behaviour | Use when |
 |------|-----------|----------|
 | `copy` (default) | Duplicates bundled assets into the workspace | You want the assets committed and shared with a team |
-| `symlink` | Links the eight `.github/` asset trees to the installed bundle; copies supporting files | Single-user, reduced duplication; linked entries are gitignored and broken links are refreshed on activation |
+| `symlink` | Links the eight `.github/` asset trees to the installed bundle; copies supporting files | Single-user, reduced duplication; linked entries are gitignored. Activation detects broken recorded targets and matching versioned installs in this host's extension directory, then offers an explicit Repair links action |
 
 Select the desired mode in the initialization dialog. Symlink mode still copies
 supporting docs, scripts, evaluation rubrics, packs, runtime plugins and
@@ -772,7 +799,7 @@ not need copied agent or skill trees.
 
 ### Extension-based setup
 
-1. Install/update Frontier and run `Frontier: Initialize Local Runtime` in the
+1. Install/update Frontier and run `Frontier: Initialize Repository Support` in the
    target workspace.
 2. Run `Frontier: Initialize Cursor`. This configures the 18 role commands,
    scoped rules, native hooks and workspace-bound MCP entry.
@@ -1599,7 +1626,7 @@ go install github.com/github/github-mcp-server@latest
 
 | Problem | Solution |
 |---------|----------|
-| Git hooks not working | Run `agentx hooks install`; it resolves Git's active `core.hooksPath`, installs all three hook sources, and verifies their bytes. |
+| Git hooks not working | Run `frontier hooks install`; it resolves Git's active `core.hooksPath`, installs all three hook sources, and verifies their bytes. |
 | Permission denied on scripts | Linux/Mac: `chmod +x .github/scripts/*.sh`; Windows: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | GitHub CLI not authenticated | `gh auth login` (install first: `winget install GitHub.cli` / `brew install gh`) |
 

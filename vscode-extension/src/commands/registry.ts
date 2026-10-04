@@ -31,7 +31,7 @@ export function registerFrontierCommands(
 ): void {
  registerInitializeLocalRuntimeCommand(context, agentx);
  registerInitializeCliCommand(context, agentx);
- registerInitializeCursorCommand(context);
+ registerInitializeCursorCommand(context, agentx);
  registerAddRemoteAdapterCommand(context, agentx);
  registerAddLlmAdapterCommand(context, agentx);
  registerAddPluginCommand(context, agentx);
@@ -53,30 +53,4 @@ export function registerFrontierCommands(
  registerRunCouncilCommand(context, agentx);
  registerDashboardCommand(context, agentx);
  registerRepositoryContextCommand(context, agentx);
-}
-
-interface CommandContribution {
- readonly command?: unknown;
-}
-
-interface PackageWithCommands {
- readonly contributes?: {
-  readonly commands?: readonly CommandContribution[];
- };
-}
-
-export function registerLegacyCommandAliases(context: vscode.ExtensionContext): void {
- const packageMetadata = context.extension.packageJSON as PackageWithCommands;
- const commandIds = packageMetadata.contributes?.commands
-  ?.map((entry) => entry.command)
-  .filter((command): command is string => typeof command === 'string' && command.startsWith('frontier.'))
-  ?? [];
-
- for (const commandId of commandIds) {
-  const legacyCommandId = `agentx.${commandId.substring('frontier.'.length)}`;
-  context.subscriptions.push(vscode.commands.registerCommand(
-   legacyCommandId,
-   (...args: unknown[]) => vscode.commands.executeCommand(commandId, ...args),
-  ));
- }
 }

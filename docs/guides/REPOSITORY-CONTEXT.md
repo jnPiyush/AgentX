@@ -6,7 +6,7 @@ description: Discover, curate and reuse a bounded source-grounded repository map
 ## What is maintained
 
 Frontier keeps a local structural graph in
-`.frontier/state/repo-context/graph.json` and a Mermaid visual map in `map.md`
+`<selected-state-root>/state/repo-context/graph.json` and a Mermaid visual map in `map.md`
 beside it. The graph inventories eligible project files, symbol ranges and signatures,
 typed relationships, and deterministic subsystem summaries. Storage is separate
 from prompt budgets: the model receives selected pointers or source evidence,
@@ -19,16 +19,18 @@ map changes invalidate the relevant context. This avoids repeating full source
 reads merely to recover project orientation.
 
 No model, embedding API or external graph service is used to build the index.
-Artifacts remain workspace-local under the existing Frontier state directory.
+Artifacts remain local and workspace-bound. Private extension profiles use
+host-local extension storage; explicit repository setup uses `.frontier`.
 Zero-copy installations load the implementation from the installed runtime.
 
 ## Where discovery runs
 
-Repository context is a Frontier workspace capability. Discovery runs only in a
-workspace that contains `.frontier/config.json`, which is created by
-`Frontier: Initialize Local Runtime` or the Frontier workspace installer.
+Repository context requires selected workspace state and enabled indexing.
+Frontier extension operations lazily create private state in trusted filesystem
+workspaces. Explicit portable setup still uses `.frontier/config.json`.
+Opening a folder or discovering dynamic MCP definitions does not start indexing.
 
-- Initialization starts the first discovery in a detached background process.
+- Explicit repository initialization starts discovery in a background process.
   If the start fails, VS Code shows a warning and the next session start retries.
 - Each Frontier session start, native run and explicit query checks the graph's
   age and starts a background refresh when it is older than two minutes.
@@ -36,10 +38,15 @@ workspace that contains `.frontier/config.json`, which is created by
   not initialize Frontier. They create no state there and index nothing.
 - `Frontier: Refresh Repository Context` (VS Code) and `context --sync` update
   the graph immediately.
+- `frontier.repositoryContext.enabled: false` disables extension indexing;
+  `repositoryContext.enabled: false` in the selected config also disables it.
+  Disabled queries report `status: disabled` without scanning.
 
 ## Use the graph
 
-Run commands from the target workspace:
+Use `frontier_context` in MCP or the refresh command in managed extension mode.
+`frontier_workspace` reports the selected cache root. The following terminal
+examples assume explicit portable repository setup:
 
 ```powershell
 .\.frontier\runtime\frontier.ps1 context
@@ -68,10 +75,12 @@ Run commands from the target workspace:
 When no graph exists yet, the default mode reports that a background build is
 running instead of blocking. Use `--sync` to wait for the build.
 
-Open `.frontier/state/repo-context/map.md` in a Mermaid-capable Markdown preview
+Open `state/repo-context/map.md` under the selected state root in a Mermaid-capable Markdown preview
 for the visual overview. Follow the source pointers to inspect the current code.
 The overview groups files for readability; the JSON graph retains the detailed
 inventory and relationships.
+Private-cache source links are calculated relative to the actual repository;
+moving state does not widen the source-file sandbox.
 
 The `frontier_context` MCP tool exposes the same query with `sync` and `refresh`
 options plus `detail`, `tokenBudget`, `graphHops` and `subsystem`. Frontier's native

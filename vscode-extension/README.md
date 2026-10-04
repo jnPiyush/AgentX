@@ -68,18 +68,56 @@ To run Frontier successfully within VS Code:
 
 1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
 2. **Open** your target project workspace in VS Code.
-3. **Initialize** the workspace by running `Frontier: Initialize Local Runtime` from the Command Palette, or start the same flow in chat with `@frontier initialize local runtime`.
+3. **Use Frontier** in a trusted workspace, for example `@frontier run engineer "Explain this codebase"`. Private workspace state is created on first use, not on folder open.
 4. **Optionally add a remote adapter** with `Frontier: Add Remote Adapter` or start it in chat with `@frontier connect github`, `@frontier connect ado`, `@frontier use local`, or `@frontier add remote adapter`.
 5. **Optionally switch the workspace LLM adapter** with `Frontier: Add LLM Adapter` or start it in chat with `@frontier switch llm`, `@frontier connect claude`, `@frontier connect claude local`, `@frontier connect openai`, or `@frontier use copilot`.
 6. **Select a role in Copilot Chat** and run the next step for that role, or select **Frontier Orchestration FDE** to orchestrate the full flow in one session.
 7. **Capture reusable outcomes** with `Frontier: Create Learning Capture` once review confirms the result should compound future work.
 
-### Workspace Initialization
+### Automatic Workspace State
 
-Frontier initialization is workspace-scoped. After opening a repository or project folder in VS Code, run:
+Only Frontier settings, commands, environment variables and credential namespaces
+are supported. AgentX/HVE aliases no longer activate these interfaces. See
+[Frontier-only interfaces](../docs/GUIDE.md#frontier-only-interfaces) for current
+names. The published extension ID remains `jnPiyush.agentx`.
+
+Installing the extension supplies the shared roles, skills and runtime. Ordinary
+Frontier chat, commands and dynamically registered MCP tools do not need
+per-repository initialization. State, sessions, pending input, graphs and gate
+evidence stay in host-local extension storage, isolated by canonical folder and
+remote authority. Source edits and requested deliverables still belong in the
+repository.
+
+Activation does not create a profile, scan the repository, switch remote
+adapters, write MCP JSON or update project launchers. The first explicit operation
+checks trust, provisions a profile and verifies runtime support. Missing
+PowerShell, Node or provider credentials remain feature-specific errors.
+Untrusted, virtual and network-share folders cannot start managed execution;
+remote folders require the workspace-side extension.
+
+The active editor selects the folder in a multi-root workspace. When ambiguous,
+Frontier asks for a folder. Use `frontier.rootPath` for an explicit nested root;
+recursive marker discovery no longer chooses a different repository.
+
+Set `frontier.repositoryContext.enabled: false` to disable indexing, or
+`frontier.automaticWorkspaceState: false` to require explicit repository setup.
+Changing the indexing setting changes the MCP definition version; accept the
+host's server-restart/refresh prompt to apply it to an already-running server.
+Setting `repositoryContext.enabled` in the selected runtime config is read live
+and can disable indexing without waiting for a server restart.
+Existing repository-managed configuration remains supported. The first selected
+mode is sticky; adding a config file does not move private history.
+
+Private mode gates Frontier-owned workflows. It does not add repository hooks
+or extend enforcement to direct editor-owned tools. A host/role without the
+MCP tools can use Frontier chat or commands instead.
+
+### Optional Repository Initialization
+
+For portable terminal launchers, team-visible configuration or repository hooks:
 
 ```text
-Frontier: Initialize Local Runtime
+Frontier: Initialize Repository Support
 ```
 
 Reinstall preserves existing provider settings and issue enforcement. Adapter
@@ -105,12 +143,33 @@ This prepares the local Frontier runtime for the current workspace by:
 - writing stable `.frontier/runtime/*` workspace entrypoints that delegate into the bundled runtime
 - keeping the executable runtime bundled while workspace state stays local to the repo
 
-Repeat this step for each workspace where you want Frontier to run.
+This is an explicit repository modification, not required for ordinary extension
+use. Switching from private mode requires confirmation and no active loop,
+candidate, pending input or editor mutation. New repository configuration starts
+with local defaults; private history and credentials are preserved, not exported,
+and approvals are never copied. A failed switch keeps private mode selected;
+requested setup files may remain if a concurrent operation blocks the final switch.
+Restart an already-running MCP server after a successful storage-mode change.
+For opted-in CLI symlink setups, activation detects dangling recorded targets
+and matching versioned installs in this host's extension directory, including
+older auto-refreshed links with stale metadata. It offers **Repair links** and
+performs no relinking or support-file copying until
+you approve repair; ordinary tab switches inside a folder do not refresh work queries.
+
+Use `frontier_workspace` in MCP (or `workspace-state info` through the configured
+runtime) to inspect the selected paths. If a process crashes during an editor
+mutation or transition, an orphan `editor-leases` record or `transition.lock`
+blocks switching. Close the relevant clients, verify their processes have stopped,
+and remove only the orphan marker; do not delete the profile or approval history.
+
+New secret references are identity-scoped. Existing local Windows repository
+keys for ASCII paths remain readable; ambiguous case-folded or remote legacy references require
+credential re-entry rather than cross-workspace guessing.
 
 ### Minimal Workspace Setup
 
 To avoid starter memories and empty output directories, set these preferences
-before running `Frontier: Initialize Local Runtime`:
+before running `Frontier: Initialize Repository Support`:
 
 ```json
 {
@@ -232,7 +291,7 @@ After enabling, reload the VS Code window. Frontier will appear in the Agents Wi
 
 ## Build Software With Frontier
 
-Once a workspace is initialized, you can use Frontier inside VS Code to move an app from planning through review.
+With a trusted workspace open, you can use Frontier inside VS Code to move an app from planning through review.
 
 <img src="resources/diagrams/delivery-flow.png" width="320" alt="Install the extension, open a workspace, initialize the local runtime, select a role or orchestrator, execute work, review, and capture learnings.">
 

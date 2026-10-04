@@ -117,7 +117,7 @@ The Engineer's quality loop is gated by the CLI, not by judgment:
 
 Practical consequence: **generate a fresh file per iteration**. The source remains available, but freshness and SHA-256 reuse guards reject an old or identical artifact on the next iteration.
 
-Bypass envs (use only for legacy/manual flows): `AGENTX_SKIP_EVIDENCE_GATE=1` skips evidence-file requirements only; it does not disable baseline pass-count enforcement. `AGENTX_SKIP_FIX_TEST_GATE=1` bypasses the fix-commit regression-test hook.
+Manual-flow controls: `FRONTIER_SKIP_EVIDENCE_GATE=1` skips evidence-file requirements only; it does not disable baseline pass-count enforcement. `FRONTIER_SKIP_FIX_TEST_GATE=1` bypasses the fix-commit regression-test hook. These controls require the applicable owner's authorization; AgentX/HVE variable names are not supported.
 
 ---
 

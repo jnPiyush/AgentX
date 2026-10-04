@@ -3,6 +3,7 @@
 . (Join-Path $PSScriptRoot 'repository-symbols.ps1')
 . (Join-Path $PSScriptRoot 'repository-retrieval.ps1')
 . (Join-Path $PSScriptRoot 'workspace-sandbox.ps1')
+. (Join-Path $PSScriptRoot 'workspace-state.ps1')
 
 function Get-FrontierRepositoryContext {
     <#
@@ -44,6 +45,16 @@ function Get-FrontierRepositoryContext {
     Set-StrictMode -Version Latest
     $ErrorActionPreference = 'Stop'
     $clock = [Diagnostics.Stopwatch]::StartNew()
+    if (-not (Test-FrontierRepositoryContextEnabled $WorkspaceRoot)) {
+        $notice = 'Repository context indexing is disabled for this workspace.'
+        return [pscustomobject]@{
+            schemaVersion = 1; contextVersion = 2; status = 'disabled'; context = $notice
+            graphPath = ''; mapPath = ''; fingerprint = ''; fileCount = 0; edgeCount = 0
+            sourceReads = 0; changedFiles = 0; deletedFiles = 0; items = @(); coverage = @{}
+            estimatedTokens = [int][Math]::Ceiling($notice.Length / 4); elapsedMs = $clock.ElapsedMilliseconds
+            budget = @{ contextChars = $notice.Length; method = 'chars4-estimate' }; freshness = @{ navigation = 'disabled' }
+        }
+    }
     $requestedChars = if ($PSBoundParameters.ContainsKey('MaxChars')) { $MaxChars }
         elseif ($null -ne $TokenBudget) { 16000 } else { 4000 }
     $MaxChars = if ($null -ne $TokenBudget) { [Math]::Min($requestedChars, 4 * [int]$TokenBudget) } else { $requestedChars }
@@ -391,14 +402,16 @@ namespace Frontier.RepositoryContext {
         [Frontier.RepositoryContext.SourceScannerV5]::ValidatePath($Path, $AllowMissing.IsPresent)
     }
 
-    function Assert-Contained([string]$Path) {
-        if (-not $Path.Equals($root, $comparison) -and -not $Path.StartsWith($rootPrefix, $comparison)) {
-            throw "Unsafe repository context path outside workspace: $Path"
+    function Assert-Contained([string]$Path, [switch]$State) {
+        $allowedRoot = if ($State) { $stateRoot } else { $root }
+        $prefix = $allowedRoot.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+        if (-not $Path.Equals($allowedRoot, $comparison) -and -not $Path.StartsWith($prefix, $comparison)) {
+            throw "Unsafe repository context path outside its allowed root: $Path"
         }
     }
 
-    function Get-Snapshot([string]$Path) {
-        Assert-Contained $Path
+    function Get-Snapshot([string]$Path, [switch]$State) {
+        Assert-Contained $Path -State:$State
         Assert-NoReparse $Path
         if ($IsWindows) {
             $snapshot = [Frontier.RepositoryContext.FileMetadataV1]::ReadPath($Path)
@@ -440,18 +453,18 @@ namespace Frontier.RepositoryContext {
         }
     }
 
-    function Read-State([string]$Path, [int]$Limit) {
+    function Read-State([string]$Path, [int]$Limit, [switch]$Source) {
         Assert-NoReparse $Path -AllowMissing
         $attributes = Get-Attributes $Path
         if ($null -eq $attributes) { return $null }
         if ($attributes -band [IO.FileAttributes]::Directory) { throw "Expected a repository context file: $Path" }
-        if ((Get-Snapshot $Path).Length -gt $Limit) { throw "Repository context state exceeds the $Limit byte safety limit: $Path" }
+        if ((Get-Snapshot $Path -State:(-not $Source)).Length -gt $Limit) { throw "Repository context state exceeds the $Limit byte safety limit: $Path" }
         # Delete sharing lets a concurrent refresh atomically replace state while a cached reader holds it.
         $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, ([IO.FileShare]::Read -bor [IO.FileShare]::Delete))
         try {
             if ($IsWindows) {
                 $opened = [Frontier.RepositoryContext.FileMetadataV1]::Read($stream.SafeFileHandle)
-                Assert-Contained $opened.FullPath
+                Assert-Contained $opened.FullPath -State:(-not $Source)
                 if (-not $opened.FullPath.Equals($Path, $comparison)) { throw "Unsafe or changed repository context state path: $Path" }
             }
             if ($stream.Length -gt $Limit) { throw "Repository context state exceeds the $Limit byte safety limit: $Path" }
@@ -469,7 +482,7 @@ namespace Frontier.RepositoryContext {
     }
 
     function Publish-State([string]$Path, [string]$Text, $Previous) {
-        Assert-Contained $Path
+        Assert-Contained $Path -State
         Assert-NoReparse $Path -AllowMissing
         if ($null -ne $Previous -and $Text.Equals($Previous.Text, [StringComparison]::Ordinal)) { return $false }
         $encoding = if ($null -ne $Previous) { $Previous.Encoding } else { $utf8 }
@@ -482,7 +495,7 @@ namespace Frontier.RepositoryContext {
             $stream = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
             $created = $true
             try {
-                if ($IsWindows) { Assert-Contained ([Frontier.RepositoryContext.FileMetadataV1]::Read($stream.SafeFileHandle).FullPath) }
+                if ($IsWindows) { Assert-Contained ([Frontier.RepositoryContext.FileMetadataV1]::Read($stream.SafeFileHandle).FullPath) -State }
                 $stream.Write($bytes, 0, $bytes.Length)
                 $stream.Flush($true)
             } finally { $stream.Dispose() }
@@ -973,7 +986,7 @@ namespace Frontier.RepositoryContext {
             if ($displayName.Length -gt 30) { $displayName = $displayName.Substring(0, 27) + '...' }
             $label = ConvertTo-Label "$displayName ($($topCounts[$name]) files)"
             $lines.Add("  g$i[`"$label`"]")
-            $destination = if ($name) { '../../../' + (ConvertTo-Link $name) + '/' } else { '../../../' }
+            $destination = if ($name) { $sourceLinkPrefix + (ConvertTo-Link $name) + '/' } else { $sourceLinkPrefix }
             $lines.Add("  click g$i `"$destination`" `"Open source group`"")
         }
         $otherGroups = $topNames.Length - $visibleNames.Length
@@ -1008,10 +1021,10 @@ namespace Frontier.RepositoryContext {
         $lines.Add('### Complete group inventory')
         foreach ($name in $names) {
             $sample = $groups[$name][0].path
-            $lines.Add("- [$(ConvertTo-Markdown $name)](../../../$(ConvertTo-Link $sample)): $($groups[$name].Count) files; example ``$(ConvertTo-Markdown $sample)``.")
+            $lines.Add("- [$(ConvertTo-Markdown $name)]($sourceLinkPrefix$(ConvertTo-Link $sample)): $($groups[$name].Count) files; example ``$(ConvertTo-Markdown $sample)``.")
         }
         foreach ($node in @($Graph.nodes | Where-Object { Test-OrientationDocument $_ } | Select-Object -First 12)) {
-            $lines.Add("- Context document: [$(ConvertTo-Markdown $node.path)](../../../$(ConvertTo-Link $node.path)).")
+            $lines.Add("- Context document: [$(ConvertTo-Markdown $node.path)]($sourceLinkPrefix$(ConvertTo-Link $node.path)).")
         }
         if ($Graph.PSObject.Properties['hierarchy']) {
             $lines.Add('')
@@ -1034,7 +1047,7 @@ namespace Frontier.RepositoryContext {
         if (-not $guard.allowed -or (Test-Excluded $Node.path)) { return @{ status = 'blocked'; text = '' } }
         if (-not [IO.File]::Exists($guard.resolvedPath)) { return @{ status = 'deleted'; text = '' } }
         try {
-            $state = Read-State $guard.resolvedPath $sourceLimit
+            $state = Read-State $guard.resolvedPath $sourceLimit -Source
             if (-not $Node.contentHash -or $state.Hash -cne $Node.contentHash) { return @{ status = 'stale'; text = '' } }
             if ($state.Text -match '(?i)-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:password|secret|api[_-]?key|access[_-]?token)\s*[:=]\s*["''][^"'']+["'']|\b(?:ghp|github_pat|AKIA)[A-Za-z0-9_]{12,}') {
                 return @{ status = 'blocked'; text = '' }
@@ -1101,13 +1114,21 @@ namespace Frontier.RepositoryContext {
         if ($root -ne [IO.Path]::GetPathRoot($root)) { $root = $root.TrimEnd('\') }
     }
     $rootPrefix = $root.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
-    $cacheDirectory = [IO.Path]::Combine($root, '.frontier', 'state', 'repo-context')
+    $stateRoot = Get-FrontierStateRoot $root
+    Assert-NoReparse $stateRoot -AllowMissing
+    $cacheDirectory = [IO.Path]::Combine($stateRoot, 'state', 'repo-context')
+    $relativeSource = [IO.Path]::GetRelativePath($cacheDirectory, $root)
+    $sourceLinkPrefix = if ([IO.Path]::IsPathFullyQualified($relativeSource)) {
+        ([uri]($root + [IO.Path]::DirectorySeparatorChar)).AbsoluteUri
+    } else { (ConvertTo-Link ($relativeSource.Replace('\', '/'))) + '/' }
     $graphPath = [IO.Path]::Combine($cacheDirectory, 'graph.json')
     $mapPath = [IO.Path]::Combine($cacheDirectory, 'map.md')
     $lockPath = [IO.Path]::Combine($cacheDirectory, 'refresh.lock')
     $primerPath = [IO.Path]::Combine($cacheDirectory, 'primer.json')
     $pins = [Collections.Generic.List[IDisposable]]::new()
     $lock = $null
+    $stateLease = Enter-FrontierStateLease $root
+    try {
     if ($Cached) {
         $cachedGraphState = Read-State $graphPath 134217728
         if ($null -eq $cachedGraphState) {
@@ -1181,16 +1202,16 @@ namespace Frontier.RepositoryContext {
                 if ([Frontier.RepositoryContext.FileMetadataV1]::Read($pin).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Unsafe workspace ancestor: $current" }
             }
         }
-        $directory = $root
-        foreach ($part in @('.frontier', 'state', 'repo-context')) {
-            $directory = [IO.Path]::Combine($directory, $part)
+        $directory = $stateRoot
+        foreach ($part in @('', 'state', 'repo-context')) {
+            if ($part) { $directory = [IO.Path]::Combine($directory, $part) }
             Assert-NoReparse $directory -AllowMissing
             [void][IO.Directory]::CreateDirectory($directory)
             if ($IsWindows) {
                 $pin = [Frontier.RepositoryContext.FileMetadataV1]::Open($directory, $true)
                 $pins.Add($pin)
                 $snapshot = [Frontier.RepositoryContext.FileMetadataV1]::Read($pin)
-                Assert-Contained $snapshot.FullPath
+                Assert-Contained $snapshot.FullPath -State
                 if ($snapshot.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Unsafe cache directory: $directory" }
             }
         }
@@ -1200,7 +1221,7 @@ namespace Frontier.RepositoryContext {
             $mode = if ($null -eq (Get-Attributes $lockPath)) { [IO.FileMode]::CreateNew } else { [IO.FileMode]::Open }
             try {
                 $lock = [IO.File]::Open($lockPath, $mode, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
-                if ($IsWindows) { Assert-Contained ([Frontier.RepositoryContext.FileMetadataV1]::Read($lock.SafeFileHandle).FullPath) }
+                if ($IsWindows) { Assert-Contained ([Frontier.RepositoryContext.FileMetadataV1]::Read($lock.SafeFileHandle).FullPath) -State }
             } catch [IO.IOException] {
                 if (($_.Exception.HResult -band 0xffff) -notin @(32, 33, 80, 183, 11) -or $waiting.Elapsed.TotalSeconds -ge $LockTimeoutSeconds) {
                     throw "Cannot acquire repository context lock within $LockTimeoutSeconds seconds at ${lockPath}: $($_.Exception.Message)"
@@ -1368,18 +1389,20 @@ namespace Frontier.RepositoryContext {
         if ($null -ne $lock) { $lock.Dispose() }
         for ($i = $pins.Count - 1; $i -ge 0; $i--) { $pins[$i].Dispose() }
     }
+    } finally { if ($stateLease) { $stateLease.Dispose() } }
 }
 
 function Test-FrontierRepositoryWorkspace([string]$WorkspaceRoot) {
-    # Automatic discovery runs only in workspaces where Frontier is initialized.
+    # Automatic discovery requires selected state and honors the workspace opt-out.
     if ([string]::IsNullOrWhiteSpace($WorkspaceRoot) -or -not [IO.Path]::IsPathFullyQualified($WorkspaceRoot)) { return $false }
-    return [IO.File]::Exists([IO.Path]::Combine([IO.Path]::GetFullPath($WorkspaceRoot), '.frontier', 'config.json'))
+    return [IO.File]::Exists((Join-FrontierStatePath $WorkspaceRoot @('config.json'))) -and
+        (Test-FrontierRepositoryContextEnabled $WorkspaceRoot)
 }
 
 function Get-FrontierRepositoryContextStateDirectory([string]$WorkspaceRoot) {
-    $current = [IO.Path]::GetFullPath($WorkspaceRoot)
-    foreach ($part in @('.frontier', 'state', 'repo-context')) {
-        $current = [IO.Path]::Combine($current, $part)
+    $current = Get-FrontierStateRoot $WorkspaceRoot
+    foreach ($part in @('', 'state', 'repo-context')) {
+        if ($part) { $current = [IO.Path]::Combine($current, $part) }
         $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
         if ($null -eq $item -or -not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $null }
     }
@@ -1437,9 +1460,9 @@ function Write-FrontierRepositoryRefreshStatus([string]$Directory, [hashtable]$S
 }
 
 function New-FrontierRepositoryContextStateDirectory([string]$WorkspaceRoot) {
-    $current = [IO.Path]::GetFullPath($WorkspaceRoot)
-    foreach ($part in @('.frontier', 'state', 'repo-context')) {
-        $current = [IO.Path]::Combine($current, $part)
+    $current = Get-FrontierStateRoot $WorkspaceRoot
+    foreach ($part in @('', 'state', 'repo-context')) {
+        if ($part) { $current = [IO.Path]::Combine($current, $part) }
         $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
         if ($null -eq $item) {
             [void][IO.Directory]::CreateDirectory($current)
@@ -1502,6 +1525,13 @@ function Start-FrontierRepositoryContextRefresh {
         $pwsh = Join-Path $PSHOME $(if ($IsWindows) { 'pwsh.exe' } else { 'pwsh' })
         # Encoded single-quoted literals keep workspace paths inert without shell quoting.
         $workerCommand = ". '{0}'; Invoke-FrontierRepositoryContextWorker -WorkspaceRoot '{1}'" -f $module.Replace("'", "''"), $root.Replace("'", "''")
+        $environmentCommand = ''
+        foreach ($name in @('FRONTIER_STATE_ROOT', 'FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY', 'FRONTIER_GRAPH_ENABLED')) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            $literal = if ($null -eq $value) { '$null' } else { "'" + $value.Replace("'", "''") + "'" }
+            $environmentCommand += '$env:{0} = {1}; ' -f $name, $literal
+        }
+        $workerCommand = $environmentCommand + $workerCommand
         $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($workerCommand))
         if ($IsWindows) {
             # Shell execution does not inherit the hook's stdio pipes, so hosts never wait for the worker.

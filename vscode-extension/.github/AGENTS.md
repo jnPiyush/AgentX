@@ -15,6 +15,15 @@ file (in extension-only workspaces, inside the installed Frontier extension).
 
 ## Working Contract
 
+- Active runtime controls MUST use Frontier names (`frontier.*`, `frontier_*`
+  and `FRONTIER_*`). AgentX/HVE aliases are not supported. Published extension
+  and repository coordinates remain factual; see `docs/BRAND.md`.
+- Runtime command requirements are transport-neutral. In extension-managed
+  workspaces, use `frontier_workspace` to discover the bound state and matching
+  MCP tools for graph/loop operations, or use Frontier chat/commands. CLI paths
+  below describe portable repository setup, not a requirement to scaffold every
+  folder. If the host does not expose the needed tools, report that limit and
+  use Frontier's supported entry point; do not manufacture local launchers.
 - Read the relevant spec, skill or instruction before writing code; repository
   conventions override general knowledge.
 - User-facing work follows the guided interaction contract in

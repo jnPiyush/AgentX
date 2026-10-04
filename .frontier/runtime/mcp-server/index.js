@@ -10,8 +10,6 @@
  *
  * Discovery:
  *   - FRONTIER_REPO_ROOT env var (preferred)      -- absolute path to Frontier repo
- *   - HVE_REPO_ROOT env var (transitional)   -- partial-migration fallback
- *   - AGENTX_REPO_ROOT env var (deprecated)  -- published compatibility fallback
  *   - walks up from this file to find .frontier/runtime/frontier-cli.ps1
  *
  * Spawning:
@@ -43,15 +41,14 @@ function resolveCliEntry(root) {
 }
 
 function discoverRepoRoot(env = process.env, start = __dirname) {
-  const key = ['FRONTIER_REPO_ROOT', 'HVE_REPO_ROOT', 'AGENTX_REPO_ROOT'].find(name => env[name] !== undefined);
-  if (key) {
-    const configuredRoot = env[key];
+  if (env.FRONTIER_REPO_ROOT !== undefined) {
+    const configuredRoot = env.FRONTIER_REPO_ROOT;
     if (typeof configuredRoot !== 'string' || !path.isAbsolute(configuredRoot)) {
-      throw new Error(`${key} must be an absolute repository path.`);
+      throw new Error('FRONTIER_REPO_ROOT must be an absolute repository path.');
     }
     const root = path.resolve(configuredRoot);
     if (resolveCliEntry(root)) return root;
-    throw new Error(`${key} does not contain a Frontier runtime CLI or workspace wrapper: ${root}`);
+    throw new Error(`FRONTIER_REPO_ROOT does not contain a Frontier runtime CLI or workspace wrapper: ${root}`);
   }
   let cur = start;
   for (let i = 0; i < 6; i++) {
@@ -67,6 +64,10 @@ function discoverRepoRoot(env = process.env, start = __dirname) {
 
 function createCliRunner(repoRoot, hooks = {}) {
   const cliEntry = resolveCliEntry(repoRoot) ?? path.join(repoRoot, CLI_RELATIVE_PATH);
+  const workspaceRoot = hooks.workspaceRoot ?? repoRoot;
+  if (!path.isAbsolute(workspaceRoot) || !fs.statSync(workspaceRoot, { throwIfNoEntry: false })?.isDirectory()) {
+    throw new Error('Frontier MCP workspace must be an existing absolute filesystem directory.');
+  }
   const active = new Map();
   let stopped = false;
   const failureResult = (message) => ({ exitCode: -1, stdout: '', stderr: message });
@@ -76,9 +77,9 @@ function createCliRunner(repoRoot, hooks = {}) {
     let child;
     try {
       child = (hooks.spawn || spawn)('pwsh', ['-NoProfile', '-NonInteractive', '-File', cliEntry, ...args], {
-        cwd: repoRoot, env: {
+        cwd: workspaceRoot, env: {
           ...process.env, FRONTIER_NONINTERACTIVE: '1', FRONTIER_NONINTERACTIVE_HUMAN: '1',
-          FRONTIER_WORKSPACE_ROOT: repoRoot,
+          FRONTIER_WORKSPACE_ROOT: workspaceRoot,
           FRONTIER_OPERATION_TIMEOUT_SECONDS: String(Math.max(1, Math.floor((hooks.timeoutMs || 600000) / 1000) - 30)),
         },
         windowsHide: true, detached: (hooks.platform || process.platform) !== 'win32',
@@ -307,6 +308,12 @@ async function resumeWithHostInput(server, runner, pending, signal, onProgress) 
 
 const TOOLS = [
   {
+    name: 'frontier_workspace',
+    description: 'Report the bound source workspace, selected state directory, runtime location, indexing policy and host-tool boundary. Use this instead of assuming repository-local .frontier state.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    build: () => ['workspace-state', 'info'],
+  },
+  {
     name: 'frontier_loop_start',
     description:
       'Start the Frontier iterative quality loop for a task. MUST be called before any file edits. Records prompt and (optionally) issue number.',
@@ -455,7 +462,7 @@ const TOOLS = [
   },
   {
     name: 'frontier_ship',
-    description: 'Run the autonomous fast-path (plan -> work -> review -> scrub -> test -> compound) for a single issue.',
+    description: 'Run the configured ship pipeline for an issue. Private workspaces use the installed Frontier script, never a same-named project script. Separate test and delivery consent gates still apply.',
     inputSchema: {
       type: 'object',
       properties: { issue: { type: 'number' } },
@@ -465,7 +472,7 @@ const TOOLS = [
   },
   {
     name: 'frontier_context',
-    description: 'Return bounded task-relevant source pointers from the repository graph of an initialized Frontier workspace. Reads the cached graph by default and schedules a background refresh when stale; sync updates incrementally first and refresh re-extracts everything. Preserves curated map notes; no model calls.',
+    description: 'Return bounded task-relevant source pointers from the selected Frontier workspace. Reads the cached graph by default and schedules a background refresh when stale; sync updates incrementally first and refresh re-extracts everything. Preserves curated map notes and indexing policy; no model calls.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -683,9 +690,6 @@ const TOOLS = [
 ];
 
 const TOOL_BY_NAME = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
-const LEGACY_TOOL_BY_NAME = Object.fromEntries(
-  TOOLS.map((tool) => [tool.name.replace(/^frontier_/, 'agentx_'), tool])
-);
 
 // ---------- MCP wiring ----------
 
@@ -700,7 +704,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
-  const tool = TOOL_BY_NAME[req.params.name] || LEGACY_TOOL_BY_NAME[req.params.name];
+  const tool = TOOL_BY_NAME[req.params.name];
   if (!tool) {
     return {
       content: [{ type: 'text', text: `Unknown tool: ${req.params.name}` }],
@@ -788,7 +792,9 @@ return server;
 
 async function main() {
   const repoRoot = discoverRepoRoot();
-  const runner = createCliRunner(repoRoot);
+  const runner = createCliRunner(repoRoot, {
+    workspaceRoot: process.env.FRONTIER_WORKSPACE_ROOT ?? repoRoot,
+  });
   const server = createServer(runner);
   const transport = new StdioServerTransport();
   let shutdown;

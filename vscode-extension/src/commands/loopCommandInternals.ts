@@ -29,14 +29,21 @@ export async function ensureLoopInitialized(agentx: FrontierContext): Promise<bo
 export async function executeLoopAction(
   agentx: FrontierContext,
   action: string,
-): Promise<void> {
+  selectedRoot?: string,
+): Promise<void | boolean> {
+  let root: string;
+  try { root = await agentx.ensureWorkspaceReady(selectedRoot); agentx = agentx.forWorkspace(root); }
+  catch (error) {
+    void vscode.window.showErrorMessage(`Frontier loop is unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  return agentx.workspaceState.withMutation(root, async () => {
   switch (action) {
     case 'start':
       await loopStart(agentx);
       break;
     case 'status':
-      await loopStatus(agentx);
-      break;
+      return loopStatus(agentx);
     case 'iterate':
       await loopIterate(agentx);
       break;
@@ -50,6 +57,7 @@ export async function executeLoopAction(
       await loopRollback(agentx);
       break;
   }
+  });
 }
 
 export async function loopStart(agentx: FrontierContext): Promise<void> {

@@ -243,12 +243,14 @@ Requirements:
 - PowerShell 7.4+ (`pwsh`) on every OS; the Bash launcher also delegates to PowerShell
 - GitHub Copilot and GitHub Copilot Chat
 
-### 2. Initialize the workspace
+### 2. Use Frontier in a trusted workspace
 
-Open a repository and run this Command Palette action:
+Open a trusted repository and use Frontier chat or commands. Private state is
+created on first use; installation alone supplies the shared agents and skills.
+For optional portable launchers and repository configuration, run:
 
 ```text
-Frontier: Initialize Local Runtime
+Frontier: Initialize Repository Support
 ```
 
 Or use chat:
@@ -310,7 +312,7 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 Frontier 9.7.0 adds repository context and bounded execution:
 
-- discover initialized workspaces into a local reference graph, preserve curated
+- discover selected workspaces on demand into a local reference graph, preserve curated
   map notes, and reuse a cached session primer while refresh runs in the background
 - route Engineer, Architect and UX Designer preferences to GPT-6 Astra on Copilot
   and other roles to Claude Opus 5.5

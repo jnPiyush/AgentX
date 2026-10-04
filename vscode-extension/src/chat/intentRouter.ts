@@ -388,7 +388,7 @@ const PHRASE_RULES: ReadonlyArray<PhraseRule> = [
     description: 'Run git push or pull through Frontier git-sync',
     destructive: true,
     subcommand: 'git-sync',
-    pattern: /^(?:run\s+)?git[\s-]?sync\s+(push|pull)\.?$|^git\s+(push|pull)\s+(?:via\s+|through\s+)?agentx\.?$/i,
+    pattern: /^(?:run\s+)?git[\s-]?sync\s+(push|pull)\.?$|^git\s+(push|pull)\s+(?:via\s+|through\s+)?frontier\.?$/i,
     argMapper: (m) => {
       const dir = ((m[1] ?? m[2]) ?? '').toLowerCase();
       if (!isGitDirection(dir)) { return undefined; }
@@ -556,7 +556,7 @@ function renderRan(intent: IntentMatch, output: string): string {
 }
 
 function formatCli(intent: IntentMatch): string {
-  const parts = ['agentx', intent.subcommand, ...intent.args].filter((p) => p.length > 0);
+  const parts = ['frontier', intent.subcommand, ...intent.args].filter((p) => p.length > 0);
   return parts.join(' ');
 }
 

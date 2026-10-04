@@ -39,6 +39,9 @@ npm start
 
 On first run, scan the QR code from WhatsApp -> Settings -> Linked Devices. Session data is cached under `.wwebjs_auth/`, which is gitignored.
 
+Companion environment overrides use `FRONTIER_WA_ALLOWED`, `FRONTIER_REPO` and
+`FRONTIER_PWSH`. AgentX/HVE aliases are ignored.
+
 For voice transcription, set the secret only in the service environment:
 
 ```powershell
@@ -112,7 +115,7 @@ and never reported as progress.
 
 - **Configuration error:** start from `config.example.json`; paths must exist and `cliRelativePath` cannot escape `repoPath`.
 - **QR does not appear:** use a terminal that supports QR block rendering.
-- **`pwsh` missing:** install PowerShell 7.4+ or set `AGENTX_PWSH` to a compatible executable.
+- **`pwsh` missing:** install PowerShell 7.4+ or set `FRONTIER_PWSH` to a compatible executable.
 - **Session logged out:** stop the service, remove `.wwebjs_auth/`, and relink.
 - **Mutation disabled:** enable only the named capability, restart, then use the nonce flow.
 - **Loop iterate/complete rejected:** generate and submit evidence from the desktop Frontier session.

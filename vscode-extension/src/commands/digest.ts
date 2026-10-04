@@ -30,7 +30,7 @@ export function registerDigestCommand(
  channel.show();
  }
  );
- vscode.window.showInformationMessage('Frontier digest generated. Check .frontier/digests/');
+ vscode.window.showInformationMessage('Frontier digest generated. See the output for its saved location.');
  } catch (err: unknown) {
  const message = err instanceof Error ? err.message : String(err);
  vscode.window.showErrorMessage(`Digest generation failed: ${message}`);

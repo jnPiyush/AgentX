@@ -139,7 +139,6 @@ if (fs.existsSync(cfgPath)) {
   catch (e) { console.error('[FAIL] Existing ' + cfgPath + ' is not valid JSON.'); process.exit(1); }
 }
 if (!cfg.mcpServers) cfg.mcpServers = {};
-delete cfg.mcpServers.agentx;
 cfg.mcpServers.frontier = {
   command: 'node',
   args: [path.join(repo, '.frontier', 'runtime', 'mcp-server', 'index.js')],

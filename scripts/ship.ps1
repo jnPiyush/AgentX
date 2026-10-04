@@ -54,7 +54,14 @@ $fromIdx = [array]::IndexOf($Order, $From)
 $toIdx   = [array]::IndexOf($Order, $To)
 if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $toIdx -lt $fromIdx) { throw "Invalid step range: $From -> $To" }
 
-$FrontierCli = Join-Path (Resolve-Path .).Path '.frontier/runtime/frontier.ps1'
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
+$privateState = (Get-FrontierStateBinding (Get-Location).Path).mode -eq 'private'
+$FrontierCli = if ($privateState) {
+    Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'frontier.ps1'
+} else { Join-Path (Resolve-Path .).Path '.frontier/runtime/frontier.ps1' }
+if (-not (Test-Path $FrontierCli)) {
+    $FrontierCli = Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'frontier.ps1'
+}
 if (-not (Test-Path $FrontierCli)) { throw "Frontier CLI not found at $FrontierCli" }
 
 function Invoke-Frontier {
@@ -141,14 +148,14 @@ if ($DryRun) {
     return
 }
 
-$candidateState = Join-Path (Get-Location).Path '.frontier/state/hydrafusion'
+$candidateState = Join-FrontierStatePath (Get-Location).Path @('state', 'hydrafusion')
 if (Test-Path -LiteralPath $candidateState -PathType Container) {
     $candidateRuntime = Join-Path $PSScriptRoot '../.frontier/runtime/hydrafusion.ps1'
     if (-not (Test-Path -LiteralPath $candidateRuntime -PathType Leaf)) {
         throw 'HydraFusion state exists but its delivery guard is unavailable.'
     }
     . $candidateRuntime
-    $ownerLoop = Read-HydraFusionJson (Join-Path (Get-Location).Path '.frontier/state/loop-state.json')
+    $ownerLoop = Read-HydraFusionJson (Join-FrontierStatePath (Get-Location).Path @('state', 'loop-state.json'))
     try { Assert-HydraFusionLoopDelivery (Get-Location).Path $ownerLoop }
     catch {
         Write-Host "[ship] [PENDING] $($_.Exception.Message)"

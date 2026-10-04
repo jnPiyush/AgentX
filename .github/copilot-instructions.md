@@ -12,6 +12,10 @@ Paths below are plain text: read them when a task needs them.
 
 ## Before Editing
 
+Use the selected runtime transport from `AGENTS.md`: managed workspaces use
+Frontier MCP/chat/commands; repository CLI paths are the portable alternative.
+Do not initialize a repository merely to satisfy a command-path example.
+
 Follow the shared guided interaction contract in `.github/AGENT-PROTOCOL.md`:
 clarify meaningful gaps, show a high-level plan, wait for approval, and report
 milestone outcomes. Delegates inherit scope; do not restart user intake.

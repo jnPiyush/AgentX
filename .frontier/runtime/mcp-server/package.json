@@ -5,8 +5,7 @@
   "private": true,
   "type": "commonjs",
   "bin": {
-    "frontier-mcp": "./index.js",
-    "agentx-mcp": "./index.js"
+    "frontier-mcp": "./index.js"
   },
   "main": "index.js",
   "engines": {
@@ -28,7 +27,6 @@
   "keywords": [
     "mcp",
     "frontier",
-    "agentx-compatibility",
     "copilot-cli",
     "quality-gate"
   ],

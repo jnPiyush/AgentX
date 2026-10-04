@@ -1,5 +1,6 @@
 #Requires -Version 7.0
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'workspace-state.ps1')
 
 $Script:INTERACTION_UNSAFE_TEXT_PATTERN = '[\p{Cc}\p{Cf}-[\u200C\u200D]]'
 
@@ -414,10 +415,10 @@ function Get-InteractionToolSchemas {
 
 function Get-RunnerSessionPath([string]$SessionId, [string]$Root, [string]$Suffix = '.json') {
     if ($SessionId -cnotmatch '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$') { throw 'Invalid session ID.' }
-    $rootPath = [IO.Path]::GetFullPath($Root)
+    $rootPath = Get-FrontierStateRoot $Root
     $current = $rootPath
-    foreach ($segment in @('.frontier', 'sessions', "$SessionId$Suffix")) {
-        $current = Join-Path $current $segment
+    foreach ($segment in @('', 'sessions', "$SessionId$Suffix")) {
+        if ($segment) { $current = Join-Path $current $segment }
         $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
         if ($item -and (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.LinkType -eq 'HardLink')) {
             throw 'Session storage must not contain links.'

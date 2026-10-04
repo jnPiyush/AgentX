@@ -14,7 +14,7 @@ function Invoke-Step([string]$File, [string]$EventName, [string]$Baseline) {
     $info.WorkingDirectory = $temp
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
-    $info.Environment['AGENTX_WORKSPACE_ROOT'] = $temp
+    $info.Environment['FRONTIER_WORKSPACE_ROOT'] = $temp
     $info.Environment['RUNNER_TEMP'] = $temp
     $info.Environment['GITHUB_STEP_SUMMARY'] = Join-Path $temp 'summary.md'
     $info.Environment['TOKEN_EVENT_NAME'] = $EventName

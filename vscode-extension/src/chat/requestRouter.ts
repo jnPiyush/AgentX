@@ -116,7 +116,7 @@ export async function routeFrontierChatRequest(
 
   const root = agentx.workspaceRoot;
   const workflowIssues = root
-    ? await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root)
+    ? await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args, root), root)
     : [];
 
   const workflowNextStepResult = await tryHandleWorkflowNextStepRequest(userText, response, root, pending, workflowIssues);

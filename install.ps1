@@ -38,10 +38,10 @@
  irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.ps1 | iex
 
  # One-liner for GitHub mode
- $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.ps1 | iex
+ $env:FRONTIER_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.ps1 | iex
 
  # One-liner to include Azure companion support
- $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.ps1 | iex
+ $env:FRONTIER_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.7.0/install.ps1 | iex
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive installer output is intentionally written directly to the host.')]
@@ -145,12 +145,10 @@ function Invoke-GitInstallIfMissing {
 }
 
 # Environment variable overrides (for irm | iex one-liner usage)
-if (-not $Mode -and $env:AGENTX_MODE) { $Mode = $env:AGENTX_MODE }
-if (-not $Path -and $env:AGENTX_PATH) { $Path = $env:AGENTX_PATH }
-# Legacy: support AGENTX_LOCAL=true -> Mode=local
-if (-not $Mode -and $env:AGENTX_LOCAL -eq "true") { $Mode = "local" }
-if (-not $PSBoundParameters.ContainsKey('NoSetup') -and $env:AGENTX_NOSETUP -eq "true") { $NoSetup = [switch]$true }
-if (-not $PSBoundParameters.ContainsKey('Azure') -and $env:AGENTX_AZURE -eq "true") { $Azure = [switch]$true }
+if (-not $Mode -and $env:FRONTIER_MODE) { $Mode = $env:FRONTIER_MODE }
+if (-not $Path -and $env:FRONTIER_PATH) { $Path = $env:FRONTIER_PATH }
+if (-not $PSBoundParameters.ContainsKey('NoSetup') -and $env:FRONTIER_NOSETUP -eq "true") { $NoSetup = [switch]$true }
+if (-not $PSBoundParameters.ContainsKey('Azure') -and $env:FRONTIER_AZURE -eq "true") { $Azure = [switch]$true }
 # -Local switch -> Mode=local shorthand
 if ($Local -and -not $Mode) { $Mode = "local" }
 
@@ -222,7 +220,7 @@ $TMP = ".frontier-install-tmp"
 $TMPRAW = ".frontier-install-raw"
 $ZIPFILE = ".frontier-install.zip"
 $ARCHIVE = "https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.zip"
-$ARCHIVE_SOURCE = if ($env:AGENTX_INSTALL_ARCHIVE) { $env:AGENTX_INSTALL_ARCHIVE } else { $ARCHIVE }
+$ARCHIVE_SOURCE = if ($env:FRONTIER_INSTALL_ARCHIVE) { $env:FRONTIER_INSTALL_ARCHIVE } else { $ARCHIVE }
 
 function Write-OK($m) { Write-Host "[OK] $m" -ForegroundColor Green }
 function Write-Skip($m) { Write-Host "[--] $m" -ForegroundColor DarkGray }
@@ -793,7 +791,7 @@ $companionExtensions = @(
 )
 if (-not $azureCompanionRequested) {
  Write-Skip "Azure companion skipped (no Azure signals detected)"
- Write-Host " Re-run with -Azure or set AGENTX_AZURE=true to install Azure Skills support." -ForegroundColor DarkGray
+ Write-Host " Re-run with -Azure or set FRONTIER_AZURE=true to install Azure Skills support." -ForegroundColor DarkGray
 } elseif (Get-Command code -ErrorAction SilentlyContinue) {
  $installedExts = code --list-extensions 2>$null
  foreach ($ext in $companionExtensions) {

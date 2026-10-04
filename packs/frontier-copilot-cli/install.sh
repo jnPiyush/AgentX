@@ -35,6 +35,7 @@ RUNTIME_BUNDLE_FILES=(
   "repository-parser-worker.ps1"
   "repository-process.cs"
   "workspace-sandbox.ps1"
+  "workspace-state.ps1"
   "repository-parser/index.js"
   "repository-parser/package.json"
   "repository-parser/package-lock.json"
@@ -335,7 +336,6 @@ install_workspace_cli_wrappers() {
 $ErrorActionPreference = '\''Stop'\''
 $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '\''../..'\'')).Path
 $env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot
-$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot
 & (Join-Path $workspaceRoot '\''.github\\frontier\\.frontier\\runtime\\frontier.ps1'\'') @args
 $succeeded = $?
 $exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
@@ -346,7 +346,6 @@ exit $exitCode
 $ErrorActionPreference = '\''Stop'\''
 $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '\''../..'\'')).Path
 $env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot
-$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot
 & (Join-Path $workspaceRoot '\''.github\\frontier\\.frontier\\runtime\\local-issue-manager.ps1'\'') @args
 $succeeded = $?
 $exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
@@ -362,7 +361,6 @@ set -euo pipefail
 
 workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export FRONTIER_WORKSPACE_ROOT="$workspace_root"
-export AGENTX_WORKSPACE_ROOT="$workspace_root"
 exec "$workspace_root/.github/frontier/.frontier/runtime/frontier.sh" "$@"
 '
   local issue_sh='#!/usr/bin/env bash
@@ -370,7 +368,6 @@ set -euo pipefail
 
 workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export FRONTIER_WORKSPACE_ROOT="$workspace_root"
-export AGENTX_WORKSPACE_ROOT="$workspace_root"
 exec "$workspace_root/.github/frontier/.frontier/runtime/local-issue-manager.sh" "$@"
 '
 
@@ -430,6 +427,7 @@ info "Installing guides..."
 copy_tree "$SOURCE/docs/guides" "$TARGET/docs/guides" "Guides"
 
 info "Installing scripts..."
+copy_file ".frontier/runtime/workspace-state.ps1" ".frontier/runtime/workspace-state.ps1"
 copy_file "scripts/budget.ps1" "scripts/budget.ps1"
 copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
 copy_file "scripts/score-code-quality.ps1" "scripts/score-code-quality.ps1"

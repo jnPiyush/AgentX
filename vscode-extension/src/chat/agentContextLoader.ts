@@ -6,7 +6,7 @@ import { rewriteAssetReferences } from '../utils/runtimeAssets';
 
 /**
  * Cache of loaded agent instructions (markdown body, without frontmatter).
- * Keyed by agent filename. Cleared on refresh.
+ * Keyed by source workspace, installed runtime and agent filename.
  */
 const instructionCache = new Map<string, string>();
 
@@ -19,12 +19,9 @@ export async function loadAgentInstructions(
   agentx: FrontierContext,
   agentFileName: string
 ): Promise<string | undefined> {
-  if (instructionCache.has(agentFileName)) {
-    return instructionCache.get(agentFileName);
-  }
-
   const root = agentx.workspaceRoot;
-  if (!root) { return undefined; }
+  const cacheKey = JSON.stringify([root, agentx.extensionContext?.extensionPath, agentFileName]);
+  if (instructionCache.has(cacheKey)) { return instructionCache.get(cacheKey); }
 
   // Guard against path traversal: agentFileName must be a plain filename, not a path.
   const safeFileName = path.basename(agentFileName);
@@ -47,7 +44,7 @@ export async function loadAgentInstructions(
     root,
     agentx.extensionContext?.extensionPath,
   );
-  instructionCache.set(agentFileName, body);
+  instructionCache.set(cacheKey, body);
   return body;
 }
 

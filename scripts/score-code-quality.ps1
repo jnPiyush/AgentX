@@ -17,14 +17,17 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
 
 $root = if ($WorkspaceRoot) {
     (Resolve-Path -LiteralPath $WorkspaceRoot -ErrorAction Stop).Path
+} elseif ($env:FRONTIER_WORKSPACE_ROOT) {
+    (Resolve-Path -LiteralPath $env:FRONTIER_WORKSPACE_ROOT -ErrorAction Stop).Path
 } else {
     (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
 if (-not $BaselinePath) {
-    $BaselinePath = Join-Path $root '.frontier/state/code-quality-baseline.json'
+    $BaselinePath = Join-FrontierStatePath $root @('state', 'code-quality-baseline.json')
 }
 
 $rubricVersion = '2.0.0'

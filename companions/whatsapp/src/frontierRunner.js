@@ -11,7 +11,7 @@ const CHILD_ENV_KEYS = [
 ];
 
 function resolvePwsh() {
-  return process.env.AGENTX_PWSH || 'pwsh';
+  return process.env.FRONTIER_PWSH || 'pwsh';
 }
 
 function childEnvironment() {
@@ -19,7 +19,7 @@ function childEnvironment() {
   for (const key of CHILD_ENV_KEYS) {
     if (process.env[key] !== undefined) env[key] = process.env[key];
   }
-  env.AGENTX_NONINTERACTIVE = '1';
+  env.FRONTIER_NONINTERACTIVE = '1';
   return env;
 }
 

@@ -66,6 +66,21 @@ to this protocol. It does not authorize tools outside the role's permissions.
 
 ## 1. Iterative Quality Loop (MANDATORY, NO SKIP)
 
+### Runtime location
+
+Command requirements in this protocol and role constraints apply equally to the
+corresponding Frontier MCP tools and extension commands. In extension-managed
+mode, `frontier_workspace` reports the source, runtime and private state roots;
+do not assume `.frontier` exists in the source repository. Native Frontier
+execution manages its own state through the same resolver. Installed assets and
+private state are not additional model-write locations.
+
+Direct editor-host tools retain host permissions. Private mode does not install
+repository hooks or enforce Frontier gates on unrelated host-owned tools. If a
+role cannot access the required gateway tools, use Frontier chat/commands or
+explicitly opt into portable repository support. Never claim unsupported hook
+enforcement or create scaffolding without the user's request.
+
 ### 1.1 Pre-Edit Gate (NON-SKIPPABLE)
 
 Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before the first

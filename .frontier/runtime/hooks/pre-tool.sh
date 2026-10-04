@@ -11,7 +11,7 @@ trace() {
   printf '{"timestamp":"%s","hook":"pre-tool","status":"%s","detail":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" >> "$TRACE_FILE"
 }
 
-TARGET=${FRONTIER_CHANGED_PATH:-${HVE_CHANGED_PATH:-${AGENTX_CHANGED_PATH:-}}}
+TARGET=${FRONTIER_CHANGED_PATH:-}
 if [ -z "$TARGET" ]; then
   trace skipped "FRONTIER_CHANGED_PATH was not provided."
   exit 0

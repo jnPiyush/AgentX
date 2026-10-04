@@ -16,6 +16,7 @@ $Script:SANDBOX_BLOCKED_RELATIVE_PATHS = @(
     '.frontier/runtime/repository-process.cs',
     '.frontier/runtime/repository-parser',
     '.frontier/runtime/workspace-sandbox.ps1',
+    '.frontier/runtime/workspace-state.ps1',
     '.frontier/runtime/hydrafusion.ps1',
     '.frontier/runtime/hydrafusion-policy.ps1',
     '.frontier/runtime/hydrafusion-protocol.ps1',

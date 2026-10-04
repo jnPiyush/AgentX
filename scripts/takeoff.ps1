@@ -63,7 +63,8 @@ if ($ghPath) {
 }
 
 # Ready queue (best-effort: local issue store)
-$issuesDir = Join-Path $root '.frontier/issues'
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
+$issuesDir = Join-FrontierStatePath $root @('issues')
 if (Test-Path -LiteralPath $issuesDir -PathType Container) {
     $open = Get-ChildItem -Path $issuesDir -Filter '*.json' -ErrorAction SilentlyContinue | ForEach-Object {
         try { Get-Content $_.FullName -Raw | ConvertFrom-Json } catch { $null }
@@ -72,7 +73,7 @@ if (Test-Path -LiteralPath $issuesDir -PathType Container) {
 }
 
 # Loop state
-$loopFile = Join-Path $root '.frontier/state/loop-state.json'
+$loopFile = Join-FrontierStatePath $root @('state', 'loop-state.json')
 if (Test-Path -LiteralPath $loopFile -PathType Leaf) {
     try {
         $loop = Get-Content $loopFile -Raw | ConvertFrom-Json
@@ -87,7 +88,7 @@ if (Test-Path -LiteralPath $loopFile -PathType Leaf) {
 }
 
 # Signal activity: age of the signal log
-$signalFile = Join-Path $root '.frontier/signals/sessions.jsonl'
+$signalFile = Join-FrontierStatePath $root @('signals', 'sessions.jsonl')
 if (Test-Path -LiteralPath $signalFile -PathType Leaf) {
     $age = (Get-Date) - (Get-Item $signalFile).LastWriteTime
     $report.signalAgeHours = [math]::Round($age.TotalHours, 1)

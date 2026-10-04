@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+. (Join-Path $PSScriptRoot 'workspace-state.ps1')
 
 function Get-HydraFusionHash([string]$Text) {
     return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($Text))).ToLowerInvariant()
@@ -29,11 +30,12 @@ function Read-HydraFusionJson([string]$Path) {
 }
 
 function Get-HydraFusionStateDirectory([string]$WorkspaceRoot) {
-    $directory = [IO.Path]::GetFullPath($WorkspaceRoot)
+    $directory = Get-FrontierStateRoot $WorkspaceRoot
+    $stateRoot = $directory
     $null = Resolve-HydraFusionPolicyPath $directory $directory
-    foreach ($part in @('.frontier', 'state', 'hydrafusion')) {
+    foreach ($part in @('state', 'hydrafusion')) {
         $directory = [IO.Path]::Combine($directory, $part)
-        $null = Resolve-HydraFusionPolicyPath $WorkspaceRoot $directory
+        $null = Resolve-HydraFusionPolicyPath $stateRoot $directory
         [void][IO.Directory]::CreateDirectory($directory)
     }
     return $directory
@@ -47,8 +49,8 @@ function Enter-HydraFusionLock([string]$Directory) {
 }
 
 function Get-HydraFusionLoopBinding([string]$WorkspaceRoot) {
-    $path = Join-Path $WorkspaceRoot '.frontier\state\loop-state.json'
-    $null = Resolve-HydraFusionPolicyPath $WorkspaceRoot $path
+    $path = Join-FrontierStatePath $WorkspaceRoot @('state', 'loop-state.json')
+    $null = Resolve-HydraFusionPolicyPath (Get-FrontierStateRoot $WorkspaceRoot) $path
     $loop = Read-HydraFusionJson $path
     if ($loop['active'] -ne $true -or $loop['status'] -cne 'active' -or -not $loop['startedAt']) {
         throw 'HydraFusion requires an active Frontier owner loop. Run frontier loop start first.'
@@ -290,7 +292,7 @@ function Get-HydraFusionReviewEvidence {
     $binding = Get-HydraFusionLoopBinding $WorkspaceRoot
     if ($binding.identity -cne $Run['loopId']) { throw 'Candidate belongs to a different owner-loop generation.' }
     $full = [IO.Path]::GetFullPath($ReportPath)
-    $null = Resolve-HydraFusionPolicyPath (Join-Path $WorkspaceRoot '.frontier\state') $full
+    $null = Resolve-HydraFusionPolicyPath (Join-FrontierStatePath $WorkspaceRoot @('state')) $full
     if ($full.StartsWith([string]$Run['scratch'], [StringComparison]::OrdinalIgnoreCase)) {
         throw 'Candidate workers cannot author their own approval or feedback.'
     }
@@ -307,7 +309,7 @@ function Get-HydraFusionReviewEvidence {
         throw 'An independent, matching review must be the latest owner-loop evidence.'
     }
     $archived = [string]$latest['evidence']
-    $null = Resolve-HydraFusionPolicyPath (Join-Path $WorkspaceRoot '.frontier\state\loop-evidence') $archived
+    $null = Resolve-HydraFusionPolicyPath (Join-FrontierStatePath $WorkspaceRoot @('state', 'loop-evidence')) $archived
     if ((Get-HydraFusionFileHash $archived) -cne $digest) { throw 'Archived review evidence changed.' }
     if ($Verdict -eq 'approved' -and ($review['high'] -ne 0 -or $review['medium'] -ne 0)) {
         throw 'HIGH/MEDIUM review findings block acceptance.'
@@ -519,7 +521,7 @@ function Assert-HydraFusionCandidateIntegrity($Run) {
 }
 
 function Assert-HydraFusionLoopDelivery([string]$WorkspaceRoot, $LoopState) {
-    $directory = Join-Path $WorkspaceRoot '.frontier\state\hydrafusion'
+    $directory = Join-FrontierStatePath $WorkspaceRoot @('state', 'hydrafusion')
     if (-not [IO.Directory]::Exists($directory)) { return }
     $state = if ($LoopState -is [System.Collections.IDictionary]) { $LoopState }
         else { ConvertFrom-Json -InputObject (ConvertTo-Json -InputObject $LoopState -Depth 40) -AsHashtable -Depth 40 }

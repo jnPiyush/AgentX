@@ -130,6 +130,7 @@ function Get-ManifestEntries {
         @{ path = '.frontier/runtime/repository-parser-worker.ps1'; category = 'cli' },
         @{ path = '.frontier/runtime/repository-process.cs'; category = 'cli' },
         @{ path = '.frontier/runtime/workspace-sandbox.ps1'; category = 'cli' },
+        @{ path = '.frontier/runtime/workspace-state.ps1'; category = 'cli' },
         @{ path = '.frontier/runtime/repository-parser/index.js'; category = 'cli' },
         @{ path = '.frontier/runtime/repository-parser/package.json'; category = 'config' },
         @{ path = '.frontier/runtime/repository-parser/package-lock.json'; category = 'config' },

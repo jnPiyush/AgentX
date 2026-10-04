@@ -13,6 +13,18 @@ import {
 } from '../../utils/pluginCatalog';
 
 describe('pluginCatalog - parsePluginManifest', () => {
+  it('rejects obsolete host engine keys rather than dropping their constraints', () => {
+    const base = {
+      name: 'fixture', version: '1.0.0', description: 'Fixture', type: 'tool',
+      entry: { node: 'index.js' },
+    };
+    for (const key of ['agentx', 'hve']) {
+      assert.throws(() => parsePluginManifest({ ...base, engines: { [key]: '^9.0.0' } }),
+        /Use engines.frontier/);
+    }
+    assert.equal(parsePluginManifest({ ...base, engines: { frontier: '^9.0.0' } })?.engines?.frontier, '^9.0.0');
+  });
+
   it('should parse legacy plugin manifests and infer capabilities from type', () => {
     const manifest = parsePluginManifest({
       name: 'convert-docs',
@@ -51,7 +63,7 @@ describe('pluginCatalog - parsePluginManifest', () => {
         bash: 'convert-docs.sh',
       },
       engines: {
-        agentx: '>=8.4.0 <9.0.0',
+        frontier: '>=8.4.0 <9.0.0',
       },
       permissions: {
         filesystem: 'read-write',
@@ -68,7 +80,7 @@ describe('pluginCatalog - parsePluginManifest', () => {
     assert.ok(manifest);
     assert.equal(manifest.publisher, 'frontier-labs');
     assert.equal(manifest.displayName, 'Convert Docs');
-    assert.equal(manifest.engines?.agentx, '>=8.4.0 <9.0.0');
+    assert.equal(manifest.engines?.frontier, '>=8.4.0 <9.0.0');
     assert.equal(manifest.permissions?.filesystem, 'read-write');
     assert.deepEqual(manifest.permissions?.remoteHosts, ['github.com']);
     assert.equal(manifest.distribution?.artifactUrl, 'https://example.test/convert-docs.zip');
@@ -77,7 +89,7 @@ describe('pluginCatalog - parsePluginManifest', () => {
     assert.equal(summary.pluginId, 'convert-docs');
     assert.equal(summary.qualifiedId, 'frontier-labs.convert-docs');
     assert.equal(summary.label, 'Convert Docs');
-    assert.equal(summary.agentxRange, '>=8.4.0 <9.0.0');
+    assert.equal(summary.frontierRange, '>=8.4.0 <9.0.0');
   });
 
   it('should return undefined for invalid manifest payloads', () => {
@@ -150,13 +162,13 @@ describe('pluginCatalog - parsePluginRegistryIndex', () => {
             {
               version: '1.5.0',
               artifactUrl: 'https://example.test/1.5.0.zip',
-              engines: { agentx: '>=8.3.0 <8.4.0' },
+              engines: { frontier: '>=8.3.0 <8.4.0' },
             },
             {
               version: '2.0.0',
               artifactUrl: 'https://example.test/2.0.0.zip',
               pluginPath: '.frontier/runtime/plugins/convert-docs',
-              engines: { agentx: '>=8.4.0 <9.0.0' },
+              engines: { frontier: '>=8.4.0 <9.0.0' },
             },
           ],
         },

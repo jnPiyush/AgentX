@@ -25,6 +25,10 @@ export class Uri {
     return new Uri('file', '', path);
   }
 
+  static from(value: { scheme: string; authority?: string; path: string }): Uri {
+    return new Uri(value.scheme, value.authority ?? '', value.path);
+  }
+
   static parse(value: string): Uri {
     return new Uri('file', '', value);
   }
@@ -96,6 +100,7 @@ export class ThemeColor {
 const _configMap: Record<string, unknown> = {};
 
 export const workspace = {
+  isTrusted: true,
   workspaceFolders: undefined as Array<{ uri: Uri; name: string; index: number }> | undefined,
 
   getConfiguration: (_section?: string) => ({
@@ -110,12 +115,18 @@ export const workspace = {
 
   onDidChangeConfiguration: (_listener: unknown) => ({ dispose: () => { /* noop */ } }),
   onDidChangeWorkspaceFolders: (_listener: unknown) => ({ dispose: () => { /* noop */ } }),
+  onDidGrantWorkspaceTrust: (_listener: unknown) => ({ dispose: () => { /* noop */ } }),
+  getWorkspaceFolder: (uri: Uri): { uri: Uri; name: string; index: number } | undefined => workspace.workspaceFolders
+    ?.filter(folder => uri.fsPath === folder.uri.fsPath
+      || uri.fsPath.startsWith(folder.uri.fsPath + '\\')
+      || uri.fsPath.startsWith(folder.uri.fsPath + '/'))
+    .sort((first, second) => second.uri.fsPath.length - first.uri.fsPath.length)[0],
 
   openTextDocument: async (_uri: unknown) => ({ getText: () => '' }),
 
   textDocuments: [] as Array<{ uri: Uri; isDirty?: boolean }>,
 
-  createFileSystemWatcher: (_pattern: string) => ({
+  createFileSystemWatcher: (_pattern: unknown) => ({
     onDidCreate: () => ({ dispose: () => { /* noop */ } }),
     onDidChange: () => ({ dispose: () => { /* noop */ } }),
     onDidDelete: () => ({ dispose: () => { /* noop */ } }),
@@ -153,6 +164,8 @@ export function __setWorkspaceFolders(
 // --- Window stubs --------------------------------------------------------
 
 export const window = {
+  onDidChangeActiveTextEditor: (_listener: unknown) => ({ dispose: () => { /* noop */ } }),
+  showWorkspaceFolderPick: async (_options?: unknown) => workspace.workspaceFolders?.[0],
   showInformationMessage: async (..._args: unknown[]) => undefined,
   showWarningMessage: async (..._args: unknown[]) => undefined,
   showErrorMessage: async (..._args: unknown[]) => undefined,
@@ -254,6 +267,7 @@ export function __clearExtensions(): void {
 // --- Env stubs -----------------------------------------------------------
 
 export const env = {
+  remoteName: undefined as string | undefined,
   openExternal: async (_uri: unknown) => true,
 };
 
@@ -293,6 +307,9 @@ export interface MockLanguageModelChat {
 let _mockModels: MockLanguageModelChat[] = [];
 
 export const lm = {
+  registerMcpServerDefinitionProvider: (_id: string, _provider: unknown) => ({
+    dispose: () => { /* noop */ },
+  }),
   selectChatModels: async (
     selector?: { family?: string; vendor?: string },
   ): Promise<MockLanguageModelChat[]> => {
@@ -304,6 +321,26 @@ export const lm = {
     });
   },
 };
+
+export enum ExtensionKind {
+  UI = 1,
+  Workspace = 2,
+}
+
+export class RelativePattern {
+  constructor(public readonly baseUri: Uri, public readonly pattern: string) {}
+}
+
+export class McpStdioServerDefinition {
+  cwd?: Uri;
+  constructor(
+    public readonly label: string,
+    public command: string,
+    public args: string[] = [],
+    public env: Record<string, string | number | null> = {},
+    public version?: string,
+  ) {}
+}
 
 /** Test helper: set available mock models. */
 export function __setMockModels(models: MockLanguageModelChat[]): void {

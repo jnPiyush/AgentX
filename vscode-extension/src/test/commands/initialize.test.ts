@@ -24,6 +24,36 @@ import {
 import { FrontierContext } from '../../frontierContext';
 
 describe('Frontier generated ignore rules', () => {
+  it('seeds the state helper beside scripts that load it in an external workspace', () => {
+    const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-seed-state-')));
+    const extension = path.join(base, 'extension');
+    const workspace = path.join(base, 'workspace');
+    const source = path.resolve(__dirname, '..', '..', '..', '..');
+    const seed = path.join(extension, '.github', 'frontier', 'seed');
+    try {
+      fs.mkdirSync(path.join(seed, 'scripts'), { recursive: true });
+      fs.mkdirSync(workspace);
+      for (const name of ['validate-handoff.ps1', 'score-code-quality.ps1']) {
+        fs.copyFileSync(path.join(source, 'scripts', name), path.join(seed, 'scripts', name));
+      }
+      const helper = COPILOT_CLI_ASSET_FILES.find(asset => asset.destination.endsWith('workspace-state.ps1'));
+      assert.ok(helper);
+      fs.mkdirSync(path.dirname(path.join(extension, helper.source)), { recursive: true });
+      fs.copyFileSync(path.join(source, '.frontier', 'runtime', 'workspace-state.ps1'), path.join(extension, helper.source));
+      copyCopilotCliAssets(extension, workspace, false);
+      assert.equal(fs.existsSync(path.join(workspace, helper.destination)), true);
+      const env = { ...process.env };
+      for (const key of ['FRONTIER_STATE_ROOT', 'FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY',
+        'FRONTIER_WORKSPACE_ROOT', 'HVE_WORKSPACE_ROOT', 'AGENTX_WORKSPACE_ROOT']) { delete env[key]; }
+      execFileSync('pwsh', ['-NoProfile', '-File', path.join(workspace, 'scripts', 'validate-handoff.ps1')],
+        { cwd: workspace, env, encoding: 'utf8' });
+      const scoped = execFileSync('pwsh', ['-NoProfile', '-File',
+        path.join(workspace, 'scripts', 'score-code-quality.ps1'), '-Mode', 'Scope',
+        '-WorkspaceRoot', workspace, '-Json'], { cwd: workspace, env, encoding: 'utf8' });
+      assert.equal(JSON.parse(scoped).status, 'scoped');
+    } finally { fs.rmSync(base, { recursive: true, force: true }); }
+  });
+
   it('ignores Frontier state without legacy entries or removing user rules', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ignore-'));
     try {
@@ -185,7 +215,10 @@ describe('runInitializeLocalRuntimeCommand', () => {
         sandbox.stub(dependencies, 'checkAllDependencies').resolves({ results: [] } as never);
         sandbox.stub(vscode.window, 'showWarningMessage').resolves('Reinstall' as never);
         const errors = sandbox.stub(vscode.window, 'showErrorMessage');
-        const context = { invalidateCache: sandbox.stub(), githubConnected: false, adoConnected: false } as unknown as FrontierContext;
+        const context = {
+          invalidateCache: sandbox.stub(), githubConnected: false, adoConnected: false,
+          workspaceState: { assertAvailable: (value: string) => value, inspect: () => undefined },
+        } as unknown as FrontierContext;
 
         await runInitializeLocalRuntimeCommand(fakeContext, context);
 
@@ -236,6 +269,9 @@ describe('runInitializeLocalRuntimeCommand', () => {
       sandbox.stub(dependencies, 'checkAllDependencies').resolves({ results: [] } as never);
       sandbox.stub(fakeContext, 'extensionUri').value(vscode.Uri.file(extensionRoot));
       fakeAgentx = sandbox.createStubInstance(FrontierContext);
+      Object.defineProperty(fakeAgentx, 'workspaceState', {
+        value: { assertAvailable: (value: string) => value, inspect: () => undefined },
+      });
       sandbox.stub(fakeAgentx, 'workspaceRoot').get(() => root);
       errors = sandbox.stub(vscode.window, 'showErrorMessage');
       __clearConfig();
@@ -596,7 +632,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
       assert.ok(powerShellLauncher.includes("(Join-Path $PSScriptRoot '../..')"));
       assert.ok(!powerShellLauncher.includes("'..' '..'"), 'wrapper avoids multi-segment Join-Path');
       assert.ok(powerShellLauncher.includes('$env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot'));
-      assert.ok(powerShellLauncher.includes('$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot'));
+      assert.ok(!powerShellLauncher.includes('AGENTX_WORKSPACE_ROOT'));
+      assert.ok(!powerShellLauncher.includes('HVE_EXTENSION_ROOT'));
       assert.ok(powerShellLauncher.includes(extensionRoot));
       assert.ok(powerShellLauncher.includes(path.join('.github', 'frontier', '.frontier', 'runtime', 'frontier.ps1')));
       assert.ok(
@@ -609,7 +646,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
 
       assert.ok(bashLauncher.includes('dirname "${BASH_SOURCE[0]}")/../..'));
       assert.ok(bashLauncher.includes('export FRONTIER_WORKSPACE_ROOT="$workspace_root"'));
-      assert.ok(bashLauncher.includes('export AGENTX_WORKSPACE_ROOT="$workspace_root"'));
+      assert.ok(!bashLauncher.includes('AGENTX_WORKSPACE_ROOT'));
+      assert.ok(!bashLauncher.includes('HVE_EXTENSION_ROOT'));
       assert.ok(bashLauncher.includes(extensionRoot.replace(/\\/g, '/')));
       assert.ok(bashLauncher.includes('.github/frontier/.frontier/runtime/frontier.sh'));
       assert.ok(

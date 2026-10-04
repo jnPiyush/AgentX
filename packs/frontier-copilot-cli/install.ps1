@@ -90,6 +90,7 @@ $RuntimeBundleFiles = @(
  'repository-parser-worker.ps1',
  'repository-process.cs',
  'workspace-sandbox.ps1',
+ 'workspace-state.ps1',
  'repository-parser/index.js',
  'repository-parser/package.json',
  'repository-parser/package-lock.json',
@@ -322,7 +323,6 @@ function Get-PowerShellWrapperContent {
   "`$ErrorActionPreference = 'Stop'",
   "`$workspaceRoot = (Resolve-Path (Join-Path `$PSScriptRoot '../..')).Path",
   "`$env:FRONTIER_WORKSPACE_ROOT = `$workspaceRoot",
-  "`$env:AGENTX_WORKSPACE_ROOT = `$workspaceRoot",
   "& (Join-Path `$workspaceRoot '$runtimeRelative') @args",
   "`$succeeded = `$?",
   "`$exitCode = if (Test-Path variable:LASTEXITCODE) { `$LASTEXITCODE } else { 0 }",
@@ -345,7 +345,6 @@ function Get-BashWrapperContent {
   '',
   'workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"',
   'export FRONTIER_WORKSPACE_ROOT="$workspace_root"',
-  'export AGENTX_WORKSPACE_ROOT="$workspace_root"',
   ('exec "$workspace_root/.github/frontier/.frontier/runtime/' + $EntryFile + '" "$@"'),
   ''
  ) -join "`n"

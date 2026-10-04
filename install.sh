@@ -18,7 +18,7 @@
 # MODE=github curl -fsSL ... | bash
 #
 # # One-liner to include Azure companion support
-# AGENTX_AZURE=true curl -fsSL ... | bash
+# FRONTIER_AZURE=true bash install.sh
 
 set -e
 
@@ -28,18 +28,18 @@ if [ -z "$BASH_VERSION" ]; then
  exit 1
 fi
 
-MODE="${MODE:-}"
+MODE="${FRONTIER_MODE:-${MODE:-}}"
 FORCE="${FORCE:-false}"
-NO_SETUP="${NO_SETUP:-false}"
-INSTALL_PATH="${AGENTX_PATH:-}"
-AZURE="${AGENTX_AZURE:-false}"
+NO_SETUP="${FRONTIER_NOSETUP:-${NO_SETUP:-false}}"
+INSTALL_PATH="${FRONTIER_PATH:-}"
+AZURE="${FRONTIER_AZURE:-false}"
 CURSOR_SETUP="false"
 GRAPH_PARSERS="false"
 BRANCH="v9.7.0"
 TMP=".frontier-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.tar.gz"
-ARCHIVE_SOURCE="${AGENTX_INSTALL_ARCHIVE:-$ARCHIVE_URL}"
+ARCHIVE_SOURCE="${FRONTIER_INSTALL_ARCHIVE:-$ARCHIVE_URL}"
 
 # -- Guaranteed cleanup (runs on success, error, or Ctrl+C) --
 cleanup() {
@@ -576,7 +576,7 @@ COMPANION_EXTS="ms-azuretools.vscode-azure-mcp-server"
 COMPANION_NAMES="Azure MCP Extension"
 if ! detect_azure_workspace; then
  skip "Azure companion skipped (no Azure signals detected)"
- echo -e "${D} Re-run with --azure or AGENTX_AZURE=true to install Azure Skills support.${N}"
+ echo -e "${D} Re-run with --azure or FRONTIER_AZURE=true to install Azure Skills support.${N}"
 elif command -v code &>/dev/null; then
  INSTALLED_EXTS=$(code --list-extensions 2>/dev/null || true)
  if echo "$INSTALLED_EXTS" | grep -qF "$COMPANION_EXTS"; then

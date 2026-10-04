@@ -173,6 +173,26 @@ test('setup upgrades only byte-equivalent legacy wrappers and preserves custom e
   } finally { fs.rmSync(workspace, { recursive: true, force: true }); }
 });
 
+test('setup does not migrate an unowned AgentX command into the Frontier role', () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cursor-no-agentx-'));
+  try {
+    fs.mkdirSync(path.join(workspace, '.frontier'), { recursive: true });
+    fs.writeFileSync(path.join(workspace, '.frontier', 'config.json'), '{}');
+    const commands = path.join(workspace, '.cursor', 'commands');
+    fs.mkdirSync(commands, { recursive: true });
+    const desired = fs.readFileSync(path.join(root, '.cursor', 'commands', 'frontier.md'), 'utf8');
+    const obsolete = desired.replace(
+      'Run `pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor read .github/agents/frontier.agent.md`',
+      'Read `.github/agents/agent-x.agent.md`',
+    );
+    assert.notEqual(obsolete, desired);
+    fs.writeFileSync(path.join(commands, 'frontier.md'), obsolete);
+    const result = setupCursor(workspace, { assetRoot: root, checkDependencies: () => {} });
+    assert.ok(result.preserved.includes('.cursor/commands/frontier.md'));
+    assert.equal(fs.readFileSync(path.join(commands, 'frontier.md'), 'utf8'), obsolete);
+  } finally { fs.rmSync(workspace, { recursive: true, force: true }); }
+});
+
 test('standalone setup reads private templates, not user-owned shared Cursor config', () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cursor-standalone-'));
   try {

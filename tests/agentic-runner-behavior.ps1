@@ -53,8 +53,8 @@ foreach ($failedExitReason in @('self_review_failed', 'error', 'empty_response',
 }
 Assert-True (-not (Test-AgenticLoopResultSucceeded $null)) 'agentic result helper rejects missing results'
 
-$originalLlmProviderEnv = $env:AGENTX_LLM_PROVIDER
-$originalReadinessModeEnv = $env:AGENTX_LLM_READINESS_MODE
+$originalLlmProviderEnv = $env:FRONTIER_LLM_PROVIDER
+$originalReadinessModeEnv = $env:FRONTIER_LLM_READINESS_MODE
 
 try {
     Assert-Equal (ConvertTo-RunnerProviderId 'models') 'github-models' 'ConvertTo-RunnerProviderId normalizes models alias'
@@ -65,8 +65,8 @@ try {
     Assert-Equal (ConvertTo-RunnerProviderId 'anthropic') 'anthropic-api' 'ConvertTo-RunnerProviderId normalizes anthropic alias'
     Assert-Equal (ConvertTo-RunnerProviderId 'openai') 'openai-api' 'ConvertTo-RunnerProviderId normalizes openai alias'
 
-    $env:AGENTX_LLM_PROVIDER = ''
-    $env:AGENTX_LLM_READINESS_MODE = ''
+    $env:FRONTIER_LLM_PROVIDER = ''
+    $env:FRONTIER_LLM_READINESS_MODE = ''
     $defaultPreference = Get-RunnerProviderPreference @{ }
     Assert-Equal $defaultPreference.providerId 'auto' 'Get-RunnerProviderPreference defaults to auto when unset'
     Assert-Equal $defaultPreference.source 'default' 'Get-RunnerProviderPreference reports default source when unset'
@@ -75,11 +75,11 @@ try {
     Assert-Equal $configPreference.providerId 'copilot' 'Get-RunnerProviderPreference reads llmProvider from config'
     Assert-Equal $configPreference.source 'config' 'Get-RunnerProviderPreference reports config source'
 
-    $env:AGENTX_LLM_PROVIDER = 'github-models'
+    $env:FRONTIER_LLM_PROVIDER = 'github-models'
     $envPreference = Get-RunnerProviderPreference ([PSCustomObject]@{ llmProvider = 'copilot' })
     Assert-Equal $envPreference.providerId 'github-models' 'Get-RunnerProviderPreference lets env override config'
     Assert-Equal $envPreference.source 'env' 'Get-RunnerProviderPreference reports env source'
-    $env:AGENTX_LLM_PROVIDER = ''
+    $env:FRONTIER_LLM_PROVIDER = ''
 
     Assert-Equal (Get-RunnerReadinessMode -Config ([PSCustomObject]@{ }) -PreferredProviderId 'copilot') 'strict' 'Get-RunnerReadinessMode defaults explicit providers to strict mode'
     Assert-Equal (Get-RunnerReadinessMode -Config ([PSCustomObject]@{ }) -PreferredProviderId 'auto') 'advisory' 'Get-RunnerReadinessMode keeps auto selection advisory by default'
@@ -119,8 +119,8 @@ try {
 
     $providerRegistry['copilot'].ready = $true
 } finally {
-    $env:AGENTX_LLM_PROVIDER = $originalLlmProviderEnv
-    $env:AGENTX_LLM_READINESS_MODE = $originalReadinessModeEnv
+    $env:FRONTIER_LLM_PROVIDER = $originalLlmProviderEnv
+    $env:FRONTIER_LLM_READINESS_MODE = $originalReadinessModeEnv
 }
 
 $originalTestRunnerCommandAvailable = ${function:Test-RunnerCommandAvailable}
@@ -873,7 +873,7 @@ try {
     $brainstormId = Save-ClarificationRecord `
         -WorkspaceRoot $ledgerRoot `
         -IssueNumber 42 `
-        -FromAgent 'agent-x' `
+        -FromAgent 'frontier' `
         -TargetAgent 'architect' `
         -Topic 'scaling approach brainstorm' `
         -Exchanges @(

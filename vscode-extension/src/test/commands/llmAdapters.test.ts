@@ -7,6 +7,8 @@ import * as vscode from 'vscode';
 import { FrontierContext } from '../../frontierContext';
 import { registerAddLlmAdapterCommand } from '../../commands/llmAdapters';
 import { applyLlmAdapterConfiguration, runAddLlmAdapterCommand } from '../../commands/llmAdaptersCommandInternals';
+import { __setWorkspaceFolders } from '../mocks/vscode';
+import { canonicalWorkspaceRoot, workspaceIdentity } from '../../utils/workspaceProfiles';
 
 describe('registerAddLlmAdapterCommand', () => {
   let sandbox: sinon.SinonSandbox;
@@ -27,6 +29,7 @@ describe('registerAddLlmAdapterCommand', () => {
   });
 
   afterEach(() => {
+    __setWorkspaceFolders(undefined);
     sandbox.restore();
   });
 
@@ -59,6 +62,7 @@ describe('runAddLlmAdapterCommand', () => {
 
   afterEach(() => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
+    __setWorkspaceFolders(undefined);
     sandbox.restore();
   });
 
@@ -67,7 +71,7 @@ describe('runAddLlmAdapterCommand', () => {
     fs.mkdirSync(path.join(rootB, '.frontier'), { recursive: true });
     fs.writeFileSync(path.join(rootB, '.frontier', 'config.json'), '{}');
     const key = (root: string, provider: string) =>
-      `frontier.llm.${provider}:${provider}::${root.toLowerCase()}`;
+      `frontier.llm.${provider}:${provider}::${workspaceIdentity(canonicalWorkspaceRoot(root), '')}`;
     const secrets = new Map([
       [key(tempRoot, 'openai-api'), 'root-a-openai'],
       [key(tempRoot, 'anthropic-api'), 'root-a-anthropic'],
@@ -75,12 +79,15 @@ describe('runAddLlmAdapterCommand', () => {
       [key(rootB, 'anthropic-api'), 'root-b-old'],
     ]);
     const context = new FrontierContext({
+      subscriptions: [],
       secrets: {
         get: async (name: string) => secrets.get(name),
         store: async (name: string, value: string) => { secrets.set(name, value); },
         delete: async (name: string) => { secrets.delete(name); },
       },
     } as unknown as vscode.ExtensionContext);
+    __setWorkspaceFolders([{ path: tempRoot }, { path: rootB }]);
+    sandbox.stub(context, 'ensureWorkspaceReady').callsFake(async root => root!);
     sandbox.stub(context, 'workspaceRoot').get(() => tempRoot);
     sandbox.stub(context, 'firstWorkspaceFolder').get(() => tempRoot);
     const setupWizard = await import('../../commands/setupWizard');
@@ -117,6 +124,8 @@ describe('runAddLlmAdapterCommand', () => {
 
     const storedSecrets = new Map<string, string>();
     const fakeAgentx = {
+      ensureWorkspaceReady: async (root: string) => root,
+      workspaceState: { withMutation: async <T>(_root: string, action: () => Promise<T>) => action() },
       workspaceRoot: tempRoot,
       firstWorkspaceFolder: tempRoot,
       invalidateCache: sandbox.stub(),
@@ -149,6 +158,8 @@ describe('runAddLlmAdapterCommand', () => {
     sandbox.stub(setupWizard, 'runCriticalPreCheck').resolves({ passed: true, report: { healthy: true } as never });
 
     const fakeAgentx = {
+      ensureWorkspaceReady: async (root: string) => root,
+      workspaceState: { withMutation: async <T>(_root: string, action: () => Promise<T>) => action() },
       workspaceRoot: tempRoot,
       firstWorkspaceFolder: tempRoot,
       invalidateCache: sandbox.stub(),
@@ -184,6 +195,8 @@ describe('runAddLlmAdapterCommand', () => {
 
     const storedSecrets = new Map<string, string>();
     const fakeAgentx = {
+      ensureWorkspaceReady: async (root: string) => root,
+      workspaceState: { withMutation: async <T>(_root: string, action: () => Promise<T>) => action() },
       workspaceRoot: tempRoot,
       firstWorkspaceFolder: tempRoot,
       invalidateCache: sandbox.stub(),

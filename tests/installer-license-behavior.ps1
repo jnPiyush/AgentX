@@ -51,7 +51,7 @@ function Invoke-Installer(
 	$startInfo.RedirectStandardOutput = $true
 	$startInfo.RedirectStandardError = $true
 	$startInfo.UseShellExecute = $false
-	$startInfo.Environment['AGENTX_INSTALL_ARCHIVE'] = $ArchivePath
+	$startInfo.Environment['FRONTIER_INSTALL_ARCHIVE'] = $ArchivePath
 	foreach ($argument in @(
 		'-NoProfile', '-NonInteractive', '-File', $InstallerPath,
 		'-Local', '-Path', $TargetPath, '-NoSetup'
@@ -226,7 +226,7 @@ try {
 		$dataAfter = @($preservedPaths | Get-FileHash | ForEach-Object Hash)
 		Assert-True ($upgrade.ExitCode -eq 0 -and ($dataBefore -join ',') -ceq ($dataAfter -join ',')) "Forced upgrade preserves all $stateDirectory $oldVersion runtime data"
 		$startInfo.ArgumentList.Add('--force')
-		$startInfo.Environment['AGENTX_INSTALL_ARCHIVE'] = $tarArchive.Replace('\', '/')
+		$startInfo.Environment['FRONTIER_INSTALL_ARCHIVE'] = $tarArchive.Replace('\', '/')
 		$result = Invoke-CapturedInstaller $startInfo
 		$dataAfter = @($preservedPaths | Get-FileHash | ForEach-Object Hash)
 		Assert-True ($result.ExitCode -eq 0 -and ($dataBefore -join ',') -ceq ($dataAfter -join ',')) "Forced Bash refresh preserves all $stateDirectory $oldVersion runtime data"

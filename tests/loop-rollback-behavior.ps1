@@ -55,13 +55,12 @@ Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role='auto-fix-reviewer'; pr
 Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role='reviewer-auto'; prompt=''; taskClass='' })) `
     'auto-fix-review' 'role=reviewer-auto resolves to auto-fix-review'
 
-Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role='agent-x'; prompt=''; taskClass='' })) `
-    'agent-x' 'role=agent-x resolves to agent-x'
+foreach ($role in @('agent-x', 'agentx', 'hve')) {
+    Assert-True ((Get-LoopTaskClass ([PSCustomObject]@{ role=$role; prompt=''; taskClass='' })) -ne 'agent-x') `
+        "$role no longer selects the orchestrator role"
+}
 
-Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role='agentx'; prompt=''; taskClass='' })) `
-    'agent-x' 'role=agentx resolves to agent-x'
-
-foreach ($role in @('frontier', 'frontier-auto', 'Frontier Orchestration FDE')) {
+foreach ($role in @('frontier', 'frontier-auto', 'Frontier Orchestration FDE', 'Frontier E2E SDLC')) {
     Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role=$role; prompt='Fix a typo' })) `
         'agent-x' "$role preserves the orchestrator classification"
 }

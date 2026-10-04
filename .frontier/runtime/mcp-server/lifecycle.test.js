@@ -9,6 +9,59 @@ const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const { ElicitRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 
+test('only advertised Frontier tool names dispatch to the runtime', async () => {
+  const calls = [];
+  const server = createServer({
+    run: async args => { calls.push(args); return { exitCode: 0, stdout: 'current', stderr: '' }; },
+    stop: async () => {},
+  });
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'frontier-only-contract', version: '1.0.0' });
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    for (const name of ['agentx_loop_status', 'hve_loop_status']) {
+      const result = await client.callTool({ name, arguments: {} });
+      assert.equal(result.isError, true);
+      assert.match(result.content[0].text, /Unknown tool/);
+    }
+    assert.equal(calls.length, 0);
+    const current = await client.callTool({ name: 'frontier_loop_status', arguments: {} });
+    assert.equal(current.isError, false);
+    assert.deepEqual(calls, [['loop', 'status']]);
+  } finally { await client.close(); await server.close(); }
+});
+
+test('MCP separates installed CLI assets from a plain target workspace', async () => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mcp-roots-'));
+  const bundle = path.join(temporary, 'bundle');
+  const workspace = path.join(temporary, 'source');
+  const cli = path.join(bundle, '.frontier', 'runtime', 'frontier-cli.ps1');
+  fs.mkdirSync(path.dirname(cli), { recursive: true });
+  fs.mkdirSync(workspace);
+  fs.writeFileSync(cli, '# fixture');
+  let invocation;
+  const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
+  const runner = createCliRunner(bundle, {
+    workspaceRoot: workspace,
+    spawn: (command, args, options) => { invocation = { command, args, options }; return child; },
+  });
+  try {
+    const response = runner.run(['workspace-state', 'info']);
+    assert.ok(invocation.args.includes(cli));
+    assert.equal(invocation.options.cwd, workspace);
+    assert.equal(invocation.options.env.FRONTIER_WORKSPACE_ROOT, workspace);
+    assert.equal(invocation.options.env.HVE_WORKSPACE_ROOT, process.env.HVE_WORKSPACE_ROOT);
+    assert.equal(invocation.options.env.AGENTX_WORKSPACE_ROOT, process.env.AGENTX_WORKSPACE_ROOT);
+    assert.equal(fs.existsSync(path.join(workspace, '.frontier')), false);
+    child.emit('close', 0);
+    assert.equal((await response).exitCode, 0);
+  } finally {
+    await runner.stop();
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
 test('repository context validates budgets and encodes query data before CLI dispatch', async () => {
   const calls = [];
   const runner = {
@@ -132,7 +185,7 @@ test('candidate operations stay pending and require explicit review inputs', asy
 test('MCP leaves teardown time inside the HydraFusion deadline', async () => {
   let options;
   const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
-  const runner = createCliRunner('/fixture', {
+  const runner = createCliRunner(os.tmpdir(), {
     platform: 'linux',
     spawn: (_command, _args, launchOptions) => { options = launchOptions; return child; },
   });
@@ -146,7 +199,7 @@ test('MCP leaves teardown time inside the HydraFusion deadline', async () => {
 function fixture(hooks = {}) {
   const children = [];
   const signals = [];
-  const runner = createCliRunner('/fixture', {
+  const runner = createCliRunner(os.tmpdir(), {
     platform: 'linux',
     spawn: () => {
       const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
@@ -166,8 +219,8 @@ test('CLI context calls pin the intended workspace instead of inheriting another
     spawn: (_command, _args, supplied) => { options = supplied; return child; },
   });
   const pending = runner.run(['context', '--json']);
-  assert.equal(options.cwd, '/fixture');
-  assert.equal(options.env.FRONTIER_WORKSPACE_ROOT, '/fixture');
+  assert.equal(options.cwd, os.tmpdir());
+  assert.equal(options.env.FRONTIER_WORKSPACE_ROOT, os.tmpdir());
   child.emit('close', 0);
   assert.equal((await pending).exitCode, 0);
   await runner.stop();
@@ -182,8 +235,9 @@ test('explicit invalid roots throw; absent configuration discovers the runtime b
     for (const value of ['', 'relative', path.join(root, 'missing')]) {
       assert.throws(() => discoverRepoRoot({ FRONTIER_REPO_ROOT: value, AGENTX_REPO_ROOT: root }, root), /FRONTIER_REPO_ROOT/);
     }
-    for (const key of ['FRONTIER_REPO_ROOT', 'HVE_REPO_ROOT', 'AGENTX_REPO_ROOT']) {
-      assert.equal(discoverRepoRoot({ [key]: root }, root), root);
+    assert.equal(discoverRepoRoot({ FRONTIER_REPO_ROOT: root }, root), root);
+    for (const key of ['HVE_REPO_ROOT', 'AGENTX_REPO_ROOT']) {
+      assert.equal(discoverRepoRoot({ [key]: path.join(root, 'obsolete-target') }, root), root);
     }
     assert.equal(discoverRepoRoot({}, path.join(runtimeDir, 'mcp-server')), root);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
@@ -303,7 +357,7 @@ test('spawn errors return failure without leaking active children', async () => 
   await runner.stop();
 });
 
-test('SDK requests advertise exactly 22 tools, preserve aliases, and forward request cancellation', async () => {
+test('SDK requests advertise exactly 23 Frontier tools, reject obsolete aliases, and forward request cancellation', async () => {
   let cancelled;
   const cancellation = new Promise(resolve => { cancelled = resolve; });
   let started;
@@ -325,13 +379,16 @@ test('SDK requests advertise exactly 22 tools, preserve aliases, and forward req
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const catalog = await client.listTools();
-    assert.equal(catalog.tools.length, 22);
+    assert.equal(catalog.tools.length, 23);
     assert.ok(catalog.tools.some(tool => tool.name === 'frontier_resume'));
     assert.ok(catalog.tools.every(tool => tool.name.startsWith('frontier_')));
-    for (const name of ['frontier_loop_status', 'agentx_loop_status']) {
-      assert.equal((await client.callTool({ name, arguments: {} })).isError, false);
+    assert.equal((await client.callTool({ name: 'frontier_loop_status', arguments: {} })).isError, false);
+    for (const name of ['agentx_loop_status', 'hve_loop_status']) {
+      const rejectedAlias = await client.callTool({ name, arguments: {} });
+      assert.equal(rejectedAlias.isError, true);
+      assert.match(rejectedAlias.content[0].text, /Unknown tool/);
     }
-    assert.deepEqual(calls, [['loop', 'status'], ['loop', 'status']]);
+    assert.deepEqual(calls, [['loop', 'status']]);
     const controller = new AbortController();
     const request = client.callTool({ name: 'frontier_ready', arguments: {} }, undefined, { signal: controller.signal });
     const rejected = assert.rejects(request);

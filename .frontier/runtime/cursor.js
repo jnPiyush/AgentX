@@ -146,9 +146,6 @@ function isLegacyAsset(relative, current, desired) {
     /^Run `(?:pwsh -NoProfile -File )?\.frontier\/runtime\/frontier\.ps1 cursor read ([^`]+)` before taking action\./m,
     'Read `$1` before taking action.',
   );
-  if (relative === '.cursor/commands/frontier.md') {
-    prior = prior.replace('Read `.github/agents/frontier.agent.md`', 'Read `.github/agents/agent-x.agent.md`');
-  }
   return normalized(current) === prior;
 }
 

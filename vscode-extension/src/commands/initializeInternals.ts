@@ -6,6 +6,8 @@ import * as vscode from 'vscode';
 import { resolveWindowsShell } from '../utils/shell';
 import { resolveAndValidate } from '../utils/ssrfValidator';
 import type { SsrfResolvedAddress } from '../utils/ssrfValidatorTypes';
+import { parseConfigurationJson } from '../utils/configurationJson';
+import { workspacePathKey } from '../utils/workspaceProfiles';
 
 export const BRANCH = 'master';
 export const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
@@ -110,6 +112,10 @@ export const COPILOT_CLI_ASSET_FILES: Array<{ source: string; destination: strin
   { source: path.join(SEED_ROOT, 'AGENTS.md'), destination: 'AGENTS.md' },
   { source: path.join(SEED_ROOT, 'Skills.md'), destination: 'Skills.md' },
   { source: path.join(SEED_ROOT, '.token-limits.json'), destination: '.token-limits.json' },
+  {
+    source: path.join(SEED_ROOT, '.frontier', 'runtime', 'workspace-state.ps1'),
+    destination: path.join('.frontier', 'runtime', 'workspace-state.ps1'),
+  },
 ];
 
 const WORKSPACE_WRAPPER_FILES = [
@@ -169,52 +175,7 @@ export function readJsonWithComments<T>(filePath: string): T | undefined {
   }
 
   try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    try {
-      return JSON.parse(raw) as T;
-    } catch {
-      let stripped = '';
-      let inStr = false;
-      let esc = false;
-      for (let index = 0; index < raw.length; index++) {
-        const char = raw[index];
-        if (esc) {
-          stripped += char;
-          esc = false;
-          continue;
-        }
-        if (inStr) {
-          if (char === '\\') {
-            esc = true;
-          } else if (char === '"') {
-            inStr = false;
-          }
-          stripped += char;
-          continue;
-        }
-        if (char === '"') {
-          inStr = true;
-          stripped += char;
-          continue;
-        }
-        if (char === '/' && raw[index + 1] === '/') {
-          while (index < raw.length && raw[index] !== '\n') {
-            index++;
-          }
-          continue;
-        }
-        if (char === '/' && raw[index + 1] === '*') {
-          index += 2;
-          while (index < raw.length && !(raw[index] === '*' && raw[index + 1] === '/')) {
-            index++;
-          }
-          index++;
-          continue;
-        }
-        stripped += char;
-      }
-      return JSON.parse(stripped) as T;
-    }
+    return parseConfigurationJson(fs.readFileSync(filePath, 'utf-8')) as T;
   } catch {
     return undefined;
   }
@@ -335,6 +296,35 @@ export function writeCliAssetState(workspaceRoot: string, state: CliAssetState):
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf-8');
 }
 
+export function findBrokenCopilotCliLinks(
+  workspaceRoot: string,
+  installation?: { readonly extensionRoot: string; readonly extensionId: string },
+): string[] {
+  const state = readCliAssetState(workspaceRoot);
+  if (state?.mode !== 'symlink' || typeof state.extensionRoot !== 'string') { return []; }
+  const broken: string[] = [];
+  for (const asset of COPILOT_CLI_ASSET_DIRS) {
+    const destination = path.join(workspaceRoot, asset.destination);
+    const entry = fs.lstatSync(destination, { throwIfNoEntry: false });
+    if (!entry?.isSymbolicLink()) { continue; }
+    const target = path.resolve(path.dirname(destination), fs.readlinkSync(destination));
+    const recordedTarget = workspacePathKey(target) === workspacePathKey(path.join(state.extensionRoot, asset.source));
+    let targetInstall = target;
+    for (const _segment of asset.source.split(/[\\/]/).filter(Boolean)) { targetInstall = path.dirname(targetInstall); }
+    const siblingInstall = installation && installation.extensionId
+      && workspacePathKey(path.dirname(targetInstall)) === workspacePathKey(path.dirname(installation.extensionRoot))
+      && path.basename(targetInstall).toLowerCase().startsWith(`${installation.extensionId.toLowerCase()}-`)
+      && workspacePathKey(target) === workspacePathKey(path.join(targetInstall, asset.source));
+    if (!recordedTarget && !siblingInstall) { continue; }
+    try { fs.statSync(destination); }
+    catch (error) {
+      if (!['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? '')) { throw error; }
+      broken.push(asset.destination);
+    }
+  }
+  return broken;
+}
+
 function symlinkType(): 'junction' | 'dir' {
   return process.platform === 'win32' ? 'junction' : 'dir';
 }
@@ -429,11 +419,13 @@ export function createCopilotCliSymlinks(
 export function refreshCopilotCliSymlinks(
   extensionRoot: string,
   workspaceRoot: string,
+  destinations?: readonly string[],
 ): { refreshed: string[]; stillValid: string[]; skipped: string[] } {
   const refreshed: string[] = [];  const stillValid: string[] = [];
   const skipped: string[] = [];
 
   for (const asset of COPILOT_CLI_ASSET_DIRS) {
+    if (destinations && !destinations.includes(asset.destination)) { continue; }
     const linkPath = path.join(workspaceRoot, asset.destination);
     if (!isSymlink(linkPath)) {
       if (fs.existsSync(linkPath)) {
@@ -463,14 +455,20 @@ export function refreshCopilotCliSymlinks(
   }
 
   // Support trees are copied, not linked, so they can go stale after an
-  // extension upgrade. Refresh is deliberately NON-destructive: this runs on
-  // every activation, and these destinations (docs/, scripts/, evaluation/,
+  // extension upgrade. Explicit refresh is deliberately NON-destructive:
+  // these destinations (docs/, scripts/, evaluation/,
   // AGENTS.md, Skills.md) are shared namespaces the user also authors in.
   // Overwriting here would silently destroy user content on every window open,
   // which is the exact failure this change set exists to eliminate. Missing
   // files are added; existing files are always preserved. Staleness of already
   // present files is tracked as TD-018.
-  copyCopilotCliSupportAssets(extensionRoot, workspaceRoot, false);
+  if (!destinations) { copyCopilotCliSupportAssets(extensionRoot, workspaceRoot, false); }
+  if (destinations && refreshed.length && !skipped.length) {
+    const state = readCliAssetState(workspaceRoot);
+    if (state?.mode === 'symlink') {
+      writeCliAssetState(workspaceRoot, { ...state, extensionRoot, updatedAt: new Date().toISOString() });
+    }
+  }
 
   return { refreshed, stillValid, skipped };
 }
@@ -547,7 +545,7 @@ function renderPowerShellWrapper(
     "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path",
     '',
     'function Resolve-FrontierExtensionRoot {',
-    '  $extensionRootOverride = if ($env:FRONTIER_EXTENSION_ROOT) { $env:FRONTIER_EXTENSION_ROOT } elseif ($env:HVE_EXTENSION_ROOT) { $env:HVE_EXTENSION_ROOT } else { $env:AGENTX_EXTENSION_ROOT }',
+    '  $extensionRootOverride = $env:FRONTIER_EXTENSION_ROOT',
     '  if ($extensionRootOverride) {',
     `    $runtimeEntry = Join-Path $extensionRootOverride '${runtimeRelativePath}'`,
     `    if ((Test-Path -LiteralPath $runtimeEntry -PathType Leaf)${cursorCheck('$extensionRootOverride')}) {`,
@@ -595,7 +593,6 @@ function renderPowerShellWrapper(
     '',
     '$extensionRoot = Resolve-FrontierExtensionRoot',
     '$env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot',
-    '$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot',
     `& (Join-Path $extensionRoot '${runtimeRelativePath}') @args`,
     '$succeeded = $?',
     '$exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }',
@@ -640,7 +637,7 @@ function renderBashWrapper(
     '',
     'resolve_frontier_extension_root() {',
     '  local candidate=""',
-    '  local extension_root_override="${FRONTIER_EXTENSION_ROOT:-${HVE_EXTENSION_ROOT:-${AGENTX_EXTENSION_ROOT:-}}}"',
+    '  local extension_root_override="${FRONTIER_EXTENSION_ROOT:-}"',
     '',
     `  if [[ -n "$extension_root_override" && -f "\${extension_root_override}/\${runtime_relative}"${cursorCheck('extension_root_override')} ]]; then`,
     "    printf '%s\n' \"$extension_root_override\"",
@@ -684,7 +681,6 @@ function renderBashWrapper(
     '',
     'extension_root="$(resolve_frontier_extension_root)"',
     'export FRONTIER_WORKSPACE_ROOT="$workspace_root"',
-    'export AGENTX_WORKSPACE_ROOT="$workspace_root"',
     'exec "${extension_root}/${runtime_relative}" "$@"',
     '',
   ].join('\n');

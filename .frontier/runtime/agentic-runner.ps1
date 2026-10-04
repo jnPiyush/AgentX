@@ -86,15 +86,11 @@ function Write-RunnerConsole([string]$Message) {
 }
 
 function Get-FrontierEnvironmentValue([string]$Name) {
-    $value = [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
-    if ($value) { return $value }
-    $value = [string][Environment]::GetEnvironmentVariable("HVE_$Name")
-    if ($value) { return $value }
-    return [string][Environment]::GetEnvironmentVariable("AGENTX_$Name")
+    return [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
 }
 
 function Get-FrontierStateDirectory([string]$WorkspaceRoot) {
-    return Join-Path $WorkspaceRoot '.frontier'
+    return Get-FrontierStateRoot $WorkspaceRoot
 }
 
 $Script:MODEL_CAPABILITIES = @{
@@ -993,7 +989,7 @@ function Get-LoopTaskClassFromState {
     $role = if ($State.PSObject.Properties.Name -contains 'role') { ([string]$State.role).Trim().ToLowerInvariant() } else { '' }
     switch -Regex ($role) {
         '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
-        '^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$' { return 'agent-x' }
+        '^(autonomous|frontier|frontier-auto|frontier orchestration fde|frontier e2e sdlc)$' { return 'agent-x' }
         '^(engineer|implementation)$' { return 'complex-delivery' }
     }
 
@@ -1001,7 +997,7 @@ function Get-LoopTaskClassFromState {
         return 'auto-fix-review'
     }
 
-    if ($normalized -match '\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b') {
+    if ($normalized -match '\b(autonomous|orchestrat|classify.*route)\b') {
         return 'agent-x'
     }
 
@@ -2937,8 +2933,7 @@ function Get-AgentDefDirectorySet([string]$root) {
 }
 
 function Resolve-AgentDefPath([string]$agentName, [string]$root) {
-    $resolvedAgentName = if ($agentName -in @('agent-x', 'agentx', 'hve')) { 'frontier' } else { $agentName }
-    $fileName = if ($resolvedAgentName -like '*.agent.md') { $resolvedAgentName } else { "$resolvedAgentName.agent.md" }
+    $fileName = if ($agentName -like '*.agent.md') { $agentName } else { "$agentName.agent.md" }
     foreach ($agentsDir in (Get-AgentDefDirectorySet -root $root)) {
         foreach ($candidate in @(
             (Join-Path $agentsDir $fileName),
@@ -3053,7 +3048,7 @@ function Resolve-AgentReference([string]$value) {
     $normalized = $value.Trim().ToLower()
     if (-not $normalized) { return '' }
 
-    $normalized = $normalized -replace '^(frontier|agentx|agent\s*x)\s+', ''
+    $normalized = $normalized -replace '^frontier\s+', ''
     $normalized = $normalized -replace '\s+fde$', ''
     $normalized = $normalized -replace '\s+', '-'
 
@@ -3105,7 +3100,7 @@ function Resolve-AgentReference([string]$value) {
         '^powerbi-analyst$' { return 'powerbi-analyst' }
         '^github-ops$' { return 'github-ops' }
         '^ado-ops$' { return 'ado-ops' }
-        '^agent-x$' { return 'agent-x' }
+        '^frontier$' { return 'frontier' }
         '^prompt-engineer$' { return 'prompt-engineer' }
         '^rag-specialist$' { return 'rag-specialist' }
         '^eval-specialist$' { return 'eval-specialist' }
@@ -3163,9 +3158,36 @@ function Resolve-ClarificationTargetList([hashtable]$agentDef) {
     }
 
     if ($handoffSection) {
-        $agentPattern = '\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|devops|data-scientist|tester|consulting-research|fabric-engineer|power-platform-builder|low-code-builder|agent-x|github-ops|ado-ops|powerbi-analyst|reviewer-auto|prompt-engineer|rag-specialist|eval-specialist|ops-monitor|functional-reviewer)\b'
-        foreach ($match in [regex]::Matches($handoffSection, $agentPattern, 'IgnoreCase')) {
-            $normalized = Resolve-AgentReference $match.Value
+        $agentIds = @('product-manager', 'architect', 'ux-designer', 'engineer', 'reviewer',
+            'devops-engineer', 'devops', 'data-scientist', 'tester', 'consulting-research',
+            'fabric-engineer', 'power-platform-builder', 'low-code-builder', 'frontier',
+            'github-ops', 'ado-ops', 'ado-prd-to-wit', 'powerbi-analyst', 'reviewer-auto',
+            'prompt-engineer', 'rag-specialist', 'eval-specialist', 'ops-monitor',
+            'functional-reviewer', 'architecture-reviewer', 'diagram-specialist',
+            'prototype-auditor', 'agile-coach')
+        $words = [regex]::Matches($handoffSection, '[A-Za-z][A-Za-z-]*')
+        for ($index = 0; $index -lt $words.Count; $index++) {
+            $candidate = $words[$index].Value.ToLowerInvariant()
+            if ($candidate -eq 'frontier') {
+                $end = $index
+                for ($next = $index + 1; $next -lt $words.Count -and $next -le $index + 6; $next++) {
+                    $previousEnd = $words[$next - 1].Index + $words[$next - 1].Length
+                    $gap = $handoffSection.Substring($previousEnd, $words[$next].Index - $previousEnd)
+                    if ($gap -notmatch '^[ \t]+$') { break }
+                    $end = $next
+                }
+                for ($last = $end; $last -gt $index; $last--) {
+                    $length = $words[$last].Index + $words[$last].Length - $words[$index].Index
+                    $resolved = Resolve-AgentReference $handoffSection.Substring($words[$index].Index, $length)
+                    if ($resolved -in $agentIds) {
+                        $candidate = $resolved
+                        $index = $last
+                        break
+                    }
+                }
+            }
+            if ($candidate -notin $agentIds) { continue }
+            $normalized = Resolve-AgentReference $candidate
             if ($normalized -and -not $targets.Contains($normalized)) {
                 $targets.Add($normalized)
             }
@@ -3320,7 +3342,7 @@ function Build-SystemPrompt([hashtable]$agentDef, [string]$agentName) {
     $parts += ""
     $parts += "## Clarification"
     $parts += 'If you need input from another agent, say: "I need clarification from [agent-name] about [topic]".'
-    $parts += 'Use runtime agent IDs such as product-manager, architect, ux-designer, engineer, data-scientist, reviewer, devops, or agent-x.'
+    $parts += 'Use runtime agent IDs such as product-manager, architect, ux-designer, engineer, data-scientist, reviewer, devops, or frontier.'
 
     return ($parts -join "`n")
 }
@@ -4701,6 +4723,7 @@ function Invoke-AgenticLoop {
     )
 
     $sessionLock = $null
+    $stateLease = $null
     try {
     $startTime = Get-Date
 
@@ -4709,6 +4732,7 @@ function Invoke-AgenticLoop {
         $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
     }
 
+    $stateLease = Enter-FrontierStateLease $WorkspaceRoot
     $runtimeConfig = Get-RunnerConfig -WorkspaceRoot $WorkspaceRoot
     try {
         if (@($AllowTools | Where-Object { $_ }).Count) { throw 'Additional tool grants are unsupported by Frontier execution; use the role tool contract.' }
@@ -5580,5 +5604,6 @@ State your PIVOT or REFINE decision and rationale before making changes.
     }
     } finally {
         if ($sessionLock) { $sessionLock.Dispose() }
+        if ($stateLease) { $stateLease.Dispose() }
     }
 }

@@ -401,7 +401,9 @@ export async function applyLlmAdapterConfiguration(
   settings: ProviderPromptResult,
   options?: { readonly runPreCheck?: boolean },
 ): Promise<LlmAdapterApplyResult> {
-  const changed = upsertLlmAdapterConfig(root, providerId, settings);
+  root = await agentx.ensureWorkspaceReady(root);
+  const changed = await agentx.workspaceState.withMutation(root, async () => {
+  const updated = upsertLlmAdapterConfig(root, providerId, settings);
 
   if (providerId === 'openai-api') {
     if (settings.apiKey) {
@@ -434,6 +436,8 @@ export async function applyLlmAdapterConfiguration(
     await agentx.deleteWorkspaceLlmSecret('anthropic-api', root);
     await agentx.deleteWorkspaceLlmSecret('claude-code', root);
   }
+  return updated;
+  });
 
   agentx.invalidateCache();
   await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
@@ -462,13 +466,7 @@ export async function runAddLlmAdapterCommand(
     return;
   }
 
-  const configFile = resolveFrontierStatePath(root, 'config.json');
-  if (!fs.existsSync(configFile)) {
-    vscode.window.showWarningMessage(
-      'Frontier LLM adapters require workspace initialization. Run "Frontier: Initialize Local Runtime" first.',
-    );
-    return;
-  }
+  await agentx.ensureWorkspaceReady(root);
 
   const setupMode = await promptProviderPick(preferredProviderId);
   if (!setupMode) {

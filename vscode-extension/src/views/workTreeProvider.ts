@@ -23,8 +23,11 @@ export class WorkTreeProvider implements vscode.TreeDataProvider<SidebarTreeItem
  }
 
  private async getOpenIssues(root: string) {
+  if (!vscode.workspace.isTrusted || !this.agentx.hasCliRuntime()) {
+   return getLocalIssues(root).filter((issue) => (issue.state ?? 'open') !== 'closed');
+  }
   try {
-   const output = await this.agentx.runCli('issue', ['list', '--json']);
+   const output = await this.agentx.runCli('issue', ['list', '--json'], root);
    const remote = normalizeIssues(JSON.parse(output)).filter((issue) => (issue.state ?? 'open') !== 'closed');
    if (remote.length > 0) {
     return remote;

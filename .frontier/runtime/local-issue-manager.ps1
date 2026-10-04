@@ -13,7 +13,6 @@ param(
 )
 
 $env:FRONTIER_WORKSPACE_ROOT = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$env:AGENTX_WORKSPACE_ROOT = $env:FRONTIER_WORKSPACE_ROOT
 Push-Location -LiteralPath $env:FRONTIER_WORKSPACE_ROOT
 
 $n = @('issue', $Action)

@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [string]$WorkspaceRoot = (Split-Path $PSScriptRoot -Parent),
+    [string]$WorkspaceRoot = '',
     [string]$Dataset = (Join-Path $PSScriptRoot '..' 'evaluation' 'repository-context' 'queries.json'),
     [string]$OutputPath = '',
     [ValidateSet('dev', 'held-out', 'all')][string]$Split = 'held-out',
@@ -11,8 +11,12 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'repository-context-evaluation.ps1')
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
+if (-not $WorkspaceRoot) {
+    $WorkspaceRoot = if ($env:FRONTIER_WORKSPACE_ROOT) { $env:FRONTIER_WORKSPACE_ROOT } else { Split-Path $PSScriptRoot -Parent }
+}
 $root = (Resolve-Path -LiteralPath $WorkspaceRoot).Path
-$loopPath = Join-Path $root '.frontier' 'state' 'loop-state.json'
+$loopPath = Join-FrontierStatePath $root @('state', 'loop-state.json')
 if (Test-Path -LiteralPath $loopPath) {
     $loop = Get-Content -LiteralPath $loopPath -Raw | ConvertFrom-Json
     if ($loop.active -eq $true) { throw 'Retrieval evaluation is a suite; complete the quality loop and obtain explicit consent first.' }
@@ -21,7 +25,7 @@ $datasetRecord = Get-Content -LiteralPath $Dataset -Raw | ConvertFrom-Json
 Assert-RepositoryEvaluationDataset $datasetRecord
 $queries = @($datasetRecord.queries | Where-Object { $Split -eq 'all' -or $_.split -eq $Split })
 if (-not $queries.Count) { throw 'No queries selected.' }
-if (-not $OutputPath) { $OutputPath = Join-Path $root '.frontier' 'state' 'repository-context-evaluation.json' }
+if (-not $OutputPath) { $OutputPath = Join-FrontierStatePath $root @('state', 'repository-context-evaluation.json') }
 $temporary = Join-Path ([IO.Path]::GetTempPath()) "frontier-context-eval-$([guid]::NewGuid().ToString('N'))"
 [void][IO.Directory]::CreateDirectory($temporary)
 $corpus = Join-Path $temporary 'corpus'
@@ -85,7 +89,14 @@ function Measure-Packet($Packet, $Case, [int]$Limit, [long]$Elapsed, [bool]$Cura
     }
 }
 
+$ownerEnvironment = @{}
+foreach ($name in @('FRONTIER_STATE_ROOT', 'FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY', 'FRONTIER_GRAPH_ENABLED')) {
+    $ownerEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+}
 try {
+    foreach ($name in $ownerEnvironment.Keys) {
+        if (Test-Path -LiteralPath "Env:\$name") { Remove-Item -LiteralPath "Env:\$name" }
+    }
     $commit = (& git -C $root rev-parse "$($datasetRecord.baselineCommit)^{commit}" 2>$null).Trim()
     if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[a-f0-9]{40,64}$') { throw 'Baseline commit cannot be resolved.' }
     $archive = Join-Path $temporary 'corpus.zip'
@@ -197,5 +208,10 @@ try {
     if (@($records | Where-Object { Test-RepositoryEvaluationRecordFailure $_ @($datasetRecord.hardFailures) }).Count -or
         @($summaries | Where-Object { $_.nondeterministicQueries }).Count) { exit 1 }
 } finally {
+    foreach ($name in $ownerEnvironment.Keys) {
+        if ($null -eq $ownerEnvironment[$name]) {
+            if (Test-Path -LiteralPath "Env:\$name") { Remove-Item -LiteralPath "Env:\$name" }
+        } else { [Environment]::SetEnvironmentVariable($name, $ownerEnvironment[$name]) }
+    }
     if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Recurse -Force }
 }

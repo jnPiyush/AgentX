@@ -116,6 +116,7 @@ try {
     $parseErrors = $null
     $runnerSyntax = [Management.Automation.Language.Parser]::ParseFile($runnerPath, [ref]$tokens, [ref]$parseErrors)
     $stateFunction = $runnerSyntax.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-FrontierStateDirectory' }, $false)
+    . (Join-Path $repoRoot '.frontier/runtime/workspace-state.ps1')
     . ([scriptblock]::Create($stateFunction.Extent.Text))
     $runnerWorkspace = Join-Path $tempRoot 'runner-workspace'
     New-Item -ItemType Directory -Path (Join-Path $runnerWorkspace '.agentx/state') -Force | Out-Null
@@ -137,8 +138,11 @@ try {
     New-Item -ItemType Directory -Path (Join-Path $frontierWorkspace '.frontier'), (Join-Path $frontierWorkspace '.agentx') -Force | Out-Null
     '{"provider":"ado"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.frontier/config.json') -Encoding utf8
     '{"provider":"github"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.agentx/config.json') -Encoding utf8
-    $frontierOutput = Invoke-ConfigShow -FrontierRoot $frontierWorkspace -TransitionalRoot '' -AgentXRoot ''
+    $frontierOutput = Invoke-ConfigShow -FrontierRoot $frontierWorkspace -TransitionalRoot $legacyOnlyWorkspace -AgentXRoot $legacyOnlyWorkspace
     Assert-True ($frontierOutput -match 'provider\s*=\s*ado') '.frontier/config.json is the only configuration source'
+    $withoutAliases = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot '' -AgentXRoot ''
+    $withAliases = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot $frontierWorkspace -AgentXRoot $legacyOnlyWorkspace
+    Assert-True ($withAliases -ceq $withoutAliases) 'Obsolete workspace environment variables do not change default runtime selection'
 
     $scanWorkspace = Join-Path $tempRoot 'scan-workspace'
     New-Item -ItemType Directory -Path (Join-Path $scanWorkspace '.frontier/state') -Force | Out-Null

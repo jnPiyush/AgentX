@@ -151,7 +151,6 @@ function Register-FrontierMcpServer {
     if (-not $existing.PSObject.Properties['mcpServers']) {
       $existing | Add-Member -NotePropertyName mcpServers -NotePropertyValue ([pscustomobject]@{})
     }
-    $existing.mcpServers.PSObject.Properties.Remove('agentx')
     $existing.mcpServers | Add-Member -NotePropertyName 'frontier' -NotePropertyValue ([pscustomobject]$entry) -Force
     $json = $existing | ConvertTo-Json -Depth 8
   } else {

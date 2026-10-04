@@ -158,7 +158,7 @@ test('configuration fails closed for secret files, bad targets, bad capabilities
   try {
     for (const invalid of [[], 'bad', 42]) {
       write(invalid);
-      assert.throws(() => loadConfig({ configPath, env: { AGENTX_WA_ALLOWED: '14155550123', AGENTX_REPO: root } }), /JSON object/);
+      assert.throws(() => loadConfig({ configPath, env: { FRONTIER_WA_ALLOWED: '14155550123', FRONTIER_REPO: root } }), /JSON object/);
     }
     write({ repoPath: root, allowedNumbers: ['14155550123'], openaiApiKey: 'secret' });
     assert.throws(() => loadConfig({ configPath, env: {} }), /OPENAI_API_KEY/);
@@ -208,7 +208,8 @@ test('child environment removes transcription and other secret variables', () =>
     assert.equal(env.GITHUB_PAT, undefined);
     assert.equal(env.AWS_ACCESS_KEY_ID, undefined);
     assert.equal(env.GOOGLE_APPLICATION_CREDENTIALS, undefined);
-    assert.equal(env.AGENTX_NONINTERACTIVE, '1');
+    assert.equal(env.FRONTIER_NONINTERACTIVE, '1');
+    assert.equal(env.AGENTX_NONINTERACTIVE, undefined);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];

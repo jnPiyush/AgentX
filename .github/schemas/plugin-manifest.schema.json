@@ -122,7 +122,7 @@
       "type": "object",
       "description": "Host compatibility ranges.",
       "properties": {
-        "agentx": {
+        "frontier": {
           "type": "string",
           "description": "Semver range describing compatible Frontier host versions."
         }

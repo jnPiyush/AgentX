@@ -1,15 +1,22 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { hasFrontierState } from '../utils/frontierPaths';
+import { hasRepositoryState, isPrivateFrontierState } from '../utils/frontierPaths';
+import { FrontierContext } from '../frontierContext';
 import { execShell } from '../utils/shell';
 import { buildCliInvocation } from '../frontierContextInternals';
 import { promptWorkspaceRoot, writeWorkspaceRuntimeWrappers } from './initializeInternals';
 
-export async function runInitializeCursorCommand(extensionRoot: string): Promise<void> {
+export async function runInitializeCursorCommand(extensionRoot: string, frontier?: FrontierContext): Promise<void> {
+  if (!vscode.workspace.isTrusted) {
+    void vscode.window.showErrorMessage('Trust this workspace before initializing Cursor support.');
+    return;
+  }
   const root = await promptWorkspaceRoot('Frontier - Initialize Cursor');
   if (!root) { return; }
-  if (!hasFrontierState(root)) {
+  frontier?.workspaceState.assertAvailable(root);
+  frontier?.workspaceState.inspect(root, true);
+  if (!hasRepositoryState(root) || isPrivateFrontierState(root)) {
     await vscode.window.showWarningMessage(
       'Initialize the Frontier local runtime in this workspace before running Initialize Cursor.',
     );
@@ -47,8 +54,9 @@ export async function runInitializeCursorCommand(extensionRoot: string): Promise
 
 export function registerInitializeCursorCommand(
   context: vscode.ExtensionContext,
+  frontier: FrontierContext,
 ): void {
   context.subscriptions.push(vscode.commands.registerCommand(
-    'frontier.initializeCursor', () => runInitializeCursorCommand(context.extensionUri.fsPath),
+    'frontier.initializeCursor', () => runInitializeCursorCommand(context.extensionUri.fsPath, frontier),
   ));
 }

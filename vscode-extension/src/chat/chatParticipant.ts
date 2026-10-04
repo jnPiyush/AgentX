@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { FrontierContext } from '../frontierContext';
+import { matchesInitializeIntent } from './requestRouterInternals';
 import {
   getFrontierChatFollowups,
   resetChatRouterStateForTests,
@@ -26,19 +27,22 @@ export async function handleFrontierChatRequest(
   if (token?.isCancellationRequested) { controller.abort(); }
   try {
     if (controller.signal.aborted) { return {}; }
-    const initialized = await agentx.checkInitialized();
-    if (controller.signal.aborted) { return {}; }
-    if (!initialized) {
-      return handleNotInitialized(response);
-    }
-
     const userText = request.prompt.trim();
     if (!userText) {
       response.markdown('Please describe what you need Frontier to do.');
       return {};
     }
+    if (matchesInitializeIntent(userText)) {
+      return await routeFrontierChatRequest(userText, response, agentx, controller.signal);
+    }
 
-    return await routeFrontierChatRequest(userText, response, agentx, controller.signal);
+    const root = await agentx.ensureWorkspaceState();
+    if (controller.signal.aborted) { return {}; }
+    return await routeFrontierChatRequest(userText, response, agentx.forWorkspace(root), controller.signal);
+  } catch (error) {
+    if (controller.signal.aborted) { return {}; }
+    response.markdown(`**Frontier error:** ${error instanceof Error ? error.message : String(error)}`);
+    return {};
   } finally {
     subscription?.dispose();
   }
@@ -68,9 +72,4 @@ export function registerChatParticipant(
     provideFollowups: async () => getFrontierChatFollowups(agentx),
   };
   context.subscriptions.push(participant);
-}
-
-function handleNotInitialized(response: vscode.ChatResponseStream): vscode.ChatResult {
-  response.markdown('**Frontier requires an open workspace folder.**\n\nOpen a folder in VS Code to get started.');
-  return {};
 }

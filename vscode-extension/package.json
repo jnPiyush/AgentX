@@ -59,10 +59,16 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "frontier.workspace",
+        "label": "Frontier workspace"
+      }
+    ],
     "commands": [
       {
         "command": "frontier.initializeLocalRuntime",
-        "title": "Initialize Local Runtime",
+        "title": "Initialize Repository Support",
         "category": "Frontier",
         "icon": "$(plug)"
       },
@@ -1243,14 +1249,27 @@
         "frontier.rootPath": {
           "type": "string",
           "default": "",
-          "description": "Explicit path to the Frontier project root (folder containing AGENTS.md and .frontier/). Leave empty for auto-detection. Useful when Frontier is initialized in a subfolder or non-first workspace folder."
+          "description": "Explicit source root within an open workspace folder. Leave empty to use the active editor's folder, or choose a folder for an ambiguous multi-root operation. No initialization marker is required."
         },
         "frontier.searchDepth": {
           "type": "number",
           "default": 2,
           "minimum": 0,
           "maximum": 5,
-          "description": "How many subfolder levels to search when auto-detecting the Frontier root. Set to 0 to only check workspace folder roots."
+          "description": "Legacy recursive root-search setting.",
+          "deprecationMessage": "Frontier no longer selects nested repositories by marker discovery. Use frontier.rootPath or select the active workspace folder."
+        },
+        "frontier.automaticWorkspaceState": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Provision isolated private state on the first explicit Frontier operation in a trusted filesystem workspace. Disable to require repository setup."
+        },
+        "frontier.repositoryContext.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Allow local repository context indexing on task/context demand. Opening a folder does not start indexing. A disabled repository policy remains authoritative."
         },
         "frontier.skipStartupCheck": {
           "type": "boolean",
@@ -1288,7 +1307,7 @@
           ],
           "default": "standard",
           "scope": "resource",
-          "description": "Workspace footprint for Initialize Local Runtime. Both modes use the installed extension's runtime and support Frontier terminal commands without Initialize CLI. Minimal mode never removes existing files."
+          "description": "Optional repository footprint for Initialize Repository Support. Ordinary extension use stores state privately. Both explicit setup modes add terminal launchers; minimal mode never removes existing files."
         },
         "frontier.seedRepoLocalAssets": {
           "type": "boolean",
@@ -1302,7 +1321,7 @@
             "symlink"
           ],
           "default": "copy",
-          "description": "Default mode used by 'Frontier: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' creates directory junctions/symlinks pointing at the installed extension bundle (zero-copy, single-user; .gitignore'd; auto-refreshed when the bundle moves on extension upgrade)."
+          "description": "Default mode used by 'Frontier: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' points at the installed bundle (single-user, ignored by Git); broken owned links prompt for explicit repair after an upgrade."
         }
       }
     }

@@ -101,6 +101,7 @@
       ".github/schemas/skill-frontmatter.schema.json"
     ],
     "scripts": [
+      ".frontier/runtime/workspace-state.ps1",
       "scripts/evaluate-repository-context.ps1",
       "scripts/repository-context-evaluation.ps1",
       "scripts/budget.ps1",

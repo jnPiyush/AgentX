@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
-import { hasFrontierState } from '../utils/frontierPaths';
+import { resolveFrontierStatePath } from '../utils/frontierPaths';
 
 /**
  * Start repository discovery for an initialized Frontier workspace without waiting.
@@ -26,27 +26,22 @@ export function registerRepositoryContextCommand(
   agentx: FrontierContext,
 ) {
   const cmd = vscode.commands.registerCommand('frontier.refreshRepositoryContext', async () => {
-    const root = agentx.workspaceRoot;
-    if (!root || !hasFrontierState(root)) {
-      vscode.window.showWarningMessage('Frontier is not initialized. Run "Frontier: Initialize Local Runtime" first.');
-      return;
-    }
-
     try {
+      const root = await agentx.ensureWorkspaceReady();
       const output = await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
           title: 'Frontier: Updating repository context...',
           cancellable: false,
         },
-        () => agentx.runCli('context', ['--sync']),
+        () => agentx.runCli('context', ['--sync'], root),
       );
       const channel = vscode.window.createOutputChannel('Frontier Repository Context');
       channel.clear();
       channel.appendLine(output);
       channel.show();
       vscode.window.showInformationMessage(
-        'Frontier repository context updated. Curate notes in .frontier/state/repo-context/map.md.',
+        `Frontier repository context request finished. Map location: ${resolveFrontierStatePath(root, 'state', 'repo-context', 'map.md')}`,
       );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

@@ -5,7 +5,7 @@
   "notes": "Hand-authored mirror of per-role phase pipelines. Phases MUST execute in order; no phase may be skipped without an explicit documented reason. Update this file and docs/guides/ROLE-PIPELINES.md together. Loop/review phases do not execute test suites; the owning agent asks about separate testing after loop completion. CI/release gates remain independent.",
   "pipelines": [
     {
-      "role": "agent-x",
+      "role": "frontier",
       "displayName": "Frontier (Hub)",
       "phases": ["Classify", "Route", "Execute specialist phases", "Validate handoffs"],
       "deliveryGate": "All specialist phase gates pass before advancing"

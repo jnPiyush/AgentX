@@ -38,18 +38,13 @@ $ErrorActionPreference = 'Stop'
 # Paths
 # ---------------------------------------------------------------------------
 
-$workspaceRootOverride = if ($env:FRONTIER_WORKSPACE_ROOT) {
-    $env:FRONTIER_WORKSPACE_ROOT
-} elseif ($env:HVE_WORKSPACE_ROOT) {
-    $env:HVE_WORKSPACE_ROOT
-} else {
-    $env:AGENTX_WORKSPACE_ROOT
-}
+$workspaceRootOverride = $env:FRONTIER_WORKSPACE_ROOT
 $defaultWorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
 $Script:ROOT = if ($workspaceRootOverride) { $workspaceRootOverride } else { $defaultWorkspaceRoot }
 $Script:INSTALL_ROOT = $defaultWorkspaceRoot
 $Script:INSTALL_RUNTIME_DIR = $PSScriptRoot
-$Script:FRONTIER_STATE_DIR = Join-Path $Script:ROOT '.frontier'
+. (Join-Path $PSScriptRoot 'workspace-state.ps1')
+$Script:FRONTIER_STATE_DIR = Get-FrontierStateRoot $Script:ROOT
 $Script:STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'agent-status.json'
 $Script:LOOP_STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'loop-state.json'
 $Script:LOOP_STALE_AFTER_HOURS = 8
@@ -85,11 +80,7 @@ function Write-CliOutput {
 }
 
 function Get-FrontierEnvironmentValue([string]$Name) {
-    $value = [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
-    if ($value) { return $value }
-    $value = [string][Environment]::GetEnvironmentVariable("HVE_$Name")
-    if ($value) { return $value }
-    return [string][Environment]::GetEnvironmentVariable("AGENTX_$Name")
+    return [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
 }
 
 function Read-JsonFile([string]$p) {
@@ -4155,7 +4146,7 @@ function Get-LoopTaskClass {
     if ($State.PSObject.Properties.Name -contains 'role' -and $State.role) {
         switch -Regex (([string]$State.role).Trim().ToLowerInvariant()) {
             '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
-            '^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$' { return 'agent-x' }
+            '^(autonomous|frontier|frontier-auto|frontier orchestration fde|frontier e2e sdlc)$' { return 'agent-x' }
             '^(engineer|implementation)$'                  { return 'complex-delivery' }
         }
     }
@@ -4166,7 +4157,7 @@ function Get-LoopTaskClass {
         return 'auto-fix-review'
     }
 
-    if ($normalized -match '\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b') {
+    if ($normalized -match '\b(autonomous|orchestrat|classify.*route)\b') {
         return 'agent-x'
     }
 
@@ -5573,7 +5564,7 @@ function Invoke-LoopComplete {
         exit 1
     }
 
-    if (Test-Path -LiteralPath (Join-Path $Script:ROOT '.frontier/state/hydrafusion') -PathType Container) {
+    if (Test-Path -LiteralPath (Join-Path $Script:FRONTIER_STATE_DIR 'state' 'hydrafusion') -PathType Container) {
         try {
             . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
             Assert-HydraFusionLoopDelivery -WorkspaceRoot $Script:ROOT -LoopState $state
@@ -5685,7 +5676,7 @@ function Invoke-LoopGateCheck {
         Write-CliOutput 'BLOCK: quality loop was already consumed by a prior commit'
         exit 1
     }
-    if (Test-Path -LiteralPath (Join-Path $Script:ROOT '.frontier/state/hydrafusion') -PathType Container) {
+    if (Test-Path -LiteralPath (Join-Path $Script:FRONTIER_STATE_DIR 'state' 'hydrafusion') -PathType Container) {
         try {
             . (Join-Path $PSScriptRoot 'hydrafusion.ps1')
             Assert-HydraFusionLoopDelivery -WorkspaceRoot $Script:ROOT -LoopState $state
@@ -6164,8 +6155,6 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
     $startInfo.ArgumentList.Add('loop')
     $startInfo.ArgumentList.Add('gate')
     $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $workspaceRoot
-    $startInfo.Environment['HVE_WORKSPACE_ROOT'] = $workspaceRoot
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $workspaceRoot
 
     $execution = Invoke-LoopCheckProcess -StartInfo $startInfo
     $output = $execution.output
@@ -6598,7 +6587,7 @@ function ConvertTo-HookPathCandidate([string]$Candidate) {
     $normalized = [regex]::Replace($normalized, '`(.)', '$1')
     $normalized = $normalized -replace '(?i)^(?:Microsoft\.PowerShell\.Core\\)?FileSystem::', ''
     $canonicalRoot = [IO.Path]::GetFullPath($Script:ROOT).TrimEnd('\', '/')
-    foreach ($workspaceToken in @('${env:FRONTIER_WORKSPACE_ROOT}', '$env:FRONTIER_WORKSPACE_ROOT', '${env:HVE_WORKSPACE_ROOT}', '$env:HVE_WORKSPACE_ROOT', '${env:AGENTX_WORKSPACE_ROOT}', '$env:AGENTX_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
+    foreach ($workspaceToken in @('${env:FRONTIER_WORKSPACE_ROOT}', '$env:FRONTIER_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
         $normalized = $normalized.Replace($workspaceToken, $canonicalRoot, [StringComparison]::OrdinalIgnoreCase)
     }
     if ($normalized -match '\$' -and $normalized -match '(?i)(?:^|[\\/])\.frontier(?:[\\/]|$)') {
@@ -6671,13 +6660,13 @@ function ConvertFrom-HookPathExpression($Expression) {
             if ($nestedExpression -isnot [Management.Automation.Language.VariableExpressionAst]) {
                 return [PSCustomObject]@{ Safe = $false; Value = $null }
             }
-            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
+            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT')) {
                 return [PSCustomObject]@{ Safe = $false; Value = $null }
             }
         }
         return [PSCustomObject]@{ Safe = $true; Value = (ConvertTo-HookPathCandidate $Expression.Extent.Text.Trim('"', "'")) }
     }
-    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
+    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:FRONTIER_WORKSPACE_ROOT')) {
         return [PSCustomObject]@{ Safe = $true; Value = [IO.Path]::GetFullPath($Script:ROOT) }
     }
     return [PSCustomObject]@{ Safe = $false; Value = $null }
@@ -6688,7 +6677,7 @@ function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[str
         $unsupportedDynamic = @($element.FindAll({
             param($node)
             ($node -is [Management.Automation.Language.VariableExpressionAst] -and
-                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) -or
+                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT')) -or
             $node -is [Management.Automation.Language.SubExpressionAst]
         }, $true)).Count -gt 0
         if ($unsupportedDynamic) { return $false }
@@ -6991,7 +6980,7 @@ function Invoke-PolicyHookCmd {
         }
         if ($isTerminalTool) {
             $command = [string](Get-HookInputValue $toolInput 'command')
-            if ($command -match '(?i)\b(frontier|agentx|hve)(?:-cli)?(?:\.ps1|\.sh)?\b' -and
+            if ($command -match '(?i)\bfrontier(?:-cli)?(?:\.ps1|\.sh)?\b' -and
                 $command -match '(?i)--(?:input-decision|input-id|plan-version|plan-digest|interaction|autonomous)\b') {
                 Stop-HookToolCall 'Frontier input decisions and autonomous authorization belong to the user or a trusted host input channel, not an agent terminal tool.'
             }
@@ -9456,11 +9445,12 @@ function Invoke-SprintCmd {
 
 function Invoke-ScriptWrapper {
     param([string]$ScriptRelPath, [string]$Label)
-    # Prefer the workspace copy (repo dev / packs install). Fall back to the
-    # bundled extension runtime so these commands still work after an
-    # extension-only "Initialize Local Runtime", which does not seed scripts/
-    # into the workspace (zero-copy runtime).
-    $full = Join-Path $Script:ROOT $ScriptRelPath
+    # Private profiles execute installed framework scripts. Explicit repository
+    # setups retain workspace overrides with the installed runtime as fallback.
+    $scriptRoot = if ((Get-FrontierStateBinding $Script:ROOT).mode -eq 'private') {
+        $Script:INSTALL_ROOT
+    } else { $Script:ROOT }
+    $full = Join-Path $scriptRoot $ScriptRelPath
     if (-not (Test-Path $full)) {
         $bundled = Join-Path $Script:INSTALL_ROOT $ScriptRelPath
         if (Test-Path $bundled) { $full = $bundled }
@@ -9471,8 +9461,10 @@ function Invoke-ScriptWrapper {
     }
     $extra = @()
     if ($Script:SubArgs -and $Script:SubArgs.Count -gt 0) { $extra = @($Script:SubArgs) }
-    & pwsh -NoProfile -File $full @extra
-    exit $LASTEXITCODE
+    Push-Location -LiteralPath $Script:ROOT
+    try { & pwsh -NoProfile -File $full @extra; $code = $LASTEXITCODE }
+    finally { Pop-Location }
+    exit $code
 }
 
 function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scrub.ps1'             -Label 'scrub' }
@@ -9507,7 +9499,24 @@ function Invoke-BudgetCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/
 # Main router
 # ---------------------------------------------------------------------------
 
+$stateLease = if ($Script:Command -eq 'workspace-state') { $null } else { Enter-FrontierStateLease $Script:ROOT }
+try {
 switch ($Script:Command) {
+    'workspace-state' {
+        if ($Script:SubArgs.Count -ne 1 -or $Script:SubArgs[0] -notin @('info', 'check-transition', 'use-repository')) {
+            throw 'Usage: frontier workspace-state info|check-transition|use-repository'
+        }
+        if ($Script:SubArgs[0] -eq 'info') {
+            $binding = Get-FrontierStateBinding $Script:ROOT
+            $result = @{ workspaceRoot = $Script:ROOT; stateRoot = $binding.root; storageMode = $binding.mode
+                authority = $binding.authority; runtimeRoot = $Script:INSTALL_RUNTIME_DIR
+                repositoryContextEnabled = (Test-FrontierRepositoryContextEnabled $Script:ROOT)
+                hostToolEnforcement = 'Host-owned tools retain host permissions; Frontier gates cover Frontier-owned workflows.' }
+        } else {
+            $result = Set-FrontierRepositoryStateMode $Script:ROOT -ValidateOnly:($Script:SubArgs[0] -eq 'check-transition')
+        }
+        Write-CliOutput ($result | ConvertTo-Json -Compress)
+    }
     'ready'    { Invoke-ReadyCmd }
     'state'    { Invoke-StateCmd }
     'deps'     { Invoke-DepsCmd }
@@ -9568,3 +9577,4 @@ switch ($Script:Command) {
         exit 1
     }
 }
+} finally { if ($stateLease) { $stateLease.Dispose() } }

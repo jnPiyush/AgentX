@@ -167,9 +167,9 @@ export function parseCouncilBrief(content: string): ParsedCouncilBrief {
  * Payload is base64 (alphabet `[A-Za-z0-9+/=]`) so instruction text
  * containing `--` (which would terminate an HTML comment) is safe.
  */
-const INSTRUCTION_MARKER_PREFIX = '<!-- agentx:role-instruction:base64 ';
+const INSTRUCTION_MARKER_PREFIX = '<!-- frontier:role-instruction:base64 ';
 const INSTRUCTION_MARKER_SUFFIX = ' -->';
-const INSTRUCTION_MARKER_PATTERN = /<!-- agentx:role-instruction:base64 ([A-Za-z0-9+/=]+) -->/;
+const INSTRUCTION_MARKER_PATTERN = /<!-- frontier:role-instruction:base64 ([A-Za-z0-9+/=]+) -->/;
 
 function encodeInstructionMarker(instruction: string): string {
   const b64 = Buffer.from(instruction, 'utf8').toString('base64');
@@ -190,7 +190,7 @@ function decodeInstructionMarker(block: string): string | undefined {
 /**
  * Extract the per-role instruction for the named role from the Member
  * Responses section. Tries two sources in order:
- *   1. The `<!-- agentx:role-instruction:base64 ... -->` sentinel comment
+ *   1. The `<!-- frontier:role-instruction:base64 ... -->` sentinel comment
  *      written by `replaceRoleBlock` on a prior run. Authoritative when
  *      present because we emitted it ourselves; preferred over the text
  *      line so a model response that happens to contain the string

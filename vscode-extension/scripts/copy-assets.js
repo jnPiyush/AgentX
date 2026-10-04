@@ -80,6 +80,7 @@ const rootRuntimeFiles = [
     'repository-parser-worker.ps1',
     'repository-process.cs',
     'workspace-sandbox.ps1',
+    'workspace-state.ps1',
     'hydrafusion.ps1',
     'hydrafusion-policy.ps1',
     'hydrafusion-protocol.ps1',
@@ -527,6 +528,8 @@ function buildCopilotCliSeedTree() {
     for (const file of [...runtimeScriptFiles, 'validate-handoff.ps1', 'score-output.ps1']) {
         copyFile(path.join(repoRoot, 'scripts', file), path.join('scripts', file));
     }
+    copyFile(path.join(repoRoot, '.frontier', 'runtime', 'workspace-state.ps1'),
+        path.join('.frontier', 'runtime', 'workspace-state.ps1'));
 
     // Trees referenced by individual agents.
     copyTree(path.join(repoRoot, 'packs'), 'packs');

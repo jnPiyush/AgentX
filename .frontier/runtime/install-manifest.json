@@ -1,6 +1,6 @@
 {
   "version": "9.7.0",
-  "createdAt": "2026-10-03T05:11:53Z",
+  "createdAt": "2026-10-04T01:18:49Z",
   "files": [
     {
       "path": ".cursor/commands/ado-ops.md",
@@ -136,7 +136,7 @@
     },
     {
       "path": ".frontier/runtime/agentic-runner.ps1",
-      "sha256": "59a678c312d58e552910951876864316820881c94a59165af24a3ddf6ec25d98",
+      "sha256": "8eff65c12f4a2c98bd261babb1a263ae2e90fbeac9a1230a06d95415dc024a58",
       "category": "cli"
     },
     {
@@ -146,27 +146,27 @@
     },
     {
       "path": ".frontier/runtime/cursor.js",
-      "sha256": "80d28f6ed55f385af8fa7214986ab58de2b7b131a0f71151b1c57ad10ff22ea8",
+      "sha256": "cb5748be9303f0b8e309cfa9a4488e716fdd56f6fe8891cc53916ee7392273cb",
       "category": "cli"
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "c21689af8c46b43b3d41cee47d78cc36689b2842a51b954d920e3606aa41d791",
+      "sha256": "c05c6f672e64e1fe2e40fb4e4274e7f1b222930417fb0daddd265b267cb6e323",
       "category": "cli"
     },
     {
       "path": ".frontier/runtime/frontier.ps1",
-      "sha256": "5f73c785123e2edb9313c80830e64bab02427454688a4d4ee1115b291dad9a56",
+      "sha256": "ddb7328e23d72c89a9f8a17c24b2e9296825b90e384af4aea7b99b9c7e1ac0fd",
       "category": "cli"
     },
     {
       "path": ".frontier/runtime/frontier.sh",
-      "sha256": "ae08e7fe1c44ed41d73eac010c6b9bfdaadee175a618e684f9be514d505bc47d",
+      "sha256": "806e2b1f4a61e75da0ac43850bb8e88a0ac94417f7cbe08ac46bc72245b995f0",
       "category": "cli"
     },
     {
       "path": ".frontier/runtime/guided-interaction.ps1",
-      "sha256": "9226243fe6fe87011260ff050b53918b8309ddd2f4b9c5d35ef717a6c571581e",
+      "sha256": "6d7c8b7ff38d7128b06e1b17dfcd8f78d4d3e660376713efd373af53bc347d16",
       "category": "cli"
     },
     {
@@ -181,7 +181,7 @@
     },
     {
       "path": ".frontier/runtime/hydrafusion-workspace.ps1",
-      "sha256": "9f0c1cdd70fc3d099cdd928ae073f664c75071ccf79f71a889f9d395a3ac7cfb",
+      "sha256": "65dd68347e94c94e40718ce979e6dd1f93b0c898e3ab9228657230e93db257f1",
       "category": "cli"
     },
     {
@@ -191,22 +191,22 @@
     },
     {
       "path": ".frontier/runtime/mcp-server/index.js",
-      "sha256": "0c01e17085b0ff57cc841b1be6402b61bc6a78bebbbe0d56b23ed124442fe75f",
+      "sha256": "57c739024e16ec47c933cb3bc3c6e94b95b2e3f0234decb1fdec8ca7d1648400",
       "category": "cli"
     },
     {
       "path": ".frontier/runtime/mcp-server/package-lock.json",
-      "sha256": "bac8287299686736ff9971cd7a82aae2803c2745ce07aa06fda7968d8f77ebba",
+      "sha256": "f886b1b14a8c4d14482f28c4c66c45ac7209badc1dceebd9eb7b309273638756",
       "category": "config"
     },
     {
       "path": ".frontier/runtime/mcp-server/package.json",
-      "sha256": "20aa98815213949e02954e3344140b637ef6f5d6390464b03ae0c72fa8f04870",
+      "sha256": "fa1c64ad00b3d691db2bffcb2800a1927243f6bd4693a549857af0e4d2621550",
       "category": "config"
     },
     {
       "path": ".frontier/runtime/repository-context.ps1",
-      "sha256": "625e1b41b3b2b9813cec06ac8d45af5e97442522ec7b2dda069a38a960bc7788",
+      "sha256": "95f1eb715d62097e2b0bb29ec7c8a7e9288a1bc2bab1cd571ad1709bd10a94a9",
       "category": "cli"
     },
     {
@@ -246,7 +246,12 @@
     },
     {
       "path": ".frontier/runtime/workspace-sandbox.ps1",
-      "sha256": "209844456ce983d34d88a8fff1ad9fbc2de1a443273f1ad205132135bfa23d46",
+      "sha256": "4b482f2c747169878e71b5406e71816d766f8063aeefddb4fcde4a975a859f0f",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/workspace-state.ps1",
+      "sha256": "6813da2be354e76f5ad9b92ee115932c3d66e9ffc096ae9387f1f25352958a5f",
       "category": "cli"
     },
     {
@@ -586,7 +591,7 @@
     },
     {
       "path": ".github/registries/pipelines.json",
-      "sha256": "df51930e2968145c70e5e96529599f4d347dabeba606de47f32f546c915168f8",
+      "sha256": "19e7f16e30ed24ed584d0047a8297e20dc15ee69314c0558679585896a7a9873",
       "category": "registry"
     },
     {
@@ -616,7 +621,7 @@
     },
     {
       "path": ".github/schemas/handoff-message.schema.json",
-      "sha256": "f7a1af9a43a5aac5cc6ea762dd10f4a572c8af098b50cfd7f99c56ea48125d03",
+      "sha256": "baa4c9c4ca85edd5ff8e5b18e92a7b16d04018b3d138313676fc09f8214fc002",
       "category": "schema"
     },
     {
@@ -631,7 +636,7 @@
     },
     {
       "path": ".github/schemas/plugin-manifest.schema.json",
-      "sha256": "acd4dce30cff86256303a1d4e7ae18352750e8276764590f76a52481d41e2964",
+      "sha256": "817f1bf9e8baf4c30575a5cb25f7a37d478b97991a8b9d1a9d0674309306c339",
       "category": "schema"
     },
     {
@@ -1071,7 +1076,7 @@
     },
     {
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "75df6aa66089a07e6fa683901536c12f243464ff0a910d54d3075ca9d783d384",
+      "sha256": "7589980db77503c2ee2baf56c194cf65ae60525c45851736bc684b52197416fc",
       "category": "skill"
     },
     {
@@ -1506,7 +1511,7 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "9b4b638536d9ad91781bb7d1ce89fb695876727cdfa3d78b9e3ad4e4cb01e40a",
+      "sha256": "9f2bb8412efdfb07e3f8256caef3ce0a4f57c532b7e5950fa62e9a4cd870cbc9",
       "category": "doc"
     },
     {
@@ -1516,22 +1521,22 @@
     },
     {
       "path": "packs/frontier-copilot-cli/install-user.ps1",
-      "sha256": "51733b31f37a01769a93adad9ea4820a5e49f1e3a25b7a8e5cf5684e83d72355",
+      "sha256": "6e553b9cb442e0d4f76b1822c322e13bbbe4f98a75ad34b972eb2aeddbc39974",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.ps1",
-      "sha256": "e845650efc5ce6b559bd9c5b836784c3b1a7c67a6b074e8eff26f817dd0bc066",
+      "sha256": "f9a41c1a733de22ebca2de2f8ee4ae8b7db3b12e854db83c0f49941109852a5b",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.sh",
-      "sha256": "ecfea45d4c8b3736d9498999bd9ad031f7243b0d5f1067d26858a82ca0aaa3bd",
+      "sha256": "f44e68821e273b3543347163e424ea062f7208a30168e1f5ae3860c07aef1e2e",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/manifest.json",
-      "sha256": "a55c152d1f83e1e4dda3f3a20a04ae0185de8bf080c7db639616854556eb7ba5",
+      "sha256": "e8402bade156d780552c70fda72eb84bf16f39a631ceda8bfe45ed5c27b90b8d",
       "category": "pack"
     },
     {
@@ -1591,7 +1596,7 @@
     },
     {
       "path": "scripts/check-harness-compliance.ps1",
-      "sha256": "25700fd3202a44ea056ff48e80140064dd0158744121ad5638f31d6ba6791b9d",
+      "sha256": "e737389d456dfce868766141923c0cb27e5b14d040d1f487074682f96529e669",
       "category": "script"
     },
     {
@@ -1601,12 +1606,12 @@
     },
     {
       "path": "scripts/dream.ps1",
-      "sha256": "46dcbf0b1537b8e30362d5893c81b818c97fc5af9c9c335b42e8c66f6003167d",
+      "sha256": "857fb26f65323e093180ec4b6c748d88ef02005b88a86272d96fbcb139bf1752",
       "category": "script"
     },
     {
       "path": "scripts/evaluate-repository-context.ps1",
-      "sha256": "17cc6dbee99b25d3bcfa036a3f4faaf5ce1ec1ce43e441425999c98ca3412337",
+      "sha256": "79ffbdbb5ad8a86c2171fb2fbd5e5550102f52da5621542d5a332367fd0ca130",
       "category": "script"
     },
     {
@@ -1626,7 +1631,7 @@
     },
     {
       "path": "scripts/install-manifest.ps1",
-      "sha256": "3bce941005d7784e2ec7193a64aa361c73c71df2d382725e974ec58149a432f4",
+      "sha256": "895f94831e417eff6ed34479cd0fae9a3f23c8325d18e4052d07059ebbfb77c9",
       "category": "script"
     },
     {
@@ -1636,7 +1641,7 @@
     },
     {
       "path": "scripts/model-council.ps1",
-      "sha256": "63747fe2dc10c085cfae30b4d86eb8934d8103f80872cd2adc160964dbbb2365",
+      "sha256": "5d339ff1d0ebc62f76664e4bf705bc9d4b262f6af6f3d4a846f732a74c456d1b",
       "category": "script"
     },
     {
@@ -1666,7 +1671,7 @@
     },
     {
       "path": "scripts/research.ps1",
-      "sha256": "a9321e89e66889830efb4f8e67341af78e82634cf07ba4c2337add3c2fd52253",
+      "sha256": "10cc9696ce2f8549f7fbc72545576a0175f433c9f42e29e6e7839a43c43becb8",
       "category": "script"
     },
     {
@@ -1681,17 +1686,17 @@
     },
     {
       "path": "scripts/scan.ps1",
-      "sha256": "d658ffdae468d9b374e4787452da8eb5007c124ac3d1ed917fd87a3bb89f724b",
+      "sha256": "5b3b189906d385b7a194ec025cbc0999dc05306df95e700b3429c65c32647b6b",
       "category": "script"
     },
     {
       "path": "scripts/score-code-quality.ps1",
-      "sha256": "bd50a4db268d53a7351e3e0f4116ded89ddae869d1decf0e6b8f0f512c2c564c",
+      "sha256": "4b67098d3c240a521fceae5677ca0f020558a7bea58fe85249c29b8d9cd418bb",
       "category": "script"
     },
     {
       "path": "scripts/score-output.ps1",
-      "sha256": "3706dee1b2adf8d7d93164275b268d92711069f6d4672c828d278354032e2157",
+      "sha256": "02ca6c5f738268fc4e96489be1f94b0a1d2530eb8db412fd73db144973dc07dc",
       "category": "script"
     },
     {
@@ -1701,7 +1706,7 @@
     },
     {
       "path": "scripts/score-stage-gate.ps1",
-      "sha256": "11e4cd02e53fdc4e0d5747e529be571a89754bc73c95a5b07f3f00b5b688b24e",
+      "sha256": "f5e2dc8f3a084ba969a8a859a60edc385b6ca56db0595679dde3734b6267625b",
       "category": "script"
     },
     {
@@ -1711,7 +1716,7 @@
     },
     {
       "path": "scripts/ship.ps1",
-      "sha256": "d102a29f06cd2a3f7c1a6ebb50e2b22c378a69d4417757388091d072fcbd2fba",
+      "sha256": "0e2021d06699279364f488a0867cf7144a681ec8f0e5a42c563a34ffae625bb1",
       "category": "script"
     },
     {
@@ -1726,17 +1731,17 @@
     },
     {
       "path": "scripts/stocktake.ps1",
-      "sha256": "46574f024933d28cd5acd4cb8b61d2df5e921a26e74dc479df8d26e8657c410d",
+      "sha256": "b0b12584f0a951bde9bb594d2475d80da0303ce86252f79c8bf02ff995579462",
       "category": "script"
     },
     {
       "path": "scripts/takeoff.ps1",
-      "sha256": "7a2f869c601b17c493384e4ad83c4ccd001e0bd2d54b73c65b459afc1b1d8b5f",
+      "sha256": "e50362ac49fcac6af8d41f4d90cf798945bece343966ae1bed630a88bed50a6c",
       "category": "script"
     },
     {
       "path": "scripts/token-counter.ps1",
-      "sha256": "60556fa0dbee99ae34db5a52ca4dc28e7692c960da0ff63130772368c81fed06",
+      "sha256": "e76e75278e221f79d58f70c1790719fd888e436048465cdf8ec178fe1339cabe",
       "category": "script"
     },
     {
@@ -1746,17 +1751,17 @@
     },
     {
       "path": "scripts/validate-frontmatter.ps1",
-      "sha256": "b9ef3c1e57799333379f309f34d51615ea119760562ab50eaf0c085b63833c70",
+      "sha256": "5c928d090c679779d6ca9c7d150d9053cd2a4d662d30004934bffb4946207f2f",
       "category": "script"
     },
     {
       "path": "scripts/validate-handoff.ps1",
-      "sha256": "f17ffc991f5e1dfabf86439dad7df257ed1d2f3cca82362dc86c778916b4cb07",
+      "sha256": "63a3e24bd73ba1076ac7daa5e3ed63bcef4baea51ad26ae312c352eff38fe080",
       "category": "script"
     },
     {
       "path": "scripts/validate-references.ps1",
-      "sha256": "6e2236112c60213b7e35ccc1c5a9722a23fb0214798bd905a1569413e1509c07",
+      "sha256": "ab483373ba744a166b8a4661c329b2f8920f157fffb5132a6c289cf4f82ef0ef",
       "category": "script"
     },
     {
