@@ -686,7 +686,7 @@
     },
     {
       "path": ".github/skills/ai-systems/ai-agent-development/SKILL.md",
-      "sha256": "82e327383339362459ec78f3f4bf2273fdf18b7220786f6f16102bcec6d32fbb",
+      "sha256": "4fab34ff6d6de927e2aacba078e3f0d4a67040644c4cd52ef9f86d636b911fa3",
       "category": "skill"
     },
     {
@@ -781,7 +781,7 @@
     },
     {
       "path": ".github/skills/ai-systems/multi-agent-orchestration/SKILL.md",
-      "sha256": "b0ddbb20191f237baf672bbd761045e69191a25efb5480d245dda007df93c3ad",
+      "sha256": "a8d72a9a16005db72113b3fa6573937dfb5d535751fa4b346d1c19f9ae073d54",
       "category": "skill"
     },
     {
@@ -1006,7 +1006,7 @@
     },
     {
       "path": ".github/skills/development/code-hygiene/SKILL.md",
-      "sha256": "a2f126da7149a8308067b59df411463e7bcb606970a65d4f17f918b813f694a6",
+      "sha256": "dbf4ef7df732bf51ef428e4aff0104010430522f2224bcc751424480013be912",
       "category": "skill"
     },
     {
@@ -1091,7 +1091,7 @@
     },
     {
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "b0a93aa83887f71dcba3ba311302544ce4ccccfdda04335cb54634d9d37549c7",
+      "sha256": "fd02687351ae3a2de2a007d77d6d88bd2e1967992cb18e07319ca15c7d49b56e",
       "category": "skill"
     },
     {
@@ -1146,7 +1146,7 @@
     },
     {
       "path": ".github/skills/development/testing/SKILL.md",
-      "sha256": "cd8deb74305e1d1a403b7dd41f61c347d9d5e5450077a17f089636c51ac1b0ef",
+      "sha256": "4b09adca36520be52bc7acaa4c72cbd0393d79c52758892ca6b91dd36af6ebbf",
       "category": "skill"
     },
     {
@@ -1161,7 +1161,7 @@
     },
     {
       "path": ".github/skills/development/verification-before-completion/SKILL.md",
-      "sha256": "6d52a6a51c73ce28ec339341ecbe91e63056e7de361c3a211f676b7410beeef4",
+      "sha256": "b6e9250baaef779bd6b3462d5061cd3a8d882a22888113d12c810cae2f5417b8",
       "category": "skill"
     },
     {
