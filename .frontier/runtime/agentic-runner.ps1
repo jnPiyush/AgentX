@@ -58,6 +58,8 @@ $Script:COMPACTION_DETERMINISTIC_MAX_ITEMS = 6
 $Script:MAX_ITERATIONS = 30
 $Script:MAX_TOOL_RESULT_CHARS = 8000
 $Script:CLAUDE_CODE_MAX_TURNS = 12
+# Long adaptive-thinking outputs can exceed two minutes; keep these calls finite but not premature.
+$Script:MODEL_CALL_TIMEOUT_SECONDS = 600
 $Script:SESSION_DIR = $null
 $Script:ApiMode = $null  # 'copilot', 'models', or provider-specific transport ids
 $Script:ActiveProvider = $null
@@ -2716,7 +2718,8 @@ function Invoke-ClaudeCodePrintMode(
             $arguments += @('--effort', [string]$RequestOptions['effort'])
         }
 
-        $commandResult = Invoke-RunnerCommandWithInput -FileName 'claude' -Arguments $arguments -InputText $promptText
+        $commandResult = Invoke-RunnerCommandWithInput -FileName 'claude' -Arguments $arguments -InputText $promptText `
+            -TimeoutSeconds $Script:MODEL_CALL_TIMEOUT_SECONDS
         if ($commandResult.exitCode -ne 0) {
             $errorOutput = if ($commandResult.output) { $commandResult.output.Trim() } else { 'Unknown Claude Code failure.' }
             throw "Claude Code CLI error (exit $($commandResult.exitCode)): $errorOutput"
@@ -2850,7 +2853,7 @@ function Invoke-LlmChat(
         $url = Resolve-ProviderApiUrl -ProviderId 'anthropic-api'
 
         try {
-            $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -TimeoutSec 120 -ErrorAction Stop
+            $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -TimeoutSec $Script:MODEL_CALL_TIMEOUT_SECONDS -ErrorAction Stop
             return ConvertFrom-AnthropicResponse -Response $resp
         } catch {
             $statusCode = Get-MessageFieldValue (Get-MessageFieldValue $_.Exception 'Response') 'StatusCode'

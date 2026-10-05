@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased
+## 9.8.0 - 2026-10-05
+
+### Upgrade notes
+
+- AgentX/HVE compatibility aliases are removed: old `AGENTX_*`/`HVE_*`
+  variables, `agentx.*` settings, `agentx-mcp`, `engines.agentx` and legacy
+  `.agentx/`/`.hve/` state are no longer read. The extension ID
+  `jnPiyush.agentx` and repository coordinate are unchanged. See
+  [Frontier-only interfaces](docs/GUIDE.md#frontier-only-interfaces).
+- Ordinary extension use no longer requires per-workspace initialization.
+  Frontier creates private, workspace-isolated state on first use;
+  **Initialize Repository Support** remains optional for team-visible setup.
 
 ### Added
 
@@ -18,6 +29,17 @@
   automation without treating it as user approval.
 - Connect full plan review and live milestones to Frontier chat, and add
   host-elicited MCP continuation with explicit unsupported-host behavior.
+- Add automatic private workspace state with multi-root selection,
+  workspace-scoped credentials, interrupted-transition recovery and no passive
+  repository scanning or scaffolding.
+- Add native loop preparation: `loop preflight`, `loop review-packet`,
+  `loop reviewer-check` and `loop timing`, with immutable check receipts,
+  safe input-bound reuse and attributed phase timing. Suites still run only
+  after loop completion and explicit approval.
+- Integrate the optional WhatsApp and Teams/GitHub App companions with native
+  guided sessions: owner-bound plan approval, answers, resume, read-only
+  inspection and bounded runner execution.
+- Preserve the Frontier feature inventory in `docs/FEATURES.md`.
 
 ### Changed
 
@@ -36,6 +58,33 @@
   extension consumers; standalone setup restores its pinned lock explicitly.
 - Bind MCP execution to initialized consumer wrappers and include Cursor
   configuration/commands/rules in install integrity tracking.
+- An authentication failure no longer moves an approved guided plan to another
+  provider; provider, model and role drift block model responses and tool effects.
+- Bound the Claude Code bridge and direct Anthropic requests with a 600-second
+  deadline, output limits and owned process-tree termination. Non-ASCII input
+  and literal arguments reach shimmed CLIs unchanged.
+- Commit, handoff and finish gates revalidate the approved review against current
+  sources. Scored review and semantic checks include `.mjs`, `.cjs`, `.mts` and
+  `.cts`; Git diff checks always run fresh.
+- GitHub issue reads use the configured repository and ignore stderr warnings;
+  ADO text-only MCP results parse; missing or unreadable dependencies block
+  readiness; replacing parallel units resets reconciliation approval.
+- Singleton issue responses drive workflow guidance; the registered learning
+  template is ranked by retrieval and promotion uses its metadata title.
+- Add Plugin keeps extracted sources until installation finishes and prefers
+  compatible plugins bundled with the extension. Unverifiable 8.x registry
+  releases and placeholder checksums were withdrawn; no new plugin release is
+  implied.
+- Parallel closeout requires every unit to be `Done`, unblocked and marked
+  `Ready For Reconciliation`. Units are set by `parallel start`; re-run it with
+  final unit states, which also resets prior reconciliation approval.
+
+### Release qualification
+
+- Native execution remains the default; HydraFusion remains experimental and
+  opt-in. Live provider, Linux/macOS and messaging-account qualification remain
+  separate from local validation. Validation results are recorded with the
+  release package; unrun checks are not represented as passes.
 
 ## 9.7.0 - 2026-10-01
 

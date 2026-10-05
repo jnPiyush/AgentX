@@ -4,7 +4,7 @@
 
 **Frontier Corp's FDE fleet for Hypervelocity Engineering in VS Code**
 
-[![Version](https://img.shields.io/badge/Version-9.7.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.8.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 Frontier deploys specialized Forward Deployed Engineers (FDEs) into your
@@ -502,6 +502,17 @@ listed below and 11 hidden specialists that remain parent-invocable.
 ---
 
 ## Recent Changes
+
+### 9.8.0
+
+- Guided native execution: clarification, versioned plan approval, milestone
+  progress and durable resume, including from the optional companions.
+- Automatic private workspace state; repository initialization is optional.
+- Repository graph v2 retrieval, faster non-test loop preparation, and review
+  revalidation at commit and handoff.
+- Bounded Claude Code/Anthropic calls, compatible bundled plugin installation
+  and backlog/dependency correctness fixes.
+- AgentX/HVE compatibility aliases removed; the extension ID is unchanged.
 
 ### 9.7.0
 

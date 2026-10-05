@@ -353,7 +353,7 @@ try {
     Assert-Equal $anthropicOpus55Body['max_tokens'] 16384 'Anthropic Opus 5.5 uses a larger default when maxTokens is omitted'
     Assert-Equal $copilotOpus55Body['max_tokens'] 16384 'Copilot Opus 5.5 uses a larger default when maxTokens is omitted'
     Assert-Equal $anthropicOpus5Body['max_tokens'] 4096 'Opus 5 retains its previous default output limit'
-    Assert-Equal $script:capturedRequestTimeouts['anthropic-api'] 120 'Direct Anthropic requests have a finite timeout'
+    Assert-Equal $script:capturedRequestTimeouts['anthropic-api'] 600 'Direct Anthropic requests have a finite model-call deadline'
     Assert-True ($copilotOpus55Body -and -not $copilotOpus55Body.ContainsKey('temperature')) 'Copilot Opus 5.5 requests omit the rejected temperature value'
     foreach ($request in $opusRequestCases) {
         $Script:ActiveProvider = [PSCustomObject]@{ id = $request[0] }
@@ -538,8 +538,9 @@ $originalInvokeRunnerCommandWithInput = ${function:Invoke-RunnerCommandWithInput
 try {
     $script:capturedClaudeArguments = @()
     function Invoke-RunnerCommandWithInput {
-        param([string]$FileName, [string[]]$Arguments = @(), [string]$InputText = '')
+        param([string]$FileName, [string[]]$Arguments = @(), [string]$InputText = '', [int]$TimeoutSeconds = 0)
         $script:capturedClaudeArguments = @($Arguments)
+        $script:capturedClaudeTimeout = $TimeoutSeconds
         return [PSCustomObject]@{
             output = '{"result":"Claude bridge executed successfully."}'
             exitCode = 0
@@ -558,6 +559,7 @@ try {
     $toolsIndex = [Array]::IndexOf($script:capturedClaudeArguments, '--tools')
     Assert-Equal $script:capturedClaudeArguments[$permissionIndex + 1] 'dontAsk' 'Claude bridge does not bypass native permissions'
     Assert-Equal $script:capturedClaudeArguments[$toolsIndex + 1] '""' 'Claude bridge passes an empty native-tool list'
+    Assert-Equal $script:capturedClaudeTimeout 600 'Claude Code calls use the finite model-call deadline'
 } finally {
     ${function:Invoke-RunnerCommandWithInput} = $originalInvokeRunnerCommandWithInput
 }

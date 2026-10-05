@@ -1373,7 +1373,7 @@ function Get-ProviderIssues {
         try {
             $json = Invoke-GitHubCli @('issue', 'list', '--state', 'all', '--json', 'number,title,labels,body,state,url', '--limit', '200') 'Failed to list GitHub issues.'
             if ($json) {
-                $raw = $json | ConvertFrom-Json
+                $raw = ConvertFrom-GitHubCliJson $json 'GitHub issue list'
                 $statusByIssue = if (Test-GitHubProjectConfigured) { Get-GitHubProjectIssueStatusMap } else { @{} }
                 return @($raw | ForEach-Object {
                     $status = ''
@@ -3336,7 +3336,14 @@ function Convert-AdoWorkItemToFrontierIssue($item) {
 
 function Get-GitHubIssue([int]$num) {
     $json = Invoke-GitHubCli @('issue', 'view', "$num", '--json', 'number,title,body,state,url,labels,comments') "Failed to read GitHub issue #$num."
-    return Convert-GitHubIssueToFrontierIssue ($json | ConvertFrom-Json)
+    return Convert-GitHubIssueToFrontierIssue (ConvertFrom-GitHubCliJson $json "GitHub issue #$num")
+}
+
+function ConvertFrom-GitHubCliJson($Output, [string]$Context) {
+    # Invoke-GitHubCli merges stderr; parse only stdout text records.
+    $text = @($Output | Where-Object { $_ -is [string] })
+    if ($text.Count -eq 0) { throw "$Context returned no JSON output." }
+    return $text | ConvertFrom-Json
 }
 
 function Invoke-GitHubCli([string[]]$arguments, [string]$failureMessage, [switch]$AllowEmptyOutput) {

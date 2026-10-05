@@ -748,7 +748,7 @@ const TOOL_BY_NAME = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
 
 function createServer(runner) {
 const server = new Server(
-  { name: 'frontier', version: '9.7.0' },
+  { name: 'frontier', version: '9.8.0' },
   { capabilities: { tools: {} } }
 );
 

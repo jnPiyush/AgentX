@@ -190,7 +190,7 @@ the original inventory above remains a historical snapshot. See the
 
 - Provider selection occurs before execution. An authentication failure does
   not silently transfer an approved plan to another provider.
-- Native Anthropic requests and Claude Code processes have a 120-second
+- Native Anthropic requests and Claude Code processes have a 600-second
   deadline. Claude readiness checks use 30 seconds. Child execution has bounded
   output and terminates its owned process tree on interruption.
 - Native commit, handoff and finish checks revalidate approved source inputs.

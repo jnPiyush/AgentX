@@ -194,7 +194,7 @@ function Test-ProviderBoundaryContracts {
     $ast = [Management.Automation.Language.Parser]::ParseFile(
         (Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'), [ref]$tokens, [ref]$errors)
     foreach ($name in @('ConvertFrom-AdoMcpToolResult', 'Get-ConfigValue', 'Invoke-GitHubCli',
-        'Get-GitHubIssue', 'Get-ProviderIssues', 'Convert-GitHubIssueToFrontierIssue',
+        'Get-GitHubIssue', 'Get-ProviderIssues', 'Convert-GitHubIssueToFrontierIssue', 'ConvertFrom-GitHubCliJson',
         'Convert-GitHubIssueStateToIssueState', 'Get-IssueDeps', 'Get-UnresolvedIssueDependencies')) {
         $definition = $ast.Find({ param($node)
             $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
@@ -228,6 +228,20 @@ function Test-ProviderBoundaryContracts {
     $null = Get-GitHubIssue 42
     $null = Get-ProviderIssues
     Assert-True ($calls.Count -eq 2 -and @($calls | Where-Object { $_ -notmatch '-R configured/target' }).Count -eq 0) 'GitHub list and readback use the configured repository'
+    function gh {
+        $global:LASTEXITCODE = 0
+        Write-Error 'fixture gh warning on stderr' -ErrorAction Continue
+        $issue = @{ number = 7; title = 'Warned'; body = ''; state = 'OPEN'; labels = @(); url = 'https://github.com/configured/target/issues/7' }
+        if ($args -contains 'list') { ConvertTo-Json -InputObject @($issue) -Depth 5 -Compress }
+        else { $issue | ConvertTo-Json -Depth 5 -Compress }
+    }
+    Assert-True ((Get-GitHubIssue 7).number -eq 7 -and @(Get-ProviderIssues)[0].number -eq 7) 'GitHub stderr warnings do not corrupt successful JSON reads'
+    function gh { $global:LASTEXITCODE = 0; Write-Error 'fixture warning only' -ErrorAction Continue }
+    foreach ($read in @({ Get-GitHubIssue 7 }, { Get-ProviderIssues })) {
+        $emptyRejected = $false
+        try { $null = & $read } catch { $emptyRejected = $_.Exception.Message -match 'no JSON output' }
+        Assert-True $emptyRejected 'a successful gh exit with only stderr is an explicit read failure'
+    }
     function gh { $global:LASTEXITCODE = 1; 'fixture provider failure' }
     $fetchFailed = $false
     try { $null = Get-ProviderIssues } catch { $fetchFailed = $_.Exception.Message -match 'fixture provider failure' }

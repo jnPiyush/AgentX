@@ -3,7 +3,7 @@
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.7.0"><img src="https://img.shields.io/badge/Version-9.7.0-b11f4b?style=for-the-badge" alt="Version 9.7.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.8.0"><img src="https://img.shields.io/badge/Version-9.8.0-b11f4b?style=for-the-badge" alt="Version 9.8.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -308,30 +308,25 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.7.0
+## New In 9.8.0
 
-Frontier 9.7.0 adds repository context and bounded execution:
+Frontier 9.8.0 adds guided collaboration and zero-setup workspaces:
 
-- discover selected workspaces on demand into a local reference graph, preserve curated
-  map notes, and reuse a cached session primer while refresh runs in the background
-- route Engineer, Architect and UX Designer preferences to GPT-6 Astra on Copilot
-  and other roles to Claude Opus 5.5
-- offer HydraFusion as an experimental opt-in candidate adapter with isolated
-  snapshots, explicit budgets, independent promotion and final source review;
-  native execution remains the default
+- clarify, propose a versioned plan and wait for explicit approval before
+  guided native execution; report milestones and resume durable sessions
+- work in any folder without per-workspace initialization; private state is
+  created on first use and repository support stays optional
+- retrieve bounded repository context from hierarchical summaries, AST symbols
+  and typed relationships with token budgets
+- prepare quality loops faster with change-aware non-test preflight, reusable
+  receipts, factual review packets and phase timing
+- continue guided sessions from the optional WhatsApp and Teams/GitHub companions
+- revalidate approved reviews at commit and handoff, bound model and CLI calls,
+  and install compatible bundled plugins without a catalog download
 
-It also retains the preceding workflow and setup changes:
-
-- loop/review suites are deferred until an explicit post-loop user decision
-- cosmetic lint findings are LOW local advisories; cleanup needs explicit approval
-- `frontier.initializationMode: minimal` skips starter memories and empty output
-  folders while retaining the terminal runtime launchers
-- standard initialization and existing project files remain unchanged by default
-- initialization reads settings from the selected folder, including remote URIs
-- both READMEs use the new Frontier icon and portable PNG workflow diagrams with
-  editable Mermaid sources
-- package README links resolve from the extension subdirectory rather than the
-  repository root
+AgentX/HVE compatibility aliases are removed; see
+[Frontier-only interfaces](docs/GUIDE.md#frontier-only-interfaces). Frontier
+9.7.0 (repository graph, model routing and opt-in HydraFusion) is included.
 
 Local validation and remaining provider/platform limitations are recorded with
 the release package. Public publishing and experimental HydraFusion qualification
