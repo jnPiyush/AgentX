@@ -91,6 +91,10 @@ not part of this task.
       `references/`, and reviewer agent and one skill line were reworded more
       tightly. No guidance was dropped; moved lines exist verbatim in their
       new files.
+- [x] The always-on context budget (router plus applyTo-all instructions)
+      measured 4165 > 4000 tokens. `AGENTS.md` working-contract bullets were
+      condensed and two `.github/copilot-instructions.md` paragraphs that
+      repeated `AGENTS.md` now point to it; it measures 3963.
 
 ## Validation and Acceptance
 

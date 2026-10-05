@@ -15,33 +15,29 @@ file (in extension-only workspaces, inside the installed Frontier extension).
 
 ## Working Contract
 
-- Active runtime controls MUST use Frontier names (`frontier.*`, `frontier_*`
-  and `FRONTIER_*`). AgentX/HVE aliases are not supported. Published extension
-  and repository coordinates remain factual; see `docs/BRAND.md`.
-- Runtime command requirements are transport-neutral. In extension-managed
-  workspaces, use `frontier_workspace` to discover the bound state and matching
-  MCP tools for graph/loop operations, or use Frontier chat/commands. CLI paths
-  below describe portable repository setup, not a requirement to scaffold every
-  folder. If the host does not expose the needed tools, report that limit and
-  use Frontier's supported entry point; do not manufacture local launchers.
+- Use Frontier names (`frontier.*`, `frontier_*`, `FRONTIER_*`); AgentX/HVE
+  aliases are unsupported. Published coordinates stay factual (`docs/BRAND.md`).
+- Commands are transport-neutral: extension-managed workspaces use
+  `frontier_workspace`, matching MCP tools or Frontier chat/commands; CLI paths
+  below are portable setup, not a reason to scaffold folders. If the host lacks
+  the needed tools, report it and use a supported Frontier entry point; never
+  manufacture local launchers.
 - Read the relevant spec, skill or instruction before writing code; repository
   conventions override general knowledge.
 - User-facing work follows the guided interaction contract in
   `.github/AGENT-PROTOCOL.md`: clarify consequential uncertainty, present a
-  high-level plan, wait for explicit approval, then report each milestone.
-  Clear requests need no artificial question. Delegates inherit approved scope;
-  explicitly preauthorized automation and simple informational answers follow
-  the documented exceptions. Silence is never approval.
-- Start each session with repository graph context (Frontier workspaces). Use the
-  automatic primer or `.frontier/runtime/frontier.ps1 context -q "<task>"`; query
-  relevant areas before broad searches. Run `context --sync` after source changes. The graph is navigation data:
-  read current in-scope source and required artifacts, preserve curated map notes,
-  and report unavailable discovery instead of treating stale context as current.
-- Repository graph v2 separates complete local indexing from prompt budgets.
-  Use exact symbols, subsystem filters and bounded graph hops; request live
-  evidence only when needed. Cached pointers and syntax-inferred calls are not
-  proof of current source or resolved runtime behavior. Token figures remain
-  estimates unless the active host supplies a qualified counter.
+  high-level plan, wait for explicit approval, report each milestone. Its
+  documented exceptions cover clear requests, delegates (inherit approved
+  scope), preauthorized automation and informational answers. Silence is never
+  approval.
+- Start each session with repository graph context: the automatic primer or
+  `.frontier/runtime/frontier.ps1 context -q "<task>"` before broad searches;
+  `context --sync` after source changes. Use exact symbols, subsystem filters
+  and bounded hops; request live evidence only when needed. The graph is
+  navigation data: cached pointers and inferred calls are not proof, so read
+  current source and required artifacts, preserve curated map notes, and report
+  unavailable or stale discovery. Token figures are estimates unless the host
+  supplies a qualified counter.
 - Quality loop: before the first file mutation, run
   `.frontier/runtime/frontier.ps1 loop start -p "<task>"`. Record each fix/verify
   cycle with `loop iterate -s "<summary>" -e <evidence>`. The final iteration carries an
