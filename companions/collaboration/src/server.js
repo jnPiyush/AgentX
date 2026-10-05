@@ -24,59 +24,88 @@ export function createHttpApp({ github, teams }) {
     return app;
 }
 
-export async function start(config = loadConfig(), { runtime: injectedRuntime, teams: injectedTeams } = {}) {
+async function withDeadline(promise, timeoutMs, message) {
+    let timer;
+    try {
+        return await Promise.race([
+            promise,
+            new Promise((_resolve, reject) => { timer = setTimeout(() => reject(new Error(message)), timeoutMs); }),
+        ]);
+    } finally { clearTimeout(timer); }
+}
+
+export async function start(config = loadConfig(), { runtime: injectedRuntime, teams: injectedTeams, githubApp } = {}) {
     const runtime = injectedRuntime || createRuntime(config);
+    const shutdownTimeoutMs = config.shutdownTimeoutMs || 10000;
+    const log = config.log || console.error;
+    let service;
     let teams;
     let github;
     let server;
     let timer;
-    const service = new CollaborationService({
-        ...config, run: runtime.run,
-        publish: (destination, text) => (destination.provider === 'teams' ? teams : github).publish(destination, text),
-        onFatal: () => {
-            runtime.stop();
-            clearInterval(timer);
-            if (server) { server.close(); server.closeAllConnections(); }
-        },
-    });
-    try {
-        teams = injectedTeams || (config.teams ? createTeams(config.teams, service) : undefined);
-        github = config.github ? createGitHub(config.github, service) : undefined;
-        const app = createHttpApp({ teams, github });
-        server = await new Promise((resolve, reject) => {
-            const listener = app.listen(config.port, config.host);
-            listener.once('listening', () => resolve(listener));
-            listener.once('error', reject);
+    let publishing;
+    let closing;
+    const close = () => {
+        if (closing) return closing;
+        clearInterval(timer);
+        if (service) service.stopping = true;
+        const closed = new Promise((resolve, reject) => {
+            if (!server) return resolve();
+            server.close(error => {
+                if (error && error.code !== 'ERR_SERVER_NOT_RUNNING') reject(error);
+                else resolve();
+            });
         });
+        const deadline = setTimeout(() => server?.closeAllConnections(), shutdownTimeoutMs);
+        let stopped;
+        try { stopped = Promise.resolve(runtime.stop()); }
+        catch (error) { stopped = Promise.reject(error); }
+        closing = Promise.allSettled([
+            withDeadline(stopped, shutdownTimeoutMs, 'Runtime termination was not confirmed before the shutdown deadline.'),
+            withDeadline(closed, shutdownTimeoutMs + 1000, 'HTTP listener did not close before the shutdown deadline.'),
+        ]).then(async results => {
+            const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+            if (errors.length) throw new AggregateError(errors, 'Shutdown failed; collaboration storage ownership was retained.');
+            await withDeadline(Promise.all([publishing, service?.close()]),
+                shutdownTimeoutMs + (service?.publicationTimeoutMs || 0), 'Collaboration shutdown did not finish before the deadline.');
+        }).finally(() => {
+            clearTimeout(deadline);
+            server?.closeAllConnections();
+        });
+        return closing;
+    };
+    const onFatal = () => close().catch(() => log('collaboration shutdown_failed verify_runtime_and_storage'));
+    try {
+        service = new CollaborationService({
+            ...config, run: runtime.run,
+            publish: (destination, text) => (destination.provider === 'teams' ? teams : github).publish(destination, text),
+            onFatal,
+        });
+        teams = injectedTeams || (config.teams ? createTeams(config.teams, service) : undefined);
+        github = config.github ? createGitHub(config.github, service, githubApp) : undefined;
+        const app = createHttpApp({ teams, github });
+        server = app.listen(config.port, config.host);
+        await new Promise((resolve, reject) => {
+            const listening = () => { server.removeListener('error', failed); resolve(); };
+            const failed = error => { server.removeListener('listening', listening); reject(error); };
+            server.once('listening', listening);
+            server.once('error', failed);
+        });
+        if (service.stopping) throw new Error('Service stopped during startup.');
+        server.on('error', () => service.halt('collaboration listener_failed execution_stopped'));
         server.requestTimeout = 15000;
         server.headersTimeout = 10000;
-        let publishing;
         timer = setInterval(() => {
             if (publishing) return;
             publishing = service.publishRunning().catch(() => {
-                console.error('Progress persistence failed.');
+                service.halt('collaboration progress_publication_failed execution_stopped');
             }).finally(() => { publishing = undefined; });
         }, config.progressMs);
         console.log(`Frontier collaboration listening on http://${config.host}:${server.address().port}`);
-        return {
-            server, service,
-            async close() {
-                clearInterval(timer);
-                service.stopping = true;
-                const closed = new Promise(resolve => server.close(resolve));
-                const deadline = setTimeout(() => server.closeAllConnections(), config.shutdownTimeoutMs || 10000);
-                runtime.stop();
-                try {
-                    await publishing;
-                    await service.close();
-                    await closed;
-                } finally { clearTimeout(deadline); }
-            },
-        };
+        return { server, service, close };
     } catch (error) {
-        clearInterval(timer);
-        runtime.stop();
-        await service.close();
+        try { await close(); }
+        catch (shutdownError) { throw new AggregateError([error, shutdownError], 'Startup failed and shutdown did not complete. Check local storage ownership.'); }
         throw error;
     }
 }
@@ -84,10 +113,13 @@ export async function start(config = loadConfig(), { runtime: injectedRuntime, t
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     start().then(handle => {
         let closing = false;
-        const close = async () => {
+        const close = () => {
             if (closing) return;
             closing = true;
-            await handle.close();
+            handle.close().catch(() => {
+                console.error('Shutdown failed. Runtime termination or storage release was not confirmed; inspect local processes before restarting.');
+                process.exitCode = 1;
+            });
         };
         process.once('SIGINT', close);
         process.once('SIGTERM', close);

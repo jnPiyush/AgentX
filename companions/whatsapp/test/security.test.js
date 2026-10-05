@@ -184,6 +184,11 @@ test('configuration fails closed for secret files, bad targets, bad capabilities
     assert.throws(() => loadConfig({ configPath, env: {} }), /known boolean/);
     write({ repoPath: root, allowedNumbers: ['14155550123'], cliRelativePath: '../x' });
     assert.throws(() => loadConfig({ configPath, env: {} }), /parent traversal/);
+    write({ repoPath: root, allowedNumbers: ['14155550123'], runtimeEnv: ['FRONTIER_TEAMS_APP_SECRET'] });
+    assert.throws(() => loadConfig({ configPath, env: {} }), /supported LLM/);
+    write({ repoPath: root, allowedNumbers: ['14155550123'] });
+    assert.throws(() => loadConfig({ configPath, env: { FRONTIER_WA_ALLOWED: '' } }), /present but empty/);
+    assert.throws(() => loadConfig({ configPath, env: { FRONTIER_REPO: '' } }), /present but empty/);
     write({ repoPath: root, allowedNumbers: ['14155550123'], browser: { executablePath: path.join(root, 'missing-browser') } });
     assert.throws(() => loadConfig({ configPath, env: {} }), /browser\.executablePath/);
   } finally {

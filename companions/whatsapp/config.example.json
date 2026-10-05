@@ -5,6 +5,8 @@
   "defaultAgent": "engineer",
   "commandTimeoutMs": 600000,
   "maxOutputChars": 6000,
+  "maxRuntimeOutputChars": 256000,
+  "runtimeEnv": [],
   "maxInputChars": 2000,
   "maxQueueDepth": 5,
   "confirmationTtlMs": 120000,

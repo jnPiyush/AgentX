@@ -43,7 +43,7 @@ test('routeCommand routes common WhatsApp commands to the Frontier CLI', async (
   const calls = [];
   runner.runFrontier = async (args, config) => {
     calls.push({ args, config });
-    return { ok: true, text: 'ok' };
+    return { ok: true, exitCode: 0, text: 'ok', stdout: JSON.stringify({ sessionId: 'engineer-fixture', finalText: 'ok' }) };
   };
 
   const { routeCommand } = freshRequire(routerPath);
@@ -60,8 +60,8 @@ test('routeCommand routes common WhatsApp commands to the Frontier CLI', async (
   assert.deepEqual(calls.map((entry) => entry.args), [
     ['ready'],
     ['loop', 'start', '-p', 'Fix login bug'],
-    ['run', 'engineer', 'Add /health endpoint'],
-    ['run', 'engineer', 'what should I work on next?'],
+    ['run', '-a', 'engineer', '-p', 'Add /health endpoint', '--json'],
+    ['run', '-a', 'engineer', '-p', 'what should I work on next?', '--json'],
   ]);
 });
 

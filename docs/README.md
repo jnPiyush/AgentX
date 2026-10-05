@@ -5,6 +5,7 @@ This directory has a canonical split between reference guidance, durable workflo
 ## Canonical Locations
 
 - Core reference docs stay at the top of docs/ when they are repo-wide guidance:
+  - [FEATURES.md](FEATURES.md): source-versioned feature inventory and availability notes
   - WORKFLOW.md
   - GUIDE.md
   - GOLDEN_PRINCIPLES.md

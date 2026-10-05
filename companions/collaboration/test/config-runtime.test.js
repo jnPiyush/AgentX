@@ -25,11 +25,21 @@ test('configuration fails closed and keeps credentials separate from runner conf
         assert.equal(config.enabled, false);
         assert.equal(config.directory, path.join(directory, '.frontier', 'state', 'collaboration'));
         assert.equal(config.port, 3978);
+        assert.equal(config.maxOutputChars, 256000);
+        assert.deepEqual(config.runtimeEnv, []);
+        const optedIn = loadConfig({ ...env, FRONTIER_RUNTIME_ENV: ' OPENAI_API_KEY,FRONTIER_LLM_PROVIDER,OPENAI_API_KEY ', OPENAI_API_KEY: 'provider-fixture' });
+        assert.deepEqual(optedIn.runtimeEnv, ['OPENAI_API_KEY', 'FRONTIER_LLM_PROVIDER']);
+        assert.doesNotMatch(JSON.stringify(optedIn), /provider-fixture/);
+        for (const name of ['FRONTIER_TEAMS_APP_SECRET', 'FRONTIER_GITHUB_PRIVATE_KEY_FILE', 'FRONTIER_GITHUB_WEBHOOK_SECRET', 'OPENAI_API_KEY=provider-fixture']) {
+            assert.throws(() => loadConfig({ ...env, FRONTIER_RUNTIME_ENV: name }), /supported LLM/);
+        }
         assert.throws(() => loadConfig({ ...env, FRONTIER_TEAMS_USERS: '' }), /required/);
         assert.throws(() => loadConfig({ ...env, FRONTIER_TEAMS_APP_ID: 'invalid' }), /UUID/);
         assert.throws(() => loadConfig({ ...env, PORT: 'NaN' }), /range/);
         assert.throws(() => loadConfig({ ...env, FRONTIER_REMOTE_EXECUTION: 'yes' }), /true or false/);
         assert.throws(() => loadConfig({ ...env, FRONTIER_REMOTE_AGENTS: '--help' }), /allowlist/);
+        assert.throws(() => loadConfig({ ...env, FRONTIER_REMOTE_AGENTS: '' }), /allowlist/);
+        assert.throws(() => loadConfig({ ...env, FRONTIER_CLI_PATH: '' }), /CLI/);
         assert.throws(() => loadConfig({ ...env, FRONTIER_CHANNELS: 'unknown' }), /Unsupported/);
     } finally { fs.rmSync(directory, { recursive: true }); }
 });
@@ -38,18 +48,24 @@ test('runtime uses argument arrays and publishes only recognized progress metada
     const phases = [];
     const child = { stdout: new EventEmitter() };
     let terminated = false;
-    const runtime = createRuntime({ repoPath: '/workspace' }, {
+    let stopping;
+    const runtime = createRuntime({ repoPath: '/workspace', runtimeEnv: ['OPENAI_API_KEY'], teams: { clientSecret: 'channel-fixture' } }, {
         async runFrontierProcess(args, config, hooks) {
-            assert.deepEqual(args, ['run', 'engineer', 'Fix; shell syntax stays text']);
+            assert.deepEqual(args, ['run', '-a', 'engineer', '-p', 'Fix; shell syntax stays text', '--json']);
+            assert.deepEqual(config.runtimeEnv, ['OPENAI_API_KEY']);
+            assert.equal(config.teams, undefined);
+            assert.doesNotMatch(JSON.stringify(config), /channel-fixture/);
             hooks.signal.addEventListener('abort', () => { terminated = true; }, { once: true });
             hooks.onChild(child);
-            child.stdout.emit('data', Buffer.from('private credential\n Iteration 1/3...\n[SELF-REVIEW] Iteration 1\n[COMPACTION] private content\n'));
-            runtime.stop();
+            child.stdout.emit('data', Buffer.from('private credential\n\u001b[32m Iteration '));
+            child.stdout.emit('data', Buffer.from('1/3...\u001b[0m\n[SELF-REVIEW] Iteration 1\n[COMPACTION] private content\n'));
+            stopping = runtime.stop();
             hooks.onChildDone(child);
-            return { ok: true };
+            return { ok: true, exitCode: 0, stdout: JSON.stringify({ sessionId: 'fixture-session', agent: 'engineer', phase: 'completed' }), stderr: '' };
         },
     });
     await runtime.run({ agent: 'engineer', instruction: 'Fix; shell syntax stays text' }, phase => phases.push(phase));
+    await stopping;
     assert.equal(terminated, true);
     assert.deepEqual(phases, ['Agent iteration 1 of 3.', 'Agent self-review in progress.', 'Agent context compaction in progress.']);
 });
@@ -77,7 +93,7 @@ test('GitHub configuration validates installation, repository, numeric users and
     } finally { fs.rmSync(directory, { recursive: true }); }
 });
 
-test('mocked PowerShell child reports progress and returns a nonzero exit as failure', async () => {
+test('mocked PowerShell child reports progress but exit 2 without pending input fails closed', async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-runtime-'));
     fs.mkdirSync(path.join(directory, '.frontier', 'runtime'), { recursive: true });
     fs.writeFileSync(path.join(directory, '.frontier', 'runtime', 'frontier.ps1'), '');
@@ -86,15 +102,16 @@ test('mocked PowerShell child reports progress and returns a nonzero exit as fai
         runFrontierProcess(args, config, hooks) {
             return runner.runFrontierProcess(args, config, { ...hooks, spawn: () => {
                 const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
-                setImmediate(() => { child.stdout.emit('data', 'Iteration 1/2...\nprivate-output\n'); child.emit('close', 2); });
+                setImmediate(() => {
+                    child.stdout.emit('data', `Iteration 1/2...\nprivate-output\n${JSON.stringify({ sessionId: 'fixture-session', agent: 'engineer' })}\n`);
+                    child.emit('close', 2);
+                });
                 return child;
             } });
         },
     });
     try {
-        const result = await runtime.run({ agent: 'engineer', instruction: 'Fixture only' }, phase => phases.push(phase));
-        assert.equal(result.ok, false);
-        assert.equal(result.exitCode, 2);
+        await assert.rejects(runtime.run({ agent: 'engineer', instruction: 'Fixture only' }, phase => phases.push(phase)), /input-required/);
         assert.deepEqual(phases, ['Agent iteration 1 of 2.']);
     } finally { await runtime.stop(); fs.rmSync(directory, { recursive: true }); }
 });

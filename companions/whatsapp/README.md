@@ -15,6 +15,8 @@ The companion is read-only by default.
 - Voice notes are transcript-only by default. A mutation is never authorized by voice.
 - Chromium sandboxing stays enabled; do not add `--no-sandbox` on a workstation.
 - Frontier children receive a secret-redacted environment, run serially, and have timeout/output limits.
+- Opaque WhatsApp LIDs must resolve to an allowlisted phone through the client;
+  group and unresolved identities never authorize commands.
 
 Use a dedicated OS account and, ideally, a dedicated WhatsApp account. Protect `.wwebjs_auth/` as a credential. This is not a WhatsApp Business API integration and can break when WhatsApp Web changes.
 
@@ -22,8 +24,14 @@ Use a dedicated OS account and, ideally, a dedicated WhatsApp account. Protect `
 
 - Node.js 22.12+ (required by the pinned Puppeteer version)
 - PowerShell 7.4+ (`pwsh`) on PATH
-- Frontier checkout with `.frontier/runtime/frontier.ps1`
+- Current Frontier CLI with guided JSON, session inspection and response support
+  at `.frontier/runtime/frontier.ps1`
 - A supported local Chrome/Chromium installed by Puppeteer or selected via `browser.executablePath`
+
+Use explicit **Initialize Repository Support** for a consumer checkout. These
+desktop services use repository-managed runtime/state, not an inferred VS Code
+private profile. Prepare the task's quality loop on the desktop before expecting
+remote code changes; remote confirmation does not complete or waive that loop.
 
 ## Setup
 
@@ -45,10 +53,19 @@ Companion environment overrides use `FRONTIER_WA_ALLOWED`, `FRONTIER_REPO` and
 For voice transcription, set the secret only in the service environment:
 
 ```powershell
-Set-Item Env:OPENAI_API_KEY (Read-Host 'OpenAI API key' -AsSecureString)
+$env:OPENAI_API_KEY = Read-Host 'OpenAI API key' -MaskInput
 ```
 
 `openaiApiKey` in `config.json` is rejected.
+
+For a native LLM provider that reads credentials from environment variables,
+explicitly list the required variable names in `runtimeEnv`, for example
+`["OPENAI_API_KEY", "FRONTIER_LLM_PROVIDER", "FRONTIER_OPENAI_MODEL"]`. Inject their
+values into the service environment; never put credential values in JSON or chat.
+Only supported LLM credential/provider names are accepted. Bot/App credentials,
+private-state overrides and gate-bypass variables cannot be forwarded.
+The default is an empty list. A configured text-only Claude Code bridge is not
+a substitute for a native provider supporting guided tools.
 
 ## Commands
 
@@ -63,7 +80,7 @@ Set-Item Env:OPENAI_API_KEY (Read-Host 'OpenAI API key' -AsSecureString)
 | `workflow engineer` | Agent workflow |
 | `help` | Current command/capability menu |
 
-### Mutating capabilities
+### Confirmed capabilities
 
 All are disabled in `config.example.json`. Enable only what is needed:
 
@@ -85,7 +102,45 @@ You: confirm A1B2C3
 Bot: <Frontier output>
 ```
 
-The nonce expires after `confirmationTtlMs`, is bound to the sender, and works once. `raw` is the highest-risk capability because it exposes the full Frontier CLI argument surface; keep it disabled.
+The nonce expires after `confirmationTtlMs`, is bound to the sender, and works once.
+`raw` is limited to the validated read-only commands, `loop status`, `version`
+and `help`, and still requires its capability and confirmation. It cannot start
+sprints/watchers, change configuration, run agents or submit approvals.
+
+### Guided tasks and plan approval
+
+`run` and `ask` invoke the native guided JSON contract. Confirming the initial
+command starts discovery; it does not approve the plan generated later. Pending
+questions and full plans are returned to the owning sender, including the native
+session identifier.
+
+```text
+You: run engineer "Add the health endpoint"
+Bot: Confirmation required ... Reply: confirm A1B2C3
+You: confirm A1B2C3
+Bot: Awaiting your input. Plan v1 ... respond engineer-<session> approve
+You: respond engineer-<session> approve
+Bot: Confirmation required ... Reply: confirm D4E5F6
+You: confirm D4E5F6
+```
+
+Responses use `respond <session> answer <text>`, `approve`, `revise <feedback>`,
+or `cancel`. They need a fresh sender-bound confirmation. Immediately before
+submission the companion reads the current native request; stale input IDs or
+plan digests cause it to show the new request without applying the old response.
+Another allowlisted sender cannot respond to your session.
+
+The running WhatsApp companion keeps at most 20 pending owner/session mappings.
+They are not restored after a restart or eviction: inspect and resume those
+sessions from the trusted desktop instead of supplying an arbitrary session ID.
+Native history remains durable. Teams/GitHub job persistence is separate.
+Raw commands use an allowlist, not a list of known execution aliases. Use the
+owned guided commands for execution and keep evidence operations local.
+
+`maxRuntimeOutputChars` bounds structured native output separately from
+`maxOutputChars`, which still bounds ordinary command output and displayed final
+answers. Plans are chunked rather than silently truncated. Stdout and stderr
+remain separate so diagnostics cannot corrupt the native JSON record.
 
 ## Voice Notes
 
@@ -106,6 +161,9 @@ and never reported as progress.
 ## Operations
 
 - Run as a foreground service, scheduled task, or process manager under a dedicated account.
+- Use one writer service per checkout. WhatsApp, the collaboration companion and
+  a desktop agent do not share one execution queue; use separate worktrees when
+  they may edit concurrently.
 - `SIGINT` and `SIGTERM` stop the watcher, cancel owned Frontier children, and destroy the WhatsApp client once.
 - Commands are serialized. Queue overflow, timeout, output overflow, spawn errors, nonzero exits, and CLI `[FAIL]` output are reported as failures.
 - The queue waits for child closure and process-tree termination after cancellation. If termination cannot be confirmed within eight seconds, it reports failure and blocks subsequent writers. Confirm the process tree has stopped before restarting the service; shell exit alone is insufficient.

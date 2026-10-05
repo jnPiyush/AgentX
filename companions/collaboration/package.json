@@ -20,5 +20,8 @@
     "express": "5.2.1",
     "express-rate-limit": "8.7.0",
     "proper-lockfile": "4.1.2"
+  },
+  "overrides": {
+    "ip-address": "10.7.2"
   }
 }

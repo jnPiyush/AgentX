@@ -90,7 +90,8 @@ test('Teams rejects unauthorized activity and sends progress to the captured con
     assert.equal(messages[0].text.trim(), 'status');
     await teams.publish(messages[0].destination, 'Running');
     assert.equal(continued.reference.conversation.id, 'conversation');
-    assert.equal(replies.at(-1), 'Running');
+    assert.equal(replies.at(-1).text, 'Running');
+    assert.equal(replies.at(-1).textFormat, 'plain');
     await assert.rejects(teams.publish({ reference: { serviceUrl: 'https://evil.example/' } }, 'text'));
 });
 
@@ -218,4 +219,34 @@ test('shutdown during the initial notification never starts an agent after runti
         assert.equal(runs, 0);
         assert.equal(handle.service.state.jobs[0].status, 'interrupted');
     } finally { releaseNotification(); fs.rmSync(directory, { recursive: true }); }
+});
+
+test('Teams sends complete numbered plain-text chunks for long plans and propagates partial delivery failure', async () => {
+    const sent = [];
+    let failAt = Infinity;
+    const destination = { reference: {
+        serviceUrl: 'https://smba.trafficmanager.net/amer/', conversation: { id: 'conversation' },
+    } };
+    const teams = createTeams(teamsConfig, { handle: assert.fail }, {
+        async continueConversation(_id, _reference, callback) {
+            await callback({ sendActivity: async activity => {
+                if (sent.length === failAt) throw new Error('Fixture transport failure');
+                sent.push(activity);
+            } });
+        },
+    });
+    const text = `Awaiting your input.\n${JSON.stringify({ goal: 'g'.repeat(22000), step: String.fromCodePoint(0x1f4cb).repeat(2000) })}\nrespond 0123456789abcdef approve`;
+    await teams.publish(destination, text);
+    assert.ok(sent.length > 2);
+    assert.equal(sent.map(activity => activity.text.replace(/^Part \d+\/\d+\n/, '')).join(''), text);
+    for (const activity of sent) {
+        assert.equal(activity.textFormat, 'plain');
+        assert.ok(Buffer.byteLength(JSON.stringify(activity), 'utf8') <= 12000);
+    }
+    assert.match(sent.at(-1).text, /respond 0123456789abcdef approve$/);
+    sent.length = 0;
+    failAt = 1;
+    await assert.rejects(teams.publish(destination, text), /Fixture transport failure/);
+    assert.equal(sent.length, 1);
+    await assert.rejects(teams.publish(destination, 'x'.repeat(256001)), /bounded message size/);
 });

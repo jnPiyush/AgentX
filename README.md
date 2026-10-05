@@ -14,7 +14,7 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 
 > Frontier combines specialized FDEs with the contracts and evidence required to ship dependable software.
 
-[Install](#install-in-vs-code) | [See the workflow](#the-operating-loop) | [Meet the fleet](#the-frontier-fde-fleet) | [Explore skills](Skills.md) | [Read the guide](docs/GUIDE.md) | [Security](SECURITY.md)
+[Install](#install-in-vs-code) | [Feature list](docs/FEATURES.md) | [See the workflow](#the-operating-loop) | [Meet the fleet](#the-frontier-fde-fleet) | [Explore skills](Skills.md) | [Read the guide](docs/GUIDE.md) | [Security](SECURITY.md)
 
 ---
 
