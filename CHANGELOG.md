@@ -46,6 +46,9 @@
 - Native runs default to guided execution. HydraFusion requires explicit
   bounded automation authorization; it does not silently use another planner.
 - Document direct editor-host guidance separately from native enforcement.
+- `docs/GUIDE.md` keeps short pointers; HydraFusion, guided interaction,
+  Cursor, loop operations and Frontier-only interfaces now live in topic guides
+  under `docs/guides/`. Detailed skill sections moved to skill `references/`.
 
 ### Fixed
 

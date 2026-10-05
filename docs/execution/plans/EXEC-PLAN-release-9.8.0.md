@@ -85,6 +85,12 @@ not part of this task.
       queued (runner capacity) and never ran; Dependency Scan Summary then
       failed because its scan inputs were cancelled. They need a rerun.
 - [ ] New CodeQL alert fixes reviewed, pushed and re-analyzed on PR #439.
+- [x] `84583638` exposed a token-budget no-regression failure: 8 documents grew
+      past their budgets on this branch. Branch-added GUIDE sections moved to
+      `docs/guides/` topic guides, detailed skill sections moved to skill
+      `references/`, and reviewer agent and one skill line were reworded more
+      tightly. No guidance was dropped; moved lines exist verbatim in their
+      new files.
 
 ## Validation and Acceptance
 

@@ -217,25 +217,23 @@ Failure or score <80 is `CHANGES REQUESTED`. Test/docs-only reviews skip it.
 ### 5. Verify (Without Suite Execution)
 
 Inspect the Pass A mapping, implementation, regression cases and supplied
-evidence. Run relevant non-test checks such as typecheck, lint or schema
-validation, after confirming the command does not invoke suites indirectly.
-MUST NOT run tests, coverage or adversarial suites as part of review.
+evidence. Run non-test checks (typecheck, lint, schema validation) that do not
+invoke suites indirectly. MUST NOT run tests, coverage or adversarial suites.
 
-Recommend a scoped post-loop test command when useful; `frontier loop affected`
-can identify candidate files without executing them. The owning agent asks the
-user after successful loop completion and waits for approval, per
-[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) section 1.4. A delegated reviewer does
-not ask or launch suites on the parent's behalf.
+Recommend a scoped post-loop test command when useful (`frontier loop affected`
+lists candidates without running them). Per
+[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) section 1.4, the owning agent asks the
+user after loop completion; a delegated reviewer neither asks nor launches suites.
 
-Record suites as not run and coverage as not measured unless actual supplied
-results prove otherwise. Preserve their revision and age; do not relabel them
-as current. Known failures and independent CI/release requirements remain
-visible. Code-review approval does not mean those checks passed.
+Record suites as not run and coverage as not measured unless supplied results
+prove otherwise, keeping their revision and age (never relabeled as current).
+Known failures and CI/release requirements stay visible; approval does not mean
+they passed.
 
-Lint is detection-only in this review. Cosmetic findings are LOW and do not
-block local approval or reduce a rubric dimension below its gate solely because
-cleanup was declined/deferred. Report original tool results and the proposed
-cleanup scope. The owner asks the user; do not auto-fix or hide genuine defects.
+Lint is detection-only. Cosmetic findings are LOW: they do not block approval or
+lower a rubric gate because cleanup was declined. Report tool results and the
+proposed cleanup scope to the owner, who asks the user; never auto-fix or hide
+genuine defects.
 
 ### 5.1 Pattern Advisory (Read-Only)
 

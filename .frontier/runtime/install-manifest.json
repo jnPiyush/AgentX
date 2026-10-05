@@ -386,7 +386,7 @@
     },
     {
       "path": ".github/agents/reviewer.agent.md",
-      "sha256": "5c659ae0546b5e330bf0f707b8bbc3abe200aa2df842cf05a27004663f49787e",
+      "sha256": "3cf1d30917e5ff301cbdf25869248ea02acfd9dda39f1eac48737220b0963722",
       "category": "agent"
     },
     {
@@ -686,7 +686,7 @@
     },
     {
       "path": ".github/skills/ai-systems/ai-agent-development/SKILL.md",
-      "sha256": "ad60e023a46cdf28ae599b0a8bef49922b1836468916173ad93ade32d6e1b386",
+      "sha256": "82e327383339362459ec78f3f4bf2273fdf18b7220786f6f16102bcec6d32fbb",
       "category": "skill"
     },
     {
@@ -781,7 +781,7 @@
     },
     {
       "path": ".github/skills/ai-systems/multi-agent-orchestration/SKILL.md",
-      "sha256": "0780bda3ce92ecccb32e5e23261b8290830c315dab0ca89bdcecd53ca68d73cf",
+      "sha256": "b0ddbb20191f237baf672bbd761045e69191a25efb5480d245dda007df93c3ad",
       "category": "skill"
     },
     {
@@ -1006,7 +1006,7 @@
     },
     {
       "path": ".github/skills/development/code-hygiene/SKILL.md",
-      "sha256": "f6b22cff0f536b2045207203362379035002bcc02778d1a8882300587428dff4",
+      "sha256": "a2f126da7149a8308067b59df411463e7bcb606970a65d4f17f918b813f694a6",
       "category": "skill"
     },
     {
@@ -1091,7 +1091,7 @@
     },
     {
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "1827a983d7f614e203d9a0eb51a12c096eed7bd95ddcd054bc496c345487507e",
+      "sha256": "b0a93aa83887f71dcba3ba311302544ce4ccccfdda04335cb54634d9d37549c7",
       "category": "skill"
     },
     {
@@ -1146,7 +1146,7 @@
     },
     {
       "path": ".github/skills/development/testing/SKILL.md",
-      "sha256": "f8467a5840c9c5f6f4314e51537bf95506a9b4e9312f78953acca6693400b7a8",
+      "sha256": "cd8deb74305e1d1a403b7dd41f61c347d9d5e5450077a17f089636c51ac1b0ef",
       "category": "skill"
     },
     {
@@ -1161,7 +1161,7 @@
     },
     {
       "path": ".github/skills/development/verification-before-completion/SKILL.md",
-      "sha256": "32a466fb965a5ce0d74d6d8413e51d93248bd5620d98d9a5f180c9dd5e9f51ab",
+      "sha256": "6d52a6a51c73ce28ec339341ecbe91e63056e7de361c3a211f676b7410beeef4",
       "category": "skill"
     },
     {
