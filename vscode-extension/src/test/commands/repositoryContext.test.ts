@@ -10,13 +10,20 @@ import { FrontierContext } from '../../frontierContext';
 describe('repository context command', () => {
   let sandbox: sinon.SinonSandbox;
   let root: string;
-  let fakeAgentx: { workspaceRoot: string | undefined; runCli: sinon.SinonStub };
+  let fakeAgentx: { workspaceRoot: string | undefined; runCli: sinon.SinonStub; ensureWorkspaceReady: sinon.SinonStub };
   let registeredCallback: (...args: unknown[]) => unknown;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-repo-context-command-'));
-    fakeAgentx = { workspaceRoot: root, runCli: sandbox.stub() };
+    fakeAgentx = {
+      workspaceRoot: root,
+      runCli: sandbox.stub(),
+      ensureWorkspaceReady: sandbox.stub().callsFake(async () => {
+        if (!fakeAgentx.workspaceRoot) { throw new Error('Open a workspace folder first.'); }
+        return fakeAgentx.workspaceRoot;
+      }),
+    };
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {
         registeredCallback = cb;
@@ -40,12 +47,13 @@ describe('repository context command', () => {
     assert.ok((vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.refreshRepositoryContext'));
   });
 
-  it('does not index an open folder where Frontier is not initialized', async () => {
-    const warn = sandbox.spy(vscode.window, 'showWarningMessage');
+  it('does not index when the workspace cannot be prepared', async () => {
+    fakeAgentx.ensureWorkspaceReady.rejects(new Error('Automatic Frontier state is disabled.'));
+    const error = sandbox.spy(vscode.window, 'showErrorMessage');
 
     await registeredCallback();
 
-    assert.ok(warn.calledOnce);
+    assert.ok(String(error.firstCall.args[0]).includes('Automatic Frontier state is disabled.'));
     sinon.assert.notCalled(fakeAgentx.runCli);
   });
 
@@ -64,7 +72,7 @@ describe('repository context command', () => {
 
     await registeredCallback();
 
-    assert.ok(fakeAgentx.runCli.calledWith('context', ['--sync']));
+    assert.ok(fakeAgentx.runCli.calledWith('context', ['--sync'], root));
     assert.ok(info.calledOnce);
   });
 

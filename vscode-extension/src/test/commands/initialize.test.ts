@@ -743,6 +743,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
       adoConnected: false,
       workspaceRoot: undefined,
       firstWorkspaceFolder: undefined,
+      workspaceState: { assertAvailable: (value: string) => value, inspect: () => undefined },
     } as unknown as FrontierContext;
 
     (vscode.workspace as any).workspaceFolders = [
@@ -768,7 +769,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
       ) as Record<string, unknown>;
       assert.deepEqual(Object.keys(versionStamp).sort(), ['installedAt', 'updatedAt', 'version']);
       assert.equal(versionStamp.version, '8.4.7');
-      sinon.assert.calledWith(infoStub, 'Frontier: Local runtime initialized.');
+      sinon.assert.calledWith(infoStub, 'Frontier: Repository support initialized. Private history, if any, was preserved.');
       assert.ok(executeCommandStub.calledWith('frontier.refresh'));
     } finally {
       fs.rmSync(extensionRoot, { recursive: true, force: true });

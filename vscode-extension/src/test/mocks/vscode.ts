@@ -287,6 +287,7 @@ export const chat = {
     iconPath: undefined as unknown,
     followupProvider: undefined as unknown,
     handler: _handler,
+    dispose: () => { /* noop */ },
   }),
 };
 
