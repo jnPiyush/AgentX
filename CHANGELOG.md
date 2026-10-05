@@ -80,6 +80,10 @@
   final unit states, which also resets prior reconciliation approval.
 - Clean checkouts build the extension again: `npm ci` in `vscode-extension`
   now installs the locked managed graph parser, which asset generation needs.
+- Workspace binding, pending-input and legacy session reads check size and read
+  through one file descriptor, and the initial agent status file is created
+  atomically, closing check-then-use races reported by CodeQL. Plugin catalog
+  fallback warnings log a single-line reason.
 
 ### Release qualification
 

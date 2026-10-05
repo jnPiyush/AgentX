@@ -11,6 +11,7 @@ import {
   provisionWorkspace, readWorkspaceBinding, WorkspaceBinding, workspaceIdentity,
 } from './utils/workspaceProfiles';
 import { parseConfigurationJson } from './utils/configurationJson';
+import { readBoundedUtf8 } from './utils/boundedFile';
 
 function processAlive(pid: number): boolean {
   try { process.kill(pid, 0); return true; } catch (error) {
@@ -150,7 +151,7 @@ export class WorkspaceState {
       }
       if (!binding && this.context.globalStorageUri) {
         const authority = this.authority(root);
-        binding = provisionWorkspace(
+        provisionWorkspace(
           privateWorkspacePath(this.context.globalStorageUri.fsPath, canonical, authority),
           canonical, authority, String(this.context.extension.packageJSON.version), 'repository');
       }
@@ -197,9 +198,9 @@ export class WorkspaceState {
   readInteraction<T extends object>(root: string, kind: 'clarification' | 'setup'): T | undefined {
     this.inspect(root);
     const filename = this.interactionPath(root, kind);
-    if (!fs.existsSync(filename)) { return undefined; }
-    if (fs.statSync(filename).size > 262144) { throw new Error('Frontier pending input is oversized.'); }
-    const record: unknown = JSON.parse(fs.readFileSync(filename, 'utf8'));
+    const text = readBoundedUtf8(filename, 262144, 'Frontier pending input is oversized.');
+    if (text === undefined) { return undefined; }
+    const record: unknown = JSON.parse(text);
     if (!record || typeof record !== 'object' || !('schemaVersion' in record)
       || record.schemaVersion !== 1 || !('identity' in record)
       || record.identity !== this.identity(root) || !('state' in record)

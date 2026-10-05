@@ -4,6 +4,7 @@ import { WorkspaceState } from './workspaceState';
 import { execShell, execShellStreaming, type ShellExecutionOptions } from './utils/shell';
 import { hasRepositoryState, resolveFrontierStatePath } from './utils/frontierPaths';
 import { assertStatePath } from './utils/workspaceProfiles';
+import { readBoundedUtf8 } from './utils/boundedFile';
 import {
   buildCliCommand,
   buildCliInvocation,
@@ -463,8 +464,9 @@ export class FrontierContext {
   if (!boundRoot && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(legacy.sessionId)) {
    const sessionPath = resolveFrontierStatePath(root, 'sessions', `${legacy.sessionId}.json`);
    assertStatePath(sessionPath);
-   if (fs.existsSync(sessionPath) && fs.statSync(sessionPath).size <= 16 * 1024 * 1024) {
-    const session: unknown = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+   const sessionText = readBoundedUtf8(sessionPath, 16 * 1024 * 1024);
+   if (sessionText !== undefined) {
+    const session: unknown = JSON.parse(sessionText);
     if (session && typeof session === 'object' && 'meta' in session
       && session.meta && typeof session.meta === 'object' && 'interaction' in session.meta) {
      const interaction = session.meta.interaction;

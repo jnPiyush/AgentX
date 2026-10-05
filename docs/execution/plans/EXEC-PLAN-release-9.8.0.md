@@ -51,6 +51,17 @@ not part of this task.
     evaluator first, and the fixture mirrors an installed runtime that lacks
     only the evaluator.
   - Branch execution plans now use the canonical harness sections.
+- With the build fixed, CodeQL analyzed the branch for the first time and
+  reported 8 alerts absent from `master` (63 older alerts there are out of
+  scope). Six are addressed in code, and the next CodeQL analysis on PR #439
+  must confirm closure: three size-bounded reads now use one descriptor
+  (`readBoundedUtf8`), the agent status file is created with `wx`, the plugin
+  catalog warning logs a single-line reason, and a dead assignment is removed.
+  The two `js/remote-property-injection` alerts in the collaboration service
+  are false positives: every key is `JSON.stringify([scope, actor, id])`,
+  which starts with `[` and cannot name a prototype property. Changing the key
+  format would invalidate persisted delivery deduplication, so they are
+  documented rather than changed.
 
 ## Plan of Work
 
@@ -69,7 +80,11 @@ not part of this task.
 
 - [x] Candidate stamped, packaged, reviewed and pushed as `71ceb880`.
 - [x] CI failures on `71ceb880` triaged to five causes.
-- [ ] CI blocker fixes reviewed, pushed and green on PR #439.
+- [x] CI blocker fixes pushed as `2d745425`; CodeQL build, PSScriptAnalyzer and
+      both Quality Loop jobs passed. The other jobs were cancelled while still
+      queued (runner capacity) and never ran; Dependency Scan Summary then
+      failed because its scan inputs were cancelled. They need a rerun.
+- [ ] New CodeQL alert fixes reviewed, pushed and re-analyzed on PR #439.
 
 ## Validation and Acceptance
 

@@ -315,7 +315,8 @@ export async function selectCatalogPicks(
       return { source: 'registry', picks: registryPicks };
     }
   } catch (error) {
-    console.warn('Frontier published plugin catalog is unavailable; trying the source archive:', error);
+    const reason = (error instanceof Error ? error.message : String(error)).replace(/[\r\n]/g, '');
+    console.warn(`Frontier published plugin catalog is unavailable; trying the source archive: ${reason}`);
   }
 
   return { source: 'archive', picks: await loadArchive() };

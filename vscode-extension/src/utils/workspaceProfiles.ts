@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash, randomUUID } from 'crypto';
 import { parseConfigurationJson } from './configurationJson';
+import { readBoundedUtf8 } from './boundedFile';
 
 export interface WorkspaceBinding {
   readonly schemaVersion: 1;
@@ -76,11 +77,11 @@ export function readWorkspaceBinding(
   if (!fs.existsSync(stateRoot)) { return undefined; }
   const filename = path.join(stateRoot, 'workspace-binding.json');
   assertStatePath(filename);
-  if (!fs.existsSync(filename)) {
+  const text = readBoundedUtf8(filename, 16384, 'Frontier workspace binding is oversized.');
+  if (text === undefined) {
     throw new Error('Frontier private state is incomplete; existing files were preserved for recovery.');
   }
-  if (fs.statSync(filename).size > 16384) { throw new Error('Frontier workspace binding is oversized.'); }
-  const value: unknown = JSON.parse(fs.readFileSync(filename, 'utf8'));
+  const value: unknown = JSON.parse(text);
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('Invalid Frontier workspace binding.');
   }

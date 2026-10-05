@@ -129,26 +129,29 @@ export async function runInitializeLocalRuntimeCommand(
     }, null, 2));
 
     const statusFile = resolveRepositoryStatePath(root, 'state', 'agent-status.json');
-    if (!fs.existsSync(statusFile)) {
-     const agentStatus: Record<string, unknown> = {};
-     for (const agent of [
-      'product-manager',
-      'ux-designer',
-      'architect',
-      'engineer',
-      'reviewer',
-      'devops-engineer',
-      'auto-fix-reviewer',
-      'data-scientist',
-      'tester',
-      'fabric-engineer',
-      'power-platform-builder',
-      'consulting-research',
-      'powerbi-analyst',
-     ]) {
-      agentStatus[agent] = { status: 'idle', issue: null, lastActivity: null };
-     }
-     fs.writeFileSync(statusFile, JSON.stringify(agentStatus, null, 2));
+    const agentStatus: Record<string, unknown> = {};
+    for (const agent of [
+     'product-manager',
+     'ux-designer',
+     'architect',
+     'engineer',
+     'reviewer',
+     'devops-engineer',
+     'auto-fix-reviewer',
+     'data-scientist',
+     'tester',
+     'fabric-engineer',
+     'power-platform-builder',
+     'consulting-research',
+     'powerbi-analyst',
+    ]) {
+     agentStatus[agent] = { status: 'idle', issue: null, lastActivity: null };
+    }
+    try {
+     // Create only when absent; 'wx' makes the existence check and the write one operation.
+     fs.writeFileSync(statusFile, JSON.stringify(agentStatus, null, 2), { flag: 'wx' });
+    } catch (error) {
+     if ((error as NodeJS.ErrnoException).code !== 'EEXIST') { throw error; }
     }
 
     const configFile = resolveRepositoryStatePath(root, 'config.json');
