@@ -5,7 +5,7 @@ description: Stamp, document, package and validate the 9.8.0 candidate without p
 
 **Issue**: #411
 **Date**: 2026-10-05
-**Status**: Candidate prepared; publication waits for protected review and CI
+**Status**: Candidate ready; PR #439 CI green except the informational CodeQL alert result; publication waits for code-owner review and merge
 
 ## Purpose / Big Picture
 
@@ -74,7 +74,7 @@ not part of this task.
 | Independent review and loop completion | Complete | Approved 96/100, zero HIGH/MEDIUM |
 | Release validation suites | Not run | Post-loop consent unanswered; CI is authoritative |
 | Commit, push and PR update | Complete | `71ceb880`; PR #439 retitled for 9.8.0 |
-| CI blocker fixes | In progress | Target: ESLint, PSScriptAnalyzer, CodeQL build, loop case and plan check green in PR CI |
+| CI blocker fixes | Complete | Every PR #439 job passes on `e7271d17`; CodeQL alert result lists two documented false positives |
 
 ## Progress
 
@@ -84,7 +84,8 @@ not part of this task.
       both Quality Loop jobs passed. The other jobs were cancelled while still
       queued (runner capacity) and never ran; Dependency Scan Summary then
       failed because its scan inputs were cancelled. They need a rerun.
-- [ ] New CodeQL alert fixes reviewed, pushed and re-analyzed on PR #439.
+- [x] New CodeQL alert fixes pushed as `84583638`; re-analysis marked alerts 190-193,
+      196 and 197 fixed. Only 194/195 (documented false positives) remain new.
 - [x] `84583638` exposed a token-budget no-regression failure: 8 documents grew
       past their budgets on this branch. Branch-added GUIDE sections moved to
       `docs/guides/` topic guides, detailed skill sections moved to skill
@@ -100,19 +101,27 @@ not part of this task.
       reworded to "needs". Local static pre-check of later CI steps found the
       documented prompt count stale (23 vs 24 after the guided-interaction
       prompt); README, the Copilot CLI pack and the count test now say 24.
+- [x] `228301b5`: the stage-gate missing-catalog fixture mirrors the installed
+      runtime (the CLI loads sibling modules at startup).
+- [x] `e7271d17`: extension unit fixtures updated for automatic workspaces and
+      Frontier-only names (9 failures that had never run in CI). Quality Gates,
+      SAST, dependency scanning and issue routing all pass on this commit.
 
 ## Validation and Acceptance
 
 - [x] Final independent review approves the candidate scope (96/100).
 - [x] Commit-time gate passes on the delivered revision (`71ceb880`).
-- [ ] Release preflight suites (extension coverage, MCP tests) pass, or their
-      unrun/failed state is recorded and blocks a release claim. Local runs
-      were not approved; PR CI and the `master` preflight are the record.
+- [x] Extension `npm run test:coverage` (with E2E and audit) passed in PR CI on
+      `e7271d17`. Local suite runs were not approved and were not run.
+- [ ] MCP server `npm test` and `audit:runtime` run only in the `master`
+      release preflight; they have not run on this branch. A failure there
+      stops release creation.
 - [ ] Protected review and CI on `master` remain required before `v9.8.0`.
 
 ## Artifacts and Notes
 
-- Evidence: candidate commit `71ceb880` and CI runs on PR #439.
+- Evidence: final commit `e7271d17` and its PR #439 CI runs (Quality Gates
+  37388586752, SAST 37388587168).
 - Local VSIX `dist/vsix/agentx-9.8.0.vsix` (gitignored) is superseded by any
   later commit and must be repackaged from the final revision.
 
