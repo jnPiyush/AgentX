@@ -3,7 +3,7 @@ title: Integrate remote companions with Frontier guided execution
 description: Validate WhatsApp, Teams and GitHub App transport-to-runtime behavior without live account changes or bypassing plan approval.
 ---
 
-## Contract and baseline
+## Purpose / Big Picture: contract and baseline
 
 Issue #411. The user requested validation, fixes, integration and tests for the
 optional WhatsApp and Microsoft Teams/GitHub App companions. Live WhatsApp pairing,
@@ -17,7 +17,7 @@ guided-runtime interoperability: the shared runner treats exit 2 as a failure,
 and neither companion currently exposes a bound response to a native question
 or plan. The approved feature-inventory documents remain unrelated pending edits.
 
-## Alternatives and selected approach
+## Decision Log: alternatives and selected approach
 
 - Rejected: append `--interaction autonomous` after the companion's confirmation.
   Confirming a task is not approval of a subsequently generated native plan.
@@ -29,7 +29,7 @@ or plan. The approved feature-inventory documents remain unrelated pending edits
   immediately before submission. Changed requests are displayed again instead
   of receiving stale approval.
 
-## Interfaces and ownership
+## Plan of Work: interfaces and ownership
 
 | Surface | Work |
 | --- | --- |
@@ -47,7 +47,11 @@ than guessed from a user-supplied session ID. Native session history remains
 durable. Teams/GitHub jobs already have durable owner/conversation storage.
 Confirmations remain single-use, short-lived and cleared on restart.
 
-## Acceptance and verification
+## Progress
+
+- [x] Delivered in d1074854; the step-level state is recorded in the sections above.
+
+## Validation and Acceptance
 
 1. Existing read-only commands, sender/conversation allowlists, webhook signature
    checks and Teams authentication remain intact.
@@ -71,3 +75,7 @@ Confirmations remain single-use, short-lived and cleared on restart.
 No source commits, deployments or account changes are requested. A passing
 offline integration result does not certify WhatsApp Web stability, valid Teams
 JWT/proactive delivery or an actual GitHub installation token exchange.
+
+## Artifacts and Notes
+
+- Evidence: delivery commit d1074854 (`feat: integrate guided companions and preserve feature inventory (#411)`).

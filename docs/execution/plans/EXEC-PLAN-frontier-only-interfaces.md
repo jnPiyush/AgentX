@@ -3,7 +3,7 @@ title: Retire AgentX and HVE compatibility interfaces
 description: Keep Frontier runtime controls canonical without renaming published identifiers or discarding prior workspace work.
 ---
 
-## Contract
+## Purpose / Big Picture: contract
 
 The user explicitly no longer requires AgentX/HVE backward compatibility.
 Remove active aliases and fallback readers, and update their producers together.
@@ -15,7 +15,7 @@ Its completed loop and baseline were preserved in the session files under
 `automatic-workspace-completed-before-frontier-only`. The new loop starts from
 those bytes in `new-changes-only` mode. No commit, push or installation is requested.
 
-## Approach
+## Decision Log: approach
 
 - Rejected: replace every AgentX/HVE string. That would rename published extension
   identities, historical records, internal variables and durable data identifiers.
@@ -29,7 +29,7 @@ review. No multi-model controller or model-family qualification is claimed.
 The user's removal request authorizes this scope; action-specific consent gates
 remain unchanged.
 
-## Included surfaces
+## Plan of Work: included surfaces
 
 | Surface | Change |
 | --- | --- |
@@ -57,7 +57,7 @@ remain unchanged.
 - Keep protective exclusions for old private-state locations; removing support
   does not authorize reading their contents.
 
-## Acceptance and verification
+## Validation and Acceptance
 
 1. Active control-plane reads and writes use `FRONTIER_*` consistently.
 2. AgentX/HVE settings, command aliases, MCP aliases and old agent-name prefixes
@@ -92,3 +92,7 @@ The closure review approved the retirement with one functional LOW for multi-wor
 role names. That parser now resolves bounded, same-line Frontier display-name
 phrases through the shared role resolver before scanning remaining bare IDs.
 Regression cases cover every shipped display name and multiple roles on one line.
+
+## Artifacts and Notes
+
+- Evidence: delivery commit a00a2813 (`feat: enable automatic workspaces and Frontier-only interfaces (#411)`).

@@ -3,7 +3,7 @@ title: Incremental verification and impact-aware loop reviews
 description: Implement both approved optimization phases without weakening Frontier quality or consent gates.
 ---
 
-## Contract
+## Purpose / Big Picture: contract
 
 Issue #411. The user approved both phases of the loop-time recommendation:
 batched non-test preflight, factual review packets, reviewer capability checks,
@@ -15,7 +15,7 @@ No test suite runs inside a loop or review. An independent final report still
 covers the complete current implementation scope. No approval, authorization
 decision or mutation-policy result is cached.
 
-## Research and alternatives
+## Decision Log: research and alternatives
 
 - Reuse the native CLI's bounded checker process and hash-bound quality report.
   Reuse `scrub -PathsFrom` rather than another scanner. Use the existing
@@ -28,7 +28,7 @@ decision or mutation-policy result is cached.
   and thin CLI/editor/MCP entry points. Unknown impact expands review. Checks
   whose complete dependency set cannot be established execute fresh.
 
-## Interfaces and reuse inventory
+## Plan of Work: interfaces and reuse inventory
 
 | Surface | Decision | Contract |
 | --- | --- | --- |
@@ -67,7 +67,7 @@ decision or mutation-policy result is cached.
    remain unattributed. Waiting is recorded explicitly; no percentage saving is
    inferred from unrelated tasks.
 
-## Acceptance and regression plan
+## Validation and Acceptance: regression plan
 
 | Criterion | Regression cases / evidence |
 | --- | --- |
@@ -99,3 +99,7 @@ delivery, JavaScript package-mode invalidation/selection, cache publication only
 after stable-input validation, composite-compatible private compiler metadata,
 and non-blocking cosmetic whitespace. Each has a focused regression case; the
 closure review must verify all five before the final verdict.
+
+## Artifacts and Notes
+
+- Evidence: delivery commit c6171669 (`feat: optimize quality loops and resolve review findings (#411)`).

@@ -3,7 +3,7 @@ title: Fix review findings across graph, workspace state, guided interaction and
 description: Resolve the HIGH and MEDIUM findings from the post-delivery review of commits b07ee1fe and a00a2813 without widening scope.
 ---
 
-## Contract
+## Purpose / Big Picture: contract
 
 The user asked to fix every issue reported by the read-only review of the pushed
 guided-interaction, repository-graph, automatic-workspace, Frontier-only and Cursor
@@ -14,7 +14,7 @@ milestone self-reporting) are out of scope and recorded below.
 The previous completed loop and its evidence were archived to the session files
 under `frontier-only-completed-before-review-fixes` before this loop started.
 
-## Approach
+## Decision Log: approach
 
 - Rejected: suppress failures (for example, swallow parser timeouts or ignore stale
   markers). That hides defects and can admit unsafe states.
@@ -27,7 +27,7 @@ The graph findings were delegated to one background engineer with a fixed file
 scope; the remaining fixes were made directly. One independent reviewer covers the
 combined result.
 
-## Findings and fixes
+## Plan of Work: findings and fixes
 
 | # | Severity | Finding | Fix |
 | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ combined result.
 - Published registry releases keep their declared ranges; changing them requires
   republishing their artifacts.
 
-## Acceptance and verification
+## Validation and Acceptance
 
 1. Each finding has a code fix and, where behavior changed, a regression case.
 2. Build/type/syntax checks and bounded operational probes give fresh evidence:
@@ -73,3 +73,7 @@ from a 30-second batch timeout to under 1 ms in the sanitizer; hierarchy build
 time dropped from 8.98 s to 0.46 s, with relations from 7.15 s to 4.92 s and
 identical JSON; Cursor read hooks dropped from 1.3 s to about 0.35 s and policy
 hooks from 4.4 s to about 2.5 s. Independent review and loop completion remain.
+
+## Artifacts and Notes
+
+- Evidence: delivery commit c6171669 (`feat: optimize quality loops and resolve review findings (#411)`).

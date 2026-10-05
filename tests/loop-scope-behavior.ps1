@@ -11,7 +11,7 @@ $evaluatorPath = Join-Path $repoRoot 'scripts/score-code-quality.ps1'
 $script:passed = 0
 $script:failed = 0
 $workspace = Join-Path ([IO.Path]::GetTempPath()) ("frontier-loop-scope-{0}" -f [guid]::NewGuid().ToString('N'))
-# A CLI copy without scripts/ beside it, so the code-quality evaluator is missing.
+# An installed-runtime copy without scripts/score-code-quality.ps1, so the code-quality evaluator is missing.
 $installCopy = "$workspace-install"
 
 function Assert-True([bool]$Condition, [string]$Name) {
@@ -178,7 +178,10 @@ try {
     $lowComplete = Invoke-Loop @('complete', '-s', 'Attempt with a lower suite count', '-e', (New-Evidence 'final-2.txt'), '--passing', 'tool=3')
     Assert-True ($lowComplete.ExitCode -ne 0 -and $lowComplete.Output -match 'would regress passing tests for tool: current=3 last=4') 'loop complete rejects a lower suite count'
     New-Item -ItemType Directory -Path (Join-Path $installCopy '.frontier/runtime') -Force | Out-Null
-    Copy-Item -LiteralPath $cliPath -Destination (Join-Path $installCopy '.frontier/runtime/frontier-cli.ps1')
+    # Mirror an installed runtime that lacks only the evaluator; loop complete loads sibling modules first.
+    Get-ChildItem -LiteralPath (Split-Path $cliPath -Parent) -File | Copy-Item -Destination (Join-Path $installCopy '.frontier/runtime')
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts') -Destination (Join-Path $installCopy 'scripts') -Recurse
+    Remove-Item -LiteralPath (Join-Path $installCopy 'scripts/score-code-quality.ps1')
     $noEvaluator = Invoke-Process @('-File', (Join-Path $installCopy '.frontier/runtime/frontier-cli.ps1'), 'loop', 'complete', '-s', 'No evaluator', '-e', (New-Evidence 'final-x.txt'), '--passing', 'widget=3')
     Assert-True ($noEvaluator.ExitCode -ne 0 -and $noEvaluator.Output -match 'Code-quality evaluator is missing' -and $noEvaluator.Output -match 'Code-quality verification failed') 'loop complete reports a missing code-quality evaluator'
     $complete = Invoke-Loop @('complete', '-s', 'Loop scope fixture complete', '-e', (New-Evidence 'final-3.txt'), '--passing', 'widget=3')

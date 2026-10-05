@@ -24,7 +24,7 @@ the session's `files/guided-loop-before-graph-v2` directory before this loop.
 Git baseline is `28cdbcea`. The new loop explicitly includes existing changes
 for a final integrated review, while this plan identifies the graph-only scope.
 
-## Alternatives considered before implementation
+## Decision Log: alternatives considered before implementation
 
 1. Increase prompt size and retain the lexical index: rejected. It cannot
    retrieve definitions omitted by the 64-symbol storage limit.
@@ -107,6 +107,10 @@ comparison against injecting the entire graph.
 | 4 | CLI/MCP/session/installer distribution and documentation | Implemented; both real CLI installers observed |
 | 5 | Regression/evaluation readiness, non-suite checks and independent review | In progress |
 
+## Progress
+
+- [x] Delivered in b07ee1fe; the step-level state is recorded in the sections above.
+
 ## Validation and acceptance
 
 - [ ] Symbol lookup reaches definitions beyond the former 64-symbol boundary.
@@ -150,7 +154,9 @@ Rollback means reverting this feature's source and rebuilding derived state
 with the appropriate engine; it does not mean rewriting approved evidence or
 discarding the user's pre-existing changes.
 
-## Evidence and outcomes
+## Artifacts and Notes: evidence and outcomes
+
+- Evidence: delivery commit b07ee1fe (`feat: add guided execution and repository graph context (#411)`).
 
 Evidence is recorded in ignored runtime/session artifacts. Current task class
 is high-risk with a minimum of five evidenced iterations. No test, coverage,

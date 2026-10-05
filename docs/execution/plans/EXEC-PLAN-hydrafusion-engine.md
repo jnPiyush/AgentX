@@ -3,7 +3,7 @@ title: HydraFusion core execution engine
 description: Prepare bounded HydraFusion candidates with isolated execution, independent promotion and explicit release qualification.
 ---
 
-## Purpose
+## Purpose / Big Picture
 
 Provide an opt-in HydraFusion adapter for bounded Frontier read/edit tasks.
 Native execution remains the default. A generated candidate requires independent
@@ -252,7 +252,7 @@ or an unimplemented VSIX MCP bundle.
 | Install | Install into stable VS Code and verify registered version and runtime bytes |
 | Deliver | Record executed checks, remaining experimental-provider limits and no public release |
 
-## Alternatives Considered
+## Decision Log: alternatives considered
 
 - Add `hydrafusion` to the native runner's model map. Rejected: the Copilot model
   API catalog (46 models on 2026-09-30) does not list it, and HydraFusion
@@ -294,7 +294,7 @@ chosen as the pragmatic option and is recorded here.
 3. Mock-CLI behavior suite; one bounded real end-to-end edit in a disposable repo.
 4. Docs, independent review, loop completion.
 
-## Initial implementation progress (historical)
+## Progress: initial implementation (historical)
 
 - [x] Probes recorded (see Evidence).
 - [x] Engine, runner switch, CLI, MCP and packaging implemented.
@@ -312,7 +312,9 @@ chosen as the pragmatic option and is recorded here.
 - [x] Report-only roles receive no write grant.
 - [x] Real Copilot CLI 1.0.89 run produced a verified fusion and a boundary-clean change.
 
-## Initial integration evidence (historical)
+## Artifacts and Notes: initial integration evidence (historical)
+
+- Evidence: delivery commit 28cdbcea (`feat: harden Frontier execution and Cursor integration (#411)`).
 
 Probes on 2026-09-30 (about 40 AI credits): the Copilot `/models` API has no
 HydraFusion; CLI 1.0.84 rejects `--model hydrafusion` and 1.0.89 accepts it with

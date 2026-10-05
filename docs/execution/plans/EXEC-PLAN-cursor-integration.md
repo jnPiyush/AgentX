@@ -3,7 +3,7 @@ title: Cursor integration corrections
 description: Complete consumer-workspace setup and native Cursor policy/context wiring without copying framework trees.
 ---
 
-## Scope and approach
+## Purpose / Big Picture: scope and approach
 
 Fix the six reviewed Cursor gaps: canonical router reference, workspace setup,
 MCP readiness, stale loop rules, native hooks and install-manifest coverage.
@@ -26,7 +26,7 @@ Alternatives considered before implementation:
   explicit standalone dependency restoration, and resolve canonical contracts
   through the runtime: selected.
 
-## File inventory and reuse
+## Plan of Work: file inventory and reuse
 
 | Surface | Work |
 | --- | --- |
@@ -41,7 +41,7 @@ Alternatives considered before implementation:
 | Tests | Fresh setup, preservation, collisions, path boundaries, hook schemas, roots and distribution |
 | Docs/learning | Setup, limitations, graph behavior and durable ownership rules |
 
-## Acceptance
+## Validation and Acceptance
 
 1. All 18 commands resolve their canonical role, including in a zero-copy consumer.
 2. Explicit Cursor setup exposes commands/rules without seeding framework trees.
@@ -60,7 +60,9 @@ Alternatives considered before implementation:
 8. Syntax, typecheck, static checks, scoped diagnostics and independent review
    precede loop completion. Suites run only after the separate post-loop offer.
 
-## Evidence and limits
+## Artifacts and Notes: evidence and limits
+
+- Evidence: delivery commit 28cdbcea (`feat: harden Frontier execution and Cursor integration (#411)`).
 
 The original read-only review verified 17/18 command targets, no Cursor seed
 mapping, no native hook registration, no Cursor manifest entries and no SDK
@@ -71,7 +73,7 @@ Native Cursor CLI is unavailable here. Local protocol diagnostics and authored
 regressions are not represented as live Cursor-host qualification. Installation
 into the user's existing Cursor profile is outside this source-fix request.
 
-## Implementation evidence
+## Progress: implementation evidence
 
 - All 18 canonical role targets and the shared protocol resolve through the
   runtime without workspace agent/skill trees.
@@ -90,7 +92,7 @@ into the user's existing Cursor profile is outside this source-fix request.
 - Regression cases are authored, not executed inside this implementation loop.
   Final reviewer evidence and the post-loop test decision remain authoritative.
 
-## Independent review corrections
+## Decision Log: independent review corrections
 
 The first review found three MEDIUM issues: unqualified MCP write names escaped
 the shared GitHub write guard; the source manifest did not describe the installed

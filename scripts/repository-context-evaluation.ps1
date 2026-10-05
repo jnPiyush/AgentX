@@ -55,15 +55,15 @@ function Get-RepositoryNoAnswerViolation($Packet, $Case) {
     $coverage = $Packet.coverage
     if ($coverage -is [System.Collections.IDictionary]) {
         if (-not $coverage.Contains('exactMatches')) { throw 'No-answer evaluation requires exact-match coverage.' }
-        $matches = $coverage['exactMatches']
+        $exactMatches = $coverage['exactMatches']
     } else {
         if (-not $coverage.PSObject.Properties['exactMatches']) { throw 'No-answer evaluation requires exact-match coverage.' }
-        $matches = $coverage.exactMatches
+        $exactMatches = $coverage.exactMatches
     }
-    if (($matches -isnot [int] -and $matches -isnot [long]) -or $matches -lt 0) {
+    if (($exactMatches -isnot [int] -and $exactMatches -isnot [long]) -or $exactMatches -lt 0) {
         throw 'Invalid exact-match count in evaluated packet.'
     }
-    return $matches -gt 0
+    return $exactMatches -gt 0
 }
 
 function Test-RepositoryEvaluationRecordFailure($Record, [string[]]$HardFailures) {

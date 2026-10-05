@@ -3,14 +3,14 @@ title: Reusable repository graph context
 description: Deliver local repository discovery, incremental graph refresh and bounded session context.
 ---
 
-## Purpose
+## Purpose / Big Picture
 
 Frontier should discover the workspace once, maintain a source-grounded graph and
 visual map, preserve curated material, and retrieve a small relevant slice for
 each session. This extends the existing PowerShell runtime and workspace state
 architecture; it adds no external database, model call or embedding dependency.
 
-## Alternatives Considered
+## Decision Log: alternatives considered
 
 - Prose-only discovery instructions would not enforce freshness or output bounds.
 - A local file/reference graph with JSON state and a Mermaid map uses the existing
@@ -167,7 +167,9 @@ Revert the implementation and consumer wiring together. The graph is derived
 local state; preserve any curated map text before removing managed artifacts.
 No provider, remote repository or external service requires rollback.
 
-## Evidence and Outcomes
+## Artifacts and Notes: evidence and outcomes
+
+- Evidence: delivery commit 8a7f02ac (`feat(scripts): add repository graph context as a Frontier capability (#411)`).
 
 Implementation and local non-test diagnostics are complete. Independent review
 approved the repaired candidate with zero HIGH/MEDIUM findings; the code-quality

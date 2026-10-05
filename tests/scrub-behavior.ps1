@@ -45,12 +45,12 @@ function Invoke-ScrubJson {
 function Invoke-FrontierScrubJson {
     param([string]$Command, [string]$Path, [switch]$Production, [switch]$Advisory)
 
-    $args = @('-NoProfile', '-File', (Join-Path $script:root '.frontier/runtime/frontier.ps1'), $Command, '-Path', $Path, '-Json')
-    if ($Production) { $args += '-Production' }
-    if ($Advisory) { $args += '-Advisory' }
+    $pwshArgs = @('-NoProfile', '-File', (Join-Path $script:root '.frontier/runtime/frontier.ps1'), $Command, '-Path', $Path, '-Json')
+    if ($Production) { $pwshArgs += '-Production' }
+    if ($Advisory) { $pwshArgs += '-Advisory' }
     $stderrFile = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-scrub-stderr-" + [guid]::NewGuid().ToString('N') + '.txt')
     try {
-        $stdout = & pwsh @args 2>$stderrFile
+        $stdout = & pwsh @pwshArgs 2>$stderrFile
         $exitCode = $LASTEXITCODE
         $stderrText = if (Test-Path -LiteralPath $stderrFile) { Get-Content -LiteralPath $stderrFile -Raw -ErrorAction SilentlyContinue } else { '' }
     } finally {

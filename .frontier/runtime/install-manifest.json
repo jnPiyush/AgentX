@@ -156,7 +156,7 @@
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "c67df6788b47bb86d3982a5fa6afe19bf39de885cbad912b2b90b5146360131d",
+      "sha256": "dcd81cc2b5df777278e15201d2be0686fcb9c38c92a67f1e84d3a041d3cdadeb",
       "category": "cli"
     },
     {
@@ -186,7 +186,7 @@
     },
     {
       "path": ".frontier/runtime/hydrafusion-workspace.ps1",
-      "sha256": "65dd68347e94c94e40718ce979e6dd1f93b0c898e3ab9228657230e93db257f1",
+      "sha256": "1dbd6f513d442a3a21dbec4dad899a72674b7f137279a8b20500a9ef14e3b39f",
       "category": "cli"
     },
     {
@@ -196,7 +196,7 @@
     },
     {
       "path": ".frontier/runtime/loop-engineering.ps1",
-      "sha256": "8a7bd435b0038f618d4ccf90595427f2e18299a8069e838838aac9e525654c13",
+      "sha256": "466244c6bd3114027248b23d0d6f97b88c0ff0c8232a48a2c901b68172f73035",
       "category": "cli"
     },
     {
@@ -1681,7 +1681,7 @@
     },
     {
       "path": "scripts/repository-context-evaluation.ps1",
-      "sha256": "40455da54fb31ac3cd854c9b1fa5ecc358f6e3703e5477d7438310e857f4730f",
+      "sha256": "47eb347c56c693679a185505b003356eb2fdf888d74d87c07ed02ec6cf877f6f",
       "category": "script"
     },
     {

@@ -1,4 +1,6 @@
 #Requires -Version 7.0
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseLiteralInitializerForHashtable', '', Justification = 'Case-only rename fixtures need ordinal tables like the production manifest.')]
+param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent

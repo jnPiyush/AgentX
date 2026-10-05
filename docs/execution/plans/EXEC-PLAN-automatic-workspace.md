@@ -16,7 +16,7 @@ provision private state automatically. Keep agents/runtime shared in the
 extension. Do not create repository scaffolding, Git hooks, remote configuration
 or credentials merely because the extension activates or a folder opens.
 
-## Alternatives considered
+## Decision Log: alternatives considered
 
 - Remove the initialization marker check only: rejected; runtime/scoring/graph
   would still write repository-local state and could use inconsistent roots.
@@ -90,7 +90,7 @@ claimed; host model-family evidence is unavailable.
 | Wire lazy extension/MCP operations and explicit migration | Complete |
 | Verify, independently review and offer suites | Verification recorded; final verdict and suite decision use the loop records |
 
-## Acceptance criteria
+## Validation and Acceptance: criteria
 
 - [ ] Installation alone exposes bundled roles/skills/basic assistance.
 - [ ] First supported trusted Frontier operation works without repo initialization.
@@ -165,3 +165,7 @@ these local operational checks.
 Prior graph loop/evidence is archived in the session files under
 `graph-loop-before-auto-workspace`. Current evidence remains under ignored
 runtime state. Final runtime status and independent artifacts are authoritative.
+
+## Artifacts and Notes
+
+- Evidence: delivery commit a00a2813 (`feat: enable automatic workspaces and Frontier-only interfaces (#411)`).

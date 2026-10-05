@@ -314,7 +314,7 @@ function Invoke-LoopEngineeringSyntaxCheck($Context, [array]$Files) {
             '\.(ps1|psm1|psd1)$' {
                 $parseErrors = $null
                 [void][Management.Automation.Language.Parser]::ParseFile($full, [ref]$null, [ref]$parseErrors)
-                foreach ($error in $parseErrors) { $errors.Add("${relative}:$($error.Extent.StartLineNumber): $($error.Message)") }
+                foreach ($parseError in $parseErrors) { $errors.Add("${relative}:$($parseError.Extent.StartLineNumber): $($parseError.Message)") }
             }
             '\.json$' {
                 try { $null = Get-Content -LiteralPath $full -Raw | ConvertFrom-Json -AsHashtable -Depth 100 -ErrorAction Stop }

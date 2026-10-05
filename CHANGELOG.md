@@ -78,6 +78,8 @@
 - Parallel closeout requires every unit to be `Done`, unblocked and marked
   `Ready For Reconciliation`. Units are set by `parallel start`; re-run it with
   final unit states, which also resets prior reconciliation approval.
+- Clean checkouts build the extension again: `npm ci` in `vscode-extension`
+  now installs the locked managed graph parser, which asset generation needs.
 
 ### Release qualification
 

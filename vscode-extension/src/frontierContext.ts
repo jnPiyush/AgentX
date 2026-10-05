@@ -244,7 +244,7 @@ export class FrontierContext {
     `${storageKey}:${providerId}::${this.workspaceState.identity(root)}`,
   );
   if (secret) { return secret; }
-  if (process.platform === 'win32' && /^[\x00-\x7f]+$/.test(root) && !this.workspaceState.authority(root)
+  if (process.platform === 'win32' && /^\p{ASCII}+$/u.test(root) && !this.workspaceState.authority(root)
     && this.workspaceState.inspect(root)?.mode !== 'private') {
     return this.extensionContext.secrets.get(
       getWorkspaceScopedSecretKey(root, `${storageKey}:${providerId}`));
@@ -283,7 +283,7 @@ export class FrontierContext {
   await this.extensionContext.secrets.delete(
     `${storageKey}:${providerId}::${this.workspaceState.identity(root)}`,
   );
-  if (process.platform === 'win32' && /^[\x00-\x7f]+$/.test(root) && !this.workspaceState.authority(root)
+  if (process.platform === 'win32' && /^\p{ASCII}+$/u.test(root) && !this.workspaceState.authority(root)
     && this.workspaceState.inspect(root)?.mode !== 'private') {
     await this.extensionContext.secrets.delete(getWorkspaceScopedSecretKey(root, `${storageKey}:${providerId}`));
   }

@@ -4470,6 +4470,15 @@ function Invoke-LoopCheckProcess {
     }
 }
 
+function Get-CodeQualityEvaluatorPath {
+    $candidateRoots = if ($Script:ROOT -ne $Script:INSTALL_ROOT) { @($Script:INSTALL_ROOT) } else { @($Script:ROOT) }
+    foreach ($basePath in $candidateRoots) {
+        $candidate = Join-Path $basePath 'scripts/score-code-quality.ps1'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    return $null
+}
+
 function Invoke-CodeQualityEvaluator {
     param(
         [ValidateSet('Snapshot', 'Scope', 'Validate')][string]$Mode,
@@ -4478,12 +4487,7 @@ function Invoke-CodeQualityEvaluator {
         [switch]$IncludeExistingChanges
     )
 
-    $scriptPath = $null
-    $candidateRoots = if ($Script:ROOT -ne $Script:INSTALL_ROOT) { @($Script:INSTALL_ROOT) } else { @($Script:ROOT) }
-    foreach ($basePath in $candidateRoots) {
-        $candidate = Join-Path $basePath 'scripts/score-code-quality.ps1'
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) { $scriptPath = $candidate; break }
-    }
+    $scriptPath = Get-CodeQualityEvaluatorPath
 
     if (-not $scriptPath) {
         return [PSCustomObject]@{
@@ -5680,6 +5684,13 @@ function Invoke-LoopComplete {
     }
 
     if ($finalEvidenceAbs -and -not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { exit 1 }
+    $codeQualityFailure = "$($C.r)  [FAIL] Code-quality verification failed. For a checker timeout/startup error, inspect the checker and retry unchanged inputs. For stale hashes or review findings, rerun the affected checks and independent review.$($C.n)"
+    # Report a missing evaluator before the preflight, whose tool fingerprint cannot match without it.
+    if (-not (Get-CodeQualityEvaluatorPath)) {
+        Write-CliOutput '  Code-quality evaluator is missing from both workspace and installed runtime.'
+        Write-CliOutput $codeQualityFailure
+        exit 1
+    }
     . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
     $engineering = Get-ActiveLoopEngineeringContext $state
     $preflight = Invoke-LoopEngineeringPreflight $engineering -Delivery
@@ -5706,7 +5717,7 @@ function Invoke-LoopComplete {
         $codeQualityGate.output | Select-Object -Last 20 | ForEach-Object { Write-CliOutput ([string]$_) }
     }
     if (-not $codeQualityGate.available -or $codeQualityGate.exitCode -ne 0) {
-        Write-CliOutput "$($C.r)  [FAIL] Code-quality verification failed. For a checker timeout/startup error, inspect the checker and retry unchanged inputs. For stale hashes or review findings, rerun the affected checks and independent review.$($C.n)"
+        Write-CliOutput $codeQualityFailure
         exit 1
     }
 

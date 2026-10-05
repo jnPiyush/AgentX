@@ -3,7 +3,7 @@ title: Feature audit corrections
 description: Bounded fixes for the 13 implementation gaps identified at d1074854.
 ---
 
-## Scope and authority
+## Purpose / Big Picture: scope and authority
 
 Issue #411. The user authorized careful, simple corrections to the feature audit
 of source commit `d1074854`. Preserve the 88-claim inventory and its historical
@@ -15,7 +15,7 @@ are affected. Use implementation plus independent review. The host does not
 attest distinct model families or controller isolation; no formal multi-family
 execution qualification is claimed. The existing repository quality gate applies.
 
-## Research and alternatives
+## Decision Log: research and alternatives
 
 - Keep provider choice at initialization, where enabled/readiness policy already
   exists. Reject authentication errors during execution instead of adding a
@@ -35,7 +35,7 @@ execution qualification is claimed. The existing repository quality gate applies
   the owning command. Prefer compatible bundled source over an unusable published
   catalog. Do not relabel old binaries or invent release checksums.
 
-## Acceptance and file inventory
+## Plan of Work: acceptance and file inventory
 
 | ID | Required correction | Existing implementation and regression surface |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ The source paths above resolve under `.frontier/runtime`, `scripts`,
 `tests` and `vscode-extension/src/test`. Update directly related operating docs,
 this plan, a concise learning artifact and current memory. No ADR changes.
 
-## Verification
+## Validation and Acceptance
 
 Author discriminating regression cases before their fixes. Include disabled and
 explicit provider choices, identity drift, timeout/cancellation and output limits,
@@ -106,3 +106,7 @@ Edits after that report require fresh review.
   in 92.8 seconds after repeated 90-second preflight timeouts. Give the complete
   scan the same bounded 180-second budget as semantic typechecking; do not skip
   files, suppress failures or substitute old evidence.
+
+## Artifacts and Notes
+
+- Evidence: delivery commit 90c1f4ba (`fix: close audited feature gaps (#411)`).

@@ -1332,6 +1332,7 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\"",
     "sync:version": "node ../scripts/stamp-version.js",
+    "postinstall": "npm ci --prefix ../.frontier/runtime/repository-parser --ignore-scripts --no-audit --no-fund",
     "copy:assets": "node scripts/copy-assets.js",
     "prepare:chat": "node scripts/prepare-chat-contributions.js",
     "vscode:prepublish": "npm run sync:version && npm run prepare:chat && npm run clean && tsc -p ./",

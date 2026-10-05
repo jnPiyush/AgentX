@@ -101,6 +101,7 @@ function Test-HydraFusionSourceLink([string]$Root, [string]$Path) {
 }
 
 function Get-HydraFusionManifest {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseLiteralInitializerForHashtable', '', Justification = 'Manifest paths are case-sensitive; a literal hashtable would merge case-only renames.')]
     param([string]$Root, [switch]$Source, [string[]]$Paths)
     $files = [Collections.Hashtable]::new([StringComparer]::Ordinal)
     $omitted = [Collections.Generic.List[string]]::new()
