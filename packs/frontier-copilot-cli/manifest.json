@@ -301,7 +301,7 @@
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
     "skillLibrary": "134 production code skills across 14 categories",
     "instructionFiles": "15 auto-applied instruction files for language-specific and domain patterns",
-    "promptTemplates": "23 reference prompt templates (Copilot CLI does not execute prompt files)",
+    "promptTemplates": "24 reference prompt templates (Copilot CLI does not execute prompt files)",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",
     "iterativeLoop": "Quality loop enforcement via CLI hard gate (Layer 3)",
     "nativePlugin": "Installable as a native Copilot CLI plugin via the repository-root plugin.json",

@@ -55,7 +55,7 @@ compatibility:
 
 ## Parallel Tool Calls
 
-Current models (GPT-6 Astra, Claude Opus 5.5, Gemini) emit multiple tool calls in one turn. Astra tool calling requires the Responses API; Opus 5.5 rejects forced `tool_choice` (`any` or a named tool), so steer with descriptions and prompts.
+Current models (GPT-6 Astra, Claude Opus 5.5, Gemini) emit multiple tool calls in one turn. Astra tool calling needs the Responses API; Opus 5.5 rejects forced `tool_choice` (`any` or a named tool), so steer with descriptions and prompts.
 
 - MUST run independent calls concurrently (asyncio / Promise.all / Task.WhenAll)
 - MUST preserve `tool_call_id` -> result mapping

@@ -95,6 +95,11 @@ not part of this task.
       measured 4165 > 4000 tokens. `AGENTS.md` working-contract bullets were
       condensed and two `.github/copilot-instructions.md` paragraphs that
       repeated `AGENTS.md` now point to it; it measures 3963.
+- [x] Skill validation: `tool-use-and-function-calling` dropped 60 -> 58
+      because the word "requires" triggered the external-requirements check;
+      reworded to "needs". Local static pre-check of later CI steps found the
+      documented prompt count stale (23 vs 24 after the guided-interaction
+      prompt); README, the Copilot CLI pack and the count test now say 24.
 
 ## Validation and Acceptance
 

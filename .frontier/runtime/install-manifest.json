@@ -811,7 +811,7 @@
     },
     {
       "path": ".github/skills/ai-systems/tool-use-and-function-calling/SKILL.md",
-      "sha256": "35896731a89df90caed2213d84a30d3a3727a003443f4f40165419b8fec01566",
+      "sha256": "bd31d36b189b6625d682b6906fe808fc7f88683f0bbc7cb1e798f7ff9dee6248",
       "category": "skill"
     },
     {
@@ -1541,22 +1541,22 @@
     },
     {
       "path": "packs/frontier-copilot-cli/install.ps1",
-      "sha256": "8e98574b54783be4fd371b5c98e8c59c625f3548082bcc5d46b00f5026d6f85c",
+      "sha256": "0ffa4937209b47d57c653c83bddec2fdbd73526af08df6c5ab3dec229f1b6d63",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.sh",
-      "sha256": "5e94a4e0f625e89750e584e35deab10dfa60bc8a9ba37c973cdba90325b38a93",
+      "sha256": "5e7a7b90c7065384b384276030576853cfd41831e1a1f945ac5e2cce002d15b9",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/manifest.json",
-      "sha256": "8efd5a900d88a5db1cf3e03d82ed1be63c63ff81c98dcd2a517614e53f44b469",
+      "sha256": "13ae478985bbf5cdbbb30c32e1d534410a8ee36b6d6c3256cdae3ec25855dd7c",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/README.md",
-      "sha256": "9fbd2c6c9b4daba53ab283c39e480f68183e213a7afff5eb4d0e04620aa42b06",
+      "sha256": "8c53f1f2f49edab97657b3ddbe38679049e01f57be565ed2558f4d90a84db254",
       "category": "pack"
     },
     {

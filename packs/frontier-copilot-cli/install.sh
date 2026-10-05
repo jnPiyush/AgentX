@@ -526,7 +526,7 @@ echo ""
 echo " Agents        : 26 (15 external + 11 internal)"
 echo " Skills        : 134 across 14 categories"
 echo " Instructions  : 15 (auto-applied by file pattern)"
-echo " Prompts       : 23 reference templates"
+echo " Prompts       : 24 reference templates"
 if [ "$INCLUDE_CLI" = true ]; then
   echo " CLI utilities : 4 Frontier wrappers + bundled runtime (.github/frontier/.frontier/runtime)"
 fi

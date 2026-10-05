@@ -603,7 +603,7 @@ Write-Host ""
  Write-Host " Agents        : 26 (15 external + 11 internal)" -ForegroundColor White
  Write-Host " Skills        : 134 across 14 categories" -ForegroundColor White
  Write-Host " Instructions  : 15 (auto-applied by file pattern)" -ForegroundColor White
- Write-Host " Prompts       : 23 reference templates" -ForegroundColor White
+ Write-Host " Prompts       : 24 reference templates" -ForegroundColor White
 if ($IncludeCli) {
  Write-Host " CLI utilities : 4 Frontier wrappers + bundled runtime (.github/frontier/.frontier/runtime)" -ForegroundColor White
 }

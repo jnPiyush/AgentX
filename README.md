@@ -24,7 +24,7 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 |:-------------|:----------------|
 | Frontier FDEs | **26 total**: 15 visible roles and 11 internal specialists |
 | Production knowledge | **134 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
-| Reusable delivery assets | **15 templates**, **23 reusable prompt templates**, and **7 root instruction files**, plus scoped instruction sets |
+| Reusable delivery assets | **15 templates**, **24 reusable prompt templates**, and **7 root instruction files**, plus scoped instruction sets |
 | Quality discipline | **Risk-based evidenced iterations** (`1/2/3/5`), fresh verification, independent review, scrub, and completion gates |
 | Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
 | Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |

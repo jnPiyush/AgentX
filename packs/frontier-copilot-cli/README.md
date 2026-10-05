@@ -9,7 +9,7 @@
 | Agents | 26 | 15 external + 11 internal sub-agents |
 | Skills | 134 | Complete production code standards across 14 categories |
 | Instructions | 15 | Auto-applied coding guidelines by file pattern (7 top-level + 8 nested ADO) |
-| Prompts | 23 | Reusable prompt templates |
+| Prompts | 24 | Reusable prompt templates |
 | Templates | 15 | PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning |
 | Schemas | 7 | Frontmatter, handoff, pack and plugin manifest schemas |
 | Hooks | 1 | Copilot CLI lifecycle hook configuration plus its handler |
@@ -107,7 +107,7 @@ your-project/
       ai.instructions.md
       python.instructions.md
       ...
-    prompts/                   # 23 prompt templates
+    prompts/                   # 24 prompt templates
       prd-gen.prompt.md
       code-review.prompt.md
       ...

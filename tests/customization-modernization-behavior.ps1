@@ -38,7 +38,7 @@ $bundleAgentRoot = Join-Path $repoRoot 'vscode-extension/.github/frontier/agents
 $bundleAgentFiles = @(Get-ChildItem -LiteralPath $bundleAgentRoot -Filter '*.agent.md' -File -Recurse)
 Assert-True ($agentFiles.Count -eq 26) 'Compatibility keeps all 26 agent paths'
 Assert-True ($skillFiles.Count -eq 134) 'Compatibility keeps all 134 skill paths'
-Assert-True ($promptFiles.Count -eq 23) 'Compatibility keeps all 23 prompt paths'
+Assert-True ($promptFiles.Count -eq 24) 'Compatibility keeps all 24 prompt paths'
 Assert-True ($bundleAgentFiles.Count -eq $agentFiles.Count) 'Extension bundles every canonical agent'
 $agentFrontmatter = @($agentFiles | ForEach-Object { Get-Frontmatter $_.FullName })
 $agentNames = @($agentFrontmatter | ForEach-Object { $_.name })
