@@ -46,7 +46,7 @@ $dimensions = @(
 $implementationExtensions = @(
     '.c', '.cpp', '.cs', '.go', '.h', '.java', '.js', '.jsx', '.kt', '.m',
     '.ps1', '.psm1', '.py', '.rb', '.rs', '.sh', '.sql', '.swift', '.tf',
-    '.ts', '.tsx', '.bicep'
+    '.ts', '.tsx', '.mjs', '.cjs', '.mts', '.cts', '.bicep'
 )
 $maxReviewedAtClockSkew = [TimeSpan]::FromMinutes(5)
 $placeholderEvidenceValues = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)

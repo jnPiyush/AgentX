@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-09-28T23:17:00Z",
+  "generated": "2026-10-05T14:14:18Z",
   "source": ".github/templates/*.md",
   "totalCount": 15,
   "templates": [
@@ -199,10 +199,11 @@
         "Title"
       ],
       "sections": [
-        "Context",
-        "Learning",
+        "Summary",
+        "Guidance",
         "Evidence",
-        "Why It Matters",
+        "Use When",
+        "Avoid",
         "Promotion Path",
         "Related"
       ]

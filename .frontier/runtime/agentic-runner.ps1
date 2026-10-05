@@ -177,7 +177,7 @@ function ConvertTo-RunnerProviderId([string]$Value, [string]$Default = 'auto') {
 
 function Test-RunnerCommandAvailable([string]$CommandName) {
     try {
-        $null = Get-Command $CommandName -ErrorAction Stop
+        $null = Get-Command $CommandName -CommandType Application, ExternalScript -ErrorAction Stop
         return $true
     } catch {
         return $false
@@ -187,35 +187,51 @@ function Test-RunnerCommandAvailable([string]$CommandName) {
 function Invoke-RunnerCommand {
     param(
         [Parameter(Mandatory)][string]$FileName,
-        [string[]]$Arguments = @()
+        [string[]]$Arguments = @(),
+        [ValidateRange(1, 86400)][int]$TimeoutSeconds = 30
     )
 
-    $output = & $FileName @Arguments 2>&1
-    $exitCode = if (Test-Path variable:LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
-
-    return [PSCustomObject]@{
-        output = [string]($output -join [Environment]::NewLine)
-        exitCode = $exitCode
-    }
+    return Invoke-RunnerCommandWithInput -FileName $FileName -Arguments $Arguments -TimeoutSeconds $TimeoutSeconds
 }
 
 function Invoke-RunnerCommandWithInput {
     param(
         [Parameter(Mandatory)][string]$FileName,
         [string[]]$Arguments = @(),
-        [string]$InputText = ''
+        [string]$InputText = '',
+        [ValidateRange(1, 86400)][int]$TimeoutSeconds = 120,
+        [ValidateRange(1024, 67108864)][int]$MaxOutputBytes = 8388608,
+        [Threading.CancellationToken]$CancellationToken = [Threading.CancellationToken]::None
     )
 
-    try {
-        $output = $InputText | & $FileName @Arguments 2>&1
-        $exitCode = if (Test-Path variable:LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
-
-        return [PSCustomObject]@{
-            output = [string]($output -join [Environment]::NewLine)
-            exitCode = $exitCode
-        }
-    } catch {
-        throw $_
+    $command = Get-Command $FileName -CommandType Application, ExternalScript -ErrorAction Stop | Select-Object -First 1
+    $executable = $command.Source
+    if ([IO.Path]::GetExtension($executable) -in @('.ps1', '.cmd', '.bat')) {
+        # Serialize arguments as data; shim paths and arguments never become program text.
+        $payload = ConvertTo-Json -InputObject (@($executable) + $Arguments) -Compress
+        $encodedArguments = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
+        $scriptText = '$ErrorActionPreference = ''Stop''; $OutputEncoding = [Text.UTF8Encoding]::new($false); ' +
+            '$reader = [IO.StreamReader]::new([Console]::OpenStandardInput(), [Text.UTF8Encoding]::new($false, $true)); ' +
+            'try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }; ' +
+            '$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(''' + $encodedArguments + ''')); ' +
+            '$values = [Text.Json.JsonSerializer]::Deserialize($json, [string[]], [Text.Json.JsonSerializerOptions]::new()); ' +
+            '$command = $values[0]; $arguments = @($values | Select-Object -Skip 1); ' +
+            '$text | & $command @arguments; if (Test-Path variable:LASTEXITCODE) { exit $LASTEXITCODE }'
+        $executable = Join-Path $PSHOME $(if ($IsWindows) { 'pwsh.exe' } else { 'pwsh' })
+        $Arguments = @('-NoProfile', '-NonInteractive', '-EncodedCommand',
+            [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($scriptText)))
+    }
+    $result = Invoke-HydraFusionProcess -FileName $executable -Arguments $Arguments `
+        -WorkingDirectory (Get-Location).ProviderPath -InputText $InputText -TimeoutSeconds $TimeoutSeconds `
+        -MaxOutputBytes $MaxOutputBytes -CancellationToken $CancellationToken
+    if ($result.exitReason -or -not $result.terminationConfirmed) {
+        $failure = [InvalidOperationException]::new("Native command '$FileName' failed ($($result.exitReason)): $($result.error)")
+        $failure.Data['runnerCommandFailure'] = $true
+        throw $failure
+    }
+    return [PSCustomObject]@{
+        output = if ($result.exitCode -eq 0) { $result.stdout } else { "$($result.stdout)`n$($result.stderr)".Trim() }
+        exitCode = $result.exitCode
     }
 }
 
@@ -458,7 +474,11 @@ function Test-ClaudeCodeProviderReady {
         }
     }
 
-    $status = Invoke-RunnerCommand -FileName 'claude' -Arguments @('auth', 'status')
+    try { $status = Invoke-RunnerCommand -FileName 'claude' -Arguments @('auth', 'status') }
+    catch {
+        if (-not $_.Exception.Data.Contains('runnerCommandFailure')) { throw }
+        return [PSCustomObject]@{ ready = $false; reason = $_.Exception.Message }
+    }
     if ($status.exitCode -eq 0) {
         return [PSCustomObject]@{
             ready = $true
@@ -545,6 +565,13 @@ function Get-ActiveProviderId {
     if ($Script:ApiMode -eq 'anthropic-api') { return 'anthropic-api' }
     if ($Script:ApiMode -eq 'openai-api') { return 'openai-api' }
     return 'github-models'
+}
+
+function Assert-RunnerInteractionBinding($Interaction, [string]$ModelId, [string]$RolePolicy) {
+    if ($Interaction.provider -and ($Interaction.provider -cne (Get-ActiveProviderId) -or
+        $Interaction.model -cne $ModelId -or $Interaction.rolePolicy -cne $RolePolicy)) {
+        throw 'Provider, model or role permissions changed since this task was approved; cancel it and start a newly scoped task.'
+    }
 }
 
 function Get-RunnerModelMap([string]$ProviderId) {
@@ -2823,13 +2850,13 @@ function Invoke-LlmChat(
         $url = Resolve-ProviderApiUrl -ProviderId 'anthropic-api'
 
         try {
-            $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -ErrorAction Stop
+            $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -TimeoutSec 120 -ErrorAction Stop
             return ConvertFrom-AnthropicResponse -Response $resp
         } catch {
-            $statusCode = $_.Exception.Response.StatusCode.value__
-            $errBody = ''
-            try { $errBody = $_.ErrorDetails.Message } catch { $errBody = '' }
-            throw "Anthropic API error (HTTP $statusCode): $errBody"
+            $statusCode = Get-MessageFieldValue (Get-MessageFieldValue $_.Exception 'Response') 'StatusCode'
+            $errBody = if ($_.ErrorDetails) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+            if ($null -eq $statusCode) { throw "Anthropic API request failed: $errBody" }
+            throw "Anthropic API error (HTTP $([int]$statusCode)): $errBody"
         }
     }
 
@@ -2893,27 +2920,16 @@ function Invoke-LlmChat(
     try {
         $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -TimeoutSec 120 -ErrorAction Stop
     } catch {
-        $statusCode = $_.Exception.Response.StatusCode.value__
-        $errBody = ''
-        try { $errBody = $_.ErrorDetails.Message } catch { $errBody = '' }
-
-        if (-not $useResponses -and $activeProviderId -eq 'copilot' -and $statusCode -in @(401, 403)) {
-            Write-RunnerConsole "`e[33m  [API FALLBACK] Copilot API returned HTTP $statusCode. Retrying with GitHub Models.`e[0m"
-            if ($Script:ProviderRegistry.ContainsKey('github-models')) {
-                $fallback = $Script:ProviderRegistry['github-models']
-                $fallback.reason = 'Copilot API returned an auth failure during request execution. Falling back to GitHub Models.'
-                $Script:ActiveProvider = $fallback
-            }
-            $Script:ApiMode = 'models'
-            return Invoke-LlmChat -token $token -modelId $modelId -messages $messages -tools $tools -RequestOptions $RequestOptions -maxTokens $maxTokens
-        }
+        $statusCode = Get-MessageFieldValue (Get-MessageFieldValue $_.Exception 'Response') 'StatusCode'
+        $errBody = if ($_.ErrorDetails) { $_.ErrorDetails.Message } else { $_.Exception.Message }
 
         $apiName = switch ($activeProviderId) {
             'copilot' { 'Copilot' }
             'openai-api' { 'OpenAI' }
             default { 'GitHub Models' }
         }
-        throw "$apiName API error (HTTP $statusCode): $errBody"
+        if ($null -eq $statusCode) { throw "$apiName API request failed: $errBody" }
+        throw "$apiName API error (HTTP $([int]$statusCode)): $errBody"
     }
     if ($useResponses) { return ConvertFrom-ResponsesResponse -Response $resp -ModelId $modelId }
     return $resp
@@ -4861,10 +4877,7 @@ function Invoke-AgenticLoop {
     }
     $modelId = $modelCandidates[0]
     $providerId = Get-ActiveProviderId
-    if ($interaction.provider -and ($interaction.provider -cne $providerId -or
-        $interaction.model -cne $modelId -or $interaction.rolePolicy -cne $rolePolicy)) {
-        throw 'Provider, model or role permissions changed since this task was approved; cancel it and start a newly scoped task.'
-    }
+    Assert-RunnerInteractionBinding $interaction $modelId $rolePolicy
     $interaction.provider = $providerId
     $interaction.model = $modelId
     $interaction.rolePolicy = $rolePolicy
@@ -5133,6 +5146,7 @@ function Invoke-AgenticLoop {
         # Call LLM
         $modelWatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
+            Assert-RunnerInteractionBinding $interaction $modelId $rolePolicy
             $requestOptions = Get-ReasoningRequestConfig -agentDef $agentDef -modelId $modelId
             $availableTools = if (Test-InteractionAuthorized $interaction) {
                 $tools
@@ -5140,6 +5154,7 @@ function Invoke-AgenticLoop {
                 @($tools | Where-Object { -not (Get-InteractionToolBlock $interaction ([string]$_.function.name)) })
             }
             $response = Invoke-LlmChat -token $token -modelId $modelId -messages $messages -tools $availableTools -RequestOptions $requestOptions
+            Assert-RunnerInteractionBinding $interaction $modelId $rolePolicy
             $modelWatch.Stop()
             $stageTimings.modelMs += $modelWatch.Elapsed.TotalMilliseconds
             Register-LlmUsage -Response $response -ModelId $modelId -Purpose 'agent'
@@ -5405,7 +5420,10 @@ State your PIVOT or REFINE decision and rationale before making changes.
                 $messages += @{ role = 'tool'; tool_call_id = $tc.id; content = 'Declined: the run is awaiting user input; this batch-tail call was not executed.' }
                 continue
             }
-            $interactionBlock = Get-InteractionToolBlock $interaction $toolName
+            $interactionBlock = try {
+                Assert-RunnerInteractionBinding $interaction $modelId $rolePolicy
+                Get-InteractionToolBlock $interaction $toolName
+            } catch { $_.Exception.Message }
             if ($argumentError -or $interactionBlock -or $toolName -in @('request_user_input', 'propose_plan', 'report_progress')) {
                 try {
                     if ($argumentError) { throw $argumentError }

@@ -182,6 +182,29 @@ provisioned external services.
 - This inventory is not a test report or a release-readiness certification.
   Review approval, test execution and production qualification remain separate.
 
+### Source corrections after the snapshot
+
+The 2026-10-05 corrections address the implementation gaps found at `d1074854`;
+the original inventory above remains a historical snapshot. See the
+[acceptance map](execution/plans/EXEC-PLAN-feature-audit-fixes.md).
+
+- Provider selection occurs before execution. An authentication failure does
+  not silently transfer an approved plan to another provider.
+- Native Anthropic requests and Claude Code processes have a 120-second
+  deadline. Claude readiness checks use 30 seconds. Child execution has bounded
+  output and terminates its owned process tree on interruption.
+- Native commit, handoff and finish checks revalidate approved source inputs.
+  Git diff checks execute fresh rather than reusing incomplete cache keys.
+- Ready-work selection resolves dependencies outside the initial result page;
+  missing or unreadable blockers cannot appear complete. Parallel closeout
+  requires finished, unblocked units and renewed approval after unit replacement.
+  A remote lookup failure stops the readiness command or watch run with an
+  explicit error; resolve the reference or provider failure before restarting.
+- Add Plugin prefers compatible sources bundled with the installed extension.
+  Registry releases without verified artifacts have been withdrawn from the
+  source catalog; no new plugin release is implied. Archive fallback remains
+  available when bundled sources are absent.
+
 ## References
 
 - [Product overview](../README.md)

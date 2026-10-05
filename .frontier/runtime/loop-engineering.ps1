@@ -144,7 +144,7 @@ function Compare-LoopEngineeringFiles([array]$Before, [array]$After) {
     return @($changed | Sort-Object -Unique -CaseSensitive)
 }
 
-function Get-LoopEngineeringToolIdentity($Context) {
+function Get-LoopEngineeringToolIdentity($Context, [switch]$ForDelivery) {
     $paths = @(
         (Join-Path $Context.installRoot '.frontier/runtime/loop-engineering.ps1'),
         (Join-Path $Context.installRoot '.frontier/runtime/loop-static-checks.js'),
@@ -163,7 +163,9 @@ function Get-LoopEngineeringToolIdentity($Context) {
     $identities = @($paths | ForEach-Object {
         [ordered]@{ path = $_; sha256 = $(if (Test-Path -LiteralPath $_ -PathType Leaf) { (Get-FileHash -LiteralPath $_).Hash } else { 'MISSING' }) }
     })
-    $environment = @('PATH', 'NODE_OPTIONS', 'NODE_PATH', 'NODE_ENV') | ForEach-Object {
+    $environmentNames = @('NODE_OPTIONS', 'NODE_PATH', 'NODE_ENV')
+    if (-not $ForDelivery) { $environmentNames = @('PATH') + $environmentNames }
+    $environment = $environmentNames | ForEach-Object {
         [ordered]@{ name = $_; value = [Environment]::GetEnvironmentVariable($_) }
     }
     return Get-LoopEngineeringDigest ([ordered]@{
@@ -196,6 +198,12 @@ function Get-LoopEngineeringSnapshot($Context) {
         loopId = $Context.loopId; files = $inventory.files; tools = $toolIdentity; packageContext = $packageContext
         requirements = $Context.loop.prompt; criteria = $Context.loop.completionCriteria
     })
+    # Git prepends hook search paths. Bind delivery to resolved tools, not the PATH text.
+    $deliveryFingerprint = Get-LoopEngineeringDigest ([ordered]@{
+        loopId = $Context.loopId; files = @($inventory.files | Where-Object { $_.sha256 -ne 'DELETED' })
+        tools = Get-LoopEngineeringToolIdentity $Context -ForDelivery
+        packageContext = $packageContext; requirements = $Context.loop.prompt; criteria = $Context.loop.completionCriteria
+    })
     $baselinePath = Resolve-LoopEngineeringPath $Context.directory 'baseline.json'
     $expectedBaseline = Get-LoopEngineeringField $Context.loop 'engineeringBaselineSha256'
     $baseline = Read-LoopEngineeringJson $baselinePath
@@ -214,7 +222,8 @@ function Get-LoopEngineeringSnapshot($Context) {
             Where-Object { -not (Test-LoopEngineeringExcluded $_) } | Sort-Object -Unique -CaseSensitive)
     } else { $changed = @($inventory.files | ForEach-Object { $_.path }) }
     return [ordered]@{
-        version = 1; loopId = $Context.loopId; fingerprint = $fingerprint; toolIdentity = $toolIdentity; packageContext = $packageContext
+        version = 1; loopId = $Context.loopId; fingerprint = $fingerprint; deliveryFingerprint = $deliveryFingerprint
+        toolIdentity = $toolIdentity; packageContext = $packageContext
         files = $inventory.files; changedPaths = @($changed); gitAvailable = $inventory.gitAvailable
         observationHash = $inventory.observationHash
         discovery = $inventory.discovery
@@ -374,7 +383,7 @@ function Invoke-LoopEngineeringPreflight($Context, [switch]$Force, [switch]$Deli
                 @{ passed = $parsed.passed -is [bool] -and $parsed.passed -and @($parsed.results).Count -eq $scripts.Count; summary = $run.output }
             } -Fresh:$Force))
         }
-        $projectCandidates = @($snapshot.changedPaths | Where-Object { $_ -match '\.tsx?$' } |
+        $projectCandidates = @($snapshot.changedPaths | Where-Object { $_ -match '\.(tsx?|mts|cts)$' } |
             ForEach-Object { Get-LoopEngineeringProject $Context.root $_ })
         if (@($snapshot.changedPaths | Where-Object {
             $_ -match '(^|/)(tsconfig[^/]*\.json|package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?)$'
@@ -407,7 +416,7 @@ function Invoke-LoopEngineeringPreflight($Context, [switch]$Force, [switch]$Deli
             [IO.File]::WriteAllLines($manifest, [string[]]@($scrubFiles | ForEach-Object { Join-Path $Context.root $_.path }))
             $key = Get-LoopEngineeringDigest @('scrub', $Context.loopId, $snapshot.toolIdentity, $scrubFiles)
             $results.Add((Invoke-LoopEngineeringCachedCheck $Context 'scrub' $key {
-                $run = Invoke-LoopEngineeringProcess $Context 'pwsh' @('-NoProfile', '-File', (Join-Path $Context.installRoot 'scripts/scrub.ps1'), '-PathsFrom', $manifest, '-Advisory', '-Json')
+                $run = Invoke-LoopEngineeringProcess $Context 'pwsh' @('-NoProfile', '-File', (Join-Path $Context.installRoot 'scripts/scrub.ps1'), '-PathsFrom', $manifest, '-Advisory', '-Json') 180000
                 @{ passed = $run.exitCode -eq 0; summary = "Advisory scan; cosmetic findings are not blockers. $($run.output)" }
             } -Fresh:$Force))
         }
@@ -417,8 +426,8 @@ function Invoke-LoopEngineeringPreflight($Context, [switch]$Force, [switch]$Deli
                 $run = Invoke-LoopEngineeringProcess $Context 'git' @('-C', $Context.root, '-c', 'core.quotePath=false',
                     '-c', 'core.whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab',
                     'diff', '--no-ext-diff', '--no-textconv', '--check', 'HEAD', '--', '.')
-                @{ passed = $run.exitCode -eq 0; summary = "Conflict-marker/Git-error check; cosmetic whitespace is not a blocker. $($run.output)" }
-            } -Fresh:$Force))
+                @{ passed = $run.exitCode -eq 0; summary = "Fresh conflict-marker/Git-error check; Git configuration and attributes are not fingerprinted. Cosmetic whitespace is not a blocker. $($run.output)" }
+            } -Fresh))
         }
         if ($Delivery -and $Context.root -eq $Context.installRoot -and
             (Test-Path -LiteralPath (Join-Path $Context.root 'vscode-extension/scripts/copy-assets.js') -PathType Leaf) -and

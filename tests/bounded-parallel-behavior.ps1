@@ -41,7 +41,8 @@ function Invoke-Frontier([string]$root, [string[]]$arguments) {
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
     $startInfo.ArgumentList.Add('-File')
-    $startInfo.ArgumentList.Add((Join-Path $root '.frontier\runtime\frontier.ps1'))
+    $startInfo.ArgumentList.Add((Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1'))
+    $startInfo.WorkingDirectory = $root
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
@@ -104,6 +105,24 @@ function Test-ParentSummaryAndReconciliation {
         $reconciled = $reconcile.Output | ConvertFrom-Json
         Assert-True ($reconcile.ExitCode -eq 0) 'parallel reconcile runs even when units are not all ready'
         Assert-True ($reconciled.reconciliation.final_decision -eq 'blocked') 'reconciliation stays blocked when merge readiness is incomplete'
+
+        $readyUnits = New-UnitsBase64 @(
+            @{ title = 'Unit C'; scope_boundary = 'source'; owner = 'engineer'; recovery_guidance = 'retry sequentially'; status = 'Done'; merge_readiness = 'Ready For Reconciliation' },
+            @{ title = 'Unit D'; scope_boundary = 'tests'; owner = 'engineer'; recovery_guidance = 'retry sequentially'; status = 'Done'; merge_readiness = 'Ready For Reconciliation' }
+        )
+        $null = Invoke-Frontier $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $readyUnits)
+        $approved = Invoke-Frontier $root @('parallel', 'reconcile', '--id', $run.parallel_id, '--overlap-review', 'pass', '--conflict-review', 'pass', '--acceptance-evidence', 'pass', '--owner-approval', 'approved', '--json')
+        Assert-True (($approved.Output | ConvertFrom-Json).parent_summary.closeout_ready) 'completed ready units can reconcile'
+        $replaced = Invoke-Frontier $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $units, '--json')
+        $replacement = $replaced.Output | ConvertFrom-Json
+        Assert-True (-not $replacement.parent_summary.closeout_ready -and $replacement.reconciliation.owner_approval -eq 'pending') 'replacing approved units invalidates closeout approval'
+        $blockedReady = New-UnitsBase64 @(
+            @{ title = 'Blocked'; scope_boundary = 'source'; owner = 'engineer'; recovery_guidance = 'resolve blocker'; status = 'Blocked'; merge_readiness = 'Ready For Reconciliation' },
+            @{ title = 'Unfinished'; scope_boundary = 'tests'; owner = 'engineer'; recovery_guidance = 'finish tests'; status = 'In Progress'; merge_readiness = 'Ready For Reconciliation' }
+        )
+        $null = Invoke-Frontier $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $blockedReady)
+        $blockedReconcile = Invoke-Frontier $root @('parallel', 'reconcile', '--id', $run.parallel_id, '--overlap-review', 'pass', '--conflict-review', 'pass', '--acceptance-evidence', 'pass', '--owner-approval', 'approved', '--json')
+        Assert-True (-not ($blockedReconcile.Output | ConvertFrom-Json).parent_summary.closeout_ready) 'blocked and unfinished units cannot close out through a readiness label'
     } finally {
         Remove-TestWorkspace $root
     }

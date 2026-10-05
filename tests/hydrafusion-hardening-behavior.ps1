@@ -138,6 +138,13 @@ if (process.argv[2] === "output") process.stdout.write("x".repeat(4096));
 setTimeout(() => process.exit(0), 20000);
 '@)
 try {
+    $inputResult = Invoke-HydraFusionProcess -FileName $node -Arguments @('-e',
+        'process.stdin.on("data",c=>process.stdout.write(c));') -WorkingDirectory $processRoot `
+        -InputText ('stdin fixture' * 20000) -TimeoutSeconds 10
+    Assert-Hardening ($inputResult.exitCode -eq 0 -and $inputResult.stdout -ceq ('stdin fixture' * 20000)) 'bounded process drains output while writing stdin'
+    $blockedInput = Invoke-HydraFusionProcess -FileName $node -Arguments @('-e', 'setTimeout(()=>{},20000)') `
+        -WorkingDirectory $processRoot -InputText ('x' * 1MB) -TimeoutSeconds 1
+    Assert-Hardening ($blockedInput.timedOut -and $blockedInput.terminationConfirmed) 'a child that never reads stdin still reaches its deadline'
     foreach ($mode in @('timeout', 'output', 'cancelled', 'callback')) {
         $receiptPath = Join-Path $processRoot "$mode.json"
         $cancel = [Threading.CancellationTokenSource]::new()

@@ -149,6 +149,15 @@ try {
     Assert-True ($docsOnly.ExitCode -eq 0 -and $docsOnlyResult.status -eq 'skipped') 'Docs-only changes skip the code-quality report gate'
     & git -C $workspace restore README.md
 
+    foreach ($extension in @('mjs', 'cjs', 'mts', 'cts')) {
+        $modulePath = Join-Path $workspace "src/module.$extension"
+        Set-Content -LiteralPath $modulePath -Value 'const moduleValue = 1;' -Encoding utf8
+        $moduleScope = Invoke-Evaluator $workspace @('-Mode', 'Scope', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-Json')
+        $moduleFiles = @(($moduleScope.Output | ConvertFrom-Json).files)
+        Assert-True ($moduleScope.ExitCode -eq 0 -and $moduleFiles.Count -eq 1 -and $moduleFiles[0].path -eq "src/module.$extension") "$extension-only edits are included in scored review"
+        Remove-Item -LiteralPath $modulePath -Force
+    }
+
     Add-Content -LiteralPath (Join-Path $workspace 'src/app.ts') -Value 'export const existingDirty = true;' -Encoding utf8
     $dirtySnapshot = Invoke-Evaluator $workspace @('-Mode', 'Snapshot', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-Json')
     Assert-True ($dirtySnapshot.ExitCode -eq 0) 'Snapshot mode accepts a pre-existing dirty implementation file'
@@ -376,14 +385,14 @@ if (-not $SkipLoopIntegration) {
         $start = Invoke-Agentx $loopWorkspace @('loop', 'start', '-p', 'Correct utility defect', '-i', '420')
         Assert-True ($start.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $loopWorkspace '.frontier/state/code-quality-baseline.json'))) 'Loop start captures the code-quality baseline automatically'
 
-        $preReviewEvidence = Join-Path $loopWorkspace 'focused.txt'
+        $preReviewEvidence = Join-Path $loopWorkspace '.frontier/state/focused.txt'
         Set-Content -LiteralPath $preReviewEvidence -Value 'focused checks passed' -Encoding utf8
         $preReview = Invoke-Agentx $loopWorkspace @('loop', 'iterate', '-s', 'Focused checks', '-e', $preReviewEvidence)
         Assert-True ($preReview.ExitCode -eq 0) 'Loop records pre-review evidence with its own digest'
         Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const corrected = true;' -Encoding utf8
         $loopScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.frontier/state/code-quality-baseline.json'), '-Json')
         $loopScope = $loopScopeResult.Output | ConvertFrom-Json
-        $reviewPath = Join-Path $loopWorkspace 'code-quality-review.json'
+        $reviewPath = Join-Path $loopWorkspace '.frontier/state/code-quality-review.json'
         Write-Report $reviewPath $loopScope
         $iterate = Invoke-Agentx $loopWorkspace @(
             'loop', 'iterate', '-s', 'Subagent Review: code quality approved', '-e', $reviewPath,
@@ -394,7 +403,7 @@ if (-not $SkipLoopIntegration) {
         $reviewedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.frontier/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
         $earlyArchive = [string]$reviewedState.history[1].evidence
         Add-Content -LiteralPath $earlyArchive -Value 'rewritten after approval' -Encoding utf8
-        $earlyTamperEvidence = Join-Path $loopWorkspace 'early-tamper-final.txt'
+        $earlyTamperEvidence = Join-Path $loopWorkspace '.frontier/state/early-tamper-final.txt'
         Set-Content -LiteralPath $earlyTamperEvidence -Value 'early archive tamper attempt' -Encoding utf8
         $earlyTamperComplete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Attempt with rewritten early evidence', '-e', $earlyTamperEvidence)
         Assert-True ($earlyTamperComplete.ExitCode -ne 0 -and $earlyTamperComplete.Output -match 'SHA-256|digest') 'Loop completion rejects rewritten non-review history evidence'
@@ -408,7 +417,7 @@ if (-not $SkipLoopIntegration) {
         $archivedReviewPath = [string]$approvedState.history[-1].evidence
         $trustedReviewBytes = Get-Content -LiteralPath $archivedReviewPath -Raw -Encoding utf8
         Copy-Item -LiteralPath $reviewPath -Destination $archivedReviewPath -Force
-        $finalEvidence = Join-Path $loopWorkspace 'final-gate.txt'
+        $finalEvidence = Join-Path $loopWorkspace '.frontier/state/final-gate.txt'
         Set-Content -LiteralPath $finalEvidence -Value 'tampered archived review attempt' -Encoding utf8
         $tamperedComplete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Attempt with rewritten review', '-e', $finalEvidence)
         Assert-True ($tamperedComplete.ExitCode -ne 0 -and $tamperedComplete.Output -match 'SHA-256|hash|digest') 'Loop completion rejects a rewritten archived review'
@@ -422,6 +431,19 @@ if (-not $SkipLoopIntegration) {
         Set-Content -LiteralPath $finalEvidence -Value 'focused tests passed after re-review' -Encoding utf8
         $complete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Code-quality fixture complete', '-e', $finalEvidence)
         Assert-True ($complete.ExitCode -eq 0 -and $complete.Output -match 'Code-quality rubric passed at 100/100') 'Loop completion runs and passes the code-quality rubric automatically'
+        $approvedGate = Invoke-Agentx $loopWorkspace @('loop', 'gate')
+        Assert-True ($approvedGate.ExitCode -eq 0) 'Unchanged approved bytes pass the later commit gate'
+        $approvedBytes = [IO.File]::ReadAllBytes((Join-Path $loopWorkspace 'src/app.ts'))
+        Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const unreviewed = true;' -Encoding utf8
+        & git -C $loopWorkspace add -- src/app.ts
+        $changedGate = Invoke-Agentx $loopWorkspace @('loop', 'gate')
+        Assert-True ($changedGate.ExitCode -ne 0 -and $changedGate.Output -match 'changed after|SHA-256|hash') 'Fully staged changes after completion cannot reuse approval'
+        $changedHandoff = Invoke-Agentx $loopWorkspace @('validate', '420', 'engineer')
+        Assert-True ($changedHandoff.ExitCode -ne 0 -and $changedHandoff.Output -match 'changed after|SHA-256|hash') 'Handoff rechecks current reviewed bytes'
+        [IO.File]::WriteAllBytes((Join-Path $loopWorkspace 'src/app.ts'), $approvedBytes)
+        & git -C $loopWorkspace add -- src/app.ts
+        $restoredGate = Invoke-Agentx $loopWorkspace @('loop', 'gate')
+        Assert-True ($restoredGate.ExitCode -eq 0) 'Restoring the exact approved bytes restores gate eligibility'
     } finally {
         Remove-Item -LiteralPath $loopWorkspace -Recurse -Force -ErrorAction SilentlyContinue
     }

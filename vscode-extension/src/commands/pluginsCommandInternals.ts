@@ -1,9 +1,11 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
 import {
   getLatestCompatibleRelease,
+  isFrontierVersionSupported,
   parsePluginRegistryIndex,
   readPluginManifestFromDir,
   summarizePluginManifest,
@@ -60,7 +62,7 @@ type PluginPick = LocalPluginPick | RegistryPluginPick;
 const SAFE_PLUGIN_DIR_RE = /^[a-z0-9][a-z0-9._-]{0,127}$/i;
 
 interface CatalogSelection {
- readonly source: 'archive' | 'registry';
+ readonly source: 'archive' | 'registry' | 'bundled';
  readonly picks: PluginPick[];
 }
 
@@ -125,7 +127,7 @@ function buildPluginDescription(summary: PluginCatalogSummary, source: 'archive'
   return `${summary.description}${versionSuffix}${compatibilitySuffix}${sourceSuffix}`;
 }
 
-export function getLocalPluginPicks(pluginsRoot: string): LocalPluginPick[] {
+export function getLocalPluginPicks(pluginsRoot: string, hostVersion?: string): LocalPluginPick[] {
   const picks: LocalPluginPick[] = [];
   for (const entry of fs.readdirSync(pluginsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) { continue; }
@@ -133,6 +135,10 @@ export function getLocalPluginPicks(pluginsRoot: string): LocalPluginPick[] {
     let manifest: PluginManifest | undefined;
     try { manifest = readPluginManifestFromDir(pluginDir); } catch (error) {
       console.warn(`Frontier skipped unsupported plugin ${entry.name}:`, error);
+      continue;
+    }
+    if (!manifest || (hostVersion && !isFrontierVersionSupported(manifest.engines?.frontier, hostVersion))) {
+      console.warn(`Frontier skipped invalid or incompatible plugin ${entry.name}.`);
       continue;
     }
     const summary = summarizePluginManifest(manifest, entry.name);
@@ -213,8 +219,8 @@ function cleanUpFile(targetPath: string): void {
     if (fs.existsSync(targetPath)) {
       fs.unlinkSync(targetPath);
     }
-  } catch {
-    // ignore cleanup failures
+  } catch (error) {
+    console.warn(`Frontier could not remove temporary plugin file ${targetPath}:`, error);
   }
 }
 
@@ -223,8 +229,8 @@ function cleanUpDir(targetPath: string): void {
     if (fs.existsSync(targetPath)) {
       fs.rmSync(targetPath, { recursive: true, force: true });
     }
-  } catch {
-    // ignore cleanup failures
+  } catch (error) {
+    console.warn(`Frontier could not remove temporary plugin directory ${targetPath}:`, error);
   }
 }
 
@@ -273,13 +279,13 @@ export function resolvePluginDirectoryFromArtifact(
 async function loadRegistryPluginPicks(root: string, hostVersion: string): Promise<RegistryPluginPick[]> {
   const registryFile = path.join(root, '.frontier-plugin-registry.json');
   cleanUpFile(registryFile);
-  await downloadFile(PLUGIN_REGISTRY_URL, registryFile);
-  const picks = getRegistryPluginPicks(readJsonFile(registryFile), hostVersion);
-  cleanUpFile(registryFile);
-  return picks;
+  try {
+    await downloadFile(PLUGIN_REGISTRY_URL, registryFile);
+    return getRegistryPluginPicks(readJsonFile(registryFile), hostVersion);
+  } finally { cleanUpFile(registryFile); }
 }
 
-async function loadArchivePluginPicks(root: string): Promise<LocalPluginPick[]> {
+async function loadArchivePluginPicks(root: string, hostVersion: string): Promise<LocalPluginPick[]> {
   const rawDir = path.join(root, '.frontier-plugin-install-raw');
   const zipFile = path.join(root, '.frontier-plugin-install.zip');
 
@@ -294,8 +300,7 @@ async function loadArchivePluginPicks(root: string): Promise<LocalPluginPick[]> 
     throw new Error('No Frontier plugins were found in the source archive.');
   }
 
-  const picks = getLocalPluginPicks(pluginsRoot);
-  cleanUpDir(rawDir);
+  const picks = getLocalPluginPicks(pluginsRoot, hostVersion);
   cleanUpFile(zipFile);
   return picks;
 }
@@ -309,8 +314,8 @@ export async function selectCatalogPicks(
     if (registryPicks.length > 0) {
       return { source: 'registry', picks: registryPicks };
     }
-  } catch {
-    // fall back to the legacy archive catalog
+  } catch (error) {
+    console.warn('Frontier published plugin catalog is unavailable; trying the source archive:', error);
   }
 
   return { source: 'archive', picks: await loadArchive() };
@@ -473,13 +478,14 @@ async function installRegistryPlugin(
   pick: RegistryPluginPick,
   extensionVersion: string,
   hostVersion: string,
+  stagingRoot: string,
 ): Promise<void> {
   if (!pick.artifactUrl.startsWith('https://')) {
     throw new Error('Published plugin artifact URL must use HTTPS.');
   }
 
-  const rawDir = path.join(root, '.frontier-plugin-install-raw');
-  const zipFile = path.join(root, '.frontier-plugin-install.zip');
+  const rawDir = path.join(stagingRoot, '.frontier-plugin-install-raw');
+  const zipFile = path.join(stagingRoot, '.frontier-plugin-install.zip');
 
   cleanUpDir(rawDir);
   cleanUpFile(zipFile);
@@ -543,7 +549,10 @@ export async function runAddPluginCommand(
   return;
  }
 
+ let stagingRoot: string | undefined;
  try {
+  stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugin-install-'));
+  const staging = stagingRoot;
   const extensionVersion = context.extension?.packageJSON?.version ?? '0.0.0';
   const hostVersion = resolveHostVersion(root, extensionVersion);
   let catalog: CatalogSelection | undefined;
@@ -555,12 +564,18 @@ export async function runAddPluginCommand(
     cancellable: false,
    },
    async (progress) => {
+    const bundledRoot = path.join(context.extensionPath, '.github', 'frontier', '.frontier', 'runtime', 'plugins');
+    const bundled = fs.existsSync(bundledRoot) ? getLocalPluginPicks(bundledRoot, hostVersion) : [];
+    if (bundled.length > 0) {
+      catalog = { source: 'bundled', picks: bundled };
+      return;
+    }
     progress.report({ message: 'Resolving published plugin catalog...' });
     catalog = await selectCatalogPicks(
-      () => loadRegistryPluginPicks(root, hostVersion),
+      () => loadRegistryPluginPicks(staging, hostVersion),
       async () => {
-        progress.report({ message: 'Falling back to bundled plugin catalog...', increment: 40 });
-        return loadArchivePluginPicks(root);
+        progress.report({ message: 'Loading compatible plugins from the source archive...', increment: 40 });
+        return loadArchivePluginPicks(staging, hostVersion);
       },
     );
    },
@@ -603,13 +618,16 @@ export async function runAddPluginCommand(
     progress.report({ message: `Installing ${pick.label}...` });
 
     if (pick.sourceKind === 'registry') {
-      await installRegistryPlugin(root, pick, extensionVersion, hostVersion);
+      await installRegistryPlugin(root, pick, extensionVersion, hostVersion, staging);
       return;
     }
 
+    const localManifest = readPluginManifestOrThrow(pick.pluginDir);
+    if (!isFrontierVersionSupported(localManifest.engines?.frontier, hostVersion)) {
+      throw new Error('The selected plugin is not compatible with this Frontier version.');
+    }
     fs.mkdirSync(path.dirname(pluginTarget), { recursive: true });
     copyDirRecursive(pick.pluginDir, pluginTarget, true);
-    const localManifest = readPluginManifestOrThrow(pick.pluginDir);
     writePluginInstallAuditRecord(
       root,
       pluginTarget,
@@ -634,5 +652,7 @@ export async function runAddPluginCommand(
  } catch (err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
   vscode.window.showErrorMessage(`Frontier plugin install failed: ${message}`);
+ } finally {
+  if (stagingRoot) { cleanUpDir(stagingRoot); }
  }
 }

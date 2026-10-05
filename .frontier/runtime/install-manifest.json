@@ -1,6 +1,6 @@
 {
   "version": "9.7.0",
-  "createdAt": "2026-10-04T23:55:37Z",
+  "createdAt": "2026-10-05T16:00:25Z",
   "files": [
     {
       "path": ".cursor/commands/ado-ops.md",
@@ -136,7 +136,7 @@
     },
     {
       "path": ".frontier/runtime/agentic-runner.ps1",
-      "sha256": "0c29ff3c2e6d4ae0a2f33655d28102241e20f91b0cd95933652e54cc79dc305e",
+      "sha256": "e4687a14a7aa3f0cdfc5c059793627e64562f443049886f9dd75b9d196582f90",
       "category": "cli"
     },
     {
@@ -156,7 +156,7 @@
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "8409301e4637f834962b2392f793f437151f38fd4f9de4c6b099e18bf5d27b7e",
+      "sha256": "0b546d9440fd3596aa92f46107dfedf6e369ccfa982af9f8bf505276ddba7424",
       "category": "cli"
     },
     {
@@ -181,7 +181,7 @@
     },
     {
       "path": ".frontier/runtime/hydrafusion-protocol.ps1",
-      "sha256": "26d43c27ce9316ad2cbccb5f5c5e4a74d7f2d0a0275ad30e202eab59a49b267e",
+      "sha256": "0e0d063a68ce077ebff55445ff5d196d0c1362d5d72333b12e7fd0736fc1198e",
       "category": "cli"
     },
     {
@@ -196,7 +196,7 @@
     },
     {
       "path": ".frontier/runtime/loop-engineering.ps1",
-      "sha256": "bdc3ca212a6ef823e286eeb35ca4b9f9373a9d0c929a885801fbd6424441f720",
+      "sha256": "8a7bd435b0038f618d4ccf90595427f2e18299a8069e838838aac9e525654c13",
       "category": "cli"
     },
     {
@@ -621,7 +621,7 @@
     },
     {
       "path": ".github/registries/templates.json",
-      "sha256": "53e040516804a6a6ddfe4f938ab89e29816d3e4ff71023bee2e36d92e994fea7",
+      "sha256": "12ded8a4031e34facc9fedcdeb933bd209e349cc5dc328803902312538958992",
       "category": "registry"
     },
     {
@@ -1486,7 +1486,7 @@
     },
     {
       "path": ".github/templates/LEARNING-TEMPLATE.md",
-      "sha256": "3a43bbc55cad7d3f5d700d789fc8620154cebc854c8a3b339b4fd0d9ecc472de",
+      "sha256": "1771f5d68c80d5d42f2e33a1efc2c2159f17051211b8dd74e372ac9ad1f32937",
       "category": "template"
     },
     {
@@ -1636,7 +1636,7 @@
     },
     {
       "path": "scripts/generate-registries.ps1",
-      "sha256": "4751fd1af4beefb350ea36760fbf293302bf28c274eca55c83b17b43de85ec38",
+      "sha256": "130c9b6328f4e378c3ba0dcc076961e0730632a9c46d4318205f349fa6a7ec30",
       "category": "script"
     },
     {
@@ -1706,7 +1706,7 @@
     },
     {
       "path": "scripts/score-code-quality.ps1",
-      "sha256": "4b67098d3c240a521fceae5677ca0f020558a7bea58fe85249c29b8d9cd418bb",
+      "sha256": "09d7fa12018b6a052615b22f2c97bbb64300329b038100424c1f262e8e89661a",
       "category": "script"
     },
     {

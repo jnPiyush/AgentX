@@ -299,6 +299,23 @@ try {
     Assert-That ($noFallback.exitReason -eq 'error' -and $script:modelCalls -eq $beforeFallback + 1) 'a recorded plan cannot silently switch to the configured fallback model'
     Assert-That ($noFallback.finalText -like '*cannot be transferred*') 'model continuity failure is actionable'
 
+    $script:responseFactory = { param($messages, $tools) New-ModelReply -Calls @((New-Call 'drift-plan' propose_plan (New-FixturePlan))) }
+    $driftPlan = Invoke-AgenticLoop -Agent engineer -Prompt 'Reject provider drift' -WorkspaceRoot $root -MaxIterations 2 -SkipLoopStateSync
+    $script:responseFactory = {
+        param($messages, $tools)
+        $script:providerId = 'copilot'
+        New-ModelReply -Calls @(
+            (New-Call 'drift-start' report_progress @{ planVersion = 1; stepId = 's1'; status = 'in_progress'; summary = 'Started'; evidence = 'Fixture' }),
+            (New-Call 'drift-write' file_write @{ filePath = 'src/provider-drift.txt'; content = 'unauthorized' })
+        )
+    }
+    try {
+        $drift = Invoke-AgenticLoop -Agent engineer -WorkspaceRoot $root -ResumeSessionId $driftPlan.sessionId `
+            -InputId $driftPlan.pendingInteraction.inputId -InputDecision approve -PlanVersion 1 -PlanDigest $driftPlan.pendingInteraction.digest -SkipLoopStateSync
+        Assert-That ($drift.exitReason -eq 'error' -and $drift.finalText -like '*Provider, model or role permissions changed*') 'provider drift during a model call blocks its response'
+        Assert-That (-not (Test-Path -LiteralPath (Join-Path $root 'src/provider-drift.txt'))) 'provider drift never reaches file mutation'
+    } finally { $script:providerId = 'github-models' }
+
     $repairId = 'interrupted-fixture'
     $repairState = New-RunnerInteraction $repairId $root engineer 'Inspect an interrupted effect' guided 2
     $repairState.model = 'gpt-4o'; $repairState.provider = 'github-models'

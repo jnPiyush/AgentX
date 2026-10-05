@@ -73,10 +73,5 @@
     "filesystem": "read-write",
     "process": "allowlist"
   },
-  "distribution": {
-    "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-convert-slides/releases/download/v1.0.0/agentx-plugin-convert-slides-1.0.0.zip",
-    "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-    "signatureMode": "optional"
-  },
   "source": "https://github.com/jnPiyush/agentx-plugin-convert-slides"
 }

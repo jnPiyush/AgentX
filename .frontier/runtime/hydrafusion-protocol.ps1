@@ -54,6 +54,7 @@ function Invoke-HydraFusionProcess {
         [ValidateRange(1024, 67108864)][int]$MaxOutputBytes = 8388608,
         [hashtable]$Environment = @{},
         [switch]$PrivateEnvironment,
+        [string]$InputText = '',
         [scriptblock]$OnStdoutLine,
         [string]$LifecyclePath = '',
         [Threading.CancellationToken]$CancellationToken = [Threading.CancellationToken]::None
@@ -64,6 +65,7 @@ function Invoke-HydraFusionProcess {
     $start.RedirectStandardInput = $true
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
+    $start.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
     $start.StandardOutputEncoding = [Text.UTF8Encoding]::new($false, $true)
     $start.StandardErrorEncoding = [Text.UTF8Encoding]::new($false, $true)
     foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
@@ -104,7 +106,11 @@ function Invoke-HydraFusionProcess {
             $lifecycle['phase'] = 'running'
             Write-HydraFusionJson $LifecyclePath $lifecycle
         }
-        $process.StandardInput.Close()
+        $process.StandardInput.AutoFlush = $true
+        $inputTask = if ($InputText.Length) { $process.StandardInput.WriteAsync($InputText) } else { $null }
+        $inputClosed = $false
+        $inputFailure = ''
+        if ($null -eq $inputTask) { $process.StandardInput.Close(); $inputClosed = $true }
         # Fixed-size reads bound partial lines as well as complete JSON records.
         $outBuffer = [char[]]::new(4096)
         $errBuffer = [char[]]::new(4096)
@@ -114,10 +120,17 @@ function Invoke-HydraFusionProcess {
         $bytes = 0L
         $outClosed = $false
         $errClosed = $false
-        while (-not ($outClosed -and $errClosed -and $process.HasExited)) {
+        while (-not ($inputClosed -and $outClosed -and $errClosed -and $process.HasExited)) {
             $CancellationToken.ThrowIfCancellationRequested()
             if ($watch.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
                 Stop-HydraFusionOperation 'timeout' "Process exceeded the $TimeoutSeconds second deadline."
+            }
+            if (-not $inputClosed -and $inputTask.IsCompleted) {
+                try {
+                    $inputTask.GetAwaiter().GetResult()
+                    $process.StandardInput.Close()
+                } catch { $inputFailure = $_.Exception.Message }
+                $inputClosed = $true
             }
             foreach ($stream in @('stdout', 'stderr')) {
                 $task = if ($stream -eq 'stdout') { $outTask } else { $errTask }
@@ -154,6 +167,9 @@ function Invoke-HydraFusionProcess {
         }
         if ($OnStdoutLine -and $pending.Length) { & $OnStdoutLine $pending.ToString() | Out-Null }
         $exitCode = $process.ExitCode
+        if ($inputFailure -and $exitCode -eq 0) {
+            Stop-HydraFusionOperation 'input_error' "Process did not receive its complete input: $inputFailure"
+        }
     } catch {
         $failure = $_.Exception.Message
         $reason = if ($CancellationToken.IsCancellationRequested -or $_.Exception -is [OperationCanceledException]) { 'cancelled' }

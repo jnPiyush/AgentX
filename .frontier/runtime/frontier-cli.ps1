@@ -794,16 +794,18 @@ function Get-FrontierProviderResolution {
     }
 
     function ConvertFrom-AdoMcpToolResult($result) {
-        if (-not $result) { return $null }
-        if ($result.structuredContent) { return $result.structuredContent }
-        $content = @($result.content)
+        if ($null -eq $result) { throw 'ADO MCP returned no result.' }
+        $structured = $result.PSObject.Properties['structuredContent']
+        if ($structured -and $null -ne $structured.Value) { return $structured.Value }
+        $content = @(Get-ConfigValue $result 'content' @())
         foreach ($block in $content) {
-            if ($block.type -eq 'text' -and $block.text) {
-                $text = [string]$block.text
-                try { return ($text | ConvertFrom-Json -Depth 20) } catch { return $text }
+            $text = [string](Get-ConfigValue $block 'text' '')
+            if ((Get-ConfigValue $block 'type') -eq 'text' -and $text) {
+                try { return ($text | ConvertFrom-Json -Depth 20 -ErrorAction Stop) }
+                catch { throw "ADO MCP text result is not valid JSON: $($_.Exception.Message)" }
             }
         }
-        return $null
+        throw 'ADO MCP returned neither structured data nor JSON text.'
     }
 
     function Invoke-AdoOperation {
@@ -1369,7 +1371,7 @@ function Get-ProviderIssues {
     $provider = Get-FrontierProvider
     if ($provider -eq 'github') {
         try {
-            $json = & gh issue list --state all --json number,title,labels,body,state,url --limit 200 2>$null
+            $json = Invoke-GitHubCli @('issue', 'list', '--state', 'all', '--json', 'number,title,labels,body,state,url', '--limit', '200') 'Failed to list GitHub issues.'
             if ($json) {
                 $raw = $json | ConvertFrom-Json
                 $statusByIssue = if (Test-GitHubProjectConfigured) { Get-GitHubProjectIssueStatusMap } else { @{} }
@@ -1382,7 +1384,7 @@ function Get-ProviderIssues {
                     Convert-GitHubIssueToFrontierIssue $_ $status
                 })
             }
-        } catch { Write-Verbose "Provider issue fetch failed: $_" }
+        } catch { throw "GitHub issue fetch failed: $($_.Exception.Message)" }
         return @()
     }
 
@@ -1391,27 +1393,28 @@ function Get-ProviderIssues {
             $orgUrl = Get-AdoOrganizationUrl
             $project = Get-AdoProjectName
             if ([string]::IsNullOrWhiteSpace($orgUrl) -or [string]::IsNullOrWhiteSpace($project)) {
-                return @()
+                throw 'ADO provider requires organization and project in .frontier/config.json.'
             }
             $wiql = "Select [System.Id] From WorkItems Where [System.TeamProject] = '$project' Order By [System.ChangedDate] Desc"
             $refs = Invoke-AdoOperation -OperationName 'list' -McpBlock {
                 $tool = Get-AdoMcpToolName 'query'
                 $result = Invoke-AdoMcpTool -Tool $tool -Arguments @{ project = $project; wiql = $wiql }
                 $payload = ConvertFrom-AdoMcpToolResult $result
-                if ($payload.workItems) { return @($payload.workItems) }
-                if ($payload.value) { return @($payload.value) }
+                if ($null -eq $payload) { return @() }
+                if ($payload.PSObject.Properties['workItems']) { return @($payload.workItems) }
+                if ($payload.PSObject.Properties['value']) { return @($payload.value) }
                 return @($payload)
             }
 
             $issues = @()
-            foreach ($ref in (@($refs) | Select-Object -First 200)) {
-                $workItemId = if ($ref.id) { [int]$ref.id } elseif ($ref.fields.'System.Id') { [int]$ref.fields.'System.Id' } else { 0 }
-                if ($workItemId -le 0) { continue }
+            foreach ($ref in (@($refs) | Where-Object { $null -ne $_ } | Select-Object -First 200)) {
+                $workItemId = [int](Get-ConfigValue $ref 'id' (Get-ConfigValue (Get-ConfigValue $ref 'fields') 'System.Id' 0))
+                if ($workItemId -le 0) { throw 'ADO query returned a work item without a valid ID.' }
                 $issue = Get-AdoIssue $workItemId
                 if ($issue) { $issues += $issue }
             }
             if ($issues.Count -gt 0) { return $issues }
-        } catch { Write-Verbose "ADO issue fetch failed: $_" }
+        } catch { throw "ADO issue fetch failed: $($_.Exception.Message)" }
         return @()
     }
 
@@ -2872,7 +2875,10 @@ function Get-BoundedParallelSummary($run) {
     $blockedCount = @($units | Where-Object {
         $_.status -in @('Blocked', 'Abandoned') -or ([string]$_.summary_signal).Trim().ToLowerInvariant() -eq 'blocked'
     }).Count
-    $readyForReconciliationCount = @($units | Where-Object { $_.merge_readiness -eq 'Ready For Reconciliation' }).Count
+    $readyForReconciliationCount = @($units | Where-Object {
+        $_.merge_readiness -eq 'Ready For Reconciliation' -and $_.status -eq 'Done' -and
+        ([string]$_.summary_signal).Trim().ToLowerInvariant() -ne 'blocked'
+    }).Count
     $summaryState = if ($blockedCount -gt 0) {
         'blocked'
     } elseif ($unitCount -eq 0) {
@@ -2882,7 +2888,8 @@ function Get-BoundedParallelSummary($run) {
     } else {
         'active'
     }
-    $closeoutReady = ($run.reconciliation.final_decision -eq 'passed')
+    $closeoutReady = $unitCount -gt 0 -and $blockedCount -eq 0 -and
+        $readyForReconciliationCount -eq $unitCount -and $run.reconciliation.final_decision -eq 'passed'
 
     return [PSCustomObject]@{
         unit_count = $unitCount
@@ -3053,6 +3060,10 @@ function Invoke-ParallelStart {
 
     try {
         $run.units = @(ConvertTo-TaskUnits $unitsBase64)
+        foreach ($field in @('state', 'overlap_review', 'conflict_review', 'acceptance_evidence', 'owner_approval')) {
+            $run.reconciliation.$field = 'pending'
+        }
+        $run.reconciliation.final_decision = 'blocked'
         $run.updated_at = Get-Timestamp
         $run.parent_summary = Get-BoundedParallelSummary $run
         Save-BoundedParallelRun $run
@@ -3096,7 +3107,9 @@ function Invoke-ParallelReconcile {
         $run.reconciliation.acceptance_evidence = Format-ReconciliationVerdict (Get-Flag @('--acceptance-evidence') 'pending') 'acceptance evidence'
         $run.reconciliation.owner_approval = Format-OwnerApproval (Get-Flag @('--owner-approval') 'pending')
 
-        $allUnitsReady = @($run.units).Count -gt 0 -and @($run.units | Where-Object { $_.merge_readiness -eq 'Ready For Reconciliation' }).Count -eq @($run.units).Count
+        $summary = Get-BoundedParallelSummary $run
+        $allUnitsReady = $summary.unit_count -gt 0 -and $summary.blocked_count -eq 0 -and
+            $summary.ready_for_reconciliation_count -eq $summary.unit_count
         $passed = (
             $run.reconciliation.overlap_review -eq 'pass' -and
             $run.reconciliation.conflict_review -eq 'pass' -and
@@ -3322,8 +3335,7 @@ function Convert-AdoWorkItemToFrontierIssue($item) {
 }
 
 function Get-GitHubIssue([int]$num) {
-    $json = & gh issue view $num --json number,title,body,state,url,labels,comments 2>$null
-    if (-not $json) { return $null }
+    $json = Invoke-GitHubCli @('issue', 'view', "$num", '--json', 'number,title,body,state,url,labels,comments') "Failed to read GitHub issue #$num."
     return Convert-GitHubIssueToFrontierIssue ($json | ConvertFrom-Json)
 }
 
@@ -3694,7 +3706,7 @@ function Invoke-IssueComment {
 function Invoke-IssueList {
     $issues = @(Get-AllIssues | Sort-Object -Property number -Descending)
 
-    if ($Script:JsonOutput) { $issues | ConvertTo-Json -Depth 5; return }
+    if ($Script:JsonOutput) { ConvertTo-Json -InputObject @($issues) -Depth 5; return }
     if ($issues.Count -eq 0) { Write-CliOutput "$($C.y)No issues found.$($C.n)"; return }
 
     Write-CliOutput "`n$($C.c)Issues [$((Get-FrontierProviderInfo).name)]:$($C.n)"
@@ -3742,6 +3754,14 @@ function Get-IssueDeps($issue) {
     return $deps
 }
 
+function Get-UnresolvedIssueDependencies($Issue, [array]$AllIssues) {
+    foreach ($id in (Get-IssueDeps $Issue).blocked_by) {
+        $dependency = $AllIssues | Where-Object { $_.number -eq $id } | Select-Object -First 1
+        if (-not $dependency) { $dependency = Get-ProviderIssue $id }
+        if (-not $dependency -or $dependency.state -ne 'closed') { $id }
+    }
+}
+
 function Get-IssuePriority($issue) {
     $issueLabels = if ($null -ne $issue.labels) { @($issue.labels) } else { @() }
     foreach ($l in $issueLabels) {
@@ -3782,13 +3802,7 @@ function Invoke-ReadyCmd {
     }
 
     $ready = @($open | Where-Object {
-        $deps = Get-IssueDeps $_
-        $blocked = $false
-        foreach ($bid in $deps.blocked_by) {
-            $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
-            if ($b -and $b.state -eq 'open') { $blocked = $true }
-        }
-        -not $blocked
+        @(Get-UnresolvedIssueDependencies $_ $all).Count -eq 0
     } | Sort-Object { Get-IssuePriority $_ })
 
     if ($Script:JsonOutput) { $ready | ConvertTo-Json -Depth 5; return }
@@ -3856,6 +3870,7 @@ function Invoke-DepsCmd {
 
     $all = Get-AllIssues
     $issue = $all | Where-Object { $_.number -eq $num } | Select-Object -First 1
+    if (-not $issue) { $issue = Get-ProviderIssue $num }
     if (-not $issue) { Write-CliOutput "Error: Issue #$num not found"; exit 1 }
 
     $deps = Get-IssueDeps $issue
@@ -3868,6 +3883,7 @@ function Invoke-DepsCmd {
         Write-CliOutput "$($C.y)  Blocked by:$($C.n)"
         foreach ($bid in $deps.blocked_by) {
             $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
+            if (-not $b) { $b = Get-ProviderIssue $bid }
             if ($b) {
                 $ok = $b.state -eq 'closed'
                 $mark = if ($ok) { "$($C.g)[PASS]" } else { "$($C.r)[FAIL]" }
@@ -3875,6 +3891,7 @@ function Invoke-DepsCmd {
                 if (-not $ok) { $hasBlockers = $true }
             } else {
                 Write-CliOutput "    $($C.y)? #$bid - (not found)$($C.n)"
+                $hasBlockers = $true
             }
         }
     } else {
@@ -5370,6 +5387,7 @@ function Invoke-LoopIterate {
     $entry | Add-Member -NotePropertyName preflight -NotePropertyValue @{
         path = $preflight.artifactPath; sha256 = $preflight.artifactSha256
         fingerprint = $preflight.snapshot.fingerprint; passed = $preflight.passed
+        deliveryFingerprint = $preflight.snapshot.deliveryFingerprint
     }
     if ($reviewRecord) { $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord }
     if ($archivedPath) {
@@ -5769,17 +5787,37 @@ function Invoke-LoopComplete {
     Write-CliOutput ''
 }
 
+function Assert-LoopReviewCurrent($State) {
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    $entry = Get-LoopLatestReviewEntry $State
+    if (-not $entry -or -not $entry.PSObject.Properties['evidence'] -or
+        -not $entry.PSObject.Properties['evidenceSha256'] -or
+        -not (Test-Path -LiteralPath $entry.evidence -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $entry.evidence -Algorithm SHA256).Hash -cne $entry.evidenceSha256) {
+        throw 'Archived review evidence SHA-256 no longer matches approval; run a fresh independent review.'
+    }
+    if (-not $State.PSObject.Properties['codeQualityBaselineSha256'] -or -not $State.codeQualityBaselineSha256) {
+        throw 'The approved loop has no bound implementation baseline; start a new loop.'
+    }
+    $context = Get-ActiveLoopEngineeringContext $State
+    $snapshot = Get-LoopEngineeringSnapshot $context
+    $reviewPreflight = Get-LoopEngineeringField $entry 'preflight'
+    if (-not $reviewPreflight -or (Get-LoopEngineeringField $reviewPreflight 'deliveryFingerprint') -cne $snapshot.deliveryFingerprint) {
+        throw 'Source, contract or tool inputs changed after approval; refresh checks and independent review.'
+    }
+    $gate = Invoke-CodeQualityEvaluator -Mode Validate -ReportPath $entry.evidence -BaselineSha256 $State.codeQualityBaselineSha256
+    if (-not $gate.available -or $gate.exitCode -ne 0) {
+        throw "Current code-quality verification failed: $($gate.output -join ' ')"
+    }
+}
+
 <#
 .SYNOPSIS
   Evaluate the commit-time loop gate and exit 0 (pass) or 1 (block).
 
 .DESCRIPTION
   The pre-commit hook delegates here instead of parsing loop-state.json with
-  grep and sed. Text scanning cannot tell a review record inside a history entry
-  from one appended anywhere else in the file, and it depends on JSON key order;
-  both made the hook strictly weaker than the CLI and the extension runtime even
-  though all three are documented as equivalent. Evaluating the gate once, here,
-  removes that divergence by construction.
+  grep and sed. Review metadata and current source must both remain valid.
 #>
 function Invoke-LoopGateCheck {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
@@ -5878,6 +5916,9 @@ function Invoke-LoopGateCheck {
         Write-CliOutput 'BLOCK: work was recorded after the approved review'
         exit 1
     }
+
+    try { Assert-LoopReviewCurrent $state }
+    catch { Write-CliOutput "BLOCK: $($_.Exception.Message)"; exit 1 }
 
     Write-CliOutput "PASS: quality loop complete, approved by $($latestReview.reviewer) with zero HIGH and MEDIUM findings"
     exit 0
@@ -6033,6 +6074,10 @@ function Invoke-ValidateCmd {
             Test-Check (-not $loopActive) "Quality loop not still running (finish it first)"
             Test-Check $loopComplete "Quality loop is complete (cancelled does not satisfy this gate)"
             Test-Check (-not $loopStaleReason) "Quality loop is current for issue #$num"
+            if ($loopComplete -and -not $loopStaleReason) {
+                try { Assert-LoopReviewCurrent $loopState; Test-Check $true 'Approved review matches current files' }
+                catch { Test-Check $false $_.Exception.Message }
+            }
         }
         'reviewer' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/reviews/REVIEW-$num.md")) "REVIEW-$num.md exists"
@@ -7214,6 +7259,8 @@ function Invoke-AgentHookCmd {
                 Write-CliOutput "$($C.d)  Cancelling a loop does not satisfy the quality gate.$($C.n)`n"
                 exit 1
             }
+            try { Assert-LoopReviewCurrent $loopState }
+            catch { Write-CliOutput "$($C.r)  [FAIL] $($_.Exception.Message)$($C.n)"; exit 1 }
         }
 
         $entry = [PSCustomObject]@{ status = 'done'; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }
@@ -7806,8 +7853,10 @@ function Invoke-LessonsPromote {
             continue
         }
 
-        # Extract title (first H1)
-        $title = ($raw -split "`n" | Where-Object { $_ -match '^#\s+' } | Select-Object -First 1) -replace '^#\s+',''
+        $title = if ($fm['title'] -is [string] -and -not [string]::IsNullOrWhiteSpace($fm['title'])) {
+            $fm['title'].Trim()
+        } else { ($raw -split "`n" | Where-Object { $_ -match '^#\s+' } | Select-Object -First 1) -replace '^#\s+','' }
+        if ([string]::IsNullOrWhiteSpace($title)) { throw "Learning $($f.Name) needs a title before promotion." }
         $bullet = "- {0:yyyy-MM-dd}: {1} (LEARNING [{2}], conf={3:N2}, obs={4})" -f (Get-Date), $title, $f.BaseName, $confidence, $observations
 
         if ($dryRun) {
@@ -8567,13 +8616,7 @@ function Invoke-WatchCmd {
             }
 
             $ready = @($open | Where-Object {
-                $deps = Get-IssueDeps $_
-                $blocked = $false
-                foreach ($bid in $deps.blocked_by) {
-                    $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
-                    if ($b -and $b.state -eq 'open') { $blocked = $true }
-                }
-                -not $blocked
+                @(Get-UnresolvedIssueDependencies $_ $all).Count -eq 0
             } | Sort-Object { Get-IssuePriority $_ })
 
             if ($ready.Count -gt 0) {

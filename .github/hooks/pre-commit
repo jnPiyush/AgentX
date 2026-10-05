@@ -190,7 +190,7 @@ fi
 # Active-loop failures are already reported above, so skip re-reporting.
 # Include deletions, and disable rename collapsing so a source -> non-source
 # rename still exposes the deleted source path to the quality gate.
-CODE_FILES_STAGED=$(git diff --cached --name-only --no-renames --diff-filter=ACMRD | grep -E '(\.(ts|tsx|js|mjs|cjs|ps1|psm1|psd1|py|pyx|cs|csx|go|rs|sh|bash|tf|tfvars|bicep|sql)$|^\.github/hooks/(pre-commit|commit-msg|post-commit)$)' | head -1)
+CODE_FILES_STAGED=$(git diff --cached --name-only --no-renames --diff-filter=ACMRD | grep -E '(\.(ts|tsx|mts|cts|js|mjs|cjs|ps1|psm1|psd1|py|pyx|cs|csx|go|rs|sh|bash|tf|tfvars|bicep|sql)$|^\.github/hooks/(pre-commit|commit-msg|post-commit)$)' | head -1)
 REVIEW_DOCS=$(git diff --cached --name-only | grep '^docs/artifacts/reviews/.*\.md$')
 
 # Evaluate the gate ONCE and share the verdict. Checks 8 and 9 both need it, and

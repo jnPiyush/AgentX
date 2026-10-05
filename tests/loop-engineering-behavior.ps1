@@ -30,9 +30,11 @@ try {
         taskClass = 'high-risk'; history = @(); status = 'active'; active = $true
     }
     $calls = [Collections.Generic.List[string]]::new()
+    $scrubTimeouts = [Collections.Generic.List[int]]::new()
     $runner = {
         param($file, $arguments, $directory, $timeout)
         $calls.Add("$file $($arguments -join ' ')")
+        if ($arguments -contains '-PathsFrom') { $scrubTimeouts.Add($timeout) }
         if ($file -match '(node|pwsh)(?:\.exe)?$') {
             $start = [Diagnostics.ProcessStartInfo]::new($file)
             $start.WorkingDirectory = $directory
@@ -64,9 +66,17 @@ try {
     [IO.File]::WriteAllText((Join-Path $root 'source.json'), '{"version":2}')
     $changed = Get-LoopEngineeringSnapshot $context
     Assert-LoopOptimization ($changed.fingerprint -cne $before.fingerprint) 'changed bytes invalidate the snapshot'
+    $originalPath = $env:PATH
+    try {
+        $env:PATH = "$root$([IO.Path]::PathSeparator)$originalPath"
+        $hookEnvironment = Get-LoopEngineeringSnapshot $context
+        Assert-LoopOptimization ($hookEnvironment.fingerprint -cne $changed.fingerprint) 'PATH changes still invalidate cached checks'
+        Assert-LoopOptimization ($hookEnvironment.deliveryFingerprint -ceq $changed.deliveryFingerprint) 'delivery identity tolerates hook PATH changes with the same resolved tools and source'
+    } finally { $env:PATH = $originalPath }
     [IO.File]::WriteAllText((Join-Path $root 'added.json'), '{}')
     $added = Get-LoopEngineeringSnapshot $context
     Assert-LoopOptimization ($added.fingerprint -cne $changed.fingerprint) 'new files invalidate membership'
+    Assert-LoopOptimization ($added.deliveryFingerprint -cne $changed.deliveryFingerprint) 'delivery identity still rejects added files'
     [IO.File]::Delete((Join-Path $root 'added.json'))
     Assert-LoopOptimization ((Get-LoopEngineeringSnapshot $context).fingerprint -ceq $changed.fingerprint) 'removing the added file restores the original input set'
     [IO.File]::WriteAllText((Join-Path $state 'config.json'), '{"provider":"local"}')
@@ -123,6 +133,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $root 'app.js'), 'export const value = 1;')
     $modulePass = Invoke-LoopEngineeringPreflight $context
     Assert-LoopOptimization $modulePass.passed 'module source passes in module package mode'
+    Assert-LoopOptimization ($scrubTimeouts.Count -gt 0 -and @($scrubTimeouts | Where-Object { $_ -ne 180000 }).Count -eq 0) 'full-scope scrub has a finite three-minute check budget'
     [IO.File]::WriteAllText((Join-Path $root 'package.json'), '{"type":"commonjs"}')
     $commonJs = Invoke-LoopEngineeringPreflight $context
     $scriptReceipt = @($commonJs.results | Where-Object id -eq 'script-syntax-registration')[0]
@@ -159,7 +170,45 @@ try {
         $composite = Invoke-LoopEngineeringPreflight $context
         Assert-LoopOptimization $composite.passed 'valid composite projects typecheck without disabling required incremental support'
         Assert-LoopOptimization (-not (Test-Path -LiteralPath (Join-Path $root 'tsconfig.tsbuildinfo'))) 'compiler metadata stays outside source'
+        foreach ($extension in @('mts', 'cts')) {
+            [IO.File]::WriteAllText((Join-Path $root "module.$extension"), 'export const value: number = 1;')
+            [IO.File]::WriteAllText((Join-Path $root 'tsconfig.json'), ('{"compilerOptions":{"types":[]},"files":["module.' + $extension + '"]}'))
+            $moduleLoop = [pscustomobject]@{
+                startedAt = [DateTimeOffset]::UtcNow.ToString('o'); codeQualityBaselineSha256 = 'D' * 64
+                prompt = "Module $extension fixture"; completionCriteria = 'REVIEWED'
+                taskClass = 'standard'; history = @(); status = 'active'; active = $true
+            }
+            $moduleContext = New-LoopEngineeringContext $root $repository $state $moduleLoop $runner
+            Initialize-LoopEngineering $moduleContext
+            [IO.File]::WriteAllText((Join-Path $root "module.$extension"), 'export const value: number = "wrong";')
+            $invalidModule = Invoke-LoopEngineeringPreflight $moduleContext
+            Assert-LoopOptimization (-not $invalidModule.passed -and @($invalidModule.results | Where-Object { $_.id -like 'typecheck:*' -and -not $_.passed }).Count -eq 1) "$extension-only edits trigger semantic type errors"
+        }
     } finally { Remove-Item -LiteralPath $compilerLink -Force }
+
+    $gitRoot = Join-Path $temporary 'git-source'
+    [void][IO.Directory]::CreateDirectory($gitRoot)
+    & git -C $gitRoot init --quiet
+    & git -C $gitRoot -c user.name=Fixture -c user.email=fixture@example.invalid commit --allow-empty --quiet -m fixture
+    $gitLoop = [pscustomobject]@{
+        startedAt = [DateTimeOffset]::UtcNow.ToString('o'); codeQualityBaselineSha256 = 'E' * 64
+        prompt = 'Fresh Git check'; completionCriteria = 'REVIEWED'
+        taskClass = 'standard'; history = @(); status = 'active'; active = $true
+    }
+    $gitRunner = {
+        param($file, $arguments, $directory, $timeout)
+        if ($file -eq 'git') {
+            $output = & git @arguments 2>&1 | Out-String
+            return @{ exitCode = $LASTEXITCODE; stdout = $output; stderr = ''; output = $output }
+        }
+        & $runner $file $arguments $directory $timeout
+    }
+    $gitContext = New-LoopEngineeringContext $gitRoot $repository (Join-Path $temporary 'git-state') $gitLoop $gitRunner
+    Initialize-LoopEngineering $gitContext
+    $gitFirst = Invoke-LoopEngineeringPreflight $gitContext
+    & git -C $gitRoot config core.whitespace tab-in-indent
+    $gitAgain = Invoke-LoopEngineeringPreflight $gitContext
+    Assert-LoopOptimization ($gitFirst.passed -and $gitAgain.passed -and @($gitAgain.results | Where-Object { $_.id -eq 'diff-check' -and -not $_.reused }).Count -eq 1) 'Git checks execute fresh even when only effective Git configuration changes'
 
     $ancestor = Join-Path $temporary 'ancestor'
     $child = Join-Path $ancestor 'source'

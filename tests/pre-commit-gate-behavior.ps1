@@ -27,8 +27,11 @@ $script:scrubPath = Join-Path $script:repoRoot 'scripts\scrub.ps1'
   complete' writes, including the completion entry the CLI always appends after
   the reviewed iteration.
 #>
-function New-CliProducedLoopState {
-    $workspace = Join-Path ([IO.Path]::GetTempPath()) ("frontier-hook-cli-{0}" -f [guid]::NewGuid().ToString('N'))
+function New-CliProducedLoopState([string]$WorkspaceRoot = '') {
+    $ownsWorkspace = -not $WorkspaceRoot
+    $workspace = if ($WorkspaceRoot) { $WorkspaceRoot } else {
+        Join-Path ([IO.Path]::GetTempPath()) ("frontier-hook-cli-{0}" -f [guid]::NewGuid().ToString('N'))
+    }
     New-Item -ItemType Directory -Path (Join-Path $workspace '.frontier\state') -Force | Out-Null
     try {
         $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
@@ -47,30 +50,44 @@ function New-CliProducedLoopState {
             $psi.ArgumentList.Add($script:frontierCliPath)
             foreach ($argument in $Arguments) { $psi.ArgumentList.Add($argument) }
             $process = [System.Diagnostics.Process]::Start($psi)
-            [void]$process.StandardOutput.ReadToEnd()
-            [void]$process.StandardError.ReadToEnd()
+            $output = $process.StandardOutput.ReadToEndAsync()
+            $errors = $process.StandardError.ReadToEndAsync()
             $process.WaitForExit()
+            if ($process.ExitCode -ne 0) { throw "$($output.Result)`n$($errors.Result)" }
+            $process.Dispose()
         }
         $newEvidence = {
             param([string]$Name)
 
-            $path = Join-Path $workspace $Name
+            $path = Join-Path $workspace ".frontier/state/$Name"
             Set-Content -LiteralPath $path -Value ("evidence {0}" -f [guid]::NewGuid()) -Encoding utf8
             return $path
         }
 
-        & $invoke @('loop', 'start', '-p', 'Hook gate round trip')
+        & $invoke @('loop', 'start', '-p', 'Hook gate round trip', '--include-existing-changes')
         foreach ($iterationNumber in 1..4) {
             & $invoke @('loop', 'iterate', '-s', "Progress $iterationNumber", '-e', (& $newEvidence "evidence-$iterationNumber.txt"), '--passing', '10', '-o', 'pass')
         }
-        & $invoke @('loop', 'iterate', '-s', 'Subagent Review: approved', '-e', (& $newEvidence 'review.txt'), '--passing', '10', '--verdict', 'approved', '--reviewer', 'hook-suite', '--high', '0', '--medium', '0', '--low', '1')
+        $scope = & pwsh -NoProfile -File (Join-Path $script:repoRoot 'scripts/score-code-quality.ps1') -Mode Scope -WorkspaceRoot $workspace -Json | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0) { throw 'Could not obtain hook fixture scope.' }
+        $review = Join-Path $workspace '.frontier/state/review.json'
+        @{
+            rubricVersion = '2.0.0'; reviewer = 'hook-suite'; reviewedAt = [DateTimeOffset]::UtcNow.ToString('o')
+            files = @($scope.files)
+            dimensions = @(@('requirements-fit', 'design-conformance', 'logic-correctness', 'verification-tests',
+                'security-privacy', 'reliability-errors', 'maintainability-readability', 'simplicity-scope',
+                'performance-resources', 'documentation-operability') | ForEach-Object {
+                    @{ id = $_; score = 4; evidence = "Synthetic hook fixture evidence for $_."; findings = @() }
+                })
+        } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $review -Encoding utf8
+        & $invoke @('loop', 'iterate', '-s', 'Subagent Review: approved', '-e', $review, '--passing', '10', '--verdict', 'approved', '--reviewer', 'hook-suite', '--high', '0', '--medium', '0', '--low', '0')
         & $invoke @('loop', 'complete', '-s', 'All gates passed', '-e', (& $newEvidence 'final.txt'), '--passing', '10')
 
         $statePath = Join-Path $workspace '.frontier\state\loop-state.json'
         if (-not (Test-Path -LiteralPath $statePath)) { return $null }
         return (Get-Content -LiteralPath $statePath -Raw)
     } finally {
-        Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue
+        if ($ownsWorkspace) { Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue }
     }
 }
 
@@ -105,6 +122,9 @@ function Invoke-HookGate {
         [string]$BashPath,
         $LoopState,
         [string]$RawState,
+        [switch]$ReviewCurrent,
+        [switch]$EditAfterReview,
+        [switch]$StageDeletionAfterReview,
         [switch]$StageReviewDoc,
         [switch]$StageSecret,
         [switch]$StageSecretThenClean,
@@ -128,15 +148,17 @@ function Invoke-HookGate {
             git init --quiet 2>&1 | Out-Null
             git config user.email 'hook-test@example.com' 2>&1 | Out-Null
             git config user.name 'Hook Test' 2>&1 | Out-Null
+            git commit --allow-empty --quiet -m 'test: establish hook baseline'
             Copy-Item -LiteralPath $script:frontierLauncherPath -Destination (Join-Path $repo '.frontier\runtime\frontier.ps1') -Force
-            Copy-Item -LiteralPath $script:frontierCliPath -Destination (Join-Path $repo '.frontier\runtime\frontier-cli.ps1') -Force
+            Set-Content -LiteralPath (Join-Path $repo '.frontier\runtime\frontier-cli.ps1') `
+                -Value ("& '{0}' @args; exit `$LASTEXITCODE" -f $script:frontierCliPath.Replace("'", "''")) -Encoding utf8
             Copy-Item -LiteralPath $script:scrubPath -Destination (Join-Path $repo 'scripts\scrub.ps1') -Force
             if ($StageUnstagedValidatorDrift) {
                 git add .frontier/runtime/frontier.ps1 .frontier/runtime/frontier-cli.ps1 scripts/scrub.ps1 2>&1 | Out-Null
                 git commit --quiet -m 'test: add validator baseline'
                 Add-Content -LiteralPath (Join-Path $repo $ValidatorPath) -Value '# unstaged permissive validator drift'
             }
-            if ($StageTrackedDelete -or $StageTrackedRename -or $StageGateHookDelete) {
+            if ($StageTrackedDelete -or $StageTrackedRename -or $StageGateHookDelete -or $StageDeletionAfterReview) {
                 Set-Content -LiteralPath (Join-Path $repo 'tracked.ps1') -Value 'Write-Output "tracked code"' -Encoding utf8
                 if ($StageGateHookDelete) {
                     New-Item -ItemType Directory -Path (Join-Path $repo '.github\hooks') -Force | Out-Null
@@ -153,6 +175,9 @@ function Invoke-HookGate {
             if ($StageTrackedDelete) {
                 Remove-Item -LiteralPath (Join-Path $repo 'tracked.ps1') -Force
                 git add -u 2>&1 | Out-Null
+            }
+            if ($StageDeletionAfterReview) {
+                Remove-Item -LiteralPath (Join-Path $repo 'tracked.ps1') -Force
             }
             if ($StageTrackedRename) {
                 git mv tracked.ps1 tracked.txt 2>&1 | Out-Null
@@ -185,16 +210,28 @@ function Invoke-HookGate {
             $stateJson | Set-Content -LiteralPath (Join-Path $repo '.frontier\state\loop-state.json') -Encoding utf8
             Copy-Item -LiteralPath $script:hookPath -Destination (Join-Path $repo 'pre-commit') -Force
             Copy-Item -LiteralPath $script:postCommitHookPath -Destination (Join-Path $repo 'post-commit') -Force
+            if ($ReviewCurrent) { $null = New-CliProducedLoopState $repo }
+            if ($StageDeletionAfterReview) { git add -A -- tracked.ps1 }
+            if ($EditAfterReview) {
+                Add-Content -LiteralPath (Join-Path $repo 'change.ps1') -Value 'Write-Output "unreviewed"'
+                git add change.ps1
+            }
             # The hook delegates through the launcher so the same path works in
             # a checkout and in the extension's zero-copy runtime.
             # The hook exits non-zero by design here, so redirect every stream to a
             # file rather than letting the failure interrupt the pipeline.
-            $outFile = Join-Path $repo 'hook-output.txt'
+            $outFile = Join-Path $repo '.frontier/state/hook-output.txt'
             $exitCode = 0
             $previous = $ErrorActionPreference
             $ErrorActionPreference = 'Continue'
             try {
-                & $BashPath './pre-commit' *> $outFile
+                if ($ReviewCurrent) {
+                    $hooksDirectory = Join-Path $repo '.git/hooks'
+                    Copy-Item -LiteralPath $script:hookPath -Destination (Join-Path $hooksDirectory 'pre-commit') -Force
+                    & git -c "core.hooksPath=$hooksDirectory" -c commit.gpgsign=false commit -m 'test: exercise the reviewed hook' *> $outFile
+                } else {
+                    & $BashPath './pre-commit' *> $outFile
+                }
                 $exitCode = $LASTEXITCODE
             } catch {
                 $exitCode = -1
@@ -335,19 +372,22 @@ if (-not $bashPath) {
         # Prove the hook actually ran before trusting any -notmatch assertion:
         # empty output would otherwise pass vacuously.
         Assert-True ($cliRun.Output -match 'Running pre-commit checks') 'the hook executed and produced output'
-        Assert-True ($cliRun.Output -notmatch 'BLOCK:') 'a loop completed through the real CLI passes the hook gate'
-        Assert-True ($cliRun.ExitCode -eq 0) 'real CLI-produced state passes the complete hook with exit zero'
+        Assert-True ($cliRun.Output -match 'BLOCK:' -and $cliRun.ExitCode -ne 0) 'a completed loop copied without its bound workspace and evidence is rejected'
     } else {
         Assert-True $false 'CLI round-trip fixture could not be produced'
     }
 
-    $clean = Invoke-HookGate -BashPath $bashPath -LoopState (New-HookLoopState -History @(
+    $clean = Invoke-HookGate -BashPath $bashPath -ReviewCurrent -LoopState (New-HookLoopState -History @(
         (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
         $completionEntry
     ))
     Assert-True ($clean.Output -notmatch 'BLOCK:') 'an approved review with zero findings passes the loop gate'
     Assert-True ($clean.ExitCode -eq 0) 'clean hook fixture exits zero'
     Assert-True (-not $clean.LoopConsumed) 'pre-commit leaves successful loop consumption to post-commit'
+    $edited = Invoke-HookGate -BashPath $bashPath -ReviewCurrent -EditAfterReview
+    Assert-True ($edited.ExitCode -ne 0 -and $edited.Output -match 'changed after approval') 'fully staged edits after approval are blocked by the real hook'
+    $stagedDeletion = Invoke-HookGate -BashPath $bashPath -ReviewCurrent -StageDeletionAfterReview
+    Assert-True ($stagedDeletion.ExitCode -eq 0 -and $stagedDeletion.Output -notmatch 'BLOCK:') 'staging an already approved deletion passes the real commit gate'
 
     $validatorDrift = Invoke-HookGate -BashPath $bashPath -StageUnstagedValidatorDrift -LoopState (New-HookLoopState -History @(
         (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
@@ -363,7 +403,7 @@ if (-not $bashPath) {
     Assert-True ($launcherDrift.ExitCode -ne 0) 'unstaged Frontier launcher changes block staged code'
     Assert-True ($launcherDrift.Output -match 'validators have unstaged changes') 'Frontier launcher drift rejection is actionable'
 
-    $committed = Invoke-HookGate -BashPath $bashPath -RunPostCommit -LoopState (New-HookLoopState -History @(
+    $committed = Invoke-HookGate -BashPath $bashPath -RunPostCommit -ReviewCurrent -LoopState (New-HookLoopState -History @(
         (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
         $completionEntry
     ))
@@ -420,7 +460,7 @@ if (-not $bashPath) {
 
     # One commit carrying both a code file and a review artifact must not fail on
     # its own consumption marker.
-    $bothRun = Invoke-HookGate -BashPath $bashPath -StageReviewDoc -LoopState (New-HookLoopState -History @(
+    $bothRun = Invoke-HookGate -BashPath $bashPath -StageReviewDoc -ReviewCurrent -LoopState (New-HookLoopState -History @(
         (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
         $completionEntry
     ))
@@ -494,7 +534,7 @@ if (-not $bashPath) {
     $topLevel = Invoke-HookGate -BashPath $bashPath -LoopState $topLevelState
     Assert-True ($topLevel.Output -match 'missing a subagent reviewer pass') 'a review record outside history does not satisfy the gate'
 
-    $clean2 = Invoke-HookGate -BashPath $bashPath -LoopState (New-HookLoopState -History @(
+    $clean2 = Invoke-HookGate -BashPath $bashPath -ReviewCurrent -LoopState (New-HookLoopState -History @(
         (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
         $completionEntry
     ))

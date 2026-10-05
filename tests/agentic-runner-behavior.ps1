@@ -47,6 +47,11 @@ Write-Host ' ================================================' -ForegroundColor 
 
 $Script:ApiMode = 'models'
 
+function Invoke-RunnerAvailabilityFixture {}
+try {
+    Assert-True (-not (Test-RunnerCommandAvailable 'Invoke-RunnerAvailabilityFixture')) 'provider readiness does not mistake profile functions for supported executable commands'
+} finally { Remove-Item Function:Invoke-RunnerAvailabilityFixture }
+
 Assert-True (Test-AgenticLoopResultSucceeded ([PSCustomObject]@{ exitReason = 'text_response' })) 'agentic result helper accepts completed text responses'
 foreach ($failedExitReason in @('self_review_failed', 'error', 'empty_response', 'human_required', 'circuit_breaker', 'max_iterations')) {
     Assert-True (-not (Test-AgenticLoopResultSucceeded ([PSCustomObject]@{ exitReason = $failedExitReason }))) "agentic result helper rejects $failedExitReason"
@@ -167,6 +172,14 @@ try {
     $claudeReady = Test-ClaudeCodeProviderReady
     Assert-True $claudeReady.ready 'Test-ClaudeCodeProviderReady reports ready when claude auth status succeeds'
     Assert-True ($claudeReady.reason -match 'authenticated') 'Test-ClaudeCodeProviderReady returns an authentication success reason'
+    function Invoke-RunnerCommand {
+        param([string]$FileName, [string[]]$Arguments = @())
+        $failure = [InvalidOperationException]::new('Native command exceeded its deadline')
+        $failure.Data['runnerCommandFailure'] = $true
+        throw $failure
+    }
+    $claudeTimeout = Test-ClaudeCodeProviderReady
+    Assert-True (-not $claudeTimeout.ready -and $claudeTimeout.reason -match 'deadline') 'a bounded Claude readiness failure becomes not-ready rather than aborting other providers'
 
     ${function:Invoke-LlmChat} = {
         param($token, $modelId, $messages, $tools, $RequestOptions, $maxTokens)
@@ -312,10 +325,12 @@ $Script:ActiveProvider = [PSCustomObject]@{ id = 'openai-api' }
 Assert-Equal (Resolve-ModelId 'Claude Opus 5.5 (copilot)') 'gpt-5.6-sol' 'OpenAI API downgrades the Opus 5.5 label to a supported GPT model'
 
 $script:capturedRequestBodies = @{}
+$script:capturedRequestTimeouts = @{}
 function Invoke-RestMethod {
     param($Uri, $Method, $Headers, $Body, $TimeoutSec, $ErrorAction)
     $parsed = $Body | ConvertFrom-Json -AsHashtable
     $script:capturedRequestBodies["$($Script:ActiveProvider.id)/$($parsed.model)"] = $parsed
+    $script:capturedRequestTimeouts[$Script:ActiveProvider.id] = $TimeoutSec
     return [PSCustomObject]@{
         content = @([PSCustomObject]@{ type = 'text'; text = 'Fixture response' })
         stop_reason = 'end_turn'
@@ -338,6 +353,7 @@ try {
     Assert-Equal $anthropicOpus55Body['max_tokens'] 16384 'Anthropic Opus 5.5 uses a larger default when maxTokens is omitted'
     Assert-Equal $copilotOpus55Body['max_tokens'] 16384 'Copilot Opus 5.5 uses a larger default when maxTokens is omitted'
     Assert-Equal $anthropicOpus5Body['max_tokens'] 4096 'Opus 5 retains its previous default output limit'
+    Assert-Equal $script:capturedRequestTimeouts['anthropic-api'] 120 'Direct Anthropic requests have a finite timeout'
     Assert-True ($copilotOpus55Body -and -not $copilotOpus55Body.ContainsKey('temperature')) 'Copilot Opus 5.5 requests omit the rejected temperature value'
     foreach ($request in $opusRequestCases) {
         $Script:ActiveProvider = [PSCustomObject]@{ id = $request[0] }
@@ -352,6 +368,85 @@ try {
     Remove-Item Function:Invoke-RestMethod -ErrorAction SilentlyContinue
 }
 $Script:ActiveProvider = $null
+
+$originalProviderRegistry = $Script:ProviderRegistry
+$originalRunnerConfig = $Script:RunnerConfig
+try {
+    foreach ($status in @(401, 403)) {
+        foreach ($enabled in @($false, $true)) {
+            $Script:ApiMode = 'copilot'
+            $Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+            $Script:RunnerConfig = @{ llmProvider = 'copilot' }
+            $Script:ProviderRegistry = @{
+                'github-models' = [PSCustomObject]@{ id = 'github-models'; enabled = $enabled; ready = $enabled; reason = '' }
+            }
+            $script:authRequests = 0
+            $script:authStatus = $status
+            function Invoke-RestMethod {
+                param($Uri, $Method, $Headers, $Body, $TimeoutSec, $ErrorAction)
+                $script:authRequests++
+                if ($script:authRequests -gt 1) { throw 'Unexpected provider retry' }
+                $response = [Net.Http.HttpResponseMessage]::new([Net.HttpStatusCode]$script:authStatus)
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Authentication fixture', $response)
+            }
+            $authError = ''
+            try { $null = Invoke-LlmChat -token 'fixture' -modelId 'gpt-4o' -messages @() -tools @() }
+            catch { $authError = $_.Exception.Message }
+            Assert-True ($authError -match "HTTP $status") "HTTP $status remains an explicit authentication failure"
+            Assert-True ($script:authRequests -eq 1 -and (Get-ActiveProviderId) -eq 'copilot') "HTTP $status cannot transfer execution to another provider (enabled=$enabled)"
+        }
+    }
+} finally {
+    Remove-Item Function:Invoke-RestMethod -ErrorAction SilentlyContinue
+    $Script:ProviderRegistry = $originalProviderRegistry
+    $Script:RunnerConfig = $originalRunnerConfig
+    $Script:ActiveProvider = $null
+    $Script:ApiMode = 'models'
+}
+
+$nativeNode = (Get-Command node -CommandType Application -ErrorAction Stop).Source
+$echo = Invoke-RunnerCommandWithInput -FileName $nativeNode -Arguments @('-e',
+    'let s="";process.stdin.setEncoding("utf8");process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>process.stdout.write(s));') `
+    -InputText "fixture ' `" & `nsecond line" -TimeoutSeconds 10
+Assert-Equal $echo.output "fixture ' `" & `nsecond line" 'Bounded runner preserves stdin bytes without shell interpretation'
+Assert-Equal $echo.exitCode 0 'Bounded runner reports successful child exit'
+$shimRoot = Join-Path ([IO.Path]::GetTempPath()) "frontier-native-shim-$([guid]::NewGuid().ToString('N'))"
+[void][IO.Directory]::CreateDirectory($shimRoot)
+try {
+    $shim = Join-Path $shimRoot 'fixture.ps1'
+    [IO.File]::WriteAllText($shim, 'param([string]$Value); @{ text = ($input -join "`n"); argument = $Value } | ConvertTo-Json -Compress')
+    $unicode = [string][char]0x00e9 + [char]0x20ac + [char]::ConvertFromUtf32(0x1f642)
+    $quoted = "a'b" + [char]0x2019 + '; Write-Output unexpected'
+    $shimResult = Invoke-RunnerCommandWithInput -FileName $shim -Arguments @($quoted) -InputText $unicode -TimeoutSeconds 10
+    $shimOutput = $shimResult.output | ConvertFrom-Json
+    Assert-Equal $shimOutput.text $unicode 'PowerShell shims receive non-ASCII stdin unchanged'
+    Assert-Equal $shimOutput.argument $quoted 'Shim arguments are data even when they contain straight or typographic quotes'
+    $noArguments = Invoke-RunnerCommandWithInput -FileName $shim -InputText $unicode -TimeoutSeconds 10
+    Assert-Equal ($noArguments.output | ConvertFrom-Json).text $unicode 'A shim command without arguments still resolves its entire path'
+    $dateArgument = '2026-10-05T00:00:00Z'
+    $dated = Invoke-RunnerCommandWithInput -FileName $shim -Arguments @($dateArgument) -TimeoutSeconds 10
+    $datedOutput = [Text.Json.JsonDocument]::Parse($dated.output)
+    try { Assert-Equal $datedOutput.RootElement.GetProperty('argument').GetString() $dateArgument 'Date-like shim arguments are not reformatted' }
+    finally { $datedOutput.Dispose() }
+} finally { Remove-Item -LiteralPath $shimRoot -Recurse -Force }
+$earlyExit = Invoke-RunnerCommandWithInput -FileName $nativeNode -Arguments @('-e',
+    'process.stderr.write("fixture model unavailable");process.exit(17);') -InputText ('x' * 1MB) -TimeoutSeconds 10
+Assert-True ($earlyExit.exitCode -eq 17 -and $earlyExit.output -match 'fixture model unavailable') 'early child failure preserves exit status and stderr rather than only a pipe error'
+foreach ($mode in @('timeout', 'output', 'cancelled')) {
+    $cancel = [Threading.CancellationTokenSource]::new()
+    try {
+        if ($mode -eq 'cancelled') { $cancel.CancelAfter(100) }
+        $child = if ($mode -eq 'output') { 'process.stdout.write("x".repeat(4096));setTimeout(()=>{},20000)' }
+            else { 'setTimeout(()=>{},20000)' }
+        $failed = ''
+        try {
+            $null = Invoke-RunnerCommandWithInput -FileName $nativeNode -Arguments @('-e', $child) `
+                -TimeoutSeconds 1 -MaxOutputBytes 1024 -CancellationToken $cancel.Token
+        } catch { $failed = $_.Exception.Message }
+        $pattern = switch ($mode) { 'timeout' { 'deadline' } 'output' { 'output exceeded' } default { 'cancel' } }
+        Assert-True ($failed -match $pattern) "Bounded native runner rejects $mode rather than returning success"
+    } finally { $cancel.Dispose() }
+}
 
 # Sonnet 5 remains a selectable custom-agent label. Pin its provider
 # resolution and ensure the generic Sonnet alias cannot shadow it.

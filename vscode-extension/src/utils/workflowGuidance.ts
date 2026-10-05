@@ -101,7 +101,7 @@ export function evaluateWorkflowGuidance(
   const harnessState = readHarnessState(workspaceRoot);
   const preferredThread = [...harnessState.threads]
     .sort((left, right) => compareThreads(left.status, right.status, left.updatedAt, right.updatedAt))[0];
-  const issues = issuesOverride && issuesOverride.length > 0
+  const issues = issuesOverride !== undefined
     ? [...issuesOverride]
     : getLocalIssues(workspaceRoot);
   const issue = preferredThread?.issueNumber
@@ -599,12 +599,21 @@ export async function fetchProviderAwareIssues(
 ): Promise<LocalIssue[]> {
   try {
     const output = await runCli('issue', ['list', '--json']);
-    const parsed = JSON.parse(output);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((entry): entry is LocalIssue => !!entry && typeof entry === 'object');
+    const parsed: unknown = JSON.parse(output);
+    if (Array.isArray(parsed) || (parsed !== null && typeof parsed === 'object')) {
+      const entries: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
+      const issues = entries.filter((entry): entry is LocalIssue =>
+        entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+        && 'number' in entry && typeof entry.number === 'number'
+        && Number.isInteger(entry.number) && entry.number > 0);
+      if (issues.length !== entries.length) {
+        throw new Error('Issue list contains an invalid issue record.');
+      }
+      return issues;
     }
-  } catch {
-    // Fall through to local issues.
+    throw new Error('Issue list is neither an array nor a single issue.');
+  } catch (error) {
+    console.warn('Frontier could not load provider issues; using local issue files:', error);
   }
   return getLocalIssues(workspaceRoot);
 }

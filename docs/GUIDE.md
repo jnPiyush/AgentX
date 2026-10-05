@@ -307,8 +307,14 @@ configuration to current names before using the runtime:
 - Plugin manifests and registry entries use `engines.frontier`, not
   `engines.agentx` or `engines.hve`. The plugin catalog skips releases and plugin
   folders that still declare the old keys instead of failing as a whole.
-  Bundled plugins declare `>=8.4.0 <10.0.0`; published registry releases keep the
-  ranges they were released with.
+  Bundled plugins declare `>=8.4.0 <10.0.0`. Add Plugin prefers these compatible
+  installed sources, so ordinary installs need no catalog download. If bundled
+  sources are unavailable, it checks the published catalog, then the compatible
+  source archive. Temporary extraction lasts through selection and installation.
+  The source registry currently has no verified published releases; old 8.x
+  records and placeholder checksums are not offered as current artifacts.
+  Publishing compatible archives with measured checksums is a separate release
+  operation, not a compatibility-range edit.
 - Use the `frontier` orchestration role ID in native requests and handoffs.
 - Council files written with the old `agentx:role-instruction` marker fall back
   to the other role-instruction resolution paths. Re-run the council to record the
