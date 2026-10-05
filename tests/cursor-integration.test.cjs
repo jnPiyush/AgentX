@@ -83,6 +83,23 @@ test('previous PowerShell registration and unchanged short hook defaults migrate
   assert.deepEqual(result.hooks, hooks);
 });
 
+test('PowerShell hook launchers migrate to the Node launcher without running twice', () => {
+  const hooks = JSON.parse(fs.readFileSync(path.join(root, '.cursor', 'hooks.json'), 'utf8'));
+  const launcher = event => `pwsh -NoProfile -NonInteractive -File ".frontier/runtime/frontier.ps1" cursor hook ${event}`;
+  for (const timeout of [15, 60]) {
+    const previous = { version: 1, hooks: {
+      sessionStart: [{ command: launcher('sessionStart'), timeout }, { command: 'user-hook' }],
+      preToolUse: [{ command: launcher('preToolUse'), timeout, failClosed: true }],
+    } };
+    const merged = mergeConfiguration({}, previous, { command: 'node' }, hooks.hooks);
+    assert.deepEqual(merged.hooks.hooks.sessionStart, [hooks.hooks.sessionStart[0], { command: 'user-hook' }]);
+    assert.deepEqual(merged.hooks.hooks.preToolUse, hooks.hooks.preToolUse);
+  }
+  const customized = { version: 1, hooks: { preToolUse: [{ command: launcher('preToolUse'), timeout: 60, matcher: 'Write' }] } };
+  const kept = mergeConfiguration({}, customized, { command: 'node' }, hooks.hooks);
+  assert.equal(kept.hooks.hooks.preToolUse.length, 2);
+});
+
 test('native hooks translate edits, shell and session identity without changing roots', () => {
   const edit = translateHookInput('preToolUse', { tool_name: 'Write', tool_input: { file_path: 'src/app.ts' } });
   assert.equal(edit.tool_name, 'apply_patch');
@@ -171,6 +188,41 @@ test('setup upgrades only byte-equivalent legacy wrappers and preserves custom e
     assert.equal(fs.readFileSync(path.join(commands, 'reviewer.md'), 'utf8'), 'user custom reviewer');
     assert.ok(result.preserved.includes('.cursor/commands/reviewer.md'));
   } finally { fs.rmSync(workspace, { recursive: true, force: true }); }
+});
+
+test('setup retires unmodified owned assets that are no longer shipped and preserves edited ones', () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cursor-retire-'));
+  try {
+    fs.mkdirSync(path.join(workspace, '.frontier'), { recursive: true });
+    fs.writeFileSync(path.join(workspace, '.frontier', 'config.json'), '{}');
+    setupCursor(workspace, { assetRoot: root, checkDependencies: () => {} });
+    const commands = path.join(workspace, '.cursor', 'commands');
+    const ownershipPath = path.join(workspace, '.frontier', 'cursor-assets.json');
+    const ownership = JSON.parse(fs.readFileSync(ownershipPath, 'utf8'));
+    const digest = text => require('node:crypto').createHash('sha256').update(text).digest('hex');
+    fs.writeFileSync(path.join(commands, 'renamed-role.md'), 'old shipped command');
+    fs.writeFileSync(path.join(commands, 'edited-role.md'), 'user edited command');
+    ownership.files['.cursor/commands/renamed-role.md'] = digest('old shipped command');
+    ownership.files['.cursor/commands/edited-role.md'] = digest('original shipped command');
+    ownership.files['.frontier/config.json'] = digest('{}');
+    fs.writeFileSync(ownershipPath, JSON.stringify(ownership));
+    const result = setupCursor(workspace, { assetRoot: root, checkDependencies: () => {} });
+    assert.deepEqual(result.retired, ['.cursor/commands/renamed-role.md']);
+    assert.ok(!fs.existsSync(path.join(commands, 'renamed-role.md')));
+    assert.equal(fs.readFileSync(path.join(commands, 'edited-role.md'), 'utf8'), 'user edited command');
+    assert.ok(result.preserved.includes('.cursor/commands/edited-role.md'));
+    assert.ok(fs.existsSync(path.join(workspace, '.frontier', 'config.json')));
+  } finally { fs.rmSync(workspace, { recursive: true, force: true }); }
+});
+
+test('the hook launcher dispatches Cursor reads without loading the full CLI', () => {
+  const result = spawnSync('pwsh', ['-NoProfile', '-NonInteractive', '-File',
+    path.join(root, '.frontier', 'runtime', 'frontier.ps1'), 'cursor', 'hook', 'preToolUse'], {
+    cwd: root, encoding: 'utf8', timeout: 30000,
+    input: JSON.stringify({ tool_name: 'Read', tool_input: { path: 'README.md' }, workspace_roots: [root] }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), { permission: 'allow' });
 });
 
 test('setup does not migrate an unowned AgentX command into the Frontier role', () => {

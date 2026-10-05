@@ -91,6 +91,8 @@ $RuntimeBundleFiles = @(
  'repository-process.cs',
  'workspace-sandbox.ps1',
  'workspace-state.ps1',
+ 'loop-engineering.ps1',
+ 'loop-static-checks.js',
  'repository-parser/index.js',
  'repository-parser/package.json',
  'repository-parser/package-lock.json',
@@ -361,6 +363,7 @@ function Install-CliRuntimeBundle {
   $skipped += $result.Skipped
  }
  $trustedFiles = @(
+  @{ Source = 'scripts/scrub.ps1'; Destination = '.github/frontier/scripts/scrub.ps1' },
   @{ Source = 'scripts/score-code-quality.ps1'; Destination = '.github/frontier/scripts/score-code-quality.ps1' },
   @{ Source = 'evaluation/rubrics/code-quality.md'; Destination = '.github/frontier/evaluation/rubrics/code-quality.md' },
   @{ Source = 'scripts/score-stage-gate.ps1'; Destination = '.github/frontier/scripts/score-stage-gate.ps1' },

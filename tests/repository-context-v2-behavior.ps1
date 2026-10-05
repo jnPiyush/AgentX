@@ -160,6 +160,29 @@ try {
         $migrated.sourceReads -eq 1 -and $migrated.changedFiles -eq 1) 'v1 migration re-extracts existing nodes under the v2 parser identity'
     Assert-Graph ($migratedMap.StartsWith($legacyPrefix) -and $migratedMap.EndsWith($legacySuffix)) 'v1 migration preserves both curated regions exactly'
 
+    if ($IsWindows) {
+        $outside = Join-Path ([IO.Path]::GetTempPath()) "frontier-context-link-target-$([guid]::NewGuid().ToString('N'))"
+        $insideLink = Join-Path $root 'linked-source'
+        [void][IO.Directory]::CreateDirectory($outside)
+        try {
+            New-Item -ItemType Junction -Path $insideLink -Target $outside | Out-Null
+            $linked = Get-FrontierRepositoryContext -WorkspaceRoot $root
+            $linkedGraph = Get-Content -LiteralPath $linked.graphPath -Raw | ConvertFrom-Json -Depth 32
+            Assert-Graph (@($linkedGraph.omitted | Where-Object { $_ -match 'Reparse/link source omitted: linked-source' }).Count -ge 1) 'reparse points below the workspace root are omitted'
+        } finally {
+            if (Test-Path -LiteralPath $insideLink) { Remove-Item -LiteralPath $insideLink -Force }
+            if (Test-Path -LiteralPath $outside) { Remove-Item -LiteralPath $outside -Recurse -Force }
+        }
+        $alias = Join-Path ([IO.Path]::GetTempPath()) "frontier-context-alias-$([guid]::NewGuid().ToString('N'))"
+        New-Item -ItemType Junction -Path $alias -Target $root | Out-Null
+        try {
+            $aliased = Get-FrontierRepositoryContext -WorkspaceRoot $alias
+            Assert-Graph ($aliased.graphPath -and (Test-Path -LiteralPath $aliased.graphPath)) 'a workspace opened through a junction ancestor builds its graph at the resolved root'
+        } finally {
+            if (Test-Path -LiteralPath $alias) { Remove-Item -LiteralPath $alias -Force }
+        }
+    }
+
     $cacheDirectory = Split-Path $built.graphPath -Parent
     Write-FrontierRepositoryRefreshStatus $cacheDirectory @{
         state = 'failed'; at = [DateTime]::UtcNow.ToString('o'); error = 'parser failure fixture'

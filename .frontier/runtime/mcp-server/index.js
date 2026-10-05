@@ -384,6 +384,59 @@ const TOOLS = [
     build: () => ['loop', 'status'],
   },
   {
+    name: 'frontier_loop_prepare',
+    description:
+      'Prepare non-test loop evidence: run incremental preflight, create a factual review packet, diagnose reviewer file/diff access, or record phase timing. Never executes test suites or grants approval. A reviewer-check describes only the host that actually calls it.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        action: { type: 'string', enum: ['preflight', 'review-packet', 'reviewer-check', 'timing'] },
+        stage: { type: 'string', enum: ['boundary', 'final'] },
+        requirements: { type: 'string', description: 'Workspace-relative requirements document for a review packet' },
+        packet: { type: 'string', description: 'Generated packet path for reviewer-check' },
+        reviewer: { type: 'string', description: 'Calling reviewer id, not an approval or identity attestation' },
+        phase: { type: 'string', enum: ['implementation', 'verification', 'review', 'rework', 'waiting'] },
+        stop: { type: 'boolean', description: 'Stop attributed timing; unreported intervals remain unattributed' },
+        force: { type: 'boolean', description: 'Re-execute non-test preflight checks instead of reusing eligible receipts' },
+      },
+      required: ['action'],
+    },
+    build: a => {
+      const fields = {
+        preflight: ['force'],
+        'review-packet': ['stage', 'requirements'],
+        'reviewer-check': ['packet', 'reviewer'],
+        timing: ['phase', 'stop'],
+      };
+      if (!Object.hasOwn(fields, a.action) || Object.keys(a).some(key => key !== 'action' && !fields[a.action].includes(key))) {
+        throw new Error('Unsupported loop preparation action or argument.');
+      }
+      for (const key of fields[a.action]) {
+        if (a[key] === undefined) continue;
+        if (['force', 'stop'].includes(key)) {
+          if (typeof a[key] !== 'boolean') throw new Error(`${key} must be a boolean.`);
+        } else if (typeof a[key] !== 'string' || !a[key].trim() || a[key].length > 4096 || /[\u0000-\u001f]/.test(a[key])) {
+          throw new Error(`${key} must be bounded nonempty text.`);
+        }
+      }
+      if (a.stage && !['boundary', 'final'].includes(a.stage)) throw new Error('Unsupported review stage.');
+      if (a.phase && !['implementation', 'verification', 'review', 'rework', 'waiting'].includes(a.phase)) {
+        throw new Error('Unsupported timing phase.');
+      }
+      if (a.action === 'reviewer-check' && (!a.packet || !a.reviewer)) throw new Error('packet and reviewer are required.');
+      if (a.stop && a.phase) throw new Error('Specify phase or stop, not both.');
+      return ['loop', a.action, '--json',
+        ...(a.stage ? ['--stage', a.stage] : []),
+        ...(a.requirements ? ['--requirements', a.requirements] : []),
+        ...(a.packet ? ['--packet', a.packet] : []),
+        ...(a.reviewer ? ['--reviewer', a.reviewer] : []),
+        ...(a.phase ? ['--phase', a.phase] : []),
+        ...(a.stop ? ['--stop'] : []), ...(a.force ? ['--force'] : []),
+      ];
+    },
+  },
+  {
     name: 'frontier_ready',
     description: 'Show the priority-sorted ready queue of unblocked work.',
     inputSchema: { type: 'object', properties: {} },

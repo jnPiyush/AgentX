@@ -87,6 +87,21 @@ describe('registerLoopCommand', () => {
       assert.ok(fakeAgentx.runCli.calledWith('loop', ['status']));
     });
 
+    for (const action of ['preflight', 'review-packet', 'boundary-review']) {
+      it(`dispatches ${action} through the native loop without running tests`, async () => {
+        fakeAgentx.checkInitialized.resolves(true);
+        sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: action, description: '' } as vscode.QuickPickItem);
+        fakeAgentx.runCli.resolves(JSON.stringify({
+          version: 1, passed: true, checks: [], suitesRun: false, executedCount: 0, reusedCount: 0,
+          startedAt: '2026-10-04T00:00:00Z', finishedAt: '2026-10-04T00:00:00Z', artifactPath: 'fixture.json',
+        }));
+        await registeredCallbacks['frontier.loop']!();
+        const args = action === 'boundary-review'
+          ? ['review-packet', '--stage', 'boundary', '--json'] : [action, '--json'];
+        assert.ok(fakeAgentx.runCli.calledWith('loop', args));
+      });
+    }
+
     it('should run loop cancel action', async () => {
       fakeAgentx.checkInitialized.resolves(true);
       sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'cancel', description: '' } as vscode.QuickPickItem);

@@ -218,6 +218,41 @@ shown by `loop status`. The canonical tiers are:
 
 ### 1.5 Per-Iteration Reporting + Final Summary (MANDATORY)
 
+**Preparation and reuse.** `loop iterate` and `loop complete` run built-in
+non-test preflight; `loop preflight --json` runs it explicitly. It batches scrub,
+checks syntax and test declarations without executing tests, and typechecks
+affected TypeScript projects with their installed compiler. Missing required
+tools, errors and timeouts are not passing evidence. Cosmetic scrub findings
+remain LOW advisories.
+
+Check reuse binds file contents and membership, checker/tool identity and
+workspace/loop identity. Reused receipts retain their original execution time
+and digest. A compiler whose installed dependency closure is unknown runs fresh.
+No review verdict or mutation-authorization decision is cached.
+
+Before high-risk or cross-boundary implementation, SHOULD prepare
+`loop review-packet --stage boundary --requirements <workspace-relative-path>`
+and inspect ownership, interfaces, recovery and installed layouts during the
+existing design checkpoint. A boundary packet is not approval.
+
+Before final review, use `loop review-packet --requirements <path>`. It references
+the full current scope, actual check receipts, requirements, prior findings and
+the changed/affected inputs without supplying an author's correctness rationale.
+The reviewer MUST establish actual source/diff access in its host before a long
+review. `loop reviewer-check --packet <path> --reviewer <id>` is a diagnostic,
+not identity attestation or a substitute for host-enforced read-only access.
+Capability failure stops review; tool declarations are not proof of execution.
+
+Follow-up review SHOULD prioritize the delta plus impacted consumers and MUST
+widen when dependency impact is uncertain. The final independent report still
+covers the entire final implementation scope and current hashes. A prior
+approval is never inherited automatically.
+
+`loop timing --phase implementation|verification|review|rework|waiting` records
+attributed wall time; `loop timing --stop` ends attribution. Unreported intervals
+remain unattributed. Check time and phase time are not additive CPU/model metrics.
+Use comparable tasks before claiming a percentage speedup.
+
 - **Report each iteration as it happens**: call
   `.frontier/runtime/frontier.ps1 loop iterate -s "<what changed + verification result>" -e <evidence>`
   after every fix/verify cycle. State the iteration number, focus, what you did,

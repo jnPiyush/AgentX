@@ -39,8 +39,12 @@ function managedPackage(name, expectedVersion) {
 }
 
 function safeText(value, maximum = 400) {
-  return String(value).replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, ' ')
-    .replace(/(["'`])(?:\\.|(?!\1).)*?\1/g, '$1...$1')
+  let text = String(value).slice(0, maximum);
+  if (text.length && /[\ud800-\udbff]/.test(text.at(-1))) text = text.slice(0, -1);
+  return text.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, ' ')
+    .replace(/"(?:[^"\\]|\\.)*(?:"|$)/g, '"..."')
+    .replace(/'(?:[^'\\]|\\.)*(?:'|$)/g, "'...'")
+    .replace(/`(?:[^`\\]|\\.)*(?:`|$)/g, '`...`')
     .replace(/\s+/g, ' ').trim().slice(0, maximum);
 }
 

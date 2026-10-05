@@ -34,7 +34,7 @@ export function registerPendingClarificationCommand(
    clarificationChannel.appendLine('');
    clarificationChannel.appendLine('Continue in Copilot Chat with:');
    clarificationChannel.appendLine(pending.interaction?.kind === 'plan'
-    ? '@frontier continue "approve" (or describe changes / cancel)'
+    ? '@frontier continue approve (or describe changes / cancel)'
     : '@frontier continue "your guidance here"');
    clarificationChannel.show(true);
   }),

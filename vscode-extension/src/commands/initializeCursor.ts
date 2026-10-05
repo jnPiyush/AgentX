@@ -31,7 +31,7 @@ export async function runInitializeCursorCommand(extensionRoot: string, frontier
     );
     const output = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: 'Frontier: Configuring Cursor...', cancellable: false },
-      () => execShell(invocation.command, root, invocation.shellKind),
+      () => execShell(invocation.command, root, invocation.shellKind, frontier?.workspaceState.environment(root)),
     );
     const result: unknown = JSON.parse(output);
     if (typeof result !== 'object' || result === null || !('status' in result) ||

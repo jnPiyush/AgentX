@@ -81,12 +81,15 @@ const rootRuntimeFiles = [
     'repository-process.cs',
     'workspace-sandbox.ps1',
     'workspace-state.ps1',
+    'loop-engineering.ps1',
+    'loop-static-checks.js',
     'hydrafusion.ps1',
     'hydrafusion-policy.ps1',
     'hydrafusion-protocol.ps1',
     'hydrafusion-workspace.ps1',
     'cursor.js',
     'cursor-mcp.js',
+    'cursor-hook.js',
     'mcp-server/index.js',
     'mcp-server/package.json',
     'mcp-server/package-lock.json',
@@ -252,6 +255,19 @@ const bundledMarkdownRewrites = [
         ],
     },
 ];
+
+if (process.argv.includes('--check')) {
+    const mismatches = [];
+    for (const relative of compatibilityDocumentPaths()) {
+        const expected = compatibilityDocumentText(relative, fs.readFileSync(path.join(repoRoot, relative), 'utf8'));
+        const destination = path.join(compatibilityRoot, relative);
+        if (!fs.existsSync(destination) || fs.readFileSync(destination, 'utf8') !== expected) {
+            mismatches.push(relative);
+        }
+    }
+    console.log(JSON.stringify({ passed: mismatches.length === 0, mismatches, mode: 'read-only' }));
+    process.exit(mismatches.length ? 1 : 0);
+}
 
 // Clean destination
 if (fs.existsSync(destRoot)) {
@@ -602,78 +618,58 @@ function applyBundledMarkdownRewrites() {
 
 function syncCompatibilityRootDocs() {
     for (const file of rootDocs) {
-        const bundledPath = path.join(destRoot, file);
-        if (fs.existsSync(bundledPath)) {
-            const compatibilityPath = path.join(compatibilityRoot, file);
-            fs.copyFileSync(bundledPath, compatibilityPath);
-
-            if (file === 'Skills.md') {
-                const original = fs.readFileSync(compatibilityPath, 'utf8');
-                const updated = original
-                    .split('(skills/').join('(frontier/skills/')
-                    .split('|skills/').join('|frontier/skills/');
-
-                if (updated !== original) {
-                    fs.writeFileSync(compatibilityPath, updated, 'utf8');
-                }
-            } else if (file === 'CONTRIBUTING.md') {
-                const original = fs.readFileSync(compatibilityPath, 'utf8');
-                const updated = original
-                    .split('(skills/').join('(frontier/skills/')
-                    .split('(ISSUE_TEMPLATE/').join('(frontier/ISSUE_TEMPLATE/')
-                    .split('(copilot-instructions.md)').join('(frontier/copilot-instructions.md)');
-
-                if (updated !== original) {
-                    fs.writeFileSync(compatibilityPath, updated, 'utf8');
-                }
-            }
+        const source = path.join(repoRoot, file);
+        if (fs.existsSync(source)) {
+            fs.writeFileSync(path.join(compatibilityRoot, file),
+                compatibilityDocumentText(file, fs.readFileSync(source, 'utf8')), 'utf8');
         }
     }
 }
 
 function rewriteCompatibilityDocs() {
-    const workflowPath = path.join(compatibilityRoot, 'docs', 'WORKFLOW.md');
-    if (fs.existsSync(workflowPath)) {
-        const original = fs.readFileSync(workflowPath, 'utf8');
-        const updated = original
-            .split('(../.github/templates/').join('(../frontier/templates/')
-            .split('(../.github/agents/').join('(../frontier/agents/')
-            .split('(../.github/skills/').join('(../frontier/skills/');
-
-        if (updated !== original) {
-            fs.writeFileSync(workflowPath, updated, 'utf8');
-        }
+    for (const relative of compatibilityDocumentPaths().filter(file => !rootDocs.includes(file))) {
+        const original = fs.readFileSync(path.join(repoRoot, relative), 'utf8');
+        const updated = compatibilityDocumentText(relative, original);
+        if (updated !== original) fs.writeFileSync(path.join(compatibilityRoot, relative), updated, 'utf8');
     }
+}
 
-    const techDebtPath = path.join(compatibilityRoot, 'docs', 'tech-debt-tracker.md');
-    if (fs.existsSync(techDebtPath)) {
-        const original = fs.readFileSync(techDebtPath, 'utf8');
-        const updated = original
-            .split('(artifacts/adr/').join('(../frontier/docs/artifacts/adr/')
-            .split('(artifacts/specs/').join('(../frontier/docs/artifacts/specs/');
+function compatibilityDocumentPaths() {
+    return [
+        ...rootDocs,
+        ...docFiles.map(file => path.join('docs', file)),
+        ...fs.readdirSync(docGuideDir).filter(file => file.endsWith('.md'))
+            .map(file => path.join('docs', 'guides', file)),
+    ].filter(file => fs.existsSync(path.join(repoRoot, file)));
+}
 
-        if (updated !== original) {
-            fs.writeFileSync(techDebtPath, updated, 'utf8');
-        }
-    }
-
-    const guideRewrites = [
-        ['EVALUATOR-CALIBRATION.md', [['(../../.github/agents/', '(../../frontier/agents/']]],
-        ['CODING-HARNESS.md', [
+function compatibilityDocumentText(relative, text) {
+    const bundled = rootDocs.includes(relative)
+        ? bundledMarkdownRewrites.find(entry => entry.relativePath === relative)?.replacements ?? [] : [];
+    const replacements = {
+        'Skills.md': [['(skills/', '(frontier/skills/'], ['|skills/', '|frontier/skills/']],
+        'CONTRIBUTING.md': [
+            ['(skills/', '(frontier/skills/'],
+            ['(ISSUE_TEMPLATE/', '(frontier/ISSUE_TEMPLATE/'],
+            ['(copilot-instructions.md)', '(frontier/copilot-instructions.md)'],
+        ],
+        'docs/WORKFLOW.md': [
+            ['(../.github/templates/', '(../frontier/templates/'],
+            ['(../.github/agents/', '(../frontier/agents/'],
+            ['(../.github/skills/', '(../frontier/skills/'],
+        ],
+        'docs/tech-debt-tracker.md': [
+            ['(artifacts/adr/', '(../frontier/docs/artifacts/adr/'],
+            ['(artifacts/specs/', '(../frontier/docs/artifacts/specs/'],
+        ],
+        'docs/guides/EVALUATOR-CALIBRATION.md': [['(../../.github/agents/', '(../../frontier/agents/']],
+        'docs/guides/CODING-HARNESS.md': [
             ['(../../.github/skills/', '(../../frontier/skills/'],
             ['(../../evaluation/', '(../../frontier/evaluation/'],
-        ]],
-    ];
-    for (const [name, replacements] of guideRewrites) {
-        const guidePath = path.join(compatibilityRoot, 'docs', 'guides', name);
-        if (!fs.existsSync(guidePath)) { continue; }
-        const original = fs.readFileSync(guidePath, 'utf8');
-        let updated = original;
-        for (const [from, to] of replacements) {
-            updated = updated.split(from).join(to);
-        }
-        if (updated !== original) {
-            fs.writeFileSync(guidePath, updated, 'utf8');
-        }
+        ],
+    };
+    for (const [from, to] of [...bundled, ...(replacements[relative.replace(/\\/g, '/')] ?? [])]) {
+        text = text.split(from).join(to);
     }
+    return text;
 }

@@ -1043,6 +1043,7 @@ describe('chatParticipant', () => {
         agentName: 'engineer',
         prompt: 'implement the login fix',
       }),
+      runCli: async () => JSON.stringify({ sessionId: 'engineer-20260309120000-abcd', pendingInteraction: null }),
       runCliStreaming: async (
         _subcommand: string,
         cliArgs: string[],
@@ -1055,14 +1056,14 @@ describe('chatParticipant', () => {
     };
 
     await handleFrontierChatRequest(
-      { prompt: 'continue use the existing auth flow' } as any,
+      { prompt: 'continue "use the existing auth flow"' } as any,
       response as any,
       agentx as any,
     );
 
     assert.deepEqual(capturedArgs, [
       '--resume-session', 'engineer-20260309120000-abcd',
-      '--clarification-response', 'use the existing auth flow',
+      '--clarification-response', 'use the existing auth flow', '--json',
     ]);
     assert.equal(cleared, true);
     assert.ok(response.getMarkdown().includes('Final answer after human clarification'));
@@ -1077,6 +1078,7 @@ describe('chatParticipant', () => {
         agentName: 'engineer',
         prompt: 'implement the login fix',
       }),
+      runCli: async () => JSON.stringify({ sessionId: 'engineer-20260309120000-abcd', pendingInteraction: null }),
       runCliStreaming: async (
         _subcommand: string,
         _cliArgs: string[],
@@ -1168,6 +1170,7 @@ describe('chatParticipant', () => {
         agentName: 'engineer',
         prompt: 'implement the login fix',
       }),
+      runCli: async () => JSON.stringify({ sessionId: 'engineer-20260309120000-abcd', pendingInteraction: null }),
       runCliStreaming: async (
         _subcommand: string,
         cliArgs: string[],
@@ -1187,7 +1190,7 @@ describe('chatParticipant', () => {
 
     assert.deepEqual(capturedArgs, [
       '--resume-session', 'engineer-20260309120000-abcd',
-      '--clarification-response', 'Use the existing auth flow and do not change token semantics.',
+      '--clarification-response', 'Use the existing auth flow and do not change token semantics.', '--json',
     ]);
     assert.ok(response.getMarkdown().includes('Resumed with natural-language clarification'));
   });

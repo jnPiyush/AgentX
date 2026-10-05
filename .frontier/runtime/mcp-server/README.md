@@ -9,7 +9,7 @@ Instead of asking the model to type `pwsh .frontier/runtime/frontier-cli.ps1 loo
 
 ## Tools Exposed
 
-The server advertises 23 `frontier_*` tools. AgentX/HVE tool aliases are not
+The server advertises 24 `frontier_*` tools. AgentX/HVE tool aliases are not
 accepted; callers must use the advertised Frontier names.
 
 | Tool | Wraps | Purpose |
@@ -19,6 +19,7 @@ accepted; callers must use the advertised Frontier names.
 | `frontier_loop_iterate` | `loop iterate -s "..." [-e <evidence>]` | Record an iteration |
 | `frontier_loop_complete` | `loop complete -s "..." [-e <evidence>]` | Close the loop (risk-based minimum 1/2/3/5 iterations, final approved reviewer verdict, zero HIGH/MEDIUM) |
 | `frontier_loop_status` | `loop status` | Report current loop state |
+| `frontier_loop_prepare` | `loop preflight\|review-packet\|reviewer-check\|timing --json` | Prepare non-test evidence, scope-aware review and calling-host diagnostics; never approve work or run suites |
 | `frontier_ready` | `ready` | Priority-sorted ready queue |
 | `frontier_state` | `state [-a <agent>] [-s <status>] [-i <issue>]` | Show or update agent state |
 | `frontier_deps` | `deps <issue>` | Check blockers |
@@ -76,7 +77,7 @@ Verify it starts:
 
 ```bash
 node index.js
-# Expect a ready message on stderr with the repository and 23 tools.
+# Expect a ready message on stderr with the repository and 24 tools.
 # Then it blocks waiting for MCP requests on stdin. Ctrl+C to exit.
 ```
 

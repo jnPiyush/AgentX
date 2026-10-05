@@ -70,6 +70,30 @@
       "symbols": ["Get-RunnerTokenBudget"]
     },
     {
+      "id": "held-natural-language-repository-tool",
+      "split": "held-out",
+      "query": "retrieve bounded source pointers from the cached repository graph before broad searches",
+      "agent": "engineer",
+      "files": [".frontier/runtime/agentic-runner.ps1"],
+      "symbols": ["Get-ToolSchemaList"]
+    },
+    {
+      "id": "held-partial-repository-refresh",
+      "split": "held-out",
+      "query": "RunnerRepositoryContextRefresh",
+      "agent": "engineer",
+      "files": [".frontier/runtime/agentic-runner.ps1"],
+      "symbols": ["Start-RunnerRepositoryContextRefresh"]
+    },
+    {
+      "id": "held-hop-refresh-command-state-check",
+      "split": "held-out",
+      "query": "refresh repository context command",
+      "agent": "engineer",
+      "files": ["vscode-extension/src/commands/repositoryContext.ts", "vscode-extension/src/utils/frontierPaths.ts"],
+      "symbols": ["registerRepositoryContextCommand", "hasFrontierState"]
+    },
+    {
       "id": "held-no-answer",
       "split": "held-out",
       "query": "FrontierUnimplementedQuantumFluxResolver",

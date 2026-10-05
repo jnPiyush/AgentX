@@ -1,4 +1,5 @@
 import { strict as assert } from 'assert';
+import { formatNativePreflight } from '../../runtime/verificationLoop';
 import {
   parseVerificationFailures,
   evaluateVerificationCheck,
@@ -10,6 +11,30 @@ import {
   CommandExecution,
   VerificationCheckResult,
 } from '../../runtime';
+
+describe('native loop preflight evidence', () => {
+  function receipt() {
+    return {
+      version: 1, passed: true, suitesRun: false, artifactPath: 'state/run.json',
+      startedAt: '2026-10-04T00:00:00Z', finishedAt: '2026-10-04T00:00:01Z',
+      executedCount: 0, reusedCount: 1,
+      checks: [{
+        id: 'syntax', passed: true, reused: true, executedAt: '2026-10-03T00:00:00Z',
+        currentDurationMs: 0, summary: 'Previously parsed unchanged inputs.',
+      }],
+    };
+  }
+  it('labels reused receipts separately from execution and does not imply suite execution', () => {
+    const output = formatNativePreflight(receipt());
+    assert.ok(output.includes('Executed: 0; reused: 1'));
+    assert.ok(output.includes('Suites not run'));
+  });
+  it('rejects malformed or contradictory native evidence', () => {
+    assert.throws(() => formatNativePreflight({ ...receipt(), suitesRun: true }));
+    assert.throws(() => formatNativePreflight({ ...receipt(), executedCount: 1 }));
+    assert.throws(() => formatNativePreflight({ ...receipt(), passed: false }));
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Helpers

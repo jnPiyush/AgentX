@@ -126,26 +126,29 @@ function buildPluginDescription(summary: PluginCatalogSummary, source: 'archive'
 }
 
 export function getLocalPluginPicks(pluginsRoot: string): LocalPluginPick[] {
-  return fs.readdirSync(pluginsRoot, { withFileTypes: true })
-   .filter((entry) => entry.isDirectory())
-   .map((entry) => {
+  const picks: LocalPluginPick[] = [];
+  for (const entry of fs.readdirSync(pluginsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) { continue; }
     const pluginDir = path.join(pluginsRoot, entry.name);
-    const manifest = readPluginManifestFromDir(pluginDir);
+    let manifest: PluginManifest | undefined;
+    try { manifest = readPluginManifestFromDir(pluginDir); } catch (error) {
+      console.warn(`Frontier skipped unsupported plugin ${entry.name}:`, error);
+      continue;
+    }
     const summary = summarizePluginManifest(manifest, entry.name);
-
-    return {
+    picks.push({
       sourceKind: 'local',
-     pluginId: summary.pluginId,
-     qualifiedId: summary.qualifiedId,
-     publisher: summary.publisher,
-     version: summary.version,
-     label: summary.label,
-     description: buildPluginDescription(summary, 'archive'),
-     pluginDir,
-     targetDirName: path.basename(pluginDir),
-    } satisfies LocalPluginPick;
-   })
-   .sort((left, right) => left.label.localeCompare(right.label));
+      pluginId: summary.pluginId,
+      qualifiedId: summary.qualifiedId,
+      publisher: summary.publisher,
+      version: summary.version,
+      label: summary.label,
+      description: buildPluginDescription(summary, 'archive'),
+      pluginDir,
+      targetDirName: path.basename(pluginDir),
+    });
+  }
+  return picks.sort((left, right) => left.label.localeCompare(right.label));
 }
 
 function buildRegistrySummary(entry: PluginRegistryEntry, hostVersion: string): PluginCatalogSummary | undefined {

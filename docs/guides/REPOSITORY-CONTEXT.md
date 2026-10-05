@@ -134,9 +134,14 @@ updating an extractor invalidates affected cached analysis even when source
 timestamps are unchanged. The source parser package owns its dependencies;
 it does not resolve them from the analyzed workspace's `node_modules`.
 Blank or unsafe normalized symbol names are omitted with file-bound diagnostics
-rather than aborting the repository refresh. Parser process failures remain
-explicit and include the affected batch paths; the previous valid graph is
-preserved. Automatic stale queries respect the failed-refresh retry window.
+rather than aborting the repository refresh. When a parser batch fails or times
+out, its files are retried individually within a bounded budget (four files or
+45 seconds per batch). A file that still fails keeps only file-level metadata and a
+diagnostic, so one problematic file cannot block graph publication. Metadata
+sanitizers truncate input before pattern matching and use non-overlapping quote
+patterns, so adversarial strings stay linear-time. The previous valid graph is
+preserved if publication itself fails. Automatic stale queries respect the
+failed-refresh retry window.
 
 ## Evidence and token accounting
 
@@ -264,7 +269,10 @@ subfolder of a larger repository which tracks files inside it. A folder with no
 files tracked by an enclosing repository (for example a project under a
 home-directory dotfiles repository) uses conservative filesystem traversal, as do
 non-Git workspaces. Secrets, mutable runtime state, vendor/build output and
-unsafe links are excluded. Binary and oversized files are not parsed as source;
+unsafe links are excluded. The workspace root is resolved to its final path, so a
+folder opened through a junction or symbolic-link ancestor is supported; links
+below that root, including inside the state and cache directories, are still
+omitted or rejected. Binary and oversized files are not parsed as source;
 discovery limitations must remain visible in the result or map.
 
 References are observed syntax, not inferred runtime dependencies. Dynamic

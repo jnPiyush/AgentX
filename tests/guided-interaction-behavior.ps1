@@ -32,6 +32,11 @@ try {
     Assert-That ([bool](Get-InteractionToolBlock $state 'file_write')) 'writes are blocked before a plan'
     Assert-That ([bool](Get-InteractionToolBlock $state 'future_external_tool')) 'unknown future tools fail closed before approval'
     Assert-That (-not (Get-InteractionToolBlock $state 'file_read')) 'bounded discovery remains available'
+    $stopped = ConvertFrom-RunnerInteraction $state 'guided-fixture' $root 'engineer'
+    Resume-RunnerInteraction $stopped '' 'continue' $stopped.planVersion $stopped.digest ''
+    Assert-That ($stopped.phase -eq 'discovery' -and -not (Test-InteractionAuthorized $stopped)) 'discovery stopped before a plan can resume without gaining write access'
+    Assert-That ([bool](Get-InteractionToolBlock $stopped 'file_write')) 'resumed discovery still blocks writes'
+    Assert-Rejected { Resume-RunnerInteraction $stopped ('0' * 32) 'continue' $stopped.planVersion $stopped.digest '' } 'continuation with a stale input ID is rejected'
     Set-InteractionPlan $state (New-FixturePlan)
     $view = Get-InteractionPendingView $state
     Assert-That ($view.kind -eq 'plan' -and $view.planVersion -eq 1 -and $view.plan.steps[0].id -eq 's1') 'the runtime assigns plan and milestone identities'

@@ -4032,18 +4032,35 @@ function Invoke-LoopCmd {
     $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'status' }
     # Shift subargs past the action for loop subcommands
     $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
-    switch ($action) {
-        'start'    { Invoke-LoopStart }
-        'baseline' { Invoke-LoopBaseline }
-        'status'   { Invoke-LoopStatus }
-        'affected' { Invoke-LoopAffected }
-        'iterate'  { Invoke-LoopIterate }
-        'complete'  { Invoke-LoopComplete }
-        'cancel'    { Invoke-LoopCancel }
-        'rollback'  { Invoke-LoopRollback }
-        'gate'      { Invoke-LoopGateCheck }
-        default     { Write-CliOutput "Unknown loop action: $action" }
-    }
+    $operation = $null
+    try {
+        if ($action -in @('start', 'baseline', 'iterate', 'complete', 'cancel', 'rollback')) {
+            . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+            $lockPath = Join-Path (Get-LoopStateDirectory) 'loop-operation.lock'
+            $relative = [IO.Path]::GetRelativePath($Script:ROOT, $lockPath)
+            if ($relative -match '^\.\.([\\/]|$)' -or [IO.Path]::IsPathRooted($relative)) { Assert-FrontierStatePath $lockPath }
+            else { $null = Resolve-LoopEngineeringPath $Script:ROOT $relative }
+            [void][IO.Directory]::CreateDirectory((Split-Path $lockPath -Parent))
+            try { $operation = [IO.File]::Open($lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None) }
+            catch [IO.IOException] { throw 'Another loop mutation is running. Wait for its verification to finish; no loop state was changed.' }
+        }
+        switch ($action) {
+            'start'    { Invoke-LoopStart }
+            'baseline' { Invoke-LoopBaseline }
+            'status'   { Invoke-LoopStatus }
+            'affected' { Invoke-LoopAffected }
+            'preflight' { Invoke-LoopEngineeringAction 'preflight' }
+            'review-packet' { Invoke-LoopEngineeringAction 'review-packet' }
+            'reviewer-check' { Invoke-LoopEngineeringAction 'reviewer-check' }
+            'timing' { Invoke-LoopEngineeringAction 'timing' }
+            'iterate'  { Invoke-LoopIterate }
+            'complete'  { Invoke-LoopComplete }
+            'cancel'    { Invoke-LoopCancel }
+            'rollback'  { Invoke-LoopRollback }
+            'gate'      { Invoke-LoopGateCheck }
+            default     { Write-CliOutput "Unknown loop action: $action" }
+        }
+    } finally { if ($operation) { $operation.Dispose() } }
 }
 
 function Get-LoopStateLastTouchedUtc {
@@ -4409,19 +4426,21 @@ function Invoke-LoopCheckProcess {
         if ($timedOut) {
             $process.Kill($true)
             if (-not $process.WaitForExit(10000)) {
-                return [PSCustomObject]@{ exitCode = 1; output = 'Checker timed out; process-tree termination unconfirmed.' }
+                return [PSCustomObject]@{ exitCode = 1; stdout = ''; stderr = ''; timedOut = $true; output = 'Checker timed out; process-tree termination unconfirmed.' }
             }
         }
         if (-not [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout, $stderr), 5000)) {
-            return [PSCustomObject]@{ exitCode = 1; output = 'Checker output streams did not close; inspect remaining child processes.' }
+            return [PSCustomObject]@{ exitCode = 1; stdout = ''; stderr = ''; timedOut = $timedOut; output = 'Checker output streams did not close; inspect remaining child processes.' }
         }
-        $output = ($stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()).Trim()
+        $stdoutText = $stdout.GetAwaiter().GetResult()
+        $stderrText = $stderr.GetAwaiter().GetResult()
+        $output = ($stdoutText + $stderrText).Trim()
         if ($timedOut) {
-            return [PSCustomObject]@{ exitCode = 1; output = "Checker timed out after ${TimeoutMilliseconds}ms. Inspect the named checker and rerun it; evidence was not approved." }
+            return [PSCustomObject]@{ exitCode = 1; stdout = $stdoutText; stderr = $stderrText; timedOut = $true; output = "Checker timed out after ${TimeoutMilliseconds}ms. Inspect the named checker and rerun it; evidence was not approved." }
         }
-        return [PSCustomObject]@{ exitCode = $process.ExitCode; output = $output }
+        return [PSCustomObject]@{ exitCode = $process.ExitCode; stdout = $stdoutText; stderr = $stderrText; timedOut = $false; output = $output }
     } catch {
-        return [PSCustomObject]@{ exitCode = 1; output = "Checker execution failed: $($_.Exception.Message)" }
+        return [PSCustomObject]@{ exitCode = 1; stdout = ''; stderr = ''; timedOut = $false; output = "Checker execution failed: $($_.Exception.Message)" }
     } finally {
         if ($process) { $process.Dispose() }
     }
@@ -4441,6 +4460,7 @@ function Invoke-CodeQualityEvaluator {
         $candidate = Join-Path $basePath 'scripts/score-code-quality.ps1'
         if (Test-Path -LiteralPath $candidate -PathType Leaf) { $scriptPath = $candidate; break }
     }
+
     if (-not $scriptPath) {
         return [PSCustomObject]@{
             available = $false
@@ -4489,6 +4509,73 @@ function Invoke-CodeQualityEvaluator {
         }
     }
     return [PSCustomObject]@{ available = $true; exitCode = $exitCode; output = $output; result = $result }
+}
+
+function Get-ActiveLoopEngineeringContext($State) {
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    return New-LoopEngineeringContext $Script:ROOT $Script:INSTALL_ROOT $Script:FRONTIER_STATE_DIR $State {
+        param($file, $arguments, $directory, $timeout)
+        $start = [Diagnostics.ProcessStartInfo]::new($file)
+        $start.WorkingDirectory = $directory
+        if ([IO.Path]::GetFileName($file) -in @('node', 'node.exe')) {
+            [void]$start.Environment.Remove('NODE_OPTIONS')
+            [void]$start.Environment.Remove('NODE_PATH')
+        }
+        foreach ($argument in $arguments) { $start.ArgumentList.Add([string]$argument) }
+        Invoke-LoopCheckProcess -StartInfo $start -TimeoutMilliseconds $timeout
+    }
+}
+
+function Invoke-LoopEngineeringAction([string]$Action) {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) { throw 'Start a quality loop before preparing verification or review evidence.' }
+    $allowed = switch ($Action) {
+        'preflight' { @('--force', '--json') }
+        'review-packet' { @('--requirements', '--stage', '--json') }
+        'reviewer-check' { @('--packet', '--reviewer', '--json') }
+        'timing' { @('--phase', '--stop', '--json') }
+    }
+    for ($index = 0; $index -lt $Script:SubArgs.Count; $index++) {
+        $argument = [string]$Script:SubArgs[$index]
+        if ($argument -notin $allowed) { throw "Unsupported loop preparation argument '$argument'." }
+        if ($argument -in @('--requirements', '--stage', '--packet', '--reviewer', '--phase')) {
+            if (++$index -ge $Script:SubArgs.Count -or [string]::IsNullOrWhiteSpace($Script:SubArgs[$index])) {
+                throw "A value is required after '$argument'."
+            }
+        }
+    }
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    $context = Get-ActiveLoopEngineeringContext $state
+    switch ($Action) {
+        'preflight' {
+            $preflight = Invoke-LoopEngineeringPreflight $context -Force:(Test-Flag @('--force')) -Delivery
+            $result = Get-LoopEngineeringBrief $preflight
+        }
+        'review-packet' {
+            $scope = Invoke-CodeQualityEvaluator -Mode Scope -BaselineSha256 $state.codeQualityBaselineSha256
+            if ($scope.exitCode -ne 0) { throw ($scope.output -join "`n") }
+            $result = New-LoopEngineeringReviewPacket $context @($scope.result.files) `
+                -Requirements (Get-Flag @('--requirements') '') -Stage (Get-Flag @('--stage') 'final')
+        }
+        'reviewer-check' {
+            $result = Test-LoopEngineeringReviewer $context (Get-Flag @('--packet') '') (Get-Flag @('--reviewer') '')
+        }
+        'timing' {
+            $result = Set-LoopEngineeringPhase $context (Get-Flag @('--phase') '') -Stop:(Test-Flag @('--stop'))
+        }
+    }
+    [Console]::Out.WriteLine((ConvertTo-Json -InputObject $result -Depth 30 -Compress))
+    if ($result.Contains('passed') -and -not $result.passed) { exit 1 }
+}
+
+function Assert-LoopEngineeringStillCurrent($Expected) {
+    $current = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $current -or -not $current.active -or
+        (ConvertTo-LoopUtcOffset $current.startedAt) -ne (ConvertTo-LoopUtcOffset $Expected.startedAt) -or
+        $current.iteration -ne $Expected.iteration -or
+        $current.codeQualityBaselineSha256 -cne $Expected.codeQualityBaselineSha256) {
+        throw 'The active loop changed during verification; this operation did not overwrite the newer loop.'
+    }
 }
 
 function Get-LoopEvidenceRoot {
@@ -4941,6 +5028,9 @@ function Invoke-LoopStart {
         history            = @([PSCustomObject]@{ iteration = 0; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
     }
     Write-JsonFile $Script:LOOP_STATE_FILE $state
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    Initialize-LoopEngineering (Get-ActiveLoopEngineeringContext $state)
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
 
     # Snapshot tests-passing baseline so iterations cannot regress passing tests.
     # The baseline file is advisory: agents/CI write the actual count via
@@ -4968,6 +5058,10 @@ function Invoke-LoopStart {
             Write-CliOutput "$($C.d)       Gate: $($g.gate)$($C.n)"
         }
         Write-CliOutput ''
+    }
+    Write-CliOutput '  Preparation: loop preflight; loop review-packet; loop reviewer-check; loop timing.'
+    if ($taskClass -eq 'high-risk') {
+        Write-CliOutput '  Before implementation: prepare a boundary packet with loop review-packet --stage boundary and inspect ownership, contracts, recovery and delivery layout.'
     }
 }
 
@@ -5262,9 +5356,21 @@ function Invoke-LoopIterate {
         }
     }
 
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    $engineering = Get-ActiveLoopEngineeringContext $state
+    $preflight = Invoke-LoopEngineeringPreflight $engineering -Delivery:($null -ne $reviewRecord)
+    Assert-LoopEngineeringStillCurrent $state
+    if (-not $preflight.passed -and ($outcome -eq 'pass' -or $reviewRecord)) {
+        throw "Current non-test preflight failed: $($preflight.artifactPath). A passing iteration or review cannot be recorded."
+    }
+    if (-not $preflight.passed) { $outcome = 'fail' }
     $state.iteration = $next
     $state.lastIterationAt = Get-Timestamp
     $entry = [PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = $summary; status = 'in-progress'; outcome = $outcome }
+    $entry | Add-Member -NotePropertyName preflight -NotePropertyValue @{
+        path = $preflight.artifactPath; sha256 = $preflight.artifactSha256
+        fingerprint = $preflight.snapshot.fingerprint; passed = $preflight.passed
+    }
     if ($reviewRecord) { $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord }
     if ($archivedPath) {
         $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
@@ -5275,6 +5381,10 @@ function Invoke-LoopIterate {
     elseif ($currentPassing -is [System.Collections.IDictionary]) { $entry | Add-Member -NotePropertyName passingSuites -NotePropertyValue ([PSCustomObject]$currentPassing) }
     $state.history = @($state.history) + @($entry)
     Write-JsonFile $Script:LOOP_STATE_FILE $state
+    if ($reviewRecord) {
+        if ($reviewRecord.verdict -eq 'changes-requested') { $null = Set-LoopEngineeringPhase $engineering 'rework' -Source 'loop-record' }
+        else { $null = Set-LoopEngineeringPhase $engineering -Stop -Source 'loop-record' }
+    }
     if ($currentPassing -is [System.Collections.IDictionary]) { Save-LoopSuiteCounts $baseline $currentPassing }
 
     # Budget warning
@@ -5295,6 +5405,7 @@ function Invoke-LoopIterate {
         Write-CliOutput "$($C.d)  Review: verdict=$($reviewRecord.verdict) reviewer=$($reviewRecord.reviewer) high=$($reviewRecord.high) medium=$($reviewRecord.medium) low=$($reviewRecord.low)$($C.n)"
     }
     if ($archivedPath) { Write-CliOutput "$($C.d)  Evidence archived to: $archivedPath$($C.n)" }
+    Write-CliOutput "  Preflight: $($preflight.executedCount) executed, $($preflight.reusedCount) reused; suites not run. $($preflight.artifactPath)"
 
     # Rollback suggestion when outcome=fail at or past the final guidance iteration
     if ($outcome -eq 'fail') {
@@ -5350,6 +5461,8 @@ function Invoke-LoopRollback {
     $state.history = @($state.history) + @($entry)
     Write-JsonFile $Script:LOOP_STATE_FILE $state
 
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    $null = Set-LoopEngineeringPhase (Get-ActiveLoopEngineeringContext $state) 'rework' -Source 'rollback'
     Write-CliOutput "`n$($C.y)  Loop rolled back: iteration $current -> $target$($C.n)"
     if ($reason) { Write-CliOutput "$($C.d)  Reason: $reason$($C.n)" }
     Write-CliOutput "$($C.d)  Next 'frontier loop iterate' will be recorded as iteration $target.$($C.n)"
@@ -5542,6 +5655,14 @@ function Invoke-LoopComplete {
     }
 
     if ($finalEvidenceAbs -and -not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { exit 1 }
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    $engineering = Get-ActiveLoopEngineeringContext $state
+    $preflight = Invoke-LoopEngineeringPreflight $engineering -Delivery
+    Assert-LoopEngineeringStillCurrent $state
+    $reviewPreflight = Get-LoopEngineeringField $latestReviewEntry 'preflight'
+    if (-not $preflight.passed -or -not $reviewPreflight -or $reviewPreflight.fingerprint -cne $preflight.snapshot.fingerprint) {
+        throw 'Final preflight failed or source/contract/tool inputs changed after the review iteration. Refresh the affected checks and independent review.'
+    }
     if (-not $Script:JsonOutput) { Write-CliOutput '  Checking code-quality evidence (90s limit)...' }
     $codeQualityGate = Invoke-CodeQualityEvaluator -Mode Validate -ReportPath $reviewEvidencePath -BaselineSha256 $baselineDigest
     $gateResult = $codeQualityGate.result
@@ -5615,6 +5736,7 @@ function Invoke-LoopComplete {
         $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($finalHash)) -Force
     }
 
+    $null = Set-LoopEngineeringPhase $engineering -Stop -Source 'loop-record'
     $summary = Get-Flag @('-s', '--summary') 'Criteria met'
     $state.active = $false; $state.status = 'complete'; $state.lastIterationAt = Get-Timestamp
     $testSuitePrompt = 'Would you like to run the test suite now?'
@@ -5764,6 +5886,8 @@ function Invoke-LoopGateCheck {
 function Invoke-LoopCancel {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; return }
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
+    $null = Set-LoopEngineeringPhase (Get-ActiveLoopEngineeringContext $state) -Stop -Source 'cancel'
     $state.active = $false; $state.status = 'cancelled'; $state.lastIterationAt = Get-Timestamp
     $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = 'Cancelled'; status = 'cancelled'; outcome = 'fail' })
     Write-JsonFile $Script:LOOP_STATE_FILE $state
@@ -8179,6 +8303,10 @@ $($C.w)  Commands:$($C.n)
   cursor status                   Inspect Cursor dependencies and the selected runtime
     workflow [agent-name]            List/show workflow steps for an agent
   loop <start|status|affected|iterate|complete|cancel|rollback>  Iterative refinement; affected = tests naming changed code
+  loop preflight [--force] --json                 Batched non-test checks and safe receipt reuse
+  loop review-packet [--stage boundary|final]      Factual full-scope review packet with impact priorities
+  loop reviewer-check --packet <path> --reviewer <id>  Calling-host file/diff diagnostic, not approval
+  loop timing [--phase <phase>|--stop] --json      Attributed wall time and unreported intervals
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
     --engine <native|hydrafusion>    Execution engine (default: config executionEngine, else native)
     --feedback <report.json>         HydraFusion: independently recorded changes-requested feedback
@@ -9503,8 +9631,8 @@ $stateLease = if ($Script:Command -eq 'workspace-state') { $null } else { Enter-
 try {
 switch ($Script:Command) {
     'workspace-state' {
-        if ($Script:SubArgs.Count -ne 1 -or $Script:SubArgs[0] -notin @('info', 'check-transition', 'use-repository')) {
-            throw 'Usage: frontier workspace-state info|check-transition|use-repository'
+        if ($Script:SubArgs.Count -ne 1 -or $Script:SubArgs[0] -notin @('info', 'check-transition', 'use-repository', 'recover')) {
+            throw 'Usage: frontier workspace-state info|check-transition|use-repository|recover'
         }
         if ($Script:SubArgs[0] -eq 'info') {
             $binding = Get-FrontierStateBinding $Script:ROOT
@@ -9512,6 +9640,8 @@ switch ($Script:Command) {
                 authority = $binding.authority; runtimeRoot = $Script:INSTALL_RUNTIME_DIR
                 repositoryContextEnabled = (Test-FrontierRepositoryContextEnabled $Script:ROOT)
                 hostToolEnforcement = 'Host-owned tools retain host permissions; Frontier gates cover Frontier-owned workflows.' }
+        } elseif ($Script:SubArgs[0] -eq 'recover') {
+            $result = Repair-FrontierStateMarkers $Script:ROOT
         } else {
             $result = Set-FrontierRepositoryStateMode $Script:ROOT -ValidateOnly:($Script:SubArgs[0] -eq 'check-transition')
         }

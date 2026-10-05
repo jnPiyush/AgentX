@@ -164,8 +164,16 @@ function Resume-RunnerInteraction($State, [string]$InputId, [string]$Decision,
         return
     }
     if ($Decision -eq 'continue' -and -not $pending) {
-        if (-not (Test-InteractionAuthorized $State) -or $InputId -or
-            $PlanVersion -ne $State.planVersion -or $Digest -cne $State.digest) {
+        if ($InputId -or $PlanVersion -ne $State.planVersion -or $Digest -cne $State.digest) {
+            throw 'Continuation requires the current unfinished session identity.'
+        }
+        if ($State.phase -eq 'discovery' -and $State.mode -ne 'delegated') {
+            # Runs can stop before proposing a plan (iteration or token limits, or after a
+            # revision); resuming keeps discovery read-only until a new plan is approved.
+            Add-InteractionHistory $State 'continued' @{ response = 'Caller resumed discovery before plan approval; write access stays blocked until approval.' }
+            return
+        }
+        if (-not (Test-InteractionAuthorized $State)) {
             throw 'Continuation requires the same authorized, unfinished plan identity.'
         }
         Add-InteractionHistory $State 'continued' @{ response = 'Caller resumed an unfinished session; verify interrupted effects before retrying.' }

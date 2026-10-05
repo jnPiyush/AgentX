@@ -295,12 +295,24 @@ configuration to current names before using the runtime:
   `FRONTIER_OPENAI_BASE_URL`. Provider-standard secrets such as `OPENAI_API_KEY`
   and `ANTHROPIC_API_KEY` retain their meaning.
 - Installer overrides use `FRONTIER_MODE`, `FRONTIER_PATH`, `FRONTIER_AZURE`,
-  `FRONTIER_NOSETUP` and `FRONTIER_INSTALL_ARCHIVE`.
+  `FRONTIER_NOSETUP` and `FRONTIER_INSTALL_ARCHIVE`. The old `AGENTX_LOCAL=true`
+  shorthand was removed; use `FRONTIER_MODE=local`.
+- The MCP package exposes only the `frontier-mcp` executable; `agentx-mcp` was
+  removed. User-level installers leave an existing `mcpServers.agentx` entry in
+  place because they do not own it. Delete that entry from your MCP client
+  configuration after confirming the `frontier` entry works, so the same tools
+  are not registered twice.
 - Re-enter editor credentials under the Frontier namespace if they were saved
   only under AgentX/HVE keys. Those old secrets are not read, migrated or deleted.
 - Plugin manifests and registry entries use `engines.frontier`, not
-  `engines.agentx` or `engines.hve`. Version ranges are not changed automatically.
+  `engines.agentx` or `engines.hve`. The plugin catalog skips releases and plugin
+  folders that still declare the old keys instead of failing as a whole.
+  Bundled plugins declare `>=8.4.0 <10.0.0`; published registry releases keep the
+  ranges they were released with.
 - Use the `frontier` orchestration role ID in native requests and handoffs.
+- Council files written with the old `agentx:role-instruction` marker fall back
+  to the other role-instruction resolution paths. Re-run the council to record the
+  `frontier:role-instruction` marker.
 
 The published `jnPiyush.agentx` extension ID and `jnPiyush/AgentX` repository
 coordinate remain unchanged. Current Frontier version upgrades, state modes and
@@ -879,6 +891,14 @@ processing has a 30-second inner deadline inside a 60-second host-hook budget;
 permission failures still deny the action.
 Reinstalling the local runtime preserves the Cursor binding when its setup
 ownership record is present.
+
+Native hooks use the Node launcher `.frontier/runtime/cursor-hook.js`. It caches
+the resolved runtime in `.frontier/state/cursor-runtime.json` and resolves it again
+when the workspace wrapper changes or the cached runtime disappears. Read-only
+tools never start PowerShell. Only policy-checked tools start the PowerShell
+policy engine. Setup migrates unchanged PowerShell hook entries from earlier
+releases. It removes unmodified commands and rules that Frontier installed but no
+longer ships, and preserves edited ones.
 
 The canonical risk-based loop, independent review and post-loop test-consent
 rules apply; Cursor no longer has a separate five-iteration minimum. These hooks
@@ -1617,6 +1637,72 @@ go install github.com/github/github-mcp-server@latest
 | **Scaffold a learning artifact** | Command Palette: `Frontier: Create Learning Capture` or chat: `@frontier create learning capture` |
 | **Inspect durable review findings** | Command Palette: `Frontier: Show Review Findings` or chat: `@frontier review findings` |
 | **Run advisory parity review** | Command Palette: `Frontier: Show Agent-Native Review` or chat: `@frontier agent-native review` |
+
+### Faster loop preparation without weaker gates
+
+The **Frontier: Iterative Loop** menu includes `preflight`, `review-packet`,
+`boundary-review` and `timing`. MCP hosts use `frontier_loop_prepare` with the
+corresponding action. The same native commands are available in a terminal:
+
+```powershell
+.\.frontier\runtime\frontier.ps1 loop preflight --json
+.\.frontier\runtime\frontier.ps1 loop review-packet --stage boundary --requirements docs\contract.md
+.\.frontier\runtime\frontier.ps1 loop review-packet --requirements docs\contract.md
+.\.frontier\runtime\frontier.ps1 loop reviewer-check --packet <generated-packet-path> --reviewer <id>
+.\.frontier\runtime\frontier.ps1 loop timing --phase implementation
+.\.frontier\runtime\frontier.ps1 loop timing --phase waiting
+.\.frontier\runtime\frontier.ps1 loop timing --stop
+.\.frontier\runtime\frontier.ps1 loop timing --json
+```
+
+Substitute an existing workspace-relative requirements file for
+`docs\contract.md`. Preparation writes only beneath the selected Frontier state
+root, including private profiles. `loop start` captures a source baseline;
+upgrading during an active older loop uses the whole pending worktree
+conservatively instead of inventing an earlier baseline.
+
+Preflight runs built-in non-test checks, not package scripts. It parses changed
+PowerShell/JSON, checks JavaScript/TypeScript syntax and common Mocha declaration
+placement without executing tests, typechecks affected TypeScript projects, and
+runs one batched advisory scrub. Install-manifest and tracked-document mirror
+checks apply to a Frontier source checkout before final review and completion.
+Ordinary iterations defer delivery checks while the implementation is changing.
+Missing required tools, parsing failures and timeouts do not count as passing.
+Unsupported languages and actual UI/runtime behavior still require separate
+verification evidence.
+
+Successful receipts can be reused only for matching file bytes and membership,
+checker/tool identity and workspace/loop identity. Reuse retains the original
+execution timestamp and immutable receipt digest; `--force` reruns eligible
+checks. JavaScript checks include package parsing-mode inputs; manifest changes
+also select unchanged scripts within the affected package. New receipts become
+cache-eligible only after the complete input snapshot passes the drift check.
+Ancestor package context is compared to the immutable loop-start baseline, so
+failed retries cannot drop affected scripts. An older or missing package baseline
+selects scripts conservatively rather than assuming that the context was stable.
+Typechecks run fresh when the full installed dependency closure is not
+fingerprinted, with any incremental/composite metadata redirected to a unique
+file in selected state. Cosmetic whitespace does not fail the correctness diff
+check; conflict markers and Git errors still do. Receipt corruption fails explicitly. Preflight never installs
+dependencies, edits source, executes suites or caches mutation authorization.
+
+Review packets carry full final scope, factual check receipts, requirements
+references and prior findings. Follow-ups prioritize changed files and affected
+project consumers. Shared-runtime, dependency and contract changes request full
+review. This prioritization is not a complete dependency graph and never inherits
+approval. The final reviewer still scores the complete final scope.
+
+Run the capability diagnostic in the actual reviewer host. A successful call
+proves file/diff access for that caller only; it does not attest model identity
+or grant a read-only sandbox. A reviewer without usable tools must report that
+before attempting substantive review. Boundary packets guide the existing early
+design checkpoint for high-risk work, not another universal approval round.
+
+Timing separates explicitly attributed implementation, verification, review,
+rework and waiting wall time. Preflight records its own phase, and final packet
+creation starts review attribution. Unreported intervals remain unattributed;
+these numbers are not CPU/model time and must not be added to per-check durations.
+Review completion and user-approved test execution remain separate milestones.
 
 ---
 

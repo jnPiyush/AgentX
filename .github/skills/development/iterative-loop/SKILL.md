@@ -354,6 +354,30 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 # Output: Iteration 3/20 | Started: 10:00 | Last: 10:05 | Promise: DONE
 ```
 
+### Prepare Checks and Review
+
+```powershell
+.\.frontier\runtime\frontier.ps1 loop preflight --json
+.\.frontier\runtime\frontier.ps1 loop review-packet --stage boundary --requirements docs\contract.md
+.\.frontier\runtime\frontier.ps1 loop review-packet --requirements docs\contract.md
+.\.frontier\runtime\frontier.ps1 loop reviewer-check --packet <generated-path> --reviewer <id>
+.\.frontier\runtime\frontier.ps1 loop timing --phase implementation
+.\.frontier\runtime\frontier.ps1 loop timing --phase waiting
+.\.frontier\runtime\frontier.ps1 loop timing --stop
+```
+
+Preflight uses built-in non-test checks and one batched advisory scrub. Reuse
+preserves the original check time and receipt; changed inputs invalidate it.
+Semantic checks with unknown dependency closure run fresh. Check errors remain
+blockers. The packet prioritizes changed inputs and affected consumers, but never
+inherits approval or narrows the required full final verdict.
+
+Run reviewer diagnostics in the actual reviewer host. A parent-side result
+does not prove the child has tools, and the diagnostic grants no permissions.
+Use boundary packets during existing high-risk planning, not as another
+mandatory checkpoint for small tasks. See protocol section 1.5 for the complete
+contract. None of these commands executes a test suite.
+
 ### Record Iteration Progress
 
 ```powershell

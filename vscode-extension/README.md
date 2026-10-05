@@ -158,9 +158,10 @@ you approve repair; ordinary tab switches inside a folder do not refresh work qu
 
 Use `frontier_workspace` in MCP (or `workspace-state info` through the configured
 runtime) to inspect the selected paths. If a process crashes during an editor
-mutation or transition, an orphan `editor-leases` record or `transition.lock`
-blocks switching. Close the relevant clients, verify their processes have stopped,
-and remove only the orphan marker; do not delete the profile or approval history.
+mutation or transition, run `frontier workspace-state recover`. It takes the
+exclusive state lease, removes an interrupted `transition.lock`, removes
+`editor-leases` records whose owning process has exited, and lists leases that are
+still owned by a running editor. Profiles and approval history are never deleted.
 
 New secret references are identity-scoped. Existing local Windows repository
 keys for ASCII paths remain readable; ambiguous case-folded or remote legacy references require

@@ -102,6 +102,8 @@
     ],
     "scripts": [
       ".frontier/runtime/workspace-state.ps1",
+      ".frontier/runtime/loop-engineering.ps1",
+      ".frontier/runtime/loop-static-checks.js",
       "scripts/evaluate-repository-context.ps1",
       "scripts/repository-context-evaluation.ps1",
       "scripts/budget.ps1",
@@ -241,6 +243,9 @@
       ".github/frontier/.frontier/runtime/frontier-cli.ps1",
       ".github/frontier/.frontier/runtime/agentic-runner.ps1",
       ".github/frontier/.frontier/runtime/guided-interaction.ps1",
+      ".github/frontier/.frontier/runtime/loop-engineering.ps1",
+      ".github/frontier/.frontier/runtime/loop-static-checks.js",
+      ".github/frontier/scripts/scrub.ps1",
       ".github/frontier/.frontier/runtime/repository-context.ps1",
       ".github/frontier/.frontier/runtime/repository-symbols.ps1",
       ".github/frontier/.frontier/runtime/repository-retrieval.ps1",

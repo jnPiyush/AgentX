@@ -12,7 +12,9 @@ const MAX_JSON_BYTES = 1024 * 1024;
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 const sameDirectory = (left, right) => {
-  const normalize = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  // Windows folding is ASCII-only, matching the workspace identity contract.
+  const normalize = value => process.platform === 'win32'
+    ? path.resolve(value).replace(/[A-Z]/g, letter => letter.toLowerCase()) : path.resolve(value);
   return normalize(left) === normalize(right);
 };
 
@@ -84,7 +86,14 @@ function mergeConfiguration(mcp, hooks, frontier, nativeHooks) {
     mergedHooks[event] = [...existing];
     for (const entry of entries) {
       const previousDefault = { ...entry, timeout: 15 };
-      const current = mergedHooks[event].map(item => isDeepStrictEqual(item, previousDefault) ? entry : item);
+      // Earlier releases launched hooks through PowerShell; unchanged entries migrate to the Node launcher.
+      const previousLauncher = `pwsh -NoProfile -NonInteractive -File ".frontier/runtime/frontier.ps1" cursor hook ${event}`;
+      const isPreviousLauncher = item => item.command === previousLauncher &&
+        Object.keys(item).every(key => ['command', 'timeout', 'failClosed'].includes(key)) &&
+        [15, entry.timeout].includes(item.timeout) && [undefined, entry.failClosed].includes(item.failClosed);
+      const current = mergedHooks[event]
+        .map(item => isDeepStrictEqual(item, previousDefault) || isPreviousLauncher(item) ? entry : item)
+        .filter((item, index, all) => item !== entry || all.indexOf(entry) === index);
       if (current.some(item => item.command === entry.command && !isDeepStrictEqual(item, entry))) {
         throw new Error(`Cursor hook ${event} conflicts with a customized Frontier command; existing configuration was preserved.`);
       }
@@ -151,7 +160,7 @@ function isLegacyAsset(relative, current, desired) {
 
 function setupCursor(workspace, options = {}) {
   if (!fs.statSync(path.join(workspace, '.frontier', 'config.json'), { throwIfNoEntry: false })?.isFile()) {
-    throw new Error('Initialize the Frontier local runtime before setting up Cursor.');
+    throw new Error('Initialize Frontier repository support before setting up Cursor.');
   }
   const lockPath = containedPath(workspace, '.frontier/cursor-setup.lock');
   let lock;
@@ -203,10 +212,10 @@ function configureCursor(workspace, options) {
   const copied = [];
   const preserved = [];
   const files = {};
-  const assets = [{
-    relative: '.frontier/runtime/cursor-mcp.js',
-    source: path.join(assetRoot, '.frontier', 'runtime', 'cursor-mcp.js'),
-  }];
+  const launchers = ['.frontier/runtime/cursor-mcp.js', '.frontier/runtime/cursor-hook.js'];
+  const assets = launchers.map(relative => ({
+    relative, source: path.join(assetRoot, ...relative.split('/')),
+  }));
   for (const directory of ['commands', 'rules']) {
     const source = path.join(templates, directory);
     for (const name of fs.readdirSync(source)) {
@@ -222,8 +231,8 @@ function configureCursor(workspace, options) {
       const actual = current ? digest(current) : null;
       if (actual && actual !== wanted && actual !== ownership.files[relative] &&
           !isLegacyAsset(relative, current, content)) {
-        if (relative === '.frontier/runtime/cursor-mcp.js') {
-          throw new Error('The Cursor MCP launcher has a user override; existing configuration was preserved.');
+        if (launchers.includes(relative)) {
+          throw new Error(`The Cursor launcher ${relative} has a user override; existing configuration was preserved.`);
         }
         preserved.push(relative);
         continue;
@@ -235,10 +244,24 @@ function configureCursor(workspace, options) {
       }
       files[relative] = wanted;
   }
+  const retired = [];
+  for (const [relative, recorded] of Object.entries(ownership.files)) {
+    // Remove only unmodified files that an earlier setup installed and the current version no longer ships.
+    if (files[relative] || preserved.includes(relative) || !/^\.cursor\/(?:commands|rules)\/[^/\\]+$/.test(relative)) continue;
+    const destination = containedPath(workspace, relative);
+    const current = fs.existsSync(destination) ? fs.readFileSync(destination) : null;
+    if (!current) continue;
+    if (digest(current) === recorded) {
+      fs.unlinkSync(destination);
+      retired.push(relative);
+    } else {
+      preserved.push(relative);
+    }
+  }
   writeJson(mcpPath, merged.mcp);
   writeJson(hooksPath, merged.hooks);
   writeJson(ownershipPath, { schemaVersion: 1, files });
-  return { status: 'configured', copied, preserved, mcpReady: true,
+  return { status: 'configured', copied, preserved, retired, mcpReady: true,
     message: preserved.length ? 'Custom Cursor overrides were preserved; inspect them for compatibility.' : 'Cursor is configured.' };
 }
 
@@ -363,7 +386,7 @@ async function main() {
       }
       if (event === 'sessionStart' &&
           !fs.statSync(path.join(workspace, '.frontier', 'config.json'), { throwIfNoEntry: false })?.isFile()) {
-        process.stdout.write(`${JSON.stringify({ additional_context: 'Frontier is not initialized in this workspace. Run Frontier: Initialize Local Runtime, then Initialize Cursor. Repository discovery was not run.' })}\n`);
+        process.stdout.write(`${JSON.stringify({ additional_context: 'Frontier repository support is not initialized in this workspace. Run Frontier: Initialize Repository Support, then Frontier: Initialize Cursor. Repository discovery was not run.' })}\n`);
         return;
       }
       const result = spawnSync('pwsh', ['-NoProfile', '-NonInteractive', '-File',

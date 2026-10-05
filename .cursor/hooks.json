@@ -3,13 +3,13 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "pwsh -NoProfile -NonInteractive -File \".frontier/runtime/frontier.ps1\" cursor hook sessionStart",
+        "command": "node .frontier/runtime/cursor-hook.js sessionStart",
         "timeout": 60
       }
     ],
     "preToolUse": [
       {
-        "command": "pwsh -NoProfile -NonInteractive -File \".frontier/runtime/frontier.ps1\" cursor hook preToolUse",
+        "command": "node .frontier/runtime/cursor-hook.js preToolUse",
         "timeout": 60,
         "failClosed": true
       }

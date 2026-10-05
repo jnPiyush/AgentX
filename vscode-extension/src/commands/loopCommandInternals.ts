@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
+import { formatNativePreflight } from '../runtime/verificationLoop';
 import {
   completeHarnessThread,
   getHarnessStatusDisplay,
@@ -11,6 +12,10 @@ import {
 export const LOOP_ACTION_ITEMS = [
   { label: 'start', description: 'Start a new iterative refinement loop' },
   { label: 'status', description: 'Check active loop state' },
+  { label: 'preflight', description: 'Run changed-surface non-test checks with safe reuse' },
+  { label: 'review-packet', description: 'Prepare a factual final review packet' },
+  { label: 'boundary-review', description: 'Prepare early high-risk contract and recovery review' },
+  { label: 'timing', description: 'Inspect or record implementation, review and waiting time' },
   { label: 'iterate', description: 'Advance to next iteration with summary' },
   { label: 'complete', description: 'Mark loop as successfully done' },
   { label: 'cancel', description: 'Cancel the active loop' },
@@ -44,6 +49,12 @@ export async function executeLoopAction(
       break;
     case 'status':
       return loopStatus(agentx);
+    case 'preflight':
+    case 'review-packet':
+    case 'boundary-review':
+    case 'timing':
+      await loopPrepare(agentx, action);
+      break;
     case 'iterate':
       await loopIterate(agentx);
       break;
@@ -118,6 +129,29 @@ export async function loopStatus(agentx: FrontierContext): Promise<boolean> {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(`Loop status failed: ${message}`);
     return false;
+  }
+}
+
+export async function loopPrepare(agentx: FrontierContext, action: string): Promise<void> {
+  const args = action === 'boundary-review'
+    ? ['review-packet', '--stage', 'boundary', '--json'] : [action, '--json'];
+  if (action === 'timing') {
+    const phase = await vscode.window.showQuickPick(
+      ['Show timing', 'implementation', 'verification', 'review', 'rework', 'waiting', 'Stop timing'],
+      { placeHolder: 'Record wall-time phase; unreported intervals remain unattributed' },
+    );
+    if (!phase) { return; }
+    if (phase === 'Stop timing') { args.push('--stop'); }
+    else if (phase !== 'Show timing') { args.push('--phase', phase); }
+  }
+  try {
+    const output = await agentx.runCli('loop', args);
+    const display = action === 'preflight' ? `${formatNativePreflight(JSON.parse(output))}\n\n${output}` : output;
+    showLoopOutput(`Loop ${action}`, display, getHarnessDisplay(agentx));
+  } catch (error) {
+    void vscode.window.showErrorMessage(
+      `Loop preparation failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 

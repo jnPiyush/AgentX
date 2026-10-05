@@ -236,6 +236,21 @@ describe('Automatic Frontier workspace state', () => {
     assert.deepEqual(fs.readdirSync(path.join(directory, 'editor-leases')), []);
   });
 
+  it('ignores interrupted transition markers whose owner exited but honors live owners', async () => {
+    frontier.workspaceState.ensure(root);
+    const directory = resolveFrontierStateDirectory(root);
+    const transition = path.join(directory, 'transition.lock');
+    fs.writeFileSync(transition, JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }));
+    await assert.rejects(frontier.workspaceState.withMutation(root, async () => 'done'), /workspace-state recover/);
+    const kill = sinon.stub(process, 'kill').callsFake(() => {
+      throw Object.assign(new Error('missing'), { code: 'ESRCH' });
+    });
+    try {
+      assert.equal(await frontier.workspaceState.withMutation(root, async () => 'done'), 'done');
+    } finally { kill.restore(); }
+    assert.deepEqual(fs.readdirSync(path.join(directory, 'editor-leases')), []);
+  });
+
   it('rejects altered pending-input root bindings rather than resuming another workspace', async () => {
     frontier.workspaceState.ensure(root);
     await frontier.setPendingSetup({ kind: 'llm-adapter', step: 'choose-llm-provider', prompt: 'fixture' });

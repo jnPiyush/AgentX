@@ -365,6 +365,22 @@ describe('pluginsCommandInternals helpers', () => {
     assert.equal(picks[0].pluginId, 'convert-docs');
   });
 
+  it('skips local plugins with retired engine keys instead of failing the catalog', () => {
+    for (const [name, engines] of [['current', { frontier: '>=8.4.0 <10.0.0' }], ['legacy', { agentx: '^8.4.0' }]] as const) {
+      const pluginDir = path.join(tempRoot, name);
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({
+        name, version: '1.0.0', description: `${name} plugin`, type: 'tool',
+        entry: { pwsh: `${name}.ps1` }, engines,
+      }), 'utf-8');
+    }
+    const warn = sinon.stub(console, 'warn');
+    try {
+      assert.deepEqual(getLocalPluginPicks(tempRoot).map(pick => pick.pluginId), ['current']);
+      sinon.assert.calledOnce(warn);
+    } finally { warn.restore(); }
+  });
+
   it('verifies plugin artifact checksums', () => {
     const filePath = path.join(tempRoot, 'artifact.zip');
     fs.writeFileSync(filePath, 'plugin artifact', 'utf-8');

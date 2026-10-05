@@ -25,6 +25,13 @@ export function canonicalWorkspaceRoot(root: string): string {
 }
 
 export function workspaceIdentity(root: string, authority: string): string {
+  if (process.platform === 'win32') {
+    // Win32 normalization drops trailing dots and spaces, so such paths have no stable identity.
+    const segment = root.split(/[\\/]+/).find(part => part !== '.' && part !== '..' && /[. ]$/.test(part));
+    if (segment) {
+      throw new Error(`Frontier workspace paths must not contain segments ending in a dot or space: ${segment}`);
+    }
+  }
   const value = workspacePathKey(root).replace(/\\/g, '/');
   return createHash('sha256').update(`frontier-workspace-v1\n${authority}\n${value}`).digest('hex');
 }

@@ -146,6 +146,15 @@ namespace Frontier.RepositoryContext {
         public static FileSnapshot ReadPath(string path) {
             using (var handle = Open(path, false)) return Read(handle);
         }
+        public static FileSnapshot ReadResolvedPath(string path) {
+            var handle = CreateFileW(path, 0x80, 7u, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero);
+            if (handle.IsInvalid) {
+                int error = Marshal.GetLastWin32Error();
+                handle.Dispose();
+                throw new Win32Exception(error, "Cannot resolve repository path: " + path);
+            }
+            using (handle) return Read(handle);
+        }
     }
 }
 '@
@@ -195,7 +204,7 @@ namespace Frontier.RepositoryContext {
         static readonly Regex Heading = Compile(@"^\s{0,3}#{1,6}\s+(.{1,160})");
         static readonly Regex Declaration = Compile(@"^\s*(?:(?:export|default|public|private|protected|internal|static|abstract|async|declare|sealed|partial)\s+)*(?<kind>function|class|interface|enum|struct|record|trait|type|def|func|namespace)\s+(?<name>[A-Za-z_$][\w$.:-]{0,119})", true);
         static readonly Regex Remote = Compile(@"^[a-zA-Z][\w+.-]*:|^[\\/]{2}|^[#?]");
-        static readonly Regex Title = Compile(@"\s+[""'].*$");
+        static readonly Regex Title = Compile(@"\s+(?:""[^""\\]*(?:\\.[^""\\]*)*""|'[^'\\]*(?:\\.[^'\\]*)*')$");
         static readonly Regex UnsafeTarget = Compile(@"[\x00-\x1f]|^[a-zA-Z][\w+.-]*:|^//");
         static readonly Regex TypedSource = Compile(@"\.(ts|tsx|mts|cts)$", true);
         static readonly Regex[] ExcludedPaths = {
@@ -289,6 +298,35 @@ namespace Frontier.RepositoryContext {
             }
         }
 
+        public static void ValidatePathBelow(string root, string path, bool allowMissing) {
+            root = Path.GetFullPath(root);
+            path = Path.GetFullPath(path);
+            string trimmedRoot = Path.TrimEndingDirectorySeparator(root);
+            var comparison = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) ?
+                StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            if (!path.Equals(trimmedRoot, comparison) &&
+                !path.StartsWith(trimmedRoot + Path.DirectorySeparatorChar, comparison))
+                throw new IOException("Repository context path escapes its trusted root: " + path);
+            string relative = Path.GetRelativePath(trimmedRoot, path);
+            if (relative == "." || relative.Length == 0) return;
+            string current = trimmedRoot;
+            foreach (string part in relative.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)) {
+                current = Path.Combine(current, part);
+                FileAttributes attributes;
+                try { attributes = File.GetAttributes(current); }
+                catch (FileNotFoundException) {
+                    if (allowMissing) return;
+                    throw new IOException("Repository context path no longer exists: " + current);
+                }
+                catch (DirectoryNotFoundException) {
+                    if (allowMissing) return;
+                    throw new IOException("Repository context path no longer exists: " + current);
+                }
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Unsafe repository context path (reparse point): " + current);
+            }
+        }
+
         public static bool IsExcluded(string root, string relative) {
             string path = relative.Replace('\\', '/');
             foreach (var pattern in ExcludedPaths) if (pattern.IsMatch(path)) return true;
@@ -311,7 +349,7 @@ namespace Frontier.RepositoryContext {
             var entries = new List<SourceEntryV5>();
             examined = 0;
             foreach (string directory in directories) {
-                ValidatePath(directory, false);
+                ValidatePathBelow(root, directory, false);
                 foreach (var item in new DirectoryInfo(directory).EnumerateFileSystemInfos()) {
                     if (examined >= budget) return entries.ToArray();
                     examined++;
@@ -398,8 +436,14 @@ namespace Frontier.RepositoryContext {
         catch [IO.DirectoryNotFoundException] { return $null }
     }
 
-    function Assert-NoReparse([string]$Path, [switch]$AllowMissing) {
-        [Frontier.RepositoryContext.SourceScannerV5]::ValidatePath($Path, $AllowMissing.IsPresent)
+    function Assert-NoReparse([string]$Path, [switch]$AllowMissing, [switch]$State) {
+        $fullPath = [IO.Path]::GetFullPath($Path)
+        $validationRoot = $root
+        if ($State) {
+            $workspacePrefix = $root.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+            $validationRoot = if ($fullPath.Equals($root, $comparison) -or $fullPath.StartsWith($workspacePrefix, $comparison)) { $root } else { $stateRoot }
+        }
+        [Frontier.RepositoryContext.SourceScannerV5]::ValidatePathBelow($validationRoot, $fullPath, $AllowMissing.IsPresent)
     }
 
     function Assert-Contained([string]$Path, [switch]$State) {
@@ -412,7 +456,7 @@ namespace Frontier.RepositoryContext {
 
     function Get-Snapshot([string]$Path, [switch]$State) {
         Assert-Contained $Path -State:$State
-        Assert-NoReparse $Path
+        Assert-NoReparse $Path -State:$State
         if ($IsWindows) {
             $snapshot = [Frontier.RepositoryContext.FileMetadataV1]::ReadPath($Path)
             if (-not $snapshot.FullPath.TrimEnd('\').Equals($Path.TrimEnd('\'), $comparison)) {
@@ -454,7 +498,7 @@ namespace Frontier.RepositoryContext {
     }
 
     function Read-State([string]$Path, [int]$Limit, [switch]$Source) {
-        Assert-NoReparse $Path -AllowMissing
+        Assert-NoReparse $Path -AllowMissing -State:(-not $Source)
         $attributes = Get-Attributes $Path
         if ($null -eq $attributes) { return $null }
         if ($attributes -band [IO.FileAttributes]::Directory) { throw "Expected a repository context file: $Path" }
@@ -483,7 +527,7 @@ namespace Frontier.RepositoryContext {
 
     function Publish-State([string]$Path, [string]$Text, $Previous) {
         Assert-Contained $Path -State
-        Assert-NoReparse $Path -AllowMissing
+        Assert-NoReparse $Path -AllowMissing -State
         if ($null -ne $Previous -and $Text.Equals($Previous.Text, [StringComparison]::Ordinal)) { return $false }
         $encoding = if ($null -ne $Previous) { $Previous.Encoding } else { $utf8 }
         $bytes = $encoding.GetBytes($Text)
@@ -499,7 +543,7 @@ namespace Frontier.RepositoryContext {
                 $stream.Write($bytes, 0, $bytes.Length)
                 $stream.Flush($true)
             } finally { $stream.Dispose() }
-            Assert-NoReparse $Path -AllowMissing
+            Assert-NoReparse $Path -AllowMissing -State
             $now = Read-State $Path 134217728
             if (($null -eq $Previous) -ne ($null -eq $now) -or
                 ($null -ne $Previous -and $null -ne $now -and $Previous.Hash -ne $now.Hash)) {
@@ -1071,12 +1115,42 @@ namespace Frontier.RepositoryContext {
 
     function Complete-ParserBatch($Batch, [string]$Kind) {
         if (-not $Batch.Count) { return }
-        $parsed = @(Invoke-FrontierRepositoryParseBatch -Files @($Batch) -Capabilities $parserCapabilities -Kind $Kind)
+        $parsed = @()
+        try {
+            $parsed = @(Invoke-FrontierRepositoryParseBatch -Files @($Batch) -Capabilities $parserCapabilities -Kind $Kind)
+        } catch {
+            $batchError = $_.Exception.Message
+            [Console]::Error.WriteLine("[frontier-context] Repository $Kind parser batch failed; retrying files individually: $batchError")
+            $retryWatch = [Diagnostics.Stopwatch]::StartNew()
+            $retryCount = 0
+            foreach ($entry in @($Batch)) {
+                if ($retryCount -ge 4 -or $retryWatch.Elapsed.TotalSeconds -ge 45) {
+                    $message = 'Parser skipped after bounded isolated retry budget was exhausted.'
+                    [Console]::Error.WriteLine("[frontier-context] $($entry.path): $message")
+                    $parsed += [pscustomobject]@{
+                        path = $entry.path; parser = 'unavailable'; symbols = @(); calls = @(); references = @()
+                        parseErrors = 0; metadataTruncated = $false; diagnostics = @($message)
+                    }
+                    continue
+                }
+                try {
+                    $retryCount++
+                    $parsed += @(Invoke-FrontierRepositoryParseBatch -Files @($entry) -Capabilities $parserCapabilities -Kind $Kind)
+                } catch {
+                    $message = ConvertTo-RepositoryMetadataText "Parser unavailable after isolated retry: $($_.Exception.Message)" 500
+                    [Console]::Error.WriteLine("[frontier-context] $($entry.path): $message")
+                    $parsed += [pscustomobject]@{
+                        path = $entry.path; parser = 'unavailable'; symbols = @(); calls = @(); references = @()
+                        parseErrors = 0; metadataTruncated = $false; diagnostics = @($message)
+                    }
+                }
+            }
+        }
         for ($index = 0; $index -lt $Batch.Count; $index++) {
             $node = $Batch[$index].node
             $result = $parsed[$index]
             if ($result.parser -in @('unavailable', 'unsupported')) {
-                $node.diagnostics = @($result.diagnostics)
+                $node.diagnostics = @($node.diagnostics) + @($result.diagnostics)
                 continue
             }
             $node.parser = [string]$result.parser
@@ -1106,16 +1180,16 @@ namespace Frontier.RepositoryContext {
     }
     $root = [IO.Path]::GetFullPath($WorkspaceRoot)
     if ($root -ne [IO.Path]::GetPathRoot($root)) { $root = $root.TrimEnd('\', '/') }
-    Assert-NoReparse $root
     if (-not [IO.Directory]::Exists($root)) { throw "WorkspaceRoot is not a directory: $root" }
     if ($IsWindows) {
-        $root = [Frontier.RepositoryContext.FileMetadataV1]::ReadPath($root).FullPath
+        $root = [Frontier.RepositoryContext.FileMetadataV1]::ReadResolvedPath($root).FullPath
         if ($root.StartsWith('\\')) { throw 'Network workspaces are not supported by local repository context discovery.' }
         if ($root -ne [IO.Path]::GetPathRoot($root)) { $root = $root.TrimEnd('\') }
     }
     $rootPrefix = $root.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
     $stateRoot = Get-FrontierStateRoot $root
-    Assert-NoReparse $stateRoot -AllowMissing
+    Assert-NoReparse $root
+    Assert-NoReparse $stateRoot -AllowMissing -State
     $cacheDirectory = [IO.Path]::Combine($stateRoot, 'state', 'repo-context')
     $relativeSource = [IO.Path]::GetRelativePath($cacheDirectory, $root)
     $sourceLinkPrefix = if ([IO.Path]::IsPathFullyQualified($relativeSource)) {
@@ -1194,18 +1268,16 @@ namespace Frontier.RepositoryContext {
     }
     try {
         if ($IsWindows) {
-            $current = [IO.Path]::GetPathRoot($root)
-            foreach ($part in @('') + $root.Substring($current.Length).Split([char[]]@('\', '/'), [StringSplitOptions]::RemoveEmptyEntries)) {
-                if ($part) { $current = [IO.Path]::Combine($current, $part) }
-                $pin = [Frontier.RepositoryContext.FileMetadataV1]::Open($current, $true)
-                $pins.Add($pin)
-                if ([Frontier.RepositoryContext.FileMetadataV1]::Read($pin).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Unsafe workspace ancestor: $current" }
-            }
+            $pin = [Frontier.RepositoryContext.FileMetadataV1]::Open($root, $true)
+            $pins.Add($pin)
+            $snapshot = [Frontier.RepositoryContext.FileMetadataV1]::Read($pin)
+            if (-not $snapshot.FullPath.TrimEnd('\').Equals($root.TrimEnd('\'), $comparison)) { throw "Unsafe workspace root alias: $root" }
+            if ($snapshot.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Unsafe workspace root: $root" }
         }
         $directory = $stateRoot
         foreach ($part in @('', 'state', 'repo-context')) {
             if ($part) { $directory = [IO.Path]::Combine($directory, $part) }
-            Assert-NoReparse $directory -AllowMissing
+            Assert-NoReparse $directory -AllowMissing -State
             [void][IO.Directory]::CreateDirectory($directory)
             if ($IsWindows) {
                 $pin = [Frontier.RepositoryContext.FileMetadataV1]::Open($directory, $true)
@@ -1217,7 +1289,7 @@ namespace Frontier.RepositoryContext {
         }
         $waiting = [Diagnostics.Stopwatch]::StartNew()
         while ($null -eq $lock) {
-            Assert-NoReparse $lockPath -AllowMissing
+            Assert-NoReparse $lockPath -AllowMissing -State
             $mode = if ($null -eq (Get-Attributes $lockPath)) { [IO.FileMode]::CreateNew } else { [IO.FileMode]::Open }
             try {
                 $lock = [IO.File]::Open($lockPath, $mode, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)

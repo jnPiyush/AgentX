@@ -32,6 +32,29 @@ test('only advertised Frontier tool names dispatch to the runtime', async () => 
   } finally { await client.close(); await server.close(); }
 });
 
+test('loop preparation uses bounded actions and never supplies review approval or test execution', async () => {
+  const calls = [];
+  const server = createServer({
+    run: async args => { calls.push(args); return { exitCode: 0, stdout: '{"suitesRun":false}', stderr: '' }; },
+    stop: async () => {},
+  });
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'loop-preparation-contract', version: '1.0.0' });
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: 'frontier_loop_prepare',
+      arguments: { action: 'review-packet', stage: 'boundary', requirements: 'docs/contract.md' },
+    });
+    assert.equal(result.isError, false);
+    assert.deepEqual(calls, [['loop', 'review-packet', '--json', '--stage', 'boundary', '--requirements', 'docs/contract.md']]);
+    const invalid = await client.callTool({ name: 'frontier_loop_prepare', arguments: { action: 'test' } });
+    assert.equal(invalid.isError, true);
+    assert.equal(calls.length, 1);
+  } finally { await client.close(); await server.close(); }
+});
+
 test('MCP separates installed CLI assets from a plain target workspace', async () => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mcp-roots-'));
   const bundle = path.join(temporary, 'bundle');
@@ -357,7 +380,7 @@ test('spawn errors return failure without leaking active children', async () => 
   await runner.stop();
 });
 
-test('SDK requests advertise exactly 23 Frontier tools, reject obsolete aliases, and forward request cancellation', async () => {
+test('SDK requests advertise exactly 24 Frontier tools, reject obsolete aliases, and forward request cancellation', async () => {
   let cancelled;
   const cancellation = new Promise(resolve => { cancelled = resolve; });
   let started;
@@ -379,7 +402,7 @@ test('SDK requests advertise exactly 23 Frontier tools, reject obsolete aliases,
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const catalog = await client.listTools();
-    assert.equal(catalog.tools.length, 23);
+    assert.equal(catalog.tools.length, 24);
     assert.ok(catalog.tools.some(tool => tool.name === 'frontier_resume'));
     assert.ok(catalog.tools.every(tool => tool.name.startsWith('frontier_')));
     assert.equal((await client.callTool({ name: 'frontier_loop_status', arguments: {} })).isError, false);

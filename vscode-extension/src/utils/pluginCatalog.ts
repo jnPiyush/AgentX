@@ -553,7 +553,11 @@ export function parsePluginRegistryIndex(raw: unknown): PluginRegistryIndex | un
     const releases: PluginRegistryRelease[] = [];
     if (Array.isArray(entryRecord.releases)) {
       for (const release of entryRecord.releases) {
-        const parsedRelease = parseRegistryRelease(release);
+        let parsedRelease: PluginRegistryRelease | undefined;
+        try { parsedRelease = parseRegistryRelease(release); } catch (error) {
+          console.warn(`Frontier skipped an unsupported release of ${publisher}.${pluginId}:`, error);
+          continue;
+        }
         if (parsedRelease) {
           releases.push(parsedRelease);
         }

@@ -4813,6 +4813,14 @@ function Invoke-AgenticLoop {
         }
     }
     if (-not $interaction) {
+        if ($isResume -and [string]::IsNullOrWhiteSpace($Prompt)) {
+            # Sessions saved before guided interaction keep their task only in the first user message.
+            $firstUser = @($resumedSession.messages | Where-Object { (Get-MessageFieldValue $_ 'role') -eq 'user' } | Select-Object -First 1)
+            if ($firstUser.Count) {
+                $legacyTask = [string](Get-MessageFieldValue $firstUser[0] 'content')
+                $Prompt = $legacyTask.Substring(0, [Math]::Min(12000, $legacyTask.Length))
+            }
+        }
         $interaction = New-RunnerInteraction $sessionId $WorkspaceRoot $Agent $Prompt $mode $MaxIterations (Get-RunnerTokenBudget $runtimeConfig)
     }
 

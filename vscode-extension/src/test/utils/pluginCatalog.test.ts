@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as sinon from 'sinon';
 
 import {
   getLatestCompatibleRelease,
@@ -187,5 +188,27 @@ describe('pluginCatalog - parsePluginRegistryIndex', () => {
 
   it('should reject registry payloads with no valid plugin entries', () => {
     assert.equal(parsePluginRegistryIndex({ schemaVersion: 1, plugins: [] }), undefined);
+  });
+
+  it('skips releases with retired engine keys without dropping the catalog', () => {
+    const warn = sinon.stub(console, 'warn');
+    try {
+      const registry = parsePluginRegistryIndex({
+        schemaVersion: 1,
+        plugins: [{
+          publisher: 'frontier-labs', pluginId: 'convert-docs',
+          releases: [
+            { version: '1.0.0', artifactUrl: 'https://example.test/1.0.0.zip', engines: { agentx: '^8.4.0' } },
+            { version: '1.1.0', artifactUrl: 'https://example.test/1.1.0.zip', engines: { frontier: '>=9.0.0' } },
+          ],
+        }, {
+          publisher: 'frontier-labs', pluginId: 'legacy-only',
+          releases: [{ version: '1.0.0', artifactUrl: 'https://example.test/l.zip', engines: { hve: '*' } }],
+        }],
+      });
+      assert.ok(registry);
+      assert.deepEqual(registry.plugins.map(plugin => plugin.pluginId), ['convert-docs']);
+      assert.deepEqual(registry.plugins[0].releases.map(release => release.version), ['1.1.0']);
+    } finally { warn.restore(); }
   });
 });

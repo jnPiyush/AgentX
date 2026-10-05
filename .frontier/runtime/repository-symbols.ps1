@@ -6,8 +6,13 @@ function Get-RepositoryTextHash([string]$Text) {
 }
 
 function ConvertTo-RepositoryMetadataText([string]$Text, [int]$Maximum = 400) {
-    $text = [regex]::Replace($Text, '[\p{Cc}\u202A-\u202E\u2066-\u2069]', ' ')
-    $text = [regex]::Replace($text, '(?i)\b(password|secret|api[_-]?key|token)\s*[:=]\s*["''][^"'']*["'']', '$1=[redacted]')
+    if ($null -eq $Text -or $Maximum -le 0) { return '' }
+    $length = [Math]::Min($Maximum, $Text.Length)
+    if ($length -gt 0 -and [char]::IsHighSurrogate($Text[$length - 1])) { $length-- }
+    $text = $Text.Substring(0, $length)
+    $text = [regex]::Replace($text, '[\p{Cc}\u202A-\u202E\u2066-\u2069]', ' ')
+    $text = [regex]::Replace($text, '(?i)\b(password|secret|api[_-]?key|token)\s*[:=]\s*(?:"[^"\\]*(?:\\.[^"\\]*)*"|''[^''\\]*(?:\\.[^''\\]*)*'')', '$1=[redacted]')
+    $text = [regex]::Replace($text, '(?i)\b(password|secret|api[_-]?key|token)\s*[:=]\s*(?:"[^"\r\n]*|''[^''\r\n]*)$', '$1=[redacted]')
     $text = [regex]::Replace($text, '\s+', ' ').Trim()
     $length = [Math]::Min($Maximum, $text.Length)
     if ($length -gt 0 -and [char]::IsHighSurrogate($text[$length - 1])) { $length-- }
@@ -162,15 +167,22 @@ function ConvertTo-FrontierRepositorySymbols {
 function Get-FrontierRepositoryRelations {
     param([array]$Nodes, [array]$Edges)
     $relations = [Collections.Generic.List[object]]::new()
-    $definitions = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
+    $definitionsByKey = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
     $neighbors = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
+    $scopeLookup = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
+    $candidateCache = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
     foreach ($node in $Nodes) {
         $neighbors[$node.path] = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        $scopes = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
         foreach ($symbol in $node.symbols) {
             $key = if ($node.parser -like 'powershell-ast*') { $symbol.Name.ToLowerInvariant() } else { $symbol.Name }
-            if (-not $definitions.ContainsKey($key)) { $definitions[$key] = [Collections.Generic.List[object]]::new() }
-            $definitions[$key].Add(@{ path = $node.path; symbol = $symbol })
+            $definitionKey = "$($node.path)|$key|$($symbol.parser)"
+            if (-not $definitionsByKey.ContainsKey($definitionKey)) { $definitionsByKey[$definitionKey] = [Collections.Generic.List[object]]::new() }
+            $definitionsByKey[$definitionKey].Add(@{ path = $node.path; symbol = $symbol })
+            if (-not $scopes.ContainsKey($symbol.QualifiedName)) { $scopes[$symbol.QualifiedName] = [Collections.Generic.List[object]]::new() }
+            $scopes[$symbol.QualifiedName].Add($symbol)
         }
+        $scopeLookup[$node.path] = $scopes
     }
     foreach ($edge in $Edges) {
         if ($relations.Count -ge 100000) { break }
@@ -184,18 +196,21 @@ function Get-FrontierRepositoryRelations {
     $unresolved = 0
     $truncated = $Edges.Count -gt 100000
     foreach ($node in $Nodes) {
-        $scopes = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
-        foreach ($symbol in $node.symbols) {
-            if (-not $scopes.ContainsKey($symbol.QualifiedName)) { $scopes[$symbol.QualifiedName] = @() }
-            $scopes[$symbol.QualifiedName] += $symbol
-        }
+        $scopes = $scopeLookup[$node.path]
         foreach ($symbol in $node.symbols) {
             if ($relations.Count -ge 100000) { $truncated = $true; break }
             if ($symbol.ParentName -and $scopes.ContainsKey($symbol.ParentName)) {
-                $parents = @($scopes[$symbol.ParentName] | Where-Object { $_.Line -le $symbol.Line -and $_.EndLine -ge $symbol.EndLine })
-                if ($parents.Count -eq 1) {
+                $parent = $null
+                $parentCount = 0
+                foreach ($candidateParent in $scopes[$symbol.ParentName]) {
+                    if ($candidateParent.Line -le $symbol.Line -and $candidateParent.EndLine -ge $symbol.EndLine) {
+                        $parent = $candidateParent
+                        if (++$parentCount -gt 1) { break }
+                    }
+                }
+                if ($parentCount -eq 1) {
                     $relations.Add([pscustomobject][ordered]@{
-                        fromPath = $node.path; toPath = $node.path; fromSymbol = $parents[0].id; toSymbol = $symbol.id
+                        fromPath = $node.path; toPath = $node.path; fromSymbol = $parent.id; toSymbol = $symbol.id
                         kind = 'contains'; line = $symbol.Line; confidence = 'observed'; resolver = $node.parser
                     })
                 }
@@ -204,24 +219,39 @@ function Get-FrontierRepositoryRelations {
         foreach ($call in $node.calls) {
             if ($relations.Count -ge 100000) { $truncated = $true; break }
             $name = if ($node.parser -like 'powershell-ast*') { ([string]$call.Name).ToLowerInvariant() } else { [string]$call.Name }
-            if (-not $definitions.ContainsKey($name)) { $unresolved++; continue }
-            $candidates = @($definitions[$name] | Where-Object {
-                ($_.path -ceq $node.path -or $neighbors[$node.path].Contains($_.path)) -and
-                    $_.symbol.parser -eq $node.parser
-            })
-            $local = @($candidates | Where-Object {
-                $_.path -ceq $node.path -and (-not $_.symbol.ParentName -or
-                    [string]$call.Scope -ceq $_.symbol.ParentName -or
-                    ([string]$call.Scope).StartsWith($_.symbol.ParentName + '.', [StringComparison]::Ordinal))
-            })
+            $cacheKey = "$($node.path)|$name|$($node.parser)"
+            if ($candidateCache.ContainsKey($cacheKey)) {
+                $candidates = $candidateCache[$cacheKey]
+            } else {
+                $candidateList = [Collections.Generic.List[object]]::new()
+                $definitionKey = "$($node.path)|$name|$($node.parser)"
+                if ($definitionsByKey.ContainsKey($definitionKey)) { $candidateList.AddRange([object[]]$definitionsByKey[$definitionKey]) }
+                foreach ($neighbor in $neighbors[$node.path]) {
+                    $definitionKey = "$neighbor|$name|$($node.parser)"
+                    if ($definitionsByKey.ContainsKey($definitionKey)) { $candidateList.AddRange([object[]]$definitionsByKey[$definitionKey]) }
+                }
+                $candidates = [object[]]$candidateList
+                $candidateCache[$cacheKey] = $candidates
+            }
+            if (-not $candidates.Count) { $unresolved++; continue }
+            $local = [Collections.Generic.List[object]]::new()
+            foreach ($candidate in $candidates) {
+                if ($candidate.path -ceq $node.path -and (-not $candidate.symbol.ParentName -or
+                    [string]$call.Scope -ceq $candidate.symbol.ParentName -or
+                    ([string]$call.Scope).StartsWith($candidate.symbol.ParentName + '.', [StringComparison]::Ordinal))) {
+                    $local.Add($candidate)
+                }
+            }
             if ($local.Count -eq 1) { $candidates = $local }
             if ($candidates.Count -ne 1) { $unresolved++; continue }
-            $source = @()
-            if ($scopes.ContainsKey([string]$call.Scope)) { $source = @($scopes[[string]$call.Scope]) }
+            $source = ''
+            if ($scopes.ContainsKey([string]$call.Scope) -and $scopes[[string]$call.Scope].Count -eq 1) {
+                $source = $scopes[[string]$call.Scope][0].id
+            }
             $target = $candidates[0]
             $relations.Add([pscustomobject][ordered]@{
                 fromPath = $node.path; toPath = $target.path
-                fromSymbol = $(if ($source.Count -eq 1) { $source[0].id } else { '' })
+                fromSymbol = $source
                 toSymbol = $target.symbol.id; kind = 'calls'; line = [int]$call.Line
                 confidence = 'heuristic'; resolver = 'syntax-name-and-import'
             })
@@ -233,6 +263,7 @@ function Get-FrontierRepositoryRelations {
 function Get-FrontierRepositoryHierarchy {
     param([array]$Nodes, [array]$Edges)
     $groups = [Collections.Generic.SortedDictionary[string, object]]::new([StringComparer]::Ordinal)
+    $pathGroups = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
     foreach ($node in $Nodes) {
         $parts = $node.path.Split('/')
         $names = @()
@@ -246,13 +277,29 @@ function Get-FrontierRepositoryHierarchy {
             if (-not $groups.ContainsKey($name)) { $groups[$name] = [Collections.Generic.List[object]]::new() }
             $groups[$name].Add($node)
         }
+        $pathGroups[$node.path] = $names
+    }
+    $outgoingByGroup = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
+    foreach ($name in $groups.Keys) { $outgoingByGroup[$name] = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal) }
+    $edgeBudget = 250000
+    $truncated = $false
+    $examined = 0
+    foreach ($edge in $Edges) {
+        if (++$examined -gt $edgeBudget) { $truncated = $true; break }
+        if (-not $pathGroups.ContainsKey($edge.from) -or -not $pathGroups.ContainsKey($edge.to)) { continue }
+        foreach ($name in $pathGroups[$edge.from]) {
+            $isInternal = $false
+            foreach ($targetGroup in $pathGroups[$edge.to]) {
+                if ($targetGroup -ceq $name) { $isInternal = $true; break }
+            }
+            if ($isInternal) { continue }
+            $target = if ($edge.to.Contains('/')) { $edge.to.Split('/')[0] } else { '(root)' }
+            [void]$outgoingByGroup[$name].Add($target)
+        }
     }
     foreach ($name in $groups.Keys) {
         $members = $groups[$name]
-        $paths = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-        foreach ($node in $members) { [void]$paths.Add($node.path) }
-        $outgoing = @($Edges | Where-Object { $paths.Contains($_.from) -and -not $paths.Contains($_.to) } |
-            ForEach-Object { if ($_.to.Contains('/')) { $_.to.Split('/')[0] } else { '(root)' } } | Sort-Object -Unique)
+        $outgoing = @($outgoingByGroup[$name] | Sort-Object)
         $entryPoints = @($members | Sort-Object @{
             Expression = { [int]($_.path -match '(?i)(^|/)(readme|index|main|program|app|startup|__init__)\.') }; Descending = $true
         }, path | Select-Object -First 5 -ExpandProperty path)
@@ -261,7 +308,7 @@ function Get-FrontierRepositoryHierarchy {
         [pscustomobject][ordered]@{
             id = $name; files = $members.Count; symbols = $symbolCount
             entryPoints = $entryPoints; dependsOn = $outgoing
-            summary = "${name}: $($members.Count) files, $symbolCount indexed definitions; dependencies: $($outgoing -join ', ')."
+            summary = "${name}: $($members.Count) files, $symbolCount indexed definitions; dependencies: $($outgoing -join ', ').$(if ($truncated) { ' Hierarchy dependency scan truncated.' } else { '' })"
         }
     }
 }

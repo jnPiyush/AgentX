@@ -355,6 +355,48 @@ export function formatVerificationFeedback(
   return lines.join('\n');
 }
 
+/** Adapt native check receipts to the existing feedback model without treating reuse as execution. */
+export function formatNativePreflight(value: unknown): string {
+  const record = (item: unknown): item is Record<string, unknown> =>
+    item !== null && typeof item === 'object' && !Array.isArray(item);
+  if (!record(value) || value.version !== 1 || !Array.isArray(value.checks)
+    || typeof value.startedAt !== 'string' || typeof value.finishedAt !== 'string'
+    || !Number.isFinite(Date.parse(value.startedAt)) || !Number.isFinite(Date.parse(value.finishedAt))
+    || Date.parse(value.finishedAt) < Date.parse(value.startedAt)
+    || typeof value.artifactPath !== 'string' || value.suitesRun !== false) {
+    throw new Error('Invalid native preflight result.');
+  }
+  let reused = 0;
+  const results: VerificationCheckResult[] = value.checks.map(item => {
+    if (!record(item) || typeof item.id !== 'string' || typeof item.passed !== 'boolean'
+      || typeof item.reused !== 'boolean' || typeof item.executedAt !== 'string'
+      || !Number.isFinite(Date.parse(item.executedAt)) || (item.reused && !item.passed)
+      || typeof item.currentDurationMs !== 'number' || !Number.isFinite(item.currentDurationMs)
+      || item.currentDurationMs < 0 || typeof item.summary !== 'string') {
+      throw new Error('Invalid native preflight check receipt.');
+    }
+    if (item.reused) { reused += 1; }
+    return {
+      check: { id: item.id, kind: 'custom', label: item.id, command: 'frontier loop preflight' },
+      passed: item.passed, exitCode: item.passed ? 0 : 1, timedOut: false,
+      durationMs: item.currentDurationMs, failures: item.passed ? [] : [{
+        message: item.summary, raw: item.summary,
+      }],
+      summary: `${item.id}: ${item.reused ? 'reused' : 'executed'} (original ${item.executedAt})`,
+      skipped: false,
+    };
+  });
+  const run = summarizeVerificationRun(results, value.startedAt, value.finishedAt);
+  if (typeof value.passed !== 'boolean' || value.passed !== run.passed
+    || value.reusedCount !== reused || value.executedCount !== results.length - reused) {
+    throw new Error('Native preflight aggregate does not match its receipts.');
+  }
+  const feedback = results.length ? formatVerificationFeedback(run)
+    : 'No automated checks were applicable; separate verification evidence is still required.';
+  return `${feedback}\nExecuted: ${results.length - reused}; reused: ${reused}.\n`
+    + `Suites not run. Full evidence: ${value.artifactPath}`;
+}
+
 // ---------------------------------------------------------------------------
 // Evidence bridge (pure) -- feeds harness feature 2
 // ---------------------------------------------------------------------------

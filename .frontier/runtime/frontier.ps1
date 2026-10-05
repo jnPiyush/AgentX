@@ -14,6 +14,20 @@ if ($isBundledLauncher) {
     $workspaceRootOverride = $launcherWorkspaceRoot
 }
 $env:FRONTIER_WORKSPACE_ROOT = $workspaceRootOverride
+if ($args.Count -ge 3 -and $args[0] -ceq 'cursor' -and $args[1] -ceq 'hook') {
+    # Cursor runs this hook for every tool call; dispatching directly avoids loading the full CLI.
+    if ($IsWindows) {
+        $extensions = @($env:PATHEXT -split ';' | Where-Object { $_ })
+        $missing = @('.EXE', '.CMD' | Where-Object { $extensions -notcontains $_ })
+        if ($missing.Count -gt 0) { $env:PATHEXT = (@($extensions) + @($missing)) -join ';' }
+    }
+    $nodeCommand = Get-Command $(if ($IsWindows) { 'node.exe' } else { 'node' }) -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($nodeCommand) {
+        & $nodeCommand.Source (Join-Path $PSScriptRoot 'cursor.js') --workspace $workspaceRootOverride @($args | Select-Object -Skip 1)
+        exit $LASTEXITCODE
+    }
+}
 Push-Location -LiteralPath $workspaceRootOverride
 $succeeded = $true
 try {

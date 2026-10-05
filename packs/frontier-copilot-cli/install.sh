@@ -36,6 +36,8 @@ RUNTIME_BUNDLE_FILES=(
   "repository-process.cs"
   "workspace-sandbox.ps1"
   "workspace-state.ps1"
+  "loop-engineering.ps1"
+  "loop-static-checks.js"
   "repository-parser/index.js"
   "repository-parser/package.json"
   "repository-parser/package-lock.json"
@@ -225,6 +227,7 @@ install_cli_runtime_bundle() {
   for file_name in "${RUNTIME_BUNDLE_FILES[@]}"; do
     copy_file ".frontier/runtime/$file_name" "$RUNTIME_BUNDLE_ROOT/$file_name"
   done
+  copy_file "scripts/scrub.ps1" ".github/frontier/scripts/scrub.ps1"
   copy_file "scripts/score-code-quality.ps1" ".github/frontier/scripts/score-code-quality.ps1"
   copy_file "evaluation/rubrics/code-quality.md" ".github/frontier/evaluation/rubrics/code-quality.md"
   copy_file "scripts/score-stage-gate.ps1" ".github/frontier/scripts/score-stage-gate.ps1"

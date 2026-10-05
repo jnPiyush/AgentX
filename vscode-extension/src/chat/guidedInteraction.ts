@@ -74,8 +74,20 @@ export function renderPendingInteraction(pending: PendingInteraction): string {
   return `**${title}**\n\n${fence}json\n${body}\n${fence}\n\n${instruction}`;
 }
 
+const QUOTE_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ['"', '"'], ['\'', '\''], ['`', '`'], ['\u201C', '\u201D'], ['\u2018', '\u2019'],
+];
+
+/** Removes one pair of quotes that wraps the entire reply, as in `continue "approve"`. */
+export function unquoteResponse(text: string): string {
+  const value = text.trim();
+  const pair = QUOTE_PAIRS.find(([open, close]) =>
+    value.length >= 2 && value.startsWith(open) && value.endsWith(close));
+  return pair ? value.slice(pair[0].length, value.length - pair[1].length).trim() : value;
+}
+
 export function buildInteractionResumeArgs(pending: PendingInteraction, text: string): string[] {
-  const response = text.trim();
+  const response = unquoteResponse(text);
   if (!response) { throw new Error('A user response is required; the task remains pending.'); }
   const args = ['--resume-session', pending.sessionId, '--input-id', pending.inputId];
   if (pending.kind === 'question') {

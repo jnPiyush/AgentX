@@ -111,6 +111,20 @@ try {
     Write-FixtureJson $editorLease @{ pid = $PID }
     Assert-Rejected { Set-FrontierRepositoryStateMode $root -ValidateOnly } 'editor operation'
     Remove-Item -LiteralPath $editorLease
+    [IO.File]::WriteAllText((Join-Path $private 'transition.lock'), '')
+    Write-FixtureJson (Join-Path $private 'editor-leases' 'exited.json') @{ pid = 999999; createdAt = '2026-01-01T00:00:00Z' }
+    Write-FixtureJson (Join-Path $private 'editor-leases' 'reused.json') @{ pid = $PID; createdAt = '2000-01-01T00:00:00Z' }
+    Assert-That (Set-FrontierRepositoryStateMode $root -ValidateOnly).transitionReady 'interrupted transition markers and exited editor leases do not block transitions'
+    [IO.File]::WriteAllText((Join-Path $private 'transition.lock'), '')
+    $recovered = Repair-FrontierStateMarkers $root
+    Assert-That ($recovered.staleTransitionRemoved -and @($recovered.editorLeasesRemoved).Count -eq 2) 'recover removes interrupted markers and leases of exited or reused processes'
+    Assert-That (-not (Test-Path -LiteralPath (Join-Path $private 'transition.lock'))) 'recover leaves no transition marker'
+    foreach ($name in @('FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY')) {
+        $env:FRONTIER_STATE_ROOT = $null
+        Assert-Rejected { Get-FrontierStateRoot $root } "$name|FRONTIER_STATE_ROOT"
+        $env:FRONTIER_STATE_ROOT = $private
+    }
+    if ($IsWindows) { Assert-Rejected { Get-FrontierWorkspaceIdentity 'C:\Repo\name.\child' '' } 'dot or space' }
     $pending = Join-Path $private 'state' 'pending-setup.json'
     Write-FixtureJson $pending @{ schemaVersion = 1 }
     Assert-Rejected { Set-FrontierRepositoryStateMode $root -ValidateOnly } 'pending Frontier editor'

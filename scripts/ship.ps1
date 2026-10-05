@@ -133,7 +133,7 @@ $steps = @(
         gate = { $true }
     },
     @{
-        name = 'compound'; agent = 'agent-x';
+        name = 'compound'; agent = 'frontier';
         run  = { Write-Host "[ship] Compound: confirming learning capture or skip rationale" -ForegroundColor Cyan
                   if (Test-LearningArtifact) { return 0 }
                   Write-Host "  No learning capture found under docs/artifacts/learnings/. Either create one or document a skip rationale on the issue." -ForegroundColor Yellow

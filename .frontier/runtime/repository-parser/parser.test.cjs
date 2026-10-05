@@ -68,3 +68,13 @@ test('all managed parser ranges use CRLF, CR and LF rather than language-specifi
   const csLines = Object.fromEntries(results[1].symbols.map(symbol => [symbol.Name, symbol.Line]));
   assert.deepEqual(csLines, { First: 2, Second: 3, Third: 4 });
 });
+
+test('metadata text sanitizer remains bounded for adversarial quoted comments', async () => {
+  const marker = "'\\" + 'a\\'.repeat(256) + "*/";
+  const text = `const x = { y() { return 1; } };\n(x /*${marker}).y();\n`;
+  const started = process.hrtime.bigint();
+  const { results } = await parseFiles({ version: 1, files: [{ path: 'src/adversarial.ts', text }] });
+  const elapsedMs = Number(process.hrtime.bigint() - started) / 1_000_000;
+  assert.ok(elapsedMs < 1000, `parse took ${elapsedMs}ms`);
+  assert.ok(results[0].calls.some(call => call.Name === 'y'));
+});

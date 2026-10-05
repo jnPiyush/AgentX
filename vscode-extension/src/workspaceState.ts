@@ -12,6 +12,42 @@ import {
 } from './utils/workspaceProfiles';
 import { parseConfigurationJson } from './utils/configurationJson';
 
+function processAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+/** Returns the marker path while a storage-mode transition may still be running. */
+export function activeTransitionMarker(stateRoot: string): string | undefined {
+  const marker = path.join(stateRoot, 'transition.lock');
+  let text: string;
+  try { text = fs.readFileSync(marker, 'utf8'); } catch (error) {
+    // Windows transitions hold the marker open without sharing, so read failures mean active.
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? undefined : marker;
+  }
+  try {
+    const owner: unknown = JSON.parse(text);
+    if (owner && typeof owner === 'object' && 'pid' in owner
+      && Number.isInteger(owner.pid) && (owner.pid as number) > 0) {
+      return processAlive(owner.pid as number) ? marker : undefined;
+    }
+  } catch { /* An empty or partial marker may still be mid-write. */ }
+  return marker;
+}
+
+function releaseLease(lease: string): void {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try { fs.unlinkSync(lease); return; } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') { return; }
+      if (attempt === 2) {
+        console.warn(`Frontier could not release editor lease ${lease}; `
+          + 'run "frontier workspace-state recover" after this editor exits.', error);
+      }
+    }
+  }
+}
+
 export class WorkspaceState {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -148,13 +184,14 @@ export class WorkspaceState {
       { encoding: 'utf8', mode: 0o600, flag: 'wx' });
     try {
       const current = this.inspect(root);
-      if (current?.mode !== 'private' || current.identity !== binding.identity
-        || fs.existsSync(path.join(binding.stateRoot, 'transition.lock'))) {
-        throw new Error('Frontier storage mode is changing. Retry the operation after it finishes.');
+      const marker = activeTransitionMarker(binding.stateRoot);
+      if (current?.mode !== 'private' || current.identity !== binding.identity || marker) {
+        throw new Error(`Frontier storage mode is changing${marker ? ` (${marker})` : ''}. Retry after it finishes; `
+          + 'if no transition is running, run "frontier workspace-state recover".');
       }
       this.assertAvailable(root);
       return await action();
-    } finally { fs.unlinkSync(lease); }
+    } finally { releaseLease(lease); }
   }
 
   readInteraction<T extends object>(root: string, kind: 'clarification' | 'setup'): T | undefined {

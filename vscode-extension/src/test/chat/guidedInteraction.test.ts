@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert';
 import {
-  buildInteractionResumeArgs, readPendingInteraction, renderPendingInteraction,
+  buildInteractionResumeArgs, readPendingInteraction, renderPendingInteraction, unquoteResponse,
 } from '../../chat/guidedInteraction';
 import { PendingInteraction } from '../../frontierContextTypes';
 import { FrontierContext } from '../../frontierContext';
@@ -56,6 +56,26 @@ describe('guided interaction host contract', () => {
     }
     const revision = buildInteractionResumeArgs(pending, 'approve, but skip deployment');
     assert.equal(revision[revision.indexOf('--input-decision') + 1], 'revise');
+    for (const quoted of ['"approve"', '\'approve\'', '`approve`', '\u201Capprove\u201D']) {
+      const args = buildInteractionResumeArgs(pending, quoted);
+      assert.equal(args[args.indexOf('--input-decision') + 1], 'approve', quoted);
+    }
+    assert.equal(unquoteResponse('"keep "this" text"'), 'keep "this" text');
+    assert.equal(unquoteResponse('"unbalanced'), '"unbalanced');
+  });
+
+  it('shows the live request instead of resuming a legacy record blindly', async () => {
+    const current = plan();
+    const context = sinon.createStubInstance(FrontierContext);
+    context.hasCliRuntime.returns(true);
+    context.runCli.resolves(JSON.stringify({ sessionId: current.sessionId, pendingInteraction: current }));
+    const response = createMockResponseStream();
+    await resumePendingClarification(response, context, {
+      sessionId: current.sessionId, agentName: current.agent, prompt: 'Fixture',
+    }, 'approve');
+    sinon.assert.notCalled(context.runCliStreaming);
+    assert.ok(response.getMarkdown().includes('newer input request'));
+    assert.equal(context.setPendingClarification.firstCall.args[0].interaction?.inputId, current.inputId);
   });
 
   it('never interprets a clarification answer as plan approval', () => {

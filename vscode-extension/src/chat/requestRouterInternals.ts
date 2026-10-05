@@ -40,7 +40,7 @@ import {
 import { stripAnsi } from '../utils/stripAnsi';
 import { PendingInteraction } from '../frontierContextTypes';
 import {
-  buildInteractionResumeArgs, readPendingInteraction, renderPendingInteraction,
+  buildInteractionResumeArgs, readPendingInteraction, renderPendingInteraction, unquoteResponse,
 } from './guidedInteraction';
 
 const CHAT_OUTPUT_CHANNEL_NAME = 'Frontier Chat';
@@ -164,11 +164,11 @@ export async function resumePendingClarification(
     const root = await agentx.ensureWorkspaceReady(pending.workspaceRoot);
     if (signal?.aborted) { return {}; }
     let resumeArgs = [
-      '--resume-session', pending.sessionId, '--clarification-response', guidance,
+      '--resume-session', pending.sessionId, '--clarification-response', guidance, '--json',
     ];
+    const current = readPendingInteraction(await agentx.runCli('run',
+      ['--session-info', pending.sessionId, '--json'], root));
     if (pending.interaction) {
-      const current = readPendingInteraction(await agentx.runCli('run',
-        ['--session-info', pending.sessionId, '--json'], root));
       if (!current) {
         await clearPendingClarification(agentx, root);
         response.markdown('This session no longer has pending input. No decision was applied.');
@@ -184,6 +184,13 @@ export async function resumePendingClarification(
         return {};
       }
       resumeArgs = buildInteractionResumeArgs(current, guidance);
+    } else if (current) {
+      // Records saved before guided interaction carry no input identity; show the live request instead.
+      await updatePendingClarification(agentx, {
+        ...pending, workspaceRoot: root, interaction: current, humanPrompt: renderPendingInteraction(current),
+      });
+      response.markdown(`This session is waiting for a newer input request. Review it before responding.\n\n${renderPendingInteraction(current)}`);
+      return {};
     }
     response.progress(`Resuming ${pending.agentName} agent...`);
     let nextPendingSessionId = '';
@@ -569,7 +576,7 @@ export async function tryHandleContinueRequest(
     return {};
   }
 
-  const guidance = continueMatch[1]?.trim();
+  const guidance = continueMatch[1] ? unquoteResponse(continueMatch[1]) : '';
   if (!guidance) {
     response.markdown(buildPendingClarificationMessage(pending));
     return {};

@@ -22,7 +22,8 @@ function resolveRuntime(workspace, run = spawnSync) {
     if (!(error instanceof SyntaxError)) throw error;
     throw new Error('Cursor runtime resolution returned invalid JSON. Re-run Frontier: Initialize Cursor.');
   }
-  const normalize = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  const normalize = value => process.platform === 'win32'
+    ? path.resolve(value).replace(/[A-Z]/g, letter => letter.toLowerCase()) : path.resolve(value);
   if (!selected || selected.integration !== 'frontier-cursor' || typeof selected.workspace !== 'string' ||
       typeof selected.assetRoot !== 'string' || !path.isAbsolute(selected.assetRoot) ||
       normalize(selected.workspace) !== normalize(workspace)) {

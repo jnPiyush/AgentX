@@ -1,8 +1,32 @@
 #Requires -Version 7.4
 
+# Windows keys fold ASCII letters only, matching the extension's workspacePathKey.
+function ConvertTo-FrontierPathKey([string]$Path) {
+    if ($IsWindows) { return [regex]::Replace($Path, '[A-Z]', { param($match) $match.Value.ToLowerInvariant() }) }
+    return $Path
+}
+
+function Test-FrontierSamePath([string]$First, [string]$Second) {
+    return (ConvertTo-FrontierPathKey $First) -ceq (ConvertTo-FrontierPathKey $Second)
+}
+
+function Test-FrontierPathWithin([string]$Parent, [string]$Child) {
+    $parentKey = ConvertTo-FrontierPathKey ([IO.Path]::TrimEndingDirectorySeparator($Parent))
+    $childKey = ConvertTo-FrontierPathKey $Child
+    return $childKey -ceq $parentKey -or
+        $childKey.StartsWith($parentKey + [IO.Path]::DirectorySeparatorChar, [StringComparison]::Ordinal)
+}
+
 function Get-FrontierWorkspaceIdentity([string]$WorkspaceRoot, [string]$Authority = '') {
-    $path = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($WorkspaceRoot)).Replace('\', '/')
-    if ($IsWindows) { $path = [regex]::Replace($path, '[A-Z]', { param($match) $match.Value.ToLowerInvariant() }) }
+    if ($IsWindows) {
+        # Win32 normalization silently drops trailing dots and spaces, which Node path handling keeps.
+        foreach ($segment in $WorkspaceRoot.Split([char[]]@('\', '/'), [StringSplitOptions]::RemoveEmptyEntries)) {
+            if ($segment -notin @('.', '..') -and $segment -match '[. ]$') {
+                throw "Frontier workspace paths must not contain segments ending in a dot or space: $segment"
+            }
+        }
+    }
+    $path = ConvertTo-FrontierPathKey ([IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($WorkspaceRoot)).Replace('\', '/'))
     $text = "frontier-workspace-v1`n$Authority`n$path"
     return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($text))).ToLowerInvariant()
 }
@@ -15,8 +39,9 @@ function Assert-FrontierStatePath([string]$Path) {
     $parts = [IO.Path]::GetFullPath($Path).Substring($current.Length).Split([char[]]@('\', '/'), [StringSplitOptions]::RemoveEmptyEntries)
     foreach ($part in @('') + $parts) {
         if ($part) { $current = Join-Path $current $part }
-        $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
-        if ($item -and (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.LinkType -eq 'HardLink')) {
+        try { $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop }
+        catch [System.Management.Automation.ItemNotFoundException] { continue }
+        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.LinkType -eq 'HardLink') {
             throw "Frontier state path must not contain links: $current"
         }
     }
@@ -26,6 +51,11 @@ function Get-FrontierStateBinding([string]$WorkspaceRoot) {
     $root = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($WorkspaceRoot))
     $override = [Environment]::GetEnvironmentVariable('FRONTIER_STATE_ROOT')
     if ($null -eq $override) {
+        $partial = @('FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY') |
+            Where-Object { $null -ne [Environment]::GetEnvironmentVariable($_) }
+        if ($partial) {
+            throw "$(@($partial) -join ', ') is set without FRONTIER_STATE_ROOT; no repository fallback was used."
+        }
         return @{ mode = 'repository'; root = (Join-Path $root '.frontier'); workspaceRoot = $root; identity = ''; authority = '' }
     }
     if ([string]::IsNullOrWhiteSpace($override)) { throw 'FRONTIER_STATE_ROOT is present but empty.' }
@@ -33,13 +63,11 @@ function Get-FrontierStateBinding([string]$WorkspaceRoot) {
     if ([string]::IsNullOrWhiteSpace($boundWorkspace) -or -not [IO.Path]::IsPathFullyQualified($boundWorkspace)) {
         throw 'Private Frontier state requires FRONTIER_STATE_WORKSPACE.'
     }
-    $comparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
     $boundWorkspace = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($boundWorkspace))
-    if (-not $root.Equals($boundWorkspace, $comparison)) { throw 'Private state binding targets a different workspace.' }
+    if (-not (Test-FrontierSamePath $root $boundWorkspace)) { throw 'Private state binding targets a different workspace.' }
     Assert-FrontierStatePath $override
     $stateRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($override))
-    if ($stateRoot.Equals($root, $comparison) -or
-        $stateRoot.StartsWith($root + [IO.Path]::DirectorySeparatorChar, $comparison)) {
+    if (Test-FrontierPathWithin $root $stateRoot) {
         throw 'Private Frontier state must be outside the source workspace.'
     }
     $bindingPath = Join-Path $stateRoot 'workspace-binding.json'
@@ -59,8 +87,8 @@ function Get-FrontierStateBinding([string]$WorkspaceRoot) {
     if ($binding -isnot [System.Collections.IDictionary] -or
         $binding['schemaVersion'] -ne 1 -or $binding['mode'] -cne 'private' -or
         $binding['identity'] -cne $identity -or $binding['authority'] -cne $authority -or
-        -not $root.Equals([string]$binding['workspaceRoot'], $comparison) -or
-        -not $stateRoot.Equals([string]$binding['stateRoot'], $comparison)) {
+        -not (Test-FrontierSamePath $root ([string]$binding['workspaceRoot'])) -or
+        -not (Test-FrontierSamePath $stateRoot ([string]$binding['stateRoot']))) {
         throw 'Private Frontier state binding does not match the workspace, authority, identity or active mode.'
     }
     $configPath = Join-Path $stateRoot 'config.json'
@@ -95,19 +123,87 @@ function Enter-FrontierStateLease([string]$WorkspaceRoot, [switch]$Exclusive) {
     } catch { $lease.Dispose(); throw }
 }
 
+function Test-FrontierMarkerOwnerAlive([object]$ProcessId, [object]$CreatedAt) {
+    $id = 0
+    if (-not [int]::TryParse([string]$ProcessId, [ref]$id) -or $id -le 0) { return $false }
+    try { $process = [Diagnostics.Process]::GetProcessById($id) }
+    catch [ArgumentException] { return $false }
+    catch { return $true }
+    $created = [DateTimeOffset]::MinValue
+    if (-not [DateTimeOffset]::TryParse([string]$CreatedAt, [Globalization.CultureInfo]::InvariantCulture,
+            [Globalization.DateTimeStyles]::RoundtripKind, [ref]$created)) { return $true }
+    # A process started after the marker was written reused the recorded pid.
+    try { return $process.StartTime.ToUniversalTime() -le $created.UtcDateTime.AddSeconds(5) }
+    catch { return $true }
+}
+
+function Get-FrontierEditorLeases([string]$StateRoot) {
+    $directory = Join-Path $StateRoot 'editor-leases'
+    Assert-FrontierStatePath $directory
+    if (-not (Test-Path -LiteralPath $directory -PathType Container)) { return @() }
+    foreach ($file in Get-ChildItem -LiteralPath $directory -File -Force) {
+        $owner = $null
+        try {
+            if ($file.Length -le 4096) {
+                $owner = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json -AsHashtable -Depth 3 -ErrorAction Stop
+            }
+        } catch { $owner = $null }
+        if ($owner -is [System.Collections.IDictionary]) {
+            $alive = Test-FrontierMarkerOwnerAlive $owner['pid'] $owner['createdAt']
+            $processId = $owner['pid']
+        } else {
+            # An unreadable lease may still be mid-write; only age makes it recoverable.
+            $alive = $file.LastWriteTimeUtc -gt [DateTime]::UtcNow.AddMinutes(-1)
+            $processId = $null
+        }
+        [pscustomobject]@{ path = $file.FullName; name = $file.Name; pid = $processId; alive = $alive }
+    }
+}
+
+# transition.lock is only created while the exclusive operation lease is held, so a
+# marker found by another exclusive holder belongs to an interrupted transition.
+function Remove-FrontierStaleTransitionMarker([string]$StateRoot) {
+    $marker = Join-Path $StateRoot 'transition.lock'
+    Assert-FrontierStatePath $marker
+    if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { return $false }
+    [IO.File]::Delete($marker)
+    return $true
+}
+
+function Repair-FrontierStateMarkers([string]$WorkspaceRoot) {
+    $lease = Enter-FrontierStateLease $WorkspaceRoot -Exclusive
+    if (-not $lease) { throw 'Recovery applies only to an active private workspace profile.' }
+    try {
+        $record = Get-FrontierStateBinding $WorkspaceRoot
+        $transitionRemoved = Remove-FrontierStaleTransitionMarker $record.root
+        $removed = [System.Collections.Generic.List[string]]::new()
+        $active = [System.Collections.Generic.List[object]]::new()
+        foreach ($entry in @(Get-FrontierEditorLeases $record.root)) {
+            if ($entry.alive) { $active.Add(@{ lease = $entry.name; pid = $entry.pid }) }
+            else { Remove-Item -LiteralPath $entry.path -Force; $removed.Add($entry.name) }
+        }
+        return @{ stateRoot = $record.root; staleTransitionRemoved = $transitionRemoved
+            editorLeasesRemoved = @($removed); editorLeasesActive = @($active) }
+    } finally { $lease.Dispose() }
+}
+
 function Set-FrontierRepositoryStateMode([string]$WorkspaceRoot, [switch]$ValidateOnly) {
     $lease = Enter-FrontierStateLease $WorkspaceRoot -Exclusive
     if (-not $lease) { throw 'This operation requires an active private workspace profile.' }
     $transition = $null
     try {
         $record = Get-FrontierStateBinding $WorkspaceRoot
+        $null = Remove-FrontierStaleTransitionMarker $record.root
         $marker = Join-Path $record.root 'transition.lock'
-        Assert-FrontierStatePath $marker
         $transition = [IO.File]::Open($marker, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
-        $editorLeases = Join-Path $record.root 'editor-leases'
-        Assert-FrontierStatePath $editorLeases
-        if ((Test-Path -LiteralPath $editorLeases) -and @(Get-ChildItem -LiteralPath $editorLeases -File -Force).Count) {
-            throw 'An editor operation is active or interrupted. Resolve its editor lease before changing storage mode.'
+        $owner = [Text.Encoding]::UTF8.GetBytes((@{ pid = $PID; createdAt = [DateTime]::UtcNow.ToString('o') } | ConvertTo-Json -Compress))
+        $transition.Write($owner, 0, $owner.Length)
+        $transition.Flush()
+        foreach ($entry in @(Get-FrontierEditorLeases $record.root)) {
+            if ($entry.alive) {
+                throw "Editor operation lease '$($entry.name)' (pid $($entry.pid)) is active. Wait for it to finish, or run 'frontier workspace-state recover' after closing the editor."
+            }
+            if (-not $ValidateOnly) { Remove-Item -LiteralPath $entry.path -Force }
         }
         foreach ($kind in @('clarification', 'setup')) {
             if (Test-Path -LiteralPath (Join-Path $record.root 'state' "pending-$kind.json")) {

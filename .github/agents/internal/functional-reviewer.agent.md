@@ -24,13 +24,13 @@ hooks:
 reasoning:
   level: medium
 constraints:
-  - "MUST analyze only the branch diff, not the entire codebase"
+  - "MUST analyze the branch diff and affected consumers, not unrelated code"
   - "MUST apply false positive mitigation before reporting any finding"
   - "MUST order findings by severity (Critical > High > Medium > Low)"
   - "MUST provide evidence of harm for every finding -- no speculative warnings"
   - "MUST NOT modify source code -- report findings only"
   - "MUST NOT flag style or formatting issues (those belong to linters)"
-  - "MUST NOT report findings outside the scope of changed files"
+  - "MUST report only defects caused by the current change, including affected unchanged consumers"
 boundaries:
   can_modify: []
   cannot_modify:
@@ -57,6 +57,22 @@ Invisible sub-agent spawned by the Code Reviewer to perform deep functional anal
 - Spawned by the Reviewer agent when deep functional analysis is needed
 - Never invoked directly by users or Frontier
 - Receives: branch name, base branch, issue number, and review context
+
+## Capability and scope preflight
+
+Before substantive review, MUST read one in-scope source file and obtain its
+actual diff using the tools exposed by the current host. Tool names in this
+frontmatter do not prove access. If either operation is unavailable, return the
+missing capability immediately; do not infer a verdict from diagnostics or spend
+the review budget repeatedly searching for unavailable tools.
+
+When a native review packet is supplied, MAY use `loop reviewer-check --packet
+<path> --reviewer <id>` from the reviewer host. This diagnoses that caller's
+file/diff access; it is not approval, identity attestation or permission to write.
+Inspect the packet's factual evidence without adopting the author's rationale.
+On a follow-up, prioritize the delta and affected consumers, widening scope when
+impact is uncertain. The final verdict MUST still cover the complete current
+scope; unchanged hashes alone do not prove unchanged behavior.
 
 ## Review Focus Areas
 
