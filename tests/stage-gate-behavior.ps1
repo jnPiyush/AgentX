@@ -416,9 +416,10 @@ try {
     Assert-True ($r.ExitCode -eq 1 -and $json -and $json.status -eq 'blocked') 'frontier stage-gate maps --json and resolves paths from the workspace'
 
     # An installed runtime without the catalog degrades to a warning unless gates are required.
+    # The CLI loads sibling runtime modules at startup, so mirror the installed runtime directory.
     $install = Join-Path $runRoot 'install'
     New-Item -ItemType Directory -Path (Join-Path $install '.frontier/runtime'), (Join-Path $install 'scripts') -Force | Out-Null
-    Copy-Item -LiteralPath $cliPath -Destination (Join-Path $install '.frontier/runtime/frontier-cli.ps1')
+    Get-ChildItem -LiteralPath (Split-Path $cliPath -Parent) -File | Copy-Item -Destination (Join-Path $install '.frontier/runtime')
     Copy-Item -LiteralPath $evaluatorPath -Destination (Join-Path $install 'scripts/score-stage-gate.ps1')
     $installedCli = Join-Path $install '.frontier/runtime/frontier-cli.ps1'
     Write-Text $cli '.frontier/config.json' '{ "provider": "local" }'
