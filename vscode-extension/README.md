@@ -351,6 +351,13 @@ through its user-input tool. Missing passing-test counts do not block a loop,
 including legacy integer baselines; supplied malformed/regressed counts still
 fail. CI and mandatory release checks remain separate.
 
+The current source also provides CLI-only `frontier loop verify` to record
+`passed`, `failed` or `declined` outcomes. It does not automatically capture a
+VS Code test task's result. Keep the actual log for a pass/failure, and preserve
+needed records before the next `loop start` resets them. See
+[loop operations](../docs/guides/LOOP-OPERATIONS.md#recording-post-loop-verification)
+and the [source feature inventory](../docs/FEATURES.md) for availability.
+
 ### Lint Findings and Cleanup
 
 Loops and reviews report cosmetic lint/style findings as

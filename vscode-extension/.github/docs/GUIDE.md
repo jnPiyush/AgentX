@@ -9,7 +9,7 @@ Hypervelocity Engineering platform, Frontier.
 
 ## Table of Contents
 
-- [5-Minute Quickstart](#5-minute-quickstart)
+- [Quickstart](#quickstart)
 - [Installation](#installation)
 - [GitHub Project Setup](#github-project-setup)
 - [Local Mode (No GitHub)](#local-mode-no-github)
@@ -19,38 +19,28 @@ Hypervelocity Engineering platform, Frontier.
 
 ---
 
-## 5-Minute Quickstart
+<a id="5-minute-quickstart"></a>
 
-> **Build a reviewed feature with Frontier in 5 minutes.**
+## Quickstart
 
-### What You'll Do
+Start with a trusted project and a small task. Completion time depends on the
+repository, provider and required checks; setup is not proof of tested delivery.
 
-1. Install Frontier into your project
-2. Create your first issue
-3. Run the Product FDE -> Engineering FDE -> Review FDE pipeline
-4. Ship a reviewed, tested feature
-
-**Time**: ~5 minutes (with an existing project)
-
-### Step 1: Install (30 seconds)
+### Step 1: Install
 
 ```powershell
-# PowerShell -- into an existing project directory
-cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.ps1 | iex
+code --install-extension jnPiyush.agentx
 ```
 
-```bash
-# Bash
-cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.sh | bash
-```
+Or install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
+Open a trusted workspace. Ordinary extension use loads the bundled agents and
+skills and creates private workspace state on first use; it does not copy those
+trees into your project.
 
-**What happens**: Frontier copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
+For portable launchers, run **Frontier: Initialize Repository Support**.
+See [Installation](#installation) for standalone setup and package availability.
 
-> **No GitHub?** Add `-Local` (PowerShell) or `--local` (Bash) for offline mode.
-
-### Step 2: Create Your First Issue (30 seconds)
+### Step 2: Create Your First Issue
 
 Open VS Code with Copilot Chat. Type:
 
@@ -60,32 +50,26 @@ Open VS Code with Copilot Chat. Type:
 
 **Or via CLI** (GitHub mode):
 ```bash
-gh issue create --title "[Story] Add /health endpoint" --label "type:story"
+gh issue create --title "[Story] Add /health endpoint" --body "Return a successful health status." --label "type:story"
 ```
 
-**Or via CLI** (Local mode):
+**Or via CLI** (Local mode, after repository support is initialized):
 ```powershell
-.\.frontier\runtime\local-issue-manager.ps1 -Action create -Title "[Story] Add /health endpoint" -Labels "type:story"
+.\.frontier\runtime\frontier.ps1 issue create -t "[Story] Add /health endpoint" -b "Return a successful health status." -l "type:story"
 ```
 
-The Orchestration FDE classifies this as a simple `type:story` and can complete it using the Engineering FDE workflow.
+### Step 3: Implement with a Frontier FDE
 
-### Step 3: Implement with a Frontier FDE (2 minutes)
-
-Stay with **Frontier Orchestration FDE** for end-to-end execution, or select
-**Frontier Engineering FDE** for strict role isolation:
+Use the Orchestrator or select the Engineer for this phase:
 
 ```
 Implement the health endpoint for issue #1
 ```
 
-The implementation workflow will:
-
-1. **Read the issue** and check prerequisites
-2. **Load the right skills** automatically (`api-design`, `testing`, `error-handling`)
-3. **Generate code** that follows your project's instruction guardrails
-4. **Write tests** (enforced: >=80% coverage)
-5. **Commit** with proper format: `feat: add health endpoint (#1)`
+The implementation workflow reads the issue and approved artifacts, loads
+relevant instructions, implements the change and authors regression cases.
+Independent review and current non-test evidence complete the quality loop;
+delivery follows the approved scope and normal Git hooks.
 
 #### What Guardrails Are Active?
 
@@ -96,31 +80,32 @@ The implementation workflow will:
 | `*.ts` | `typescript.instructions.md` | Strict mode, Zod validation, ESM imports |
 | `*.tsx` | `react.instructions.md` | Hooks, TypeScript props, accessibility |
 
-You don't configure this -- it's automatic via `applyTo` glob matching.
+Compatible editor hosts apply `applyTo` globs. Other hosts load the matching
+instructions through their own supported context mechanism.
 
-### Step 4: Review with Reviewer Agent (1 minute)
+### Step 4: Review with the Reviewer
 
-Once the Engineer moves the issue to `In Review`:
+With the Reviewer selected:
 
 ```
-@Reviewer Review the code for issue #1
+Review the code for issue #1
 ```
 
-The Reviewer will:
+Review covers code quality, regression cases and security controls, using only
+checks actually performed. Findings go in `docs/artifacts/reviews/REVIEW-1.md`
+with an approval or changes-requested decision. Approval alone implies neither
+a test pass nor release readiness.
 
-1. **Check code quality** (naming, patterns, SOLID principles)
-2. **Verify tests** (80% coverage, test pyramid)
-3. **Security scan** (no hardcoded secrets, parameterized SQL)
-4. **Create review doc** at `docs/artifacts/reviews/REVIEW-1.md`
-5. **Approve** -> Status moves to `Done`
+### Step 5: Decide on Post-Loop Tests
 
-### Step 5: Done! What Just Happened?
+After `loop complete` succeeds, Frontier offers the relevant test suite and
+waits for explicit approval. An unanswered or declined offer means not run;
+coverage remains unmeasured. An approved run reports the actual command and
+results. A failure requires a new fix/review loop, not a fabricated pass.
 
-Frontier enforced:
-- **Code standards** via auto-loaded instruction files
-- **Test coverage** (80%+ required by Engineer constraints)
-- **Security** (blocked commands, secrets scanning)
-- **Process** (issue-first, status tracking, review before merge)
+CLI-capable hosts can record the outcome using `frontier loop verify`; see
+[recording post-loop verification](guides/LOOP-OPERATIONS.md#recording-post-loop-verification)
+for evidence and retention requirements. CI and release gates remain separate.
 
 ### Next: Try a Complex Feature
 
@@ -130,35 +115,36 @@ For larger work, use the **full pipeline**:
 @frontier Create an epic for user authentication with OAuth
 ```
 
-This triggers the full flow:
-
-```
-PM (creates PRD)
- -> UX Designer (wireframes + prototypes)
- -> Architect (ADR + Tech Spec)
- -> Engineer (implementation)
- -> Reviewer (code review)
-```
-
-Each agent produces a deliverable, validates it, and hands off to the next.
+The [workflow guide](WORKFLOW.md) describes product, UX, architecture,
+implementation and review handoffs.
 
 ---
 
 ## Installation
 
-### Quick Install
+### Extension or Portable Install
+
+For ordinary VS Code use, follow the [Quickstart](#quickstart). Repository
+initialization remains optional.
+
+For a standalone workspace, obtain and inspect the installer from a
+[published release](https://github.com/jnPiyush/AgentX/releases), then run it
+from the target project directory. A source-version badge is not evidence that
+the matching tag or package has been published. Do not construct download URLs
+for an unpublished version.
 
 ```powershell
-# PowerShell (Windows)
-.\install.ps1
-
-# Bash (Linux/Mac)
-./install.sh
-
-# One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.sh | bash  # Bash
+# Downloaded, published PowerShell installer; local mode
+pwsh -NoProfile -File .\install.ps1 -Local
 ```
+
+```bash
+# Downloaded, published Bash installer; local mode
+bash install.sh --local
+```
+
+Standalone installers copy their managed assets and configure portable
+repository support. That is distinct from the extension's zero-copy runtime.
 
 PowerShell install path note:
 `install.ps1` requires PowerShell 7.4+ (`pwsh`). If you are on older Windows PowerShell, install PowerShell 7 and rerun with `pwsh -File .\install.ps1`.
@@ -236,35 +222,25 @@ manually, then delete them.
 
 AgentX/HVE compatibility aliases are no longer supported. See [Frontier-only interfaces](guides/FRONTIER-ONLY-INTERFACES.md) for the current names.
 
-### Install Profiles
+<a id="install-profiles"></a>
 
-Control what gets installed with the `-Profile` flag:
+### Installer Options
 
-| Profile | Skills | Instructions | Prompts | Hooks | VS Code |
-|---------|--------|-------------|---------|-------|---------|
-| **full** (default) | All 107 | All 7 | Yes | Yes | Yes |
-| **minimal** | None | None | No | No | No |
-| **python** | Python, testing, data, architecture | python, api | Yes | Yes | Yes |
-| **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | Yes | Yes | Yes |
-| **react** | React, TypeScript, UI, design, architecture | react, api | Yes | Yes | Yes |
-
-**All profiles always include**: agents, templates, CLI, instructions, issue templates, documentation.
+The root installers no longer accept language or minimal-profile flags.
+Their supported options include local/GitHub mode, explicit overwrite and
+skipping interactive setup. Use scripts from the selected published version.
 
 ```powershell
-# PowerShell examples
-.\install.ps1 -Profile python          # Python stack
-.\install.ps1 -Profile minimal -Local  # Core only, local mode
-.\install.ps1 -Force                   # Reinstall (overwrite existing)
-.\install.ps1 -NoSetup                 # Skip interactive prompts (CI/scripts)
+pwsh -File .\install.ps1 -Local
+pwsh -File .\install.ps1 -Mode github
+pwsh -File .\install.ps1 -Force
+pwsh -File .\install.ps1 -NoSetup
+```
 
-# Bash examples
-./install.sh --profile python
-./install.sh --profile minimal --local
-./install.sh --force
-./install.sh --no-setup
-
-# One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.sh | bash
+```bash
+bash install.sh --local
+bash install.sh --force
+bash install.sh --no-setup
 ```
 
 ### What the Installer Does
@@ -1200,7 +1176,7 @@ See [Quality loop operations](guides/LOOP-OPERATIONS.md#faster-loop-preparation-
 |---------|-----|
 | PRD missing sections | Ensure: Problem Statement, Target Users, Goals, Requirements, User Stories |
 | ADR missing sections | Ensure: Context, Decision, Options Considered (3+), Consequences |
-| Test coverage below 80% | Run `dotnet test /p:CollectCoverage=true` or `pytest --cov=src`, add more tests |
+| Test coverage below the agreed target | After loop completion and test consent, run the appropriate coverage command (for example `pytest --cov=src`), inspect the result and address gaps in a new fix/review loop |
 
 ### Local Mode Issues
 

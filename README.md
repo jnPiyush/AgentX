@@ -3,7 +3,7 @@
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.8.0"><img src="https://img.shields.io/badge/Version-9.8.0-b11f4b?style=for-the-badge" alt="Version 9.8.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases"><img src="https://img.shields.io/badge/Version-9.8.0-b11f4b?style=for-the-badge" alt="Source version 9.8.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -20,7 +20,7 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 
 ## Frontier in 60 Seconds
 
-| What you get | Current release |
+| What you get | Current source |
 |:-------------|:----------------|
 | Frontier FDEs | **26 total**: 15 visible roles and 11 internal specialists |
 | Production knowledge | **134 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
@@ -30,6 +30,12 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 | Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |
 | Work tracking | Local mode, GitHub, or Azure DevOps |
 | Model adapters | GitHub Copilot, Claude Subscription/API, OpenAI API, and Claude Code through LiteLLM + Ollama |
+
+Source version and published package availability are separate. As checked on
+2026-10-06, the [Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+serves extension 9.8.0, while [GitHub releases](https://github.com/jnPiyush/AgentX/releases)
+provide standalone assets through v9.6.0. The [feature inventory](docs/FEATURES.md)
+also includes Unreleased source improvements absent from the published 9.8.0 VSIX.
 
 ### The core idea
 
@@ -76,7 +82,7 @@ Frontier uses six shared checkpoints across chat, CLI, issues, plans, reviews, a
 | **Brainstorm** | Frame the problem and retrieve prior learning | Issue or bounded task |
 | **Plan** | Record scope, alternatives, risks, and verification | Execution plan and optional work contract |
 | **Work** | Implement a bounded slice | Code, artifacts, progress, implementation evidence |
-| **Review** | Test the real surface and classify findings | Test output, runtime evidence, review decision |
+| **Review** | Inspect implementation, regression cases and non-test evidence | Structured findings, current checks and review decision |
 | **Compound Capture** | Preserve reusable outcomes or record a skip rationale | Learning artifact or closeout rationale |
 | **Done** | Close only when delivery and evidence agree | Completed loop, review, and capture state |
 
@@ -177,7 +183,7 @@ or skill trees. See the [Cursor setup guide](docs/GUIDE.md#cursor).
 
 ---
 
-## Featured 8.7 Capabilities
+## Selected Capabilities
 
 ### Fabric Engineer
 
@@ -331,6 +337,18 @@ AgentX/HVE compatibility aliases are removed; see
 Local validation and remaining provider/platform limitations are recorded with
 the release package. Public publishing and experimental HydraFusion qualification
 remain separate from packaging and source review.
+
+### Unreleased source improvements
+
+- Stage learned skills for human review before explicit publication.
+- Record post-loop test outcomes through the CLI without treating review approval
+  as a test pass.
+- Append native model-usage metadata as responses arrive, and retain full final
+  clarification guidance without the former 600-character cut-off.
+
+These additions are described in [CHANGELOG.md](CHANGELOG.md#unreleased);
+an older installed VSIX does not acquire them merely because its version matches
+the source version.
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

@@ -1,6 +1,6 @@
 ---
 title: Frontier feature list
-description: Preserved inventory of Frontier agents, workflows, context, quality controls, integrations and optional capabilities.
+description: Source inventory of Frontier agents, workflows, context, quality controls, integrations and optional capabilities.
 ---
 
 ## Snapshot
@@ -8,11 +8,11 @@ description: Preserved inventory of Frontier agents, workflows, context, quality
 Frontier is a repository-aware AI engineering platform for planning, designing,
 implementing, reviewing and delivering software.
 
-This inventory was recorded on **2026-10-04** against source commit
-[`c6171669`](https://github.com/jnPiyush/AgentX/commit/c617166946f8772bdbe3c06525b9a1c76879b4a6).
-It includes the workspace, graph-context and loop-optimization improvements in
-that commit. It describes the source implementation, not a claim that every
-feature is present in an already installed Marketplace package.
+This inventory was checked on **2026-10-06** against source commit
+[`ba376c5b`](https://github.com/jnPiyush/AgentX/commit/ba376c5ba18dbf3dff45de9edb6a73b4e8387ca4).
+It includes the workspace, graph-context, loop-optimization and reviewed
+blueprint improvements. It describes the source implementation, not a claim
+that every feature is present in an already installed Marketplace package.
 
 | Component | Count |
 | --- | ---: |
@@ -51,6 +51,8 @@ feature is present in an already installed Marketplace package.
 - Milestone progress reporting.
 - Durable pending questions and approvals.
 - Session continuation, cancellation and recovery.
+- Final sub-agent clarification guidance is no longer truncated at 600
+  characters; normal context and model limits still apply.
 
 ## 4. Automatic workspace setup
 
@@ -81,6 +83,9 @@ feature is present in an already installed Marketplace package.
 - Hash-bound review evidence and completion checks.
 - Advisory code-hygiene scanning with separate cleanup consent.
 - Test suites offered separately after loop completion, requiring approval.
+- CLI-only post-loop test outcome records with archived log hashes and decision
+  history. A declined rerun does not hide an earlier executed result. Records
+  last until the next loop; see [loop operations](guides/LOOP-OPERATIONS.md#recording-post-loop-verification).
 
 ## 7. Loop-time optimization
 
@@ -101,6 +106,9 @@ feature is present in an already installed Marketplace package.
 - Learning-capture artifacts.
 - Persistent review findings and promotion into backlog issues.
 - Context compaction and session summaries for longer tasks.
+- Learned patterns are staged outside discoverable skill folders.
+  `frontier graduate publish <name>` makes a reviewed skill discoverable;
+  existing staged or published skills are not overwritten.
 
 ## 9. Task and backlog management
 
@@ -122,6 +130,9 @@ feature is present in an already installed Marketplace package.
 - Native execution by default.
 - Experimental, opt-in HydraFusion for bounded candidate generation with
   isolation, budgets and explicit acceptance.
+- Native usage journals append provider-reported token metadata and available
+  timing as model responses arrive, including delegated calls in the parent
+  journal. Prompt and response text are not written to the usage journal.
 
 ## 11. Editor, CLI and MCP integration
 
@@ -182,10 +193,10 @@ provisioned external services.
 - This inventory is not a test report or a release-readiness certification.
   Review approval, test execution and production qualification remain separate.
 
-### Source corrections after the snapshot
+### Implementation corrections included in this snapshot
 
 The 2026-10-05 corrections address the implementation gaps found at `d1074854`;
-the original inventory above remains a historical snapshot. See the
+they are included in the source snapshot above. See the
 [acceptance map](execution/plans/EXEC-PLAN-feature-audit-fixes.md).
 
 - Provider selection occurs before execution. An authentication failure does

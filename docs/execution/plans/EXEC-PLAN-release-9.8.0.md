@@ -5,9 +5,16 @@ description: Stamp, document, package and validate the 9.8.0 candidate without p
 
 **Issue**: #411
 **Date**: 2026-10-05
-**Status**: Candidate ready; PR #439 CI green except the informational CodeQL alert result; publication waits for code-owner review and merge
+**Status**: Marketplace 9.8.0 published; GitHub v9.8.0 tag/release and PR #439 merge remain pending
 
 ## Purpose / Big Picture
+
+The results below describe the October 5 package, recorded at `d9f9b4f4`, not
+later branch commits. The [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+published 9.8.0 at 2026-10-06T00:42Z; its VSIX matches the retained local package.
+Blueprint changes in `ba376c5b` remain Unreleased and need a new version for
+Marketplace delivery. Do not rebuild later source as a replacement for the
+already published 9.8.0 package.
 
 Prepare the accumulated guided-execution, graph v2, automatic-workspace,
 loop-optimization, companion and audit-correction work as a releasable 9.8.0
@@ -116,16 +123,22 @@ not part of this task.
 - [ ] MCP server `npm test` and `audit:runtime` run only in the `master`
       release preflight; they have not run on this branch. A failure there
       stops release creation.
-- [ ] Protected review and CI on `master` remain required before `v9.8.0`.
+- [ ] Protected review and CI on `master` remain required for the GitHub
+      `v9.8.0` tag/release; Marketplace publication does not satisfy this step.
 
 ## Artifacts and Notes
 
 - Evidence: final commit `e7271d17` and its PR #439 CI runs (Quality Gates
   37388586752, SAST 37388587168).
-- Local VSIX `dist/vsix/agentx-9.8.0.vsix` (gitignored) is superseded by any
-  later commit and must be repackaged from the final revision.
+- Local VSIX `dist/vsix/agentx-9.8.0.vsix` (gitignored) is the published
+  Marketplace package, SHA-256
+  `12C3BD29DFB71264AB87731793CEC3F68B690AF081F7F6A17BE4517597BF579F`.
+  Retain it and its checksum; later source needs a new version and validation,
+  not a same-version Marketplace replacement.
 
 ## Rollback
 
-Retain v9.6.0 (latest public release) as the published rollback target. The
-local 9.7.0 VSIX is a development artifact, not a qualified rollback.
+Rollback choices are channel-specific. The prior Marketplace version is 9.6.2;
+v9.6.0 is the latest GitHub standalone release, not a Marketplace version.
+Verify workspace compatibility before downgrading through either channel.
+The former local 9.7.0 VSIX was a development artifact, not a qualified rollback.
