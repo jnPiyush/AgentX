@@ -27,6 +27,10 @@ decision or mutation-policy result is cached.
 - Selected: one native helper, a bounded static JavaScript/TypeScript checker,
   and thin CLI/editor/MCP entry points. Unknown impact expands review. Checks
   whose complete dependency set cannot be established execute fresh.
+- Blueprint follow-up (2026-10-06): extend the existing CLI and usage ledger,
+  rather than add another routing, storage or telemetry service. Keep each
+  verification decision, use unique archive names, and document the existing
+  CLI-only and per-loop retention limits.
 
 ## Plan of Work: interfaces and reuse inventory
 
@@ -81,7 +85,9 @@ decision or mutation-policy result is cached.
 
 Tests are authored during implementation and offered only after loop completion.
 Non-test validation includes parsing, typechecking, current-artifact checks and
-bounded operational inspection. No commit, push or installation is requested.
+bounded operational inspection. The original optimization phases did not
+authorize delivery. The blueprint follow-up below is now authorized for commit
+and push; installation, merging and publication remain out of scope.
 
 ## Progress
 
@@ -100,6 +106,45 @@ after stable-input validation, composite-compatible private compiler metadata,
 and non-blocking cosmetic whitespace. Each has a focused regression case; the
 closure review must verify all five before the final verdict.
 
+### Blueprint follow-up (2026-10-06)
+
+The user approved three bounded improvements and removal of the 600-character
+sub-agent answer limit, then requested fixes for every review observation.
+
+| Scope | Existing surface | Acceptance |
+| --- | --- | --- |
+| Stage skills until explicit publication | Native CLI graduation commands and their MCP/chat descriptions | Preserve active patterns on skips; list unpublished drafts; publish companion files without overwriting existing skills |
+| Record post-loop verification | Native CLI loop commands and loop operations guide | Retain decision history outside approval history; a declined rerun cannot hide failure; reject stale logs |
+| Persist incremental usage | Native runner ledger | Append metadata without prompt/response content; delegated calls use the parent journal |
+| Keep full clarification guidance | Native runner handoff summary | Preserve answers longer than 600 characters |
+| Close review edge cases | Existing loop-scope, sprint/discover and agentic-runner behavior suites | Legacy verification, missing pattern store, hidden companion files and fixed-clock archive collisions have regression cases |
+
+Implementation review closed all seven reported observations with zero HIGH,
+MEDIUM or LOW findings. PowerShell syntax/static analysis, TypeScript typecheck,
+frontmatter, bundle parity and strict manifest verification passed. The three
+behavior suites were offered but not run because consent was unanswered.
+This is implementation review evidence, not a behavioral test pass or release
+certification. The current loop and final-state report govern commit eligibility.
+
+## Surprises & Discoveries
+
+- The follow-up changes eight code files, including three test files, so the
+  normal commit hook also requires this maintained plan. Updating it is a
+  delivery-documentation step; no source behavior changes are added here.
+
+## Outcomes & Retrospective
+
+The blueprint follow-up stays within the existing runtime and keeps the test
+consent gate unchanged. Remaining delivery steps are a fresh review of this plan
+with the unchanged implementation, a normal hooked commit referencing #411, and
+a non-force push to the existing feature branch. Compound Capture is skipped as
+duplicated guidance: the operating contracts are recorded in the loop operations
+guide and changelog, with the operational pitfall retained in project memory.
+
 ## Artifacts and Notes
 
 - Evidence: delivery commit c6171669 (`feat: optimize quality loops and resolve review findings (#411)`).
+- Blueprint implementation review: local
+  `.frontier/state/blueprint-observations-review-final.json`, reviewed
+  2026-10-06T17:22:38Z. Subsequent delivery checks MUST retain the explicit
+  not-run status of behavioral suites unless a user-approved run supplies results.

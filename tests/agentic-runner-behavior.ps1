@@ -802,6 +802,11 @@ Assert-True ($clarificationSummary -match 'From: engineer') 'Build-Clarification
 Assert-True ($clarificationSummary -match 'To: architect') 'Build-ClarificationSummary includes the target agent'
 Assert-True ($clarificationSummary -match 'database indexing') 'Build-ClarificationSummary includes the clarification topic'
 Assert-True ($clarificationSummary -match 'resolved') 'Build-ClarificationSummary includes the resolution status'
+$longGuidance = 'Keep every constraint. ' * 60 + 'FINAL-MARKER'
+$longClarification = Build-ClarificationSummary -FromAgent 'engineer' -TargetAgent 'architect' -Topic 'long answer' -Exchanges @(
+    @{ question = 'Which constraints apply?'; response = 'See final guidance.'; iteration = 1; respondedBy = 'sub-agent' }
+) -FinalAnswer $longGuidance -Resolved $true -EscalatedToHuman $false
+Assert-True ($longClarification.Contains($longGuidance.Trim())) 'Build-ClarificationSummary keeps a long sub-agent answer in full'
 
 $clarificationContract = Read-ClarificationResponseContract @"
 Status: resolved
@@ -1920,6 +1925,9 @@ try {
     Assert-Equal $ledgerRun.usage.byPurpose.'self-review'.calls 1 'Self-review spend is attributed separately'
     $usageFile = Join-Path $ledgerRoot ".frontier/sessions/$($ledgerRun.sessionId).usage.json"
     Assert-True (Test-Path -LiteralPath $usageFile) 'Metered run writes a budget-compatible usage file'
+    $journalLines = @(Get-Content -LiteralPath ([IO.Path]::ChangeExtension($usageFile, '.jsonl')) -Encoding utf8 | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
+    Assert-True ($journalLines.Count -eq 2 -and @($journalLines | Where-Object { $_.purpose -eq 'agent' -and $_.inputTokens -eq 100 -and $null -ne $_.durationMs }).Count -eq 1 -and
+        @($journalLines | Where-Object { $_.PSObject.Properties.Name -contains 'content' }).Count -eq 0) 'Metered run appends one usage journal line per call with timing and no content'
 
     $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 50 } }
     $script:ledgerUseTool = $true
@@ -1960,6 +1968,8 @@ try {
         Assert-Equal ($usageFilesAfter - $usageFilesBefore) 1 'Only the requesting run writes a usage export'
         Assert-Equal @($clarifiedExport.calls | Where-Object { $_.id -like 'agent-*' }).Count 3 'The requesting run export includes its responder calls'
         Assert-Equal @($clarifiedExport.calls).Count $clarified.usage.calls 'The usage export lists every call of the run'
+        $clarifiedJournal = @(Get-Content -LiteralPath (Join-Path $usageDir "$($clarified.sessionId).usage.jsonl") -Encoding utf8 | Where-Object { $_ })
+        Assert-Equal $clarifiedJournal.Count $clarified.usage.calls 'Delegated clarification calls append to the requesting run journal'
         $clarificationLedger = Get-Content -LiteralPath (Join-Path $ledgerRoot '.frontier/state/clarifications/issue-0.json') -Raw | ConvertFrom-Json
         Assert-Equal @($clarificationLedger.clarifications)[-1].status 'resolved' 'A resolved clarification is recorded in the ledger'
 

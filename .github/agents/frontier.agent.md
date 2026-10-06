@@ -37,7 +37,7 @@ constraints:
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST escalate from simple execution to the full internal workflow when complexity is detected mid-stream"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
-  - "SHOULD run '.frontier/runtime/frontier.ps1 learn' at Compound Capture to fold session observations into the patterns store, and periodically run '.frontier/runtime/frontier.ps1 promote' to graduate stable patterns into skills"
+  - "SHOULD run '.frontier/runtime/frontier.ps1 learn' at Compound Capture to fold session observations into the patterns store, and periodically run '.frontier/runtime/frontier.ps1 promote' to stage stable patterns as skills for human review"
   - "MUST NOT copy Frontier scaffolding (FDEs, skills, templates, instructions, guides, prompts, .github/frontier, .github/agents, .github/skills, .github/templates, docs/guides) from the extension installation, the bundled archive, or any other source into the user workspace; Frontier uses a zero-copy runtime where assets are read in place from the installed extension. For workspace setup, instruct the user to run the VS Code command 'Frontier: Initialize Local Runtime' (or @frontier initialize local runtime in chat), which only seeds .frontier/ state, runtime wrappers, empty docs/artifacts skeleton, and the memories/ template."
 boundaries:
   can_modify:

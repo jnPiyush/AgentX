@@ -37,7 +37,7 @@ accepted; callers must use the advertised Frontier names.
 | `frontier_backlog_sync` | `backlog-sync [github] [--force]` | Sync local backlog to a remote provider |
 | `frontier_config_set` | `config set <key> <value>` | Set a Frontier configuration value |
 | `frontier_learn` | `learn [run\|status\|reset]` | Run pattern-discovery pipeline over recent sessions |
-| `frontier_promote` | `promote [run\|status]` | Graduate stable discovered patterns into durable artifacts |
+| `frontier_promote` | `promote [run\|status]` | Stage stable discovered patterns as skills for human review |
 
 ## Prerequisites
 

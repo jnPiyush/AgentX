@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `frontier graduate run` now stages generated skills under
+  `.frontier/patterns/staged-skills/` instead of writing them into
+  `.github/skills/`. Review a staged skill, then run
+  `frontier graduate publish <name>` to make it discoverable. Invalid domain
+  slugs and already staged or published skills are skipped; their patterns
+  stay active. Each graduation keeps a separate archive, including runs with
+  the same timestamp.
+- Clarification handoffs keep the sub-agent's full final answer; the
+  600-character truncation is removed.
+
+### Added
+
+- `frontier loop verify --result passed|failed|declined [-e <log>]` records the
+  post-loop test-suite outcome (log SHA-256, commit, dirty flag) on the
+  completed loop; `loop status` shows "not run" until one is recorded.
+  Verification history retains earlier outcomes and logs until the next
+  `loop start`. Declining a rerun does not replace the last executed result.
+- Native runs append one JSON line per model call to
+  `.frontier/sessions/<session>.usage.jsonl` (tokens, model, purpose, duration;
+  no prompt content), so usage survives an interrupted run.
+
 ## 9.8.0 - 2026-10-05
 
 ### Upgrade notes

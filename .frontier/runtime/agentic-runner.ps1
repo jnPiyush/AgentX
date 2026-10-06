@@ -67,6 +67,7 @@ $Script:ProviderRegistry = @{}
 $Script:RunnerConfig = @{}
 $Script:CurrentUsageLedger = $null  # provider-reported usage for the active run; see Register-LlmUsage
 $Script:UsageCallSequence = 0
+$Script:UsageJournalFailed = $false
 $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS = 1600
 $Script:RESEARCH_FIRST_MIN_STEPS = 2
 $Script:DEFAULT_STANDARD_LOOP_MIN_ITERATIONS = 1
@@ -1638,12 +1639,14 @@ function ConvertFrom-AnthropicUsage($Usage) {
     }
 }
 
-function Start-UsageLedger($TokenBudget = $null) {
+function Start-UsageLedger($TokenBudget = $null, [string]$JournalPath = '') {
     $parent = $Script:CurrentUsageLedger
     $Script:CurrentUsageLedger = [PSCustomObject]@{
         parent = $parent
         # Delegated runs draw on the outermost run's budget instead of a fresh one.
         tokenBudget = if ($null -ne $parent) { $parent.tokenBudget } else { $TokenBudget }
+        # Delegated runs append to the outermost run's journal, matching the merged ledger export.
+        journalPath = if ($null -ne $parent) { Get-MessageFieldValue $parent 'journalPath' } else { $JournalPath }
         calls = [System.Collections.Generic.List[object]]::new()
     }
     return $Script:CurrentUsageLedger
@@ -1677,7 +1680,7 @@ function Invoke-TokenBudgetCheck([string]$Stage = '') {
     return $message
 }
 
-function Register-LlmUsage($Response, [string]$ModelId, [string]$Purpose) {
+function Register-LlmUsage($Response, [string]$ModelId, [string]$Purpose, $DurationMs = $null) {
     $ledger = $Script:CurrentUsageLedger
     if ($null -eq $ledger) { return }
     $usage = Get-MessageFieldValue $Response 'usage'
@@ -1698,11 +1701,29 @@ function Register-LlmUsage($Response, [string]$ModelId, [string]$Purpose) {
         }
     }
     if ($null -ne $outputTokens) { $record.outputTokens = $outputTokens }
+    $reported = ($null -ne $inputTokens -and $null -ne $outputTokens)
     $ledger.calls.Add([PSCustomObject]@{
         purpose = $Purpose
-        reported = ($null -ne $inputTokens -and $null -ne $outputTokens)
+        reported = $reported
         record = [PSCustomObject]$record
     })
+    Add-UsageJournalEntry (Get-MessageFieldValue $ledger 'journalPath') $Purpose $reported $record $DurationMs
+}
+
+function Add-UsageJournalEntry([string]$Path, [string]$Purpose, [bool]$Reported, $Record, $DurationMs) {
+    # One JSON line per model call, written as it happens so a crashed run keeps its usage.
+    # Token counts and timing only; prompt and response content are never written.
+    if (-not $Path -or $Script:UsageJournalFailed) { return }
+    $entry = [ordered]@{ at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'); purpose = $Purpose; reported = $Reported }
+    foreach ($key in $Record.Keys) { $entry[$key] = $Record[$key] }
+    if ($null -ne $DurationMs) { $entry.durationMs = [Math]::Round([double]$DurationMs, 1) }
+    try {
+        [void][IO.Directory]::CreateDirectory((Split-Path $Path -Parent))
+        [IO.File]::AppendAllText($Path, (([PSCustomObject]$entry | ConvertTo-Json -Compress -Depth 4) + "`n"), [Text.UTF8Encoding]::new($false))
+    } catch {
+        $Script:UsageJournalFailed = $true
+        Write-RunnerConsole "`e[33m  [WARN] Usage journal write failed; continuing without it: $($_.Exception.Message)`e[0m"
+    }
 }
 
 function Get-UsageLedgerSummary($Ledger) {
@@ -3831,9 +3852,6 @@ function Build-ClarificationSummary {
 
     $status = if ($Resolved) { 'resolved' } elseif ($EscalatedToHuman) { 'needs human follow-up' } else { 'unresolved' }
     $answerText = if ($FinalAnswer) { $FinalAnswer.Trim() } else { '(No answer recorded)' }
-    if ($answerText.Length -gt 600) {
-        $answerText = $answerText.Substring(0, 600) + '...'
-    }
 
     $parts = @(
         '[Clarification Handoff]',
@@ -5117,8 +5135,8 @@ function Invoke-AgenticLoop {
 
     # A delegated run inherits its parent's ledger and budget. Any other run starts a fresh
     # ledger, even if an earlier run in this process threw before closing its own.
-    if (-not $DelegatedRun) { $Script:CurrentUsageLedger = $null }
-    $usageLedger = Start-UsageLedger -TokenBudget $(if (-not $DelegatedRun) { $interaction.tokenBudget })
+    if (-not $DelegatedRun) { $Script:CurrentUsageLedger = $null; $Script:UsageJournalFailed = $false }
+    $usageLedger = Start-UsageLedger -TokenBudget $(if (-not $DelegatedRun) { $interaction.tokenBudget }) -JournalPath $(if (-not $DelegatedRun) { Get-RunnerSessionPath $sessionId $WorkspaceRoot '.usage.jsonl' })
     $tokenBudgetWarned = $false
 
     # --- Main loop ---
@@ -5160,7 +5178,7 @@ function Invoke-AgenticLoop {
             Assert-RunnerInteractionBinding $interaction $modelId $rolePolicy
             $modelWatch.Stop()
             $stageTimings.modelMs += $modelWatch.Elapsed.TotalMilliseconds
-            Register-LlmUsage -Response $response -ModelId $modelId -Purpose 'agent'
+            Register-LlmUsage -Response $response -ModelId $modelId -Purpose 'agent' -DurationMs $modelWatch.Elapsed.TotalMilliseconds
         } catch {
             $modelWatch.Stop()
             $stageTimings.modelMs += $modelWatch.Elapsed.TotalMilliseconds

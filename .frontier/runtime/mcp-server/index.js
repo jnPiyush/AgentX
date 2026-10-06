@@ -727,7 +727,7 @@ const TOOLS = [
   },
   {
     name: 'frontier_promote',
-    description: 'Graduate stable discovered patterns into durable artifacts (skills, conventions, learnings).',
+    description: 'Stage stable discovered patterns as skills for human review; they are not loaded by agents until published with the frontier graduate publish CLI command.',
     inputSchema: {
       type: 'object',
       properties: {

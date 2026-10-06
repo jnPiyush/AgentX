@@ -136,7 +136,7 @@
     },
     {
       "path": ".frontier/runtime/agentic-runner.ps1",
-      "sha256": "fd994e721f92c7789e5ce086dbdf4afe4b6267bcbe3ac20ac46bca864332136c",
+      "sha256": "361e620755cf217cf7061d6b274322f0669461fe48ab33e3e45ff8b86412308e",
       "category": "cli"
     },
     {
@@ -156,7 +156,7 @@
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "dcd81cc2b5df777278e15201d2be0686fcb9c38c92a67f1e84d3a041d3cdadeb",
+      "sha256": "e41bae4c8d955a0099bc041979801e09c33a8aa2cad5ef9ce803c8abf90680b4",
       "category": "cli"
     },
     {
@@ -206,7 +206,7 @@
     },
     {
       "path": ".frontier/runtime/mcp-server/index.js",
-      "sha256": "5acbb5c2e5b7e9fffe5a4b81f168ee95d32d65660c952b980a3616794b92d7ae",
+      "sha256": "cead515da2e365e6c9024715b1020c8732cc332b9179cba9619d6a3fe9a5a377",
       "category": "cli"
     },
     {
@@ -306,7 +306,7 @@
     },
     {
       "path": ".github/agents/frontier.agent.md",
-      "sha256": "85ec159bbd9b2ad4d97e5ef33ac804c11f64502c9e030856cb734bb4b663f43e",
+      "sha256": "d9177902bd943b023a8d16316be8c1d7e58b741635cfb238abfe8092348249ea",
       "category": "agent"
     },
     {

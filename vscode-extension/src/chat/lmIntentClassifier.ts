@@ -398,7 +398,7 @@ export const INTENT_CATALOG: ReadonlyArray<IntentSpec> = [
     id: 'promote-patterns',
     subcommand: 'promote',
     destructive: true,
-    description: 'Graduate stable patterns into skills',
+    description: 'Stage stable patterns as skills for review',
     cliShape: 'frontier promote',
     examples: ['promote patterns', 'graduate stable patterns', 'run promote'],
     validate: (a) => expectNoArgs(a, []),

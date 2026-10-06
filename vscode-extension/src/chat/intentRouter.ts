@@ -420,7 +420,7 @@ const PHRASE_RULES: ReadonlyArray<PhraseRule> = [
   },
   {
     id: 'promote-patterns',
-    description: 'Graduate stable patterns into skills',
+    description: 'Stage stable patterns as skills for review',
     destructive: true,
     subcommand: 'promote',
     pattern: /^(?:run\s+)?promote(?:\s+patterns)?\.?$|^graduate\s+(?:stable\s+)?patterns\.?$/i,

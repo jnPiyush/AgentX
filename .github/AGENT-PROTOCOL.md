@@ -176,16 +176,23 @@ test-running recipes in language skills and review references.
    and scope, and wait for an affirmative answer. Delegated reviewers return
    findings; they MUST NOT run suites or ask on the parent's behalf.
 2. An unanswered, dismissed or declined offer means **not run**. Record that
-   status and the remaining verification gap; do not report tests passed,
-   coverage met or release readiness from the loop verdict.
+   status (`frontier loop verify --result declined`) and the remaining
+   verification gap; do not report tests passed, coverage met or release
+   readiness from the loop verdict.
 3. If approved, execute only the selected suite as a separate post-loop
-   verification task. Report the actual command and results. Failures remain
+   verification task. Report the actual command and results, and record them
+   with `frontier loop verify --result passed|failed -e <log>`. Failures remain
    failures; corrections require a new fix/review loop, not edits to approved
    evidence or an automatic broad rerun. Consent covers the completed revision
    and selected scope, not unlimited future changes.
 4. A specific standalone user request to run tests supplies consent for that
    separate verification task. It does not authorize suites inside a loop or
    review. Do not ask again for the identical already-approved post-loop scope.
+
+`loop verify` currently requires CLI access. If the host cannot invoke it,
+report the outcome and evidence through the supported host channel and state
+that no verification record was persisted. Do not scaffold a local runtime
+or infer a pass to fill this gap.
 
 `frontier loop affected` MAY identify candidates for the offer; it does not
 execute tests. Risk and shared-module impact inform the recommended scope, not

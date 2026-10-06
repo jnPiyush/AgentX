@@ -128,3 +128,29 @@ The lifecycle signal hook records event, session and tool metadata only. It does
 not persist prompts, tool arguments, tool results or error payloads. This change
 does not sanitize historical signal logs; review their retention and access
 separately before sharing a workspace or its logs.
+
+## Recording post-loop verification
+
+`loop complete` means the reviewed change is done, not that suites passed.
+After the post-loop test decision, record the outcome on the completed loop:
+
+```powershell
+.frontier/runtime/frontier.ps1 loop verify --result passed -e test-output.log --command "pwsh tests/x.ps1"
+.frontier/runtime/frontier.ps1 loop verify --result failed -e test-output.log
+.frontier/runtime/frontier.ps1 loop verify --result declined
+```
+
+`passed` and `failed` need a log written after completion; Frontier archives
+it with its SHA-256, the commit and a dirty-worktree flag. `declined` means not
+run. `loop status` shows "Post-loop verification: not run" until one is
+recorded. A failed result needs a new fix/review loop.
+
+Every decision is appended to `verificationHistory`, separate from the loop's
+approval history. Existing single-result records are retained on the next
+`loop verify` call. `verification` and the status summary keep the latest
+executed result; declining a rerun cannot hide an earlier failure. Inspect all
+records and their archived logs with `frontier loop status --json`.
+
+These records and archived logs last until the next `loop start`. Before
+starting a fix loop, save the status JSON and copy any needed logs outside
+the `loop-evidence` directory.

@@ -4058,7 +4058,7 @@ function Invoke-LoopCmd {
     $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
     $operation = $null
     try {
-        if ($action -in @('start', 'baseline', 'iterate', 'complete', 'cancel', 'rollback')) {
+        if ($action -in @('start', 'baseline', 'iterate', 'complete', 'cancel', 'rollback', 'verify')) {
             . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
             $lockPath = Join-Path (Get-LoopStateDirectory) 'loop-operation.lock'
             $relative = [IO.Path]::GetRelativePath($Script:ROOT, $lockPath)
@@ -4080,6 +4080,7 @@ function Invoke-LoopCmd {
             'iterate'  { Invoke-LoopIterate }
             'complete'  { Invoke-LoopComplete }
             'cancel'    { Invoke-LoopCancel }
+            'verify'    { Invoke-LoopVerify }
             'rollback'  { Invoke-LoopRollback }
             'gate'      { Invoke-LoopGateCheck }
             default     { Write-CliOutput "Unknown loop action: $action" }
@@ -5172,6 +5173,17 @@ function Invoke-LoopStatus {
     }
     elseif ($state.status -eq 'complete') {
         Write-CliOutput "$($C.g)  Completion gate: SATISFIED (loop already completed).$($C.n)"
+        $verification = if ($state.PSObject.Properties.Name -contains 'verification') { $state.verification } else { $null }
+        if ($verification) {
+            $verifiedCommit = if ($verification.PSObject.Properties.Name -contains 'commit') { " at $(([string]$verification.commit).Substring(0, [Math]::Min(12, ([string]$verification.commit).Length)))" } else { '' }
+            Write-CliOutput "$($C.d)  Post-loop verification: $($verification.result)$verifiedCommit ($($verification.recordedAt))$($C.n)"
+            if ($state.PSObject.Properties['verificationHistory'] -and @($state.verificationHistory).Count -gt 1) {
+                $verificationHistory = @($state.verificationHistory)
+                Write-CliOutput "$($C.d)  Verification history: $($verificationHistory.Count) records; latest entry: $($verificationHistory[-1].result). Inspect with 'frontier loop status --json'.$($C.n)"
+            }
+        } else {
+            Write-CliOutput "$($C.y)  Post-loop verification: not run. Record it with 'frontier loop verify --result passed|failed|declined'.$($C.n)"
+        }
     }
     elseif ($state.active -and ([int]$state.iteration -lt $effectiveMinIterations)) {
         Write-CliOutput "$($C.y)  Completion gate: BLOCKED until minimum iterations are met ($($state.iteration)/$effectiveMinIterations).$($C.n)"
@@ -5802,6 +5814,7 @@ function Invoke-LoopComplete {
     if ($finalArchivedPath) { Write-CliOutput "$($C.d)  Final evidence archived to: $finalArchivedPath$($C.n)" }
     Write-CliOutput '  Test suites are separate from loop completion.'
     Write-CliOutput "  $testSuitePrompt Ask the user and wait for explicit approval."
+    Write-CliOutput "$($C.d)  Record the outcome with 'frontier loop verify --result passed|failed|declined [-e <log>]'.$($C.n)"
     Write-CliOutput ''
 }
 
@@ -5951,6 +5964,60 @@ function Invoke-LoopCancel {
     $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = 'Cancelled'; status = 'cancelled'; outcome = 'fail' })
     Write-JsonFile $Script:LOOP_STATE_FILE $state
     Write-CliOutput "$($C.y)  Loop cancelled at iteration $($state.iteration).$($C.n)"
+}
+
+function Invoke-LoopVerify {
+    # Records the post-completion test-suite outcome separately from history so
+    # approval-binding checks keep reading only work and completion entries.
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state -or $state.status -ne 'complete') {
+        Write-CliOutput "$($C.r)  [FAIL] loop verify needs a completed loop. Run 'frontier loop complete' first.$($C.n)"
+        exit 1
+    }
+    $result = ([string](Get-Flag @('-r', '--result') '')).Trim().ToLowerInvariant()
+    if ($result -notin @('passed', 'failed', 'declined')) {
+        Write-CliOutput "$($C.r)  [FAIL] Use --result passed|failed|declined.$($C.n)"
+        exit 1
+    }
+    $verification = [ordered]@{ result = $result; recordedAt = Get-Timestamp }
+    $command = [string](Get-Flag @('--command') '')
+    if ($command) { $verification.command = $command }
+    if ($result -ne 'declined') {
+        $evidencePath = [string](Get-Flag @('-e', '--evidence') '')
+        $evidenceAbs = if (-not $evidencePath) { $null } elseif ([IO.Path]::IsPathRooted($evidencePath)) { $evidencePath } else { Join-Path (Get-Location) $evidencePath }
+        if (-not $evidenceAbs -or -not (Test-Path -LiteralPath $evidenceAbs -PathType Leaf)) {
+            Write-CliOutput "$($C.r)  [FAIL] '$result' needs -e <test-output-log> pointing to an existing file.$($C.n)"
+            exit 1
+        }
+        if (-not (Test-LoopEvidenceFreshness -EvidencePath $evidenceAbs -State $state -ContextLabel 'loop verify')) { exit 1 }
+        $archDir = Join-Path (Get-LoopStateDirectory) 'loop-evidence/verify'
+        if (-not (Test-Path -LiteralPath $archDir)) { New-Item -ItemType Directory -Path $archDir -Force | Out-Null }
+        $archived = Join-Path $archDir ('{0}-{1}-{2}' -f (Get-Date -Format 'yyyyMMddTHHmmssfff'), [guid]::NewGuid().ToString('N'), [IO.Path]::GetFileName($evidenceAbs))
+        Copy-Item -LiteralPath $evidenceAbs -Destination $archived -Force
+        $verification.evidence = $archived
+        $verification.evidenceSha256 = (Get-FileHash -LiteralPath $archived -Algorithm SHA256).Hash
+    }
+    $head = if (Get-Command git -ErrorAction SilentlyContinue) { git -C $Script:ROOT rev-parse HEAD 2>$null } else { $null }
+    if ($head -and $LASTEXITCODE -eq 0) {
+        $verification.commit = ([string]$head).Trim()
+        $verification.worktreeDirty = [bool](git -C $Script:ROOT status --porcelain 2>$null)
+    }
+    $previousVerification = if ($state.PSObject.Properties['verification']) { $state.verification } else { $null }
+    $verificationHistory = @()
+    if ($state.PSObject.Properties['verificationHistory']) {
+        $verificationHistory = @($state.verificationHistory)
+    } elseif ($previousVerification) {
+        $verificationHistory = @($previousVerification)
+    }
+    $state | Add-Member -NotePropertyName verificationHistory -NotePropertyValue ($verificationHistory + @([PSCustomObject]$verification)) -Force
+    # A declined rerun is not a new test result and must not hide an earlier failure.
+    if ($result -ne 'declined' -or -not $previousVerification -or $previousVerification.result -eq 'declined') {
+        $state | Add-Member -NotePropertyName verification -NotePropertyValue ([PSCustomObject]$verification) -Force
+    }
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+    $color = if ($result -eq 'passed') { $C.g } elseif ($result -eq 'failed') { $C.r } else { $C.y }
+    Write-CliOutput "$color  Post-loop verification recorded: $result$($C.n)"
+    if ($result -eq 'declined') { Write-CliOutput "$($C.d)  Declined means the suite was not run; it is not a pass.$($C.n)" }
 }
 
 # ---------------------------------------------------------------------------
@@ -8351,7 +8418,7 @@ $($C.w)  Commands:$($C.n)
   antislop [path] [-Production]    Alias of scrub for AI-slop release gates
   research <action>                Metric-driven experimentation loop (start/attempt/end/status)
   learn                            Capture observations from current session (alias of 'discover run')
-  promote                          Graduate stable patterns into skills (alias of 'graduate run')
+  promote                          Stage stable patterns as skills for review (alias of 'graduate run')
   patterns                         Inspect discovered patterns and graduation candidates
   manifest <action>                Install manifest: generate | verify | list
   state [-a agent -s status]       Show/update agent states
@@ -8370,6 +8437,7 @@ $($C.w)  Commands:$($C.n)
   cursor status                   Inspect Cursor dependencies and the selected runtime
     workflow [agent-name]            List/show workflow steps for an agent
   loop <start|status|affected|iterate|complete|cancel|rollback>  Iterative refinement; affected = tests naming changed code
+  loop verify --result <passed|failed|declined> [-e <log>] [--command <cmd>]  Record the post-loop test-suite outcome
   loop preflight [--force] --json                 Batched non-test checks and safe receipt reuse
   loop review-packet [--stage boundary|final]      Factual full-scope review packet with impact priorities
   loop reviewer-check --packet <path> --reviewer <id>  Calling-host file/diff diagnostic, not approval
@@ -8398,7 +8466,7 @@ $($C.w)  Commands:$($C.n)
   score <engineer|architect|pm> [issue]  Score agent output quality
   stage-gate <plan|validate> -Stage <id> -Path <artifact> [-ReportPath <json>]  Stage-gate rubric evaluation
   discover [run|status|reset]      Analyze signals + git history for patterns
-  graduate [run|list|preview]      Promote high-confidence patterns to skills
+  graduate [run|list|publish <name>]  Stage high-confidence patterns as skills; publish after review
   sprint "<task>" [-i issue]       Full pipeline: plan -> build -> review -> hygiene -> discover
   git-sync [push|pull]             Push/pull data branch to/from remote
   diagnose [--verbose] [--json]    Aggregate workspace health checks (alias: doctor)
@@ -9191,13 +9259,19 @@ function Invoke-GraduateCmd {
         'run'     { Invoke-GraduateRun }
         'list'    { Invoke-GraduateList }
         'preview' { Invoke-GraduateList }
+        'publish' { Invoke-GraduatePublish }
         default   { Invoke-GraduateHelp }
     }
 }
 
+function Get-GraduateStagedSkillsDirectory {
+    return (Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'staged-skills')
+}
+
 function Invoke-GraduateRun {
     $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
-    $skillsDir = Join-Path $Script:ROOT '.github' 'skills'
+    # Generated skills are staged outside discoverable skill folders until a person reviews and publishes them.
+    $stagedSkillsDir = Get-GraduateStagedSkillsDirectory
     $archiveDir = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'archive'
 
     if (-not (Test-Path $patternsFile)) {
@@ -9257,9 +9331,18 @@ function Invoke-GraduateRun {
     foreach ($entry in $clusters.GetEnumerator()) {
         $domain = $entry.Key
         $clusterPatterns = $entry.Value
+        if ($domain -cnotmatch '^[a-z0-9][a-z0-9-]{0,50}$') {
+            Write-CliOutput "  $($C.y)[SKIP]$($C.n) Domain '$domain' is not a lowercase skill-name slug; its patterns stay active."
+            continue
+        }
         $skillName = "graduated-$domain"
-        $skillDir = Join-Path $skillsDir "development" $skillName
+        $skillDir = Join-Path $stagedSkillsDir $skillName
         $skillFile = Join-Path $skillDir 'SKILL.md'
+        # Never replace a staged draft awaiting review or a published skill; the patterns stay active for later.
+        if ((Test-Path -LiteralPath $skillFile) -or (Test-Path -LiteralPath (Join-Path $Script:ROOT '.github' 'skills' 'development' $skillName))) {
+            Write-CliOutput "  $($C.y)[SKIP]$($C.n) $skillName is already staged or published; publish or remove it first. Its patterns stay active."
+            continue
+        }
 
         if (-not (Test-Path $skillDir)) { New-Item -ItemType Directory -Path $skillDir -Force | Out-Null }
 
@@ -9297,23 +9380,29 @@ function Invoke-GraduateRun {
         $skillContent += "## Notes`n`n"
         $skillContent += "- Generated on $now by ``frontier graduate```n"
         $skillContent += "- Source: ``.frontier/patterns/discovered.yaml```n"
-        $skillContent += "- These skills are auto-discovered by Copilot in future sessions`n"
+        $skillContent += "- Staged for review; agents do not load it until ``frontier graduate publish $skillName`` copies it into ``.github/skills/development/```n"
         $skillContent += "- Delete this file if the conventions no longer apply -- patterns will re-accumulate if still valid`n"
 
         Set-Content $skillFile $skillContent -Encoding utf8 -NoNewline
         $generatedSkills += $skillFile
 
-        Write-CliOutput "  $($C.g)[PASS]$($C.n) Generated: $skillFile (from $patternCount patterns)"
+        Write-CliOutput "  $($C.g)[STAGED]$($C.n) $skillFile (from $patternCount patterns)"
+    }
+
+    if ($generatedSkills.Count -eq 0) {
+        Write-CliOutput "$($C.y)  No skills were staged; discovered patterns are unchanged.$($C.n)`n"
+        return
     }
 
     # Archive graduated patterns
     if (-not (Test-Path $archiveDir)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
-    $archivePath = Join-Path $archiveDir "graduated-$now.yaml"
+    $archivePath = Join-Path $archiveDir "graduated-$((Get-Date).ToString('yyyy-MM-ddTHHmmss'))-$([guid]::NewGuid().ToString('N')).yaml"
     $archiveYaml = "# Graduated patterns - $now`n"
-    $archiveYaml += "# These patterns were promoted to skills under .github/skills/`n`n"
-    foreach ($candidate in $candidates) {
+    $archiveYaml += "# These patterns were staged as skills for review under patterns/staged-skills/`n`n"
+    foreach ($candidate in @($candidates | Where-Object { $_.id -in $graduatedIds })) {
         $archiveYaml += "- id: $($candidate.id)`n"
-        $archiveYaml += "  graduated_to: .github/skills/development/graduated-$($candidate.domain)/SKILL.md`n"
+        $archiveYaml += "  staged_as: patterns/staged-skills/graduated-$($candidate.domain)/SKILL.md`n"
+        $archiveYaml += "  publish_to: .github/skills/development/graduated-$($candidate.domain)/SKILL.md`n"
         $archiveYaml += "  graduated_at: $now`n"
         $archiveYaml += "  final_confidence: $([string]::Format('{0:F2}', $candidate.confidence))`n`n"
     }
@@ -9338,17 +9427,52 @@ function Invoke-GraduateRun {
     }
     Set-Content $patternsFile $remainingYaml -Encoding utf8 -NoNewline
 
-    Write-CliOutput "`n  Graduated: $($graduatedIds.Count) patterns -> $($generatedSkills.Count) skills"
+    Write-CliOutput "`n  Staged:    $($graduatedIds.Count) patterns -> $($generatedSkills.Count) skills awaiting review"
     Write-CliOutput "  Archived:  $archivePath"
-    Write-CliOutput "  Remaining: $($remainingPatterns.Count) active patterns`n"
+    Write-CliOutput "  Remaining: $($remainingPatterns.Count) active patterns"
+    Write-CliOutput "$($C.d)  Review each staged SKILL.md, then run 'frontier graduate publish <name>' to make it discoverable.$($C.n)`n"
 
     if ($Script:JsonOutput) {
         [PSCustomObject]@{
             graduated = $graduatedIds.Count
             skills = $generatedSkills
+            stagedForReview = $true
             remaining = $remainingPatterns.Count
             archivePath = $archivePath
         } | ConvertTo-Json -Depth 5
+    }
+}
+
+function Invoke-GraduatePublish {
+    $name = if ($Script:SubArgs.Count -gt 0) { [string]$Script:SubArgs[0] } else { '' }
+    if ($name -cnotmatch '^graduated-[a-z0-9][a-z0-9-]{0,50}$') {
+        Write-CliOutput "$($C.r)  Error: provide a staged skill name such as 'graduated-tooling'. Run 'frontier graduate list' to see staged skills.$($C.n)"
+        exit 1
+    }
+    $stagedDir = Join-Path (Get-GraduateStagedSkillsDirectory) $name
+    $stagedFile = Join-Path $stagedDir 'SKILL.md'
+    if (-not (Test-Path -LiteralPath $stagedFile -PathType Leaf)) {
+        Write-CliOutput "$($C.r)  Error: no staged skill '$name'. Run 'frontier graduate run' first.$($C.n)"
+        exit 1
+    }
+    $targetDir = Join-Path $Script:ROOT '.github' 'skills' 'development' $name
+    if (Test-Path -LiteralPath $targetDir) {
+        Write-CliOutput "$($C.r)  Error: $targetDir already exists. Merge or remove it before publishing; nothing was changed.$($C.n)"
+        exit 1
+    }
+    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    Get-ChildItem -LiteralPath $stagedDir -Force | Copy-Item -Destination $targetDir -Recurse -Force
+    Remove-Item -LiteralPath $stagedDir -Recurse -Force
+    Write-CliOutput "  $($C.g)[PASS]$($C.n) Published $name to $targetDir"
+    Write-CliOutput "$($C.d)  Agents can now discover it.$($C.n)`n"
+}
+
+function Write-GraduateStagedSkills {
+    $staged = @(Get-ChildItem -LiteralPath (Get-GraduateStagedSkillsDirectory) -Directory -ErrorAction SilentlyContinue |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md') -PathType Leaf })
+    if ($staged.Count -gt 0) {
+        Write-CliOutput "`n$($C.y)  Staged for review (not yet discoverable):$($C.n)"
+        foreach ($skill in $staged) { Write-CliOutput "    $($skill.Name) -> frontier graduate publish $($skill.Name)" }
     }
 }
 
@@ -9357,6 +9481,7 @@ function Invoke-GraduateList {
 
     if (-not (Test-Path $patternsFile)) {
         Write-CliOutput "$($C.y)  No patterns found. Run 'frontier discover' first.$($C.n)"
+        Write-GraduateStagedSkills
         return
     }
 
@@ -9398,19 +9523,21 @@ function Invoke-GraduateList {
             Write-CliOutput "    $($C.d)  $($b.id) (conf: $([string]::Format('{0:F2}', $b.confidence)), obs: $($b.observations))$($C.n)"
         }
     }
+    Write-GraduateStagedSkills
     Write-CliOutput ""
 }
 
 function Invoke-GraduateHelp {
     Write-CliOutput "`n$($C.c)  Graduate Commands$($C.n)"
     Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
-    Write-CliOutput "    frontier graduate               Promote high-confidence patterns to skills"
+    Write-CliOutput "    frontier graduate               Stage high-confidence patterns as skills for review"
     Write-CliOutput "    frontier graduate run           Same as above (default)"
-    Write-CliOutput "    frontier graduate list          Preview candidates without promoting"
+    Write-CliOutput "    frontier graduate list          Preview candidates and staged skills"
     Write-CliOutput "    frontier graduate preview       Same as list"
+    Write-CliOutput "    frontier graduate publish <name> Copy a reviewed staged skill into .github/skills/development/"
     Write-CliOutput ""
     Write-CliOutput "$($C.d)  Patterns need confidence > 0.80 and 5+ observations to graduate.$($C.n)"
-    Write-CliOutput "$($C.d)  Generated skills land in .github/skills/development/graduated-<domain>/$($C.n)"
+    Write-CliOutput "$($C.d)  Staged skills live under the Frontier state patterns/staged-skills/ folder and are not loaded by agents until published.$($C.n)"
     Write-CliOutput ""
 }
 
