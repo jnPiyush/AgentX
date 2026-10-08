@@ -90,6 +90,8 @@ const rootRuntimeFiles = [
     'cursor.js',
     'cursor-mcp.js',
     'cursor-hook.js',
+    'adapters/cursor/protocol.js',
+    'adapters/cursor/setup.js',
     'mcp-server/index.js',
     'mcp-server/package.json',
     'mcp-server/package-lock.json',

@@ -12,6 +12,39 @@ const {
 
 const root = path.resolve(__dirname, '..');
 
+test('the declared Cursor runtime loads from portable and extension-style layouts', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, '.frontier', 'runtime', 'install-manifest.json'), 'utf8'));
+  const required = [
+    '.frontier/runtime/cursor.js',
+    '.frontier/runtime/adapters/cursor/protocol.js',
+    '.frontier/runtime/adapters/cursor/setup.js',
+  ];
+  const entries = manifest.files.filter(entry => required.includes(entry.path));
+  assert.deepEqual(entries.map(entry => entry.path).sort(), [...required].sort());
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cursor-layout-'));
+  try {
+    for (const layout of ['portable', 'extension']) {
+      const workspace = path.join(temporary, layout);
+      for (const entry of entries) {
+        const destination = path.join(workspace, entry.path);
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.copyFileSync(path.join(root, entry.path), destination);
+      }
+      const contract = path.join(workspace, layout === 'extension' ? 'seed' : '', 'AGENTS.md');
+      fs.mkdirSync(path.dirname(contract), { recursive: true });
+      fs.writeFileSync(contract, `${layout} contract\n`);
+      const result = spawnSync(process.execPath, [path.join(workspace, '.frontier', 'runtime', 'cursor.js'),
+        '--workspace', workspace, 'read', 'AGENTS.md'], { cwd: temporary, encoding: 'utf8', timeout: 10000 });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, `${layout} contract\n`);
+      const adapter = require(path.join(workspace, '.frontier', 'runtime', 'cursor.js'));
+      assert.deepEqual(Object.keys(adapter).sort(), [
+        'mergeConfiguration', 'readAsset', 'setupCursor', 'translateHookInput', 'translateHookResult',
+      ]);
+    }
+  } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
+});
+
 test('the workspace cursor command resolves Node in a restricted MCP environment', () => {
   const env = { ...process.env };
   for (const key of Object.keys(env)) { if (key.toUpperCase() === 'PATHEXT') delete env[key]; }

@@ -1,6 +1,6 @@
 {
   "version": "9.8.0",
-  "createdAt": "2026-10-05T17:31:03Z",
+  "createdAt": "2026-10-07T21:14:41Z",
   "files": [
     {
       "path": ".cursor/commands/ado-ops.md",
@@ -135,6 +135,16 @@
       "category": "instruction"
     },
     {
+      "path": ".frontier/runtime/adapters/cursor/protocol.js",
+      "sha256": "fa62cc4781a4d595527722094c8dfba7a3680941dca4e4da99d09f611bc7eb09",
+      "category": "cli"
+    },
+    {
+      "path": ".frontier/runtime/adapters/cursor/setup.js",
+      "sha256": "ec71e765406585124c24421abbdb7aa333e0b7e3fd0df03e17bfd5b6456aa531",
+      "category": "cli"
+    },
+    {
       "path": ".frontier/runtime/agentic-runner.ps1",
       "sha256": "361e620755cf217cf7061d6b274322f0669461fe48ab33e3e45ff8b86412308e",
       "category": "cli"
@@ -151,7 +161,7 @@
     },
     {
       "path": ".frontier/runtime/cursor.js",
-      "sha256": "e9e3ca9204227b46925d6166210a7c16824f10a0c9d144cfdef7381f5c974ebe",
+      "sha256": "5475c223403ce8afc5af0ecc9b6feec67b4c4bb2353e1edc52e9d51764e344c0",
       "category": "cli"
     },
     {
@@ -1646,7 +1656,7 @@
     },
     {
       "path": "scripts/install-manifest.ps1",
-      "sha256": "ef2828117a9627337014058d88e894448671c2c5c60deff5166a21a747c33591",
+      "sha256": "7e52abd36a0d6c4741ae91cbd2620b874d2d5577e425b429ef97426555d87d13",
       "category": "script"
     },
     {
