@@ -4,6 +4,13 @@
 
 ### Changed
 
+- Agent hooks resolve the loaded Frontier runtime and skip PowerShell for known
+  read-only tools. Missing runtimes deny mutations while preserving a small
+  diagnostic-read fallback; portable managed shims discover installed updates.
+- Valid active loops with old evidence now request a fresh checkpoint instead
+  of an age-only reset. Evidence freshness and independent-review gates remain.
+- Lesson promotion is bounded, serialized and deduplicated on retry. Optional
+  host-memory saves defer after a diagnosed bounded retry rather than stalling.
 - `frontier graduate run` now stages generated skills under
   `.frontier/patterns/staged-skills/` instead of writing them into
   `.github/skills/`. Review a staged skill, then run

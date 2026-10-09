@@ -7,8 +7,8 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
-      timeout: 10
+        node -e "try{require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()}catch(e){console.error(e);process.exitCode=2;try{let b=Buffer.alloc(65537),n=require('fs').readSync(0,b);if(/^(read_file|file_search|grep_search|list_dir|get_errors)$/.test(JSON.parse(b.subarray(0,n)).tool_name))process.exitCode=0}catch{}}"
+      timeout: 15
     - type: command
       command: >-
         node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{let x={};try{x=JSON.parse(d)}catch{};const c=String((x.tool_input||{}).command||'');if(!c)return;if(/^[A-Za-z0-9_.\/\\:=,\- ]+$/.test(c)&&/^pac(?:\.exe)? +(?:(?:--version|--help|help)|solution +(?:init|unpack|pack|check)(?: +.*)?)$/i.test(c))return;console.error('Power Platform Builder terminal access is fail-closed; only direct local pac version/help and solution init/unpack/pack/check commands with literal arguments are allowed.');process.exit(2)})"
@@ -16,13 +16,13 @@ hooks:
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
 reasoning:
   mode: adaptive
   level: medium

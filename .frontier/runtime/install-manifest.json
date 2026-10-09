@@ -1,6 +1,6 @@
 {
   "version": "9.8.0",
-  "createdAt": "2026-10-07T21:14:41Z",
+  "createdAt": "2026-10-09T21:12:09.668Z",
   "files": [
     {
       "path": ".cursor/commands/ado-ops.md",
@@ -166,7 +166,7 @@
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "e41bae4c8d955a0099bc041979801e09c33a8aa2cad5ef9ce803c8abf90680b4",
+      "sha256": "f6bf6c39cf7fd94438899a2a5bd88d6189f649ab15e9c5717f998222625b3f49",
       "category": "cli"
     },
     {
@@ -230,6 +230,11 @@
       "category": "config"
     },
     {
+      "path": ".frontier/runtime/policy-hook.js",
+      "sha256": "f7eaa6da8dac3d0e6cc898253baba3125e69ff3710295af8b1bc5294e17758dc",
+      "category": "cli"
+    },
+    {
       "path": ".frontier/runtime/repository-context.ps1",
       "sha256": "806cc9c2a3c8269151a5e4c9decf04f14573cccfc84bb19d9ab0dbf698495b06",
       "category": "cli"
@@ -271,7 +276,7 @@
     },
     {
       "path": ".frontier/runtime/workspace-sandbox.ps1",
-      "sha256": "f738b1a6d4e98a721286aa747deca993a95277ba48fdcdda430fda089134ea82",
+      "sha256": "eaeedca8fcca29d93de0457c027a211eb7bd405a64febb871eb1494a252280d7",
       "category": "cli"
     },
     {
@@ -281,132 +286,132 @@
     },
     {
       "path": ".github/agents/agile-coach.agent.md",
-      "sha256": "113e8dcd648157fd932619731afc73bacd887550fb72995a0511004da9fdcf2b",
+      "sha256": "7c7638ca374bc63fc0741bb4aa4eba00f19e4f6cb812b9c407cda3261feb000a",
       "category": "agent"
     },
     {
       "path": ".github/agents/architect.agent.md",
-      "sha256": "3a9d0e7f1159b5924624ca8a180e8ace270b7d30f7f49254ece53b16eb146b2f",
+      "sha256": "0f8f6e7c0ca3e6eb7a3288bdeaf0a19c2c4c12693a55a184f21c84670ed8321d",
       "category": "agent"
     },
     {
       "path": ".github/agents/consulting-research.agent.md",
-      "sha256": "a2d9542e8b2166287228949d4d5f2561fe11916646d7321e5862ee875b24107e",
+      "sha256": "144160d45cf4c3d8857f335086f83479f9ceb49093ae56cd9c9fc651aeef8e65",
       "category": "agent"
     },
     {
       "path": ".github/agents/data-scientist.agent.md",
-      "sha256": "e145f00c0f24eb62c7cccb49ef4544b011842dc23aa0067c709839af55722a3a",
+      "sha256": "60ea5131c80ff39a85dd8558b395b8471498917af634433209a63935ac7a9948",
       "category": "agent"
     },
     {
       "path": ".github/agents/devops.agent.md",
-      "sha256": "f1fdae0bb2f5dca7090df7a8bb81acdde70e9d83011de9fddec34885901ef5fa",
+      "sha256": "a33e01715a98241518bbc07d1628dde3506d43587fd8d929b3b8c917aa6f2389",
       "category": "agent"
     },
     {
       "path": ".github/agents/engineer.agent.md",
-      "sha256": "c9c2c13c01c4154d4d4446ecd061f468e78fc4a41644defd7a23500a555fb26d",
+      "sha256": "50ccf5d4c31e660c35c9ef420c4473f319112539b2cd6a6ee0474fb558ceceae",
       "category": "agent"
     },
     {
       "path": ".github/agents/fabric-engineer.agent.md",
-      "sha256": "c7faa373bf0fca61334a5caf81471ded65a6814c3ced9adedc8b6b3febd1fc91",
+      "sha256": "b3629d6fa9bfef4549801a9f830ac770256859072ce955ac616690fe056c541e",
       "category": "agent"
     },
     {
       "path": ".github/agents/frontier.agent.md",
-      "sha256": "d9177902bd943b023a8d16316be8c1d7e58b741635cfb238abfe8092348249ea",
+      "sha256": "b33c4ff6f35fb0bd1e2a92cd986482bf50c386a282b7fe39f0fe28b8f9677809",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/ado-ops.agent.md",
-      "sha256": "bb448fee5259a9337ea3a62aaa25b286131647b77a0dce99c0f61536a255774d",
+      "sha256": "983873b95c22868f1e1b094ecfe518f738ff4dc090e87c2a8022119b874eb9de",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/ado-prd-to-wit.agent.md",
-      "sha256": "fb66f06e6ea53f5b6785c9e47d328028644063fa79ea44e31c7423748176aca6",
+      "sha256": "63a2740350eac8b514422ca28c2fbd5fa676211435f2341f2d6b92dc3423eb9f",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/architecture-reviewer.agent.md",
-      "sha256": "4c1d576ed852cea40086a31e01ab14a7a949ec4224574acfb5b21b6a8493c51c",
+      "sha256": "1456ed724e658807d9f9e146060558f8c7ca75a9513dca5e078186cef8606001",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/diagram-specialist.agent.md",
-      "sha256": "b78338e400345c821782f6fc9bffffa152388959f3693cda3d50cf8334ade3ba",
+      "sha256": "5734c19e19839ff87310ac1165d9bdeaeee7ae1e450bb1b538d3dff31f2672ce",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/eval-specialist.agent.md",
-      "sha256": "d12d7aa1e0d142e798f671c2804c5b12df4325875eceb9027720169fbdff5b66",
+      "sha256": "5ad01b7ffedc0afdb05dd590f2d0e3870ec8d47bf352f43a71e8315b676e3df3",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/functional-reviewer.agent.md",
-      "sha256": "e3f6237eefdbdc6a312466ff26e44446f7b7e23a15e06803c3e2ce09001c7587",
+      "sha256": "8821c25175f8f4e631d980d3e270f0beb7d0f5e51c67f82f284e7f4ce021fe9f",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/github-ops.agent.md",
-      "sha256": "c06dc19420e0cf9f60c9de89c718157f173e7cc1b80d569315458c5cc6833dd8",
+      "sha256": "cbc1ee0009e3f34718f4da011ed803b4c9dc14a9eef2aa8e79ba1f792d7e0ee5",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/ops-monitor.agent.md",
-      "sha256": "7ae4871bb8d943fc12c1c7dca9ab26c5a75235a5f503ed7dcd3e5e3afddc2087",
+      "sha256": "a46ca418edd3718993079fc60f3372b3c098d7f5e40b19a6a36aad1609e3608a",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/prompt-engineer.agent.md",
-      "sha256": "615fd40ec601a59bced9b0ab679d5fdb9c8d41103783982c89582f1f6635fd0f",
+      "sha256": "c05e4972604ac338aa99d79d3775d79b56ecba4e1132d72e3455b347149cfe62",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/prototype-auditor.agent.md",
-      "sha256": "a16b79ed06c95675d349ac96ef929a43a441eddf87f43f349f51a79ad730dbad",
+      "sha256": "72e4d666ec4ef05a49487439a9cd8faf6643d6f035ba81aefd29e0d7218b3b67",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/rag-specialist.agent.md",
-      "sha256": "f19f2b005dabfc7c7c29e6efd02d8066ca21f072f758d5c89c857b9fb263e385",
+      "sha256": "ab6b3bbce419a233ec8c9a6f56cacd590a1a45fb6746d2adc0dd6707ea794239",
       "category": "agent"
     },
     {
       "path": ".github/agents/power-platform-builder.agent.md",
-      "sha256": "5f1a958b3e25184fd58906b879d3534aecf8f741fb68a7c4c099b45fa0c9e854",
+      "sha256": "7518fd6eaad1b39c9aef115f3116e20704efa72698728adae224995b774e0733",
       "category": "agent"
     },
     {
       "path": ".github/agents/powerbi-analyst.agent.md",
-      "sha256": "7ce5776a0f5773c3fff968e0e4dcbf99d2ecf831dad44786668c4e8e2d64cf10",
+      "sha256": "37c1f73f11d9dfff07fdbf6bfeeefd9183b269790021d22c18b601781db296a8",
       "category": "agent"
     },
     {
       "path": ".github/agents/product-manager.agent.md",
-      "sha256": "1b82ffa205cf5d0e3eab1b77e5cf28a84ba43d0eeacad09cb9261bcb9f35d156",
+      "sha256": "bd6b0fde24761f8aba3516ed30a5ed3c8ac6240388c1eb7e94363c1efda6cf7c",
       "category": "agent"
     },
     {
       "path": ".github/agents/reviewer-auto.agent.md",
-      "sha256": "2cd9082c46ee72b74b0ee41c3b49ba8ea82575e879ac629829ff81b9177dd401",
+      "sha256": "af131d76c79140440266e44f3824fbe9e91b6b855be48381959721cff2eb0ea0",
       "category": "agent"
     },
     {
       "path": ".github/agents/reviewer.agent.md",
-      "sha256": "3cf1d30917e5ff301cbdf25869248ea02acfd9dda39f1eac48737220b0963722",
+      "sha256": "6220ab6dc8c1057f776a7f253ee314b43fe6926c68e8193017f88ed8dfd6f93d",
       "category": "agent"
     },
     {
       "path": ".github/agents/tester.agent.md",
-      "sha256": "c0831a71b687b8de37e37e0cd79421c5fc4d03725719cd4974220773da400717",
+      "sha256": "b7df32c955dbfab9d2d74b1b00fcb6ecf9dc5463b31b9ece054a2c7129895995",
       "category": "agent"
     },
     {
       "path": ".github/agents/ux-designer.agent.md",
-      "sha256": "f1268ef33bff628f6dbb918b0da187d6b1e70350b76507d7ef3edfd2c3da2755",
+      "sha256": "f22e9f60b55bcd10977181cf9ffb702098c22354d2fcb19b327c536170cb6f7b",
       "category": "agent"
     },
     {
@@ -471,7 +476,7 @@
     },
     {
       "path": ".github/instructions/memory.instructions.md",
-      "sha256": "daad3cb19fb9cfc14fc2500ecf8a7a035f05450aabfaac80fb6bc093ad0ec1a5",
+      "sha256": "c1842eebaa0a2f49a900f2751846f1e590184c6e0c4caa2b0e4440615087ead1",
       "category": "instruction"
     },
     {
@@ -1656,7 +1661,7 @@
     },
     {
       "path": "scripts/install-manifest.ps1",
-      "sha256": "7e52abd36a0d6c4741ae91cbd2620b874d2d5577e425b429ef97426555d87d13",
+      "sha256": "7ab346c67cdeccd2ebb21efedf3ce47136b3bc4e7ee91090e9e991df2da416ed",
       "category": "script"
     },
     {

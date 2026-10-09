@@ -97,6 +97,12 @@ function Test-LearningPromotion {
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-LessonsPromote'
     }, $true)
     . ([scriptblock]::Create($definition.Extent.Text))
+    $processDefinition = $ast.Find({ param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-LoopCheckProcess'
+    }, $true)
+    . ([scriptblock]::Create($processDefinition.Extent.Text))
+    . (Join-Path $script:repoRoot '.frontier/runtime/workspace-state.ps1')
+    $script:INSTALL_RUNTIME_DIR = Join-Path $script:repoRoot '.frontier/runtime'
     function Get-Flag { return '' }
     function Test-Flag([string[]]$names) { return '--dry-run' -in $names }
     function Write-CliOutput([string]$message) { Write-Output $message }
@@ -104,6 +110,8 @@ function Test-LearningPromotion {
     $script:SubArgs = @('--dry-run')
     Set-Variable -Name C -Value @{ c = ''; y = ''; n = ''; d = ''; r = ''; g = '' }
     $tempRoot = Join-Path ([IO.Path]::GetTempPath()) "frontier-promotion-test-$([guid]::NewGuid().ToString('N'))"
+    $script:ROOT = $tempRoot
+    $script:FRONTIER_STATE_DIR = Join-Path $tempRoot '.frontier'
     $learningDir = Join-Path $tempRoot 'docs/artifacts/learnings'
     New-Item -ItemType Directory -Path $learningDir -Force | Out-Null
     $fixtures = @{
@@ -167,6 +175,15 @@ function Test-LearningPromotion {
                 $beforeRepeat = [IO.File]::ReadAllText($conventionsPath)
                 $null = Invoke-LessonsPromote
                 Assert-True ([IO.File]::ReadAllText($conventionsPath) -ceq $beforeRepeat) 'repeated promotion does not append another convention'
+                [IO.File]::WriteAllText($learningPath, "---`nconfidence: 0.95`nobservations: 7`nstatus: reviewed`n---`n$body")
+                $null = Invoke-LessonsPromote
+                Assert-True ([IO.File]::ReadAllText($conventionsPath) -ceq $beforeRepeat) 'interrupted promotion retry deduplicates an already appended learning'
+                $lease = [IO.File]::Open((Join-Path $script:FRONTIER_STATE_DIR 'state/lesson-promotion.lock'),
+                    [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+                $busyRejected = $false
+                try { $null = Invoke-LessonsPromote } catch { $busyRejected = $_.Exception.Message -match 'Another lesson promotion is active' }
+                finally { $lease.Dispose() }
+                Assert-True $busyRejected 'concurrent promotion fails promptly instead of waiting or losing memory'
             } finally { Pop-Location }
         }
         Get-ChildItem -LiteralPath $learningDir | Remove-Item
@@ -182,6 +199,32 @@ function Test-LearningPromotion {
             catch { $rejected = $true }
             finally { Pop-Location }
             Assert-True $rejected "invalid promotion metadata fails closed: $($invalid -replace '\r?\n', '; ')"
+        }
+        $entryRoot = Join-Path $tempRoot 'entry-workspace'
+        $entryLearning = Join-Path $entryRoot 'docs/artifacts/learnings/LEARNING-entry.md'
+        [void][IO.Directory]::CreateDirectory((Split-Path $entryLearning -Parent))
+        [IO.File]::WriteAllText($entryLearning, "---`nconfidence: 0.95`nobservations: 3`nstatus: reviewed`n---`n# Entry-point learning`n")
+        foreach ($dry in @($true, $false)) {
+            $start = [Diagnostics.ProcessStartInfo]::new('pwsh')
+            $start.WorkingDirectory = $script:repoRoot
+            foreach ($argument in @('-NoProfile', '-NonInteractive', '-File',
+                (Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'), 'lessons', 'promote', 'entry')) {
+                $start.ArgumentList.Add($argument)
+            }
+            if ($dry) { $start.ArgumentList.Add('--dry-run') }
+            foreach ($name in @('FRONTIER_STATE_ROOT', 'FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY')) {
+                [void]$start.Environment.Remove($name)
+            }
+            $start.Environment['FRONTIER_WORKSPACE_ROOT'] = $entryRoot
+            $result = Invoke-LoopCheckProcess -StartInfo $start -TimeoutMilliseconds 60000
+            Assert-True ($result.exitCode -eq 0) "real promotion entry point succeeds (dry=$dry): $($result.output)"
+            if ($dry) {
+                Assert-True ($result.output -match 'would promote LEARNING-entry.md') 'real dry-run resolves its dependencies and selected workspace'
+                Assert-True (-not [IO.File]::Exists((Join-Path $entryRoot 'memories/conventions.md'))) 'real dry-run leaves memory untouched'
+            } else {
+                Assert-True ([IO.File]::ReadAllText($entryLearning) -match 'status: promoted') 'real promotion writes the source status'
+                Assert-True ([IO.File]::ReadAllText((Join-Path $entryRoot 'memories/conventions.md')) -match 'LEARNING-entry') 'real promotion writes memory in the bound workspace'
+            }
         }
     } finally {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force

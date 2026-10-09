@@ -141,6 +141,7 @@ function Get-ManifestEntries {
         @{ path = '.frontier/runtime/cursor.js'; category = 'cli' },
         @{ path = '.frontier/runtime/cursor-mcp.js'; category = 'cli' },
         @{ path = '.frontier/runtime/cursor-hook.js'; category = 'cli' },
+        @{ path = '.frontier/runtime/policy-hook.js'; category = 'cli' },
         @{ path = '.frontier/runtime/adapters/cursor/protocol.js'; category = 'cli' },
         @{ path = '.frontier/runtime/adapters/cursor/setup.js'; category = 'cli' },
         @{ path = '.frontier/runtime/loop-engineering.ps1'; category = 'cli' },

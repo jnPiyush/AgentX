@@ -627,6 +627,17 @@ describe('runInitializeLocalRuntimeCommand', () => {
       const issuePowerShellLauncher = fs.readFileSync(path.join(runtimeWrapperDir, 'local-issue-manager.ps1'), 'utf8');
       const bashLauncher = fs.readFileSync(path.join(runtimeWrapperDir, 'frontier.sh'), 'utf8');
       const issueBashLauncher = fs.readFileSync(path.join(runtimeWrapperDir, 'local-issue-manager.sh'), 'utf8');
+      const hookPath = path.join(runtimeWrapperDir, 'policy-hook.js');
+      const hook = fs.readFileSync(hookPath, 'utf8');
+      assert.ok(hook.includes(JSON.stringify(extensionRoot)));
+      assert.ok(hook.includes("const relative = '.github/frontier/.frontier/runtime/policy-hook.js'"));
+      const updatedRoot = path.join(extensionRoot, 'updated');
+      writeWorkspaceRuntimeWrappers(updatedRoot, workspaceRoot);
+      assert.ok(fs.readFileSync(hookPath, 'utf8').includes(JSON.stringify(updatedRoot)));
+      fs.appendFileSync(hookPath, '// User customization\n');
+      const customizedHook = fs.readFileSync(hookPath, 'utf8');
+      writeWorkspaceRuntimeWrappers(extensionRoot, workspaceRoot);
+      assert.equal(fs.readFileSync(hookPath, 'utf8'), customizedHook);
 
       // Single-segment Join-Path keeps the wrapper runnable from Windows PowerShell 5.1.
       assert.ok(powerShellLauncher.includes("(Join-Path $PSScriptRoot '../..')"));
@@ -687,6 +698,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
         `#!/usr/bin/env bash\nprintf '%s' '${version}' > "$1"\n`,
         { encoding: 'utf8', mode: 0o755 },
       );
+      fs.writeFileSync(path.join(runtimeDirectory, 'policy-hook.js'),
+        `module.exports = { version: ${JSON.stringify(version)} };\n`, 'utf8');
     };
 
     try {
@@ -700,7 +713,14 @@ describe('runInitializeLocalRuntimeCommand', () => {
         ...process.env,
         HOME: homeRoot,
         USERPROFILE: homeRoot,
+        FRONTIER_EXTENSION_ROOT: '',
       };
+      const hookPath = path.join(workspaceRoot, '.frontier', 'runtime', 'policy-hook.js');
+      const hookCode = `process.stdout.write(require(${JSON.stringify(hookPath)}).version)`;
+      assert.equal(execFileSync(process.execPath, ['-e', hookCode], { env: baseEnvironment }).toString(), '9.10.0');
+      assert.equal(execFileSync(process.execPath, ['-e', hookCode], {
+        env: { ...baseEnvironment, FRONTIER_EXTENSION_ROOT: overrideExtensionRoot },
+      }).toString(), '9.7.0');
       const launcherPath = path.join(
         workspaceRoot,
         '.frontier',

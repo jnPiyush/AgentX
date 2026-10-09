@@ -4148,7 +4148,8 @@ function Get-LoopStateStaleReason {
     }
 
     $ageHours = ([datetimeoffset]::UtcNow - $lastTouched).TotalHours
-    if ($ageHours -ge $Script:LOOP_STALE_AFTER_HOURS) {
+    $isActive = ($State.PSObject.Properties.Name -contains 'active') -and $State.active -eq $true
+    if (-not $isActive -and $ageHours -ge $Script:LOOP_STALE_AFTER_HOURS) {
         return ('loop last updated {0:N1} hours ago' -f $ageHours)
     }
 
@@ -4412,7 +4413,7 @@ function Get-LoopStateHealth {
     if ($State.active -and $lastTouched) {
         $ageMinutes = ([datetimeoffset]::UtcNow - $lastTouched).TotalMinutes
         if ($ageMinutes -ge $Script:LOOP_STUCK_AFTER_MINUTES) {
-            return [PSCustomObject]@{ kind = 'stuck'; reason = ('loop last updated {0:N0} minutes ago' -f $ageMinutes) }
+            return [PSCustomObject]@{ kind = 'checkpoint-due'; reason = ('last evidence checkpoint was {0:N0} minutes ago' -f $ageMinutes) }
         }
     }
 
@@ -4434,7 +4435,8 @@ function Get-CodeQualityBaselineFilePath {
 function Invoke-LoopCheckProcess {
     param(
         [Parameter(Mandatory)][Diagnostics.ProcessStartInfo]$StartInfo,
-        [ValidateRange(1, 300000)][int]$TimeoutMilliseconds = 30000
+        [ValidateRange(1, 300000)][int]$TimeoutMilliseconds = 30000,
+        [AllowEmptyString()][string]$InputText = ''
     )
 
     $StartInfo.UseShellExecute = $false
@@ -4443,11 +4445,18 @@ function Invoke-LoopCheckProcess {
     $StartInfo.RedirectStandardError = $true
     $process = $null
     try {
+        $watch = [Diagnostics.Stopwatch]::StartNew()
         $process = [Diagnostics.Process]::Start($StartInfo)
-        $process.StandardInput.Close()
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        $timedOut = -not $process.WaitForExit($TimeoutMilliseconds)
+        $inputWrite = $process.StandardInput.WriteAsync($InputText)
+        $inputWritten = $inputWrite.Wait($TimeoutMilliseconds)
+        if ($inputWritten) {
+            [void]$inputWrite.GetAwaiter().GetResult()
+            $process.StandardInput.Close()
+        }
+        $remaining = [Math]::Max(1, $TimeoutMilliseconds - [int]$watch.ElapsedMilliseconds)
+        $timedOut = -not $inputWritten -or -not $process.WaitForExit($remaining)
         if ($timedOut) {
             $process.Kill($true)
             if (-not $process.WaitForExit(10000)) {
@@ -4465,7 +4474,16 @@ function Invoke-LoopCheckProcess {
         }
         return [PSCustomObject]@{ exitCode = $process.ExitCode; stdout = $stdoutText; stderr = $stderrText; timedOut = $false; output = $output }
     } catch {
-        return [PSCustomObject]@{ exitCode = 1; stdout = ''; stderr = ''; timedOut = $false; output = "Checker execution failed: $($_.Exception.Message)" }
+        $failure = "Checker execution failed: $($_.Exception.Message)"
+        if ($process) {
+            try {
+                if (-not $process.HasExited) {
+                    $process.Kill($true)
+                    if (-not $process.WaitForExit(10000)) { $failure += ' Process-tree termination unconfirmed.' }
+                }
+            } catch { $failure += " Cleanup failed: $($_.Exception.Message)" }
+        }
+        return [PSCustomObject]@{ exitCode = 1; stdout = ''; stderr = ''; timedOut = $false; output = $failure }
     } finally {
         if ($process) { $process.Dispose() }
     }
@@ -5159,6 +5177,9 @@ function Invoke-LoopStatus {
     }
 
     $loopHealth = Get-LoopStateHealth $state
+    if ($loopHealth.kind -eq 'checkpoint-due') {
+        Write-CliOutput "$($C.y)  Evidence checkpoint due: $($loopHealth.reason). Record fresh verification with 'frontier loop iterate'; preserve the existing history.$($C.n)"
+    }
     if ($loopHealth.kind -eq 'stale') {
         Write-CliOutput "$($C.y)  Staleness: $($loopHealth.reason). Start a new loop for the current task.$($C.n)"
     }
@@ -5167,6 +5188,9 @@ function Invoke-LoopStatus {
     }
     if ($state.status -eq 'complete' -and $loopHealth.kind -eq 'stale') {
         Write-CliOutput "$($C.y)  Completion gate: STALE. A previous completed loop does not satisfy the current task.$($C.n)"
+    }
+    elseif ($loopHealth.kind -eq 'checkpoint-due') {
+        Write-CliOutput "$($C.y)  Completion gate: BLOCKED until a fresh evidence checkpoint and final review are recorded; no reset is required for age alone.$($C.n)"
     }
     elseif ($loopHealth.kind -eq 'stuck') {
         Write-CliOutput "$($C.y)  Completion gate: BLOCKED. Loop data is stuck and must be reset before handoff.$($C.n)"
@@ -5524,6 +5548,10 @@ function Invoke-LoopComplete {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; exit 1 }
     $loopHealth = Get-LoopStateHealth -State $state
+    if ($loopHealth.kind -eq 'checkpoint-due') {
+        Write-CliOutput "$($C.r)  [FAIL] $($loopHealth.reason). Record fresh verification with 'frontier loop iterate' and obtain final review before completion; keep the existing loop history.$($C.n)"
+        exit 1
+    }
     if ($loopHealth.kind -ne 'healthy') {
         Write-CliOutput "$($C.r)  [FAIL] Quality loop is $($loopHealth.kind): $($loopHealth.reason). Start a fresh loop before completion.$($C.n)"
         exit 1
@@ -7143,17 +7171,20 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
         ".frontier/state/$fileName"
     }
     $protectedRelativePaths += '.frontier/sessions'
+    $protectedRelativePaths += '.frontier/workspace-binding.json'
 
     foreach ($relativePath in $protectedRelativePaths) {
-        $protectedPath = Join-Path $Script:ROOT $relativePath
+        $protectedPath = Join-Path $Script:FRONTIER_STATE_DIR $relativePath.Substring('.frontier/'.Length)
 
-        $aliases = @($protectedPath)
-        if ($IsWindows -and (Test-Path -LiteralPath $protectedPath -PathType Leaf)) {
-            $volume = Split-Path -Qualifier $protectedPath
-            foreach ($listedPath in @(& fsutil hardlink list $protectedPath 2>$null)) {
-                $aliasPath = [string]$listedPath
-                if ($aliasPath.StartsWith('\')) { $aliasPath = "$volume$aliasPath" }
-                $aliases += $aliasPath
+        $aliases = @($protectedPath, (Join-Path $Script:ROOT $relativePath))
+        foreach ($statePath in @($aliases | Select-Object -Unique)) {
+            if ($IsWindows -and (Test-Path -LiteralPath $statePath -PathType Leaf)) {
+                $volume = Split-Path -Qualifier $statePath
+                foreach ($listedPath in @(& fsutil hardlink list $statePath 2>$null)) {
+                    $aliasPath = [string]$listedPath
+                    if ($aliasPath.StartsWith('\')) { $aliasPath = "$volume$aliasPath" }
+                    $aliases += $aliasPath
+                }
             }
         }
 
@@ -7196,7 +7227,7 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
                     }
                     if (-not $IsWindows -and $candidateItem) {
                         $findCommand = Get-Command find -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-                        if ($findCommand -and @(& $findCommand.Source $candidatePath -samefile $protectedPath -print 2>$null).Count -gt 0) { return $true }
+                        if ($findCommand -and @(& $findCommand.Source $candidatePath -samefile $aliasPath -print 2>$null).Count -gt 0) { return $true }
                     }
                 } catch {
                     if ($candidate -match '(?i)(?:^|[\\/])\.frontier(?:[\\/]|$)') { return $true }
@@ -7871,6 +7902,7 @@ function Invoke-LessonsPromote {
     #   frontier lessons promote --threshold 0.7    # custom threshold
     #   frontier lessons promote <id>               # promote a single LEARNING-<id> regardless of threshold
 
+    . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
     $singleId = if ($Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') { $Script:SubArgs[0] } else { $null }
     $dryRun   = Test-Flag @('--dry-run','-d')
     $thresh   = [double](Get-Flag @('--threshold') | ForEach-Object { if ($_) { $_ } else { '0.8' } } | Select-Object -First 1)
@@ -7878,13 +7910,20 @@ function Invoke-LessonsPromote {
     $minObs   = [int](Get-Flag @('--min-observations') | ForEach-Object { if ($_) { $_ } else { '3' } } | Select-Object -First 1)
     if (-not $minObs) { $minObs = 3 }
 
-    $learningDir = Join-Path (Resolve-Path .).Path 'docs/artifacts/learnings'
+    function Assert-LearningPath([string]$File) {
+        if (Test-FrontierPathWithin $Script:ROOT $File) {
+            [void](Resolve-LoopEngineeringPath $Script:ROOT ([IO.Path]::GetRelativePath($Script:ROOT, $File)))
+        } else { Assert-FrontierStatePath $File }
+    }
+
+    $learningDir = Join-Path $Script:ROOT 'docs/artifacts/learnings'
+    Assert-LearningPath $learningDir
     if (-not (Test-Path $learningDir)) {
         Write-CliOutput "$($C.y)No docs/artifacts/learnings directory found.$($C.n)"
         return
     }
 
-    $files = Get-ChildItem -Path $learningDir -Filter 'LEARNING-*.md' -ErrorAction SilentlyContinue
+    $files = @(Get-ChildItem -LiteralPath $learningDir -File -Filter 'LEARNING-*.md' | Sort-Object Name)
     if ($singleId) {
         $files = $files | Where-Object { $_.Name -match "LEARNING-$([regex]::Escape($singleId))\.md$" }
         if (-not $files) {
@@ -7893,24 +7932,68 @@ function Invoke-LessonsPromote {
         }
     }
 
-    $conventionsFile = Join-Path (Resolve-Path .).Path 'memories/conventions.md'
+    $conventionsFile = Join-Path $Script:ROOT 'memories/conventions.md'
+    Assert-LearningPath $conventionsFile
     $promoted = New-Object 'System.Collections.Generic.List[object]'
     $skipped  = New-Object 'System.Collections.Generic.List[object]'
+    $watch = [Diagnostics.Stopwatch]::StartNew()
 
+    function Invoke-LearningYaml([string]$Text, [switch]$Promote) {
+        if ($Text.Length -gt 16384) { throw 'Learning frontmatter exceeds 16 KiB; save a smaller learning.' }
+        $parser = Resolve-FrontierRuntimeScript 'scripts/parse-yaml.js'
+        if (-not $parser) { throw 'Learning promotion requires scripts/parse-yaml.js from the Frontier runtime.' }
+        $remaining = 30000 - [int]$watch.ElapsedMilliseconds
+        if ($remaining -le 0) { throw 'Lesson promotion time budget reached. Completed writes are retained; retry a specific learning ID.' }
+        $start = [Diagnostics.ProcessStartInfo]::new('node')
+        $start.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
+        $start.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
+        $start.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
+        $start.ArgumentList.Add($parser)
+        if ($Promote) { $start.ArgumentList.Add('--promote') }
+        $result = Invoke-LoopCheckProcess -StartInfo $start -InputText $Text -TimeoutMilliseconds ([Math]::Min(10000, $remaining))
+        if ($result.exitCode -ne 0) { throw "Learning YAML processing failed: $($result.output)" }
+        return $result.stdout
+    }
+
+    function Write-LearningText([string]$File, [string]$Text, [AllowNull()][object]$ExpectedText) {
+        Assert-LearningPath $File
+        $directory = Split-Path $File -Parent
+        [void][IO.Directory]::CreateDirectory($directory)
+        $temporary = "$File.$([guid]::NewGuid().ToString('N')).tmp"
+        try {
+            [IO.File]::WriteAllText($temporary, $Text, [Text.UTF8Encoding]::new($false))
+            Assert-LearningPath $File
+            if ($null -ne $ExpectedText -and
+                (-not [IO.File]::Exists($File) -or [IO.File]::ReadAllText($File) -cne $ExpectedText)) {
+                throw "Learning or memory changed during promotion: $File. Defer this save and retry with current content."
+            }
+            [IO.File]::Move($temporary, $File, ($null -ne $ExpectedText))
+        } finally {
+            if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+        }
+    }
+
+    $lease = $null
+    if (-not $dryRun) {
+        $lockPath = Join-Path $Script:FRONTIER_STATE_DIR 'state/lesson-promotion.lock'
+        Assert-LearningPath $lockPath
+        [void][IO.Directory]::CreateDirectory((Split-Path $lockPath -Parent))
+        try { $lease = [IO.File]::Open($lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None) }
+        catch [IO.IOException] { throw 'Another lesson promotion is active. Defer this save and retry later; no lesson was marked saved.' }
+    }
+
+    try {
     foreach ($f in $files) {
-        $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
+        Assert-LearningPath $f.FullName
+        if ($f.Length -gt 1MB) { throw "Learning exceeds 1 MiB: $($f.Name)" }
+        $raw = [IO.File]::ReadAllText($f.FullName)
         if (-not $raw) { continue }
         # Parse frontmatter
         $fm = @{}
         $frontmatterMatch = [regex]::Match($raw, '(?s)\A---[ \t]*\r?\n(?<yaml>.*?)\r?\n---[ \t]*(?:\r?\n|\z)')
         if ($frontmatterMatch.Success) {
             $block = $frontmatterMatch.Groups['yaml'].Value
-            $parser = Resolve-FrontierRuntimeScript 'scripts/parse-yaml.js'
-            if (-not $parser) { throw 'Learning promotion requires scripts/parse-yaml.js from the Frontier runtime.' }
-            $json = $block | & node $parser 2>&1 | Out-String
-            if ($LASTEXITCODE -ne 0) {
-                throw "Invalid learning frontmatter in $($f.Name): $json"
-            }
+            $json = Invoke-LearningYaml $block
             $fm = $json | ConvertFrom-Json -AsHashtable
         }
         $confidence = 0.0
@@ -7951,23 +8034,27 @@ function Invoke-LessonsPromote {
             continue
         }
 
-        $serialized = $block | & node $parser --promote 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) { throw "Cannot update learning frontmatter in $($f.Name): $serialized" }
+        $serialized = Invoke-LearningYaml $block -Promote
         $updated = "---`n$($serialized.TrimEnd())`n---`n" + $raw.Substring($frontmatterMatch.Length)
 
-        # Append to conventions.md (creating section if needed)
-        $convDir = Split-Path $conventionsFile -Parent
-        if (-not (Test-Path $convDir)) { New-Item -ItemType Directory -Path $convDir -Force | Out-Null }
-        if (-not (Test-Path $conventionsFile)) {
-            "# Conventions`n`nPromoted learnings (auto-graduated by frontier lessons promote).`n" | Set-Content -Encoding utf8 $conventionsFile
+        $conventions = "# Conventions`n`nPromoted learnings (auto-graduated by frontier lessons promote).`n"
+        $expectedConventions = $null
+        if (Test-Path -LiteralPath $conventionsFile) {
+            Assert-LearningPath $conventionsFile
+            if ((Get-Item -LiteralPath $conventionsFile).Length -gt 1MB) { throw 'Conventions exceed 1 MiB; defer promotion until the memory is curated.' }
+            $conventions = [IO.File]::ReadAllText($conventionsFile)
+            $expectedConventions = $conventions
         }
-        Add-Content -Path $conventionsFile -Value $bullet -Encoding utf8
-
-        Set-Content -LiteralPath $f.FullName -Value $updated -Encoding utf8 -NoNewline
+        if ([IO.File]::ReadAllText($f.FullName) -cne $raw) { throw "Learning changed during promotion: $($f.Name). Retry with the current content." }
+        if (-not $conventions.Contains("(LEARNING [$($f.BaseName)],")) {
+            Write-LearningText $conventionsFile ($conventions.TrimEnd() + "`n$bullet`n") $expectedConventions
+        }
+        Write-LearningText $f.FullName $updated $raw
 
         Write-CliOutput "$($C.g)[promoted]$($C.n) $($f.Name) (conf=$confidence, obs=$observations) -> memories/conventions.md"
         $promoted.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations }) | Out-Null
     }
+    } finally { if ($lease) { $lease.Dispose() } }
 
     Write-CliOutput ""
     Write-CliOutput "$($C.c)Summary:$($C.n) promoted=$($promoted.Count) skipped=$($skipped.Count) (threshold=$thresh, min-observations=$minObs)"

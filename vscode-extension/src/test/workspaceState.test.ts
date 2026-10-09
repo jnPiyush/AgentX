@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
 import { WorkspaceState } from '../workspaceState';
 import { registerFrontierMcp } from '../runtime/mcpProvider';
+import { registerPolicyHookEnvironment } from '../runtime/policyHooks';
 import { resolveFrontierStateDirectory } from '../utils/frontierPaths';
 import { resolveAgentDefinitionPath } from '../frontierContextInternals';
 import {
@@ -397,6 +398,22 @@ describe('Automatic Frontier workspace state', () => {
     const linkedProfile = path.join(context.globalStorageUri.fsPath, 'workspaces', workspaceIdentity(second, ''));
     fs.symlinkSync(destination, linkedProfile, process.platform === 'win32' ? 'junction' : 'dir');
     assert.throws(() => privateWorkspacePath(context.globalStorageUri.fsPath, second, ''), /must not contain links/);
+  });
+
+  it('binds hook children to the loaded runtime without provisioning workspace state', () => {
+    const previousRuntime = process.env.FRONTIER_HOOK_RUNTIME;
+    const previousProfiles = process.env.FRONTIER_HOOK_PROFILES;
+    registerPolicyHookEnvironment(context, frontier);
+    assert.equal(process.env.FRONTIER_HOOK_RUNTIME,
+      path.join(context.extensionPath, '.github', 'frontier', '.frontier', 'runtime', 'policy-hook.js'));
+    const profiles = JSON.parse(process.env.FRONTIER_HOOK_PROFILES!);
+    assert.deepEqual(profiles, [{ workspaceRoot: root, authority: '', graphEnabled: true,
+      stateRoot: privateWorkspacePath(context.globalStorageUri.fsPath, root, '') }]);
+    assert.equal(fs.existsSync(context.globalStorageUri.fsPath), false);
+    assert.deepEqual(fs.readdirSync(root), ['source.txt']);
+    for (const disposable of context.subscriptions.splice(0)) disposable.dispose();
+    assert.equal(process.env.FRONTIER_HOOK_RUNTIME, previousRuntime);
+    assert.equal(process.env.FRONTIER_HOOK_PROFILES, previousProfiles);
   });
 
   it('advertises MCP without provisioning, then binds it on explicit start without a graph scan', async () => {

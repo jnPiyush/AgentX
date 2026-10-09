@@ -12,6 +12,7 @@ import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
 import { runSetupWizard } from './commands/setupWizard';
 import { registerFrontierMcp } from './runtime/mcpProvider';
+import { registerPolicyHookEnvironment } from './runtime/policyHooks';
 import { findBrokenCopilotCliLinks, refreshCopilotCliSymlinks } from './commands/initializeInternals';
 import { hasRepositoryState, isPrivateFrontierState } from './utils/frontierPaths';
 import { checkCompanionExtensions } from './utils/companionExtensions';
@@ -34,6 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
  void warnIfHostUnsupported(context);
 
  frontierContext = new FrontierContext(context);
+ registerPolicyHookEnvironment(context, frontierContext);
  const sidebarProviders = createSidebarProviders(frontierContext);
  const repairOffered = new Set<string>();
  const offerCliLinkRepair = async (): Promise<void> => {

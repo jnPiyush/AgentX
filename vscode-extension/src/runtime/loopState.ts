@@ -87,7 +87,7 @@ export interface LoopGateResult {
 }
 
 export type LoopTaskClass = 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x' | 'high-risk';
-export type LoopHealthKind = 'healthy' | 'stale' | 'stuck';
+export type LoopHealthKind = 'healthy' | 'checkpoint-due' | 'stale' | 'stuck';
 
 export interface LoopHealth {
   readonly kind: LoopHealthKind;
@@ -287,8 +287,8 @@ export function getLoopHealth(
   const ageMs = nowMs - lastTouchedMs;
   if (state.active && ageMs >= LOOP_STUCK_AFTER_MS) {
     return {
-      kind: 'stuck',
-      reason: `loop last updated ${(ageMs / (60 * 1000)).toFixed(0)} minutes ago`,
+      kind: 'checkpoint-due',
+      reason: `last evidence checkpoint was ${(ageMs / (60 * 1000)).toFixed(0)} minutes ago`,
     };
   }
 
@@ -385,6 +385,14 @@ export function evaluateHandoffGate(
   const health = getLoopHealth(state, expectedIssue, nowMs);
 
   if (state.active) {
+    if (health.kind === 'checkpoint-due') {
+      return {
+        allowed: false,
+        reason: `Quality loop needs an evidence checkpoint (${health.reason}). `
+          + 'Record fresh verification with frontier loop iterate; preserve the existing history.',
+        state,
+      };
+    }
     if (health.kind === 'stale') {
       return {
         allowed: false,
@@ -547,7 +555,8 @@ export function evaluateShouldAutoStart(
   }
 
   if (state.active) {
-    return getLoopHealth(state, expectedIssue, nowMs).kind !== 'healthy';
+    const health = getLoopHealth(state, expectedIssue, nowMs);
+    return health.kind === 'stale' || health.kind === 'stuck';
   }
 
   return true;
@@ -568,6 +577,9 @@ export function buildLoopStatusDisplay(state: LoopState | null, nowMs: number = 
     const readiness = state.iteration < minIterations
       ? `not ready to complete (${state.iteration}/${minIterations} min)`
       : 'minimum iterations met';
+    if (health.kind === 'checkpoint-due') {
+      return `Loop active ${state.iteration}/${state.maxIterations} (checkpoint due; ${health.reason}) [${state.completionCriteria}]${budgetSuffix}${scoreSuffix}`;
+    }
     if (health.kind === 'stale') {
       return `Loop active ${state.iteration}/${state.maxIterations} (stale; ${health.reason}) [${state.completionCriteria}]${budgetSuffix}${scoreSuffix}`;
     }

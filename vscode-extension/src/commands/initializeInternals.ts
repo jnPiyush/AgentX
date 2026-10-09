@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { createHash } from 'crypto';
 import * as http from 'http';
 import * as https from 'https';
 import * as path from 'path';
@@ -700,6 +701,33 @@ export function writeWorkspaceRuntimeWrappers(
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, content, 'utf-8');
   }
+  const hookPath = path.join(workspaceRoot, '.frontier', 'runtime', 'policy-hook.js');
+  const body = [
+    "'use strict';",
+    "const fs = require('node:fs');",
+    "const path = require('node:path');",
+    `const preferred = ${JSON.stringify(extensionRoot)};`,
+    "const relative = '.github/frontier/.frontier/runtime/policy-hook.js';",
+    "const home = require('node:os').homedir();",
+    "const roots = [path.dirname(preferred), ...['.vscode', '.vscode-insiders', '.cursor', '.cursor-server'].map(name => path.join(home, name, 'extensions'))];",
+    "const candidates = roots.flatMap(root => fs.existsSync(root) ? fs.readdirSync(root).filter(name => /^jnpiyush\\.agentx-\\d+\\.\\d+\\.\\d+$/.test(name)).map(name => path.join(root, name)) : []);",
+    "candidates.sort((left, right) => path.basename(right).localeCompare(path.basename(left), 'en', { numeric: true }));",
+    "const selected = process.env.FRONTIER_EXTENSION_ROOT || [...candidates, preferred].find(root => fs.existsSync(path.join(root, relative)));",
+    "if (!selected || !path.isAbsolute(selected)) throw Error('Frontier runtime unavailable; reinstall Frontier or initialize repository support.');",
+    "module.exports = require(path.join(selected, relative));",
+    '',
+  ].join('\n');
+  const marker = '// Frontier managed hook ';
+  if (fs.existsSync(hookPath)) {
+    const current = fs.readFileSync(hookPath, 'utf8').replace(/\r\n/g, '\n');
+    const newline = current.indexOf('\n');
+    const recorded = current.slice(marker.length, newline);
+    if (!current.startsWith(marker) || newline < 0
+      || createHash('sha256').update(current.slice(newline + 1)).digest('hex') !== recorded) {
+      return;
+    }
+  }
+  fs.writeFileSync(hookPath, `${marker}${createHash('sha256').update(body).digest('hex')}\n${body}`, 'utf8');
 }
 
 export async function downloadFile(url: string, dest: string, timeoutMs = 60_000): Promise<void> {

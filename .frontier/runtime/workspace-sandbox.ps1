@@ -7,6 +7,7 @@ $Script:SANDBOX_BLOCKED_RELATIVE_PATHS = @(
     '.frontier/state',
     '.frontier/sessions',
     '.frontier/runtime/frontier-cli.ps1',
+    '.frontier/runtime/policy-hook.js',
     '.frontier/runtime/agentic-runner.ps1',
     '.frontier/runtime/guided-interaction.ps1',
     '.frontier/runtime/repository-context.ps1',

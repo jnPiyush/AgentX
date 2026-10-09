@@ -7,38 +7,27 @@ applyTo: '**'
 
 ## At Session Start
 
-Read `/memories/*.md` files to restore project context, past decisions, and known
-pitfalls before beginning any work.
-
-If no memory files exist yet, proceed without them -- they will be created as work
-progresses.
+Use supplied notes first; read only missing task-relevant memory. Do not reload
+all notes each turn. Missing memory does not block work. `/memories/` belongs to
+the host memory tool, not an assumed filesystem root.
 
 ## During Work
 
-Note significant decisions, failed approaches, and key facts in `/memories/` as they
-occur -- not just at session end. Create or update files as needed:
-
-- `/memories/decisions.md` -- architectural and design decisions
-- `/memories/pitfalls.md` -- approaches that failed and why
-- `/memories/conventions.md` -- project-specific patterns discovered
-- `/memories/session/` -- temporary in-progress notes for this session
+Save verified decisions and pitfalls, not tool transcripts. Read the target before
+writing; deduplicate and preserve concurrent edits. Keep repository facts in repo
+memory, preferences in user memory, and temporary progress in session memory.
 
 ## At Session End
 
-Update `/memories/` with:
+Verify each save before claiming "saved". On failure/timeout, allow at most one
+bounded retry after diagnosis, never an unchanged retry loop. Defer optional
+memory and continue authorized work. Do not bypass storage restrictions.
 
-- Decisions made and rationale (append to `decisions.md`)
-- Approaches that failed and why (append to `pitfalls.md`)
-- Current state and next steps (update `session/progress.md`)
-- Any new project conventions discovered (append to `conventions.md`)
+AGENTS.md still governs required Compound Capture: use a repository learning
+artifact when host memory is unavailable, without inventing success or a skip.
+`lessons promote` explicitly promotes artifacts; it does not replace host saves.
 
 ## Memory File Format
 
-Keep entries short and concise -- use brief bullet points, not lengthy prose:
-
-```markdown
-<!-- decisions.md -->
-- 2025-01-15: Chose PostgreSQL over MongoDB for relational data model (#42)
-- 2025-01-16: Using Playwright for E2E tests, not Cypress (team preference)
-```
+Use short factual bullets with a date and evidence/source; label uncertainty.
 

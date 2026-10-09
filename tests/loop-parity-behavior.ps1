@@ -307,6 +307,16 @@ try {
     $statusResult = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'status')
     Assert-Match $statusResult.Output 'Staleness:|Health: STUCK' 'loop status reports stale or stuck health fixture'
 
+    $agedValid = $oldState.PSObject.Copy()
+    $agedValid.history = @([PSCustomObject]@{ iteration=2; timestamp=$oldState.lastIterationAt; summary='Prior evidence'; status='in-progress' })
+    $agedValid | ConvertTo-Json -Depth 10 | Set-Content -Path $statePath -Encoding utf8
+    $agedStatus = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'status')
+    Assert-Match $agedStatus.Output 'Evidence checkpoint due:' 'aged valid active loop requests fresh evidence'
+    Assert-True ($agedStatus.Output -notmatch 'Health: STUCK|Reset the loop') 'age alone does not require resetting work'
+    $agedComplete = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'complete')
+    Assert-True ($agedComplete.ExitCode -ne 0) 'aged active loop cannot complete without fresh evidence'
+    Assert-Match $agedComplete.Output 'frontier loop iterate' 'completion gives the non-destructive checkpoint recovery command'
+
     $staleCompleted = $oldState.PSObject.Copy()
     $staleCompleted.active = $false
     $staleCompleted.status = 'complete'
