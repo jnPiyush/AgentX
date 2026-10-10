@@ -408,6 +408,13 @@ jobs:
           npm run lint || echo "[WARN] Lint warnings/errors present (advisory mode)"
           echo "[PASS] Extension unit, Extension Host, coverage, and audit gates passed"
 
+      - name: MCP Runtime Test and Audit
+        working-directory: .frontier/runtime/mcp-server
+        run: |
+          npm ci
+          npm test
+          npm run audit:runtime
+
       - name: Agent Deliverable Validation
         if: github.event_name == 'pull_request'
         continue-on-error: true
