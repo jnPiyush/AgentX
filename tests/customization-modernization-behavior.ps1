@@ -38,7 +38,7 @@ $bundleAgentRoot = Join-Path $repoRoot 'vscode-extension/.github/frontier/agents
 $bundleAgentFiles = @(Get-ChildItem -LiteralPath $bundleAgentRoot -Filter '*.agent.md' -File -Recurse)
 Assert-True ($agentFiles.Count -eq 26) 'Compatibility keeps all 26 agent paths'
 Assert-True ($skillFiles.Count -eq 134) 'Compatibility keeps all 134 skill paths'
-Assert-True ($promptFiles.Count -eq 23) 'Compatibility keeps all 23 prompt paths'
+Assert-True ($promptFiles.Count -eq 24) 'Compatibility keeps all 24 prompt paths'
 Assert-True ($bundleAgentFiles.Count -eq $agentFiles.Count) 'Extension bundles every canonical agent'
 $agentFrontmatter = @($agentFiles | ForEach-Object { Get-Frontmatter $_.FullName })
 $agentNames = @($agentFrontmatter | ForEach-Object { $_.name })
@@ -70,8 +70,22 @@ $workspaceAgentLocation = if ($null -ne $agentFileLocationsProperty) {
     $null
 }
 Assert-True (
-    $null -ne $workspaceAgentLocation -and $workspaceAgentLocation.Value -eq $false
-) 'Source workspace suppresses duplicate repository-agent discovery'
+    $null -ne $workspaceAgentLocation -and $workspaceAgentLocation.Value -eq $true
+) 'Source workspace enables its canonical repository-agent definitions'
+Assert-True (
+    (Get-PropertyValue $workspaceSettings 'frontier.useBundledAgents') -eq $false
+) 'Source workspace suppresses duplicate bundled-agent discovery'
+Assert-True (
+    @($extensionPackage.contributes.chatAgents | Where-Object {
+        (Get-PropertyValue $_ 'when') -ne 'config.frontier.useBundledAgents'
+    }).Count -eq 0
+) 'Every bundled agent honors the workspace source preference'
+foreach ($file in $promptFiles) {
+    $target = Get-PropertyValue (Get-Frontmatter $file.FullName) 'agent'
+    if ($target -match '^Frontier(?: |$)') {
+        Assert-True ($target -in $agentNames) "$($file.BaseName) targets a canonical Frontier agent"
+    }
+}
 foreach ($file in $agentFiles) {
     $frontmatter = Get-Frontmatter $file.FullName
     foreach ($collaborator in @((Get-PropertyValue $frontmatter 'agents'))) {
@@ -136,9 +150,9 @@ foreach ($readOnlyAgent in @('functional-reviewer.agent.md', 'architecture-revie
 }
 
 $handoffContracts = @{
-    'product-manager.agent.md' = 'Frontier Architecture FDE'; 'architect.agent.md' = 'Frontier Engineering FDE'
-    'ux-designer.agent.md' = 'Frontier Engineering FDE'; 'data-scientist.agent.md' = 'Frontier Engineering FDE'
-    'engineer.agent.md' = 'Frontier Review FDE'; 'reviewer.agent.md' = 'Frontier Test FDE'
+    'product-manager.agent.md' = 'Frontier Architect'; 'architect.agent.md' = 'Frontier Engineer'
+    'ux-designer.agent.md' = 'Frontier Engineer'; 'data-scientist.agent.md' = 'Frontier Engineer'
+    'engineer.agent.md' = 'Frontier Reviewer'; 'reviewer.agent.md' = 'Frontier Tester'
 }
 foreach ($entry in $handoffContracts.GetEnumerator()) {
     $handoffs = Get-PropertyValue (Get-Frontmatter (Join-Path $agentRoot $entry.Key)) 'handoffs'

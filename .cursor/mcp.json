@@ -2,7 +2,7 @@
   "mcpServers": {
     "frontier": {
       "command": "node",
-      "args": [".frontier/runtime/mcp-server/index.js"]
+      "args": ["${workspaceFolder}/.frontier/runtime/cursor-mcp.js"]
     }
   }
 }

@@ -7,11 +7,222 @@ const { EventEmitter } = require('node:events');
 const { createCliRunner, createServer, discoverRepoRoot } = require('./index');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+const { ElicitRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
+
+test('only advertised Frontier tool names dispatch to the runtime', async () => {
+  const calls = [];
+  const server = createServer({
+    run: async args => { calls.push(args); return { exitCode: 0, stdout: 'current', stderr: '' }; },
+    stop: async () => {},
+  });
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'frontier-only-contract', version: '1.0.0' });
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    for (const name of ['agentx_loop_status', 'hve_loop_status']) {
+      const result = await client.callTool({ name, arguments: {} });
+      assert.equal(result.isError, true);
+      assert.match(result.content[0].text, /Unknown tool/);
+    }
+    assert.equal(calls.length, 0);
+    const current = await client.callTool({ name: 'frontier_loop_status', arguments: {} });
+    assert.equal(current.isError, false);
+    assert.deepEqual(calls, [['loop', 'status']]);
+  } finally { await client.close(); await server.close(); }
+});
+
+test('loop preparation uses bounded actions and never supplies review approval or test execution', async () => {
+  const calls = [];
+  const server = createServer({
+    run: async args => { calls.push(args); return { exitCode: 0, stdout: '{"suitesRun":false}', stderr: '' }; },
+    stop: async () => {},
+  });
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'loop-preparation-contract', version: '1.0.0' });
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: 'frontier_loop_prepare',
+      arguments: { action: 'review-packet', stage: 'boundary', requirements: 'docs/contract.md' },
+    });
+    assert.equal(result.isError, false);
+    assert.deepEqual(calls, [['loop', 'review-packet', '--json', '--stage', 'boundary', '--requirements', 'docs/contract.md']]);
+    const invalid = await client.callTool({ name: 'frontier_loop_prepare', arguments: { action: 'test' } });
+    assert.equal(invalid.isError, true);
+    assert.equal(calls.length, 1);
+  } finally { await client.close(); await server.close(); }
+});
+
+test('MCP separates installed CLI assets from a plain target workspace', async () => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mcp-roots-'));
+  const bundle = path.join(temporary, 'bundle');
+  const workspace = path.join(temporary, 'source');
+  const cli = path.join(bundle, '.frontier', 'runtime', 'frontier-cli.ps1');
+  fs.mkdirSync(path.dirname(cli), { recursive: true });
+  fs.mkdirSync(workspace);
+  fs.writeFileSync(cli, '# fixture');
+  let invocation;
+  const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
+  const runner = createCliRunner(bundle, {
+    workspaceRoot: workspace,
+    spawn: (command, args, options) => { invocation = { command, args, options }; return child; },
+  });
+  try {
+    const response = runner.run(['workspace-state', 'info']);
+    assert.ok(invocation.args.includes(cli));
+    assert.equal(invocation.options.cwd, workspace);
+    assert.equal(invocation.options.env.FRONTIER_WORKSPACE_ROOT, workspace);
+    assert.equal(invocation.options.env.HVE_WORKSPACE_ROOT, process.env.HVE_WORKSPACE_ROOT);
+    assert.equal(invocation.options.env.AGENTX_WORKSPACE_ROOT, process.env.AGENTX_WORKSPACE_ROOT);
+    assert.equal(fs.existsSync(path.join(workspace, '.frontier')), false);
+    child.emit('close', 0);
+    assert.equal((await response).exitCode, 0);
+  } finally {
+    await runner.stop();
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test('repository context validates budgets and encodes query data before CLI dispatch', async () => {
+  const calls = [];
+  const runner = {
+    run: async (args) => {
+      calls.push(args);
+      return { exitCode: 0, stdout: '{"context":"source pointers"}', stderr: '' };
+    },
+    stop: async () => {},
+  };
+  const server = createServer(runner);
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'context-contract', version: '1.0.0' }, { capabilities: {} });
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    const tools = await client.listTools();
+    assert.ok(tools.tools.some(tool => tool.name === 'frontier_context'));
+    const query = '--refresh "literal query"; do not execute';
+    const result = await client.callTool({ name: 'frontier_context', arguments: { query, agent: 'engineer', maxChars: 1024 } });
+    assert.ok(!result.isError);
+    assert.equal(result.content[0].text, 'source pointers');
+    assert.ok(!('context' in result.structuredContent));
+    assert.deepEqual(calls[0], ['context', '--json', '--query64', Buffer.from(query).toString('base64'), '--max-chars', '1024', '-a', 'engineer']);
+    const synced = await client.callTool({ name: 'frontier_context', arguments: { sync: true } });
+    assert.ok(!synced.isError);
+    assert.deepEqual(calls[1], ['context', '--json', '--query64', '', '--max-chars', '4000', '--sync']);
+    for (const arguments_ of [{ maxChars: 511 }, { maxChars: 16001 }, { maxChars: 1.5 }, { maxChars: null }, { query: null }, { query: {} }, { query: 'x'.repeat(4097) }, { agent: '--refresh' }, { refresh: 'yes' }, { sync: 'yes' }, { root: '/elsewhere' }]) {
+      const invalid = await client.callTool({ name: 'frontier_context', arguments: arguments_ });
+      assert.equal(invalid.isError, true);
+    }
+    assert.equal(calls.length, 2);
+    await client.callTool({ name: 'frontier_context', arguments: {
+      query: 'Service', tokenBudget: 1200, detail: 'evidence', graphHops: 2, subsystem: 'src/services',
+    } });
+    assert.deepEqual(calls[2], ['context', '--json', '--query64', Buffer.from('Service').toString('base64'),
+      '--max-chars', '16000', '--tokens', '1200', '--detail', 'evidence', '--hops', '2',
+      '--subsystem64', Buffer.from('src/services').toString('base64')]);
+    for (const arguments_ of [{ tokenBudget: 255 }, { tokenBudget: 8001 }, { tokenBudget: true },
+      { graphHops: 3 }, { graphHops: 1.5 }, { detail: 'raw' }, { subsystem: '../outside' }]) {
+      const invalid = await client.callTool({ name: 'frontier_context', arguments: arguments_ });
+      assert.equal(invalid.isError, true);
+    }
+    assert.equal(calls.length, 3);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
+test('frontier_run forwards the execution engine and rejects unknown engines before dispatch', async () => {
+  const calls = [];
+  const runner = {
+    run: async (args) => {
+      calls.push(args);
+      return { exitCode: 0, stdout: 'done', stderr: '' };
+    },
+    stop: async () => {},
+  };
+  const server = createServer(runner);
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'run-engine-contract', version: '1.0.0' },
+    { capabilities: { elicitation: { form: {} } } });
+  client.setRequestHandler(ElicitRequestSchema, async () =>
+    ({ action: 'accept', content: { authorize: true } }));
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    const result = await client.callTool({ name: 'frontier_run', arguments: { agent: 'engineer', prompt: 'task', engine: 'hydrafusion' } });
+    assert.ok(!result.isError);
+    assert.deepEqual(calls[0], ['run', '-a', 'engineer', '-p', 'task', '--json',
+      '--engine', 'hydrafusion', '--interaction', 'autonomous']);
+    const defaulted = await client.callTool({ name: 'frontier_run', arguments: { agent: 'engineer', prompt: 'task' } });
+    assert.ok(!defaulted.isError);
+    assert.deepEqual(calls[1], ['run', '-a', 'engineer', '-p', 'task', '--json']);
+    const invalid = await client.callTool({ name: 'frontier_run', arguments: { agent: 'engineer', prompt: 'task', engine: 'auto' } });
+    assert.equal(invalid.isError, true);
+    assert.equal(calls.length, 2);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
+test('candidate operations stay pending and require explicit review inputs', async () => {
+  const calls = [];
+  const runner = {
+    run: async args => {
+      calls.push(args);
+      return { exitCode: 3, stdout: '{"status":"applied_pending_verification"}', stderr: '' };
+    },
+    stop: async () => {},
+  };
+  const server = createServer(runner);
+  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'candidate-contract', version: '1.0.0' }, { capabilities: {} });
+  try {
+    await server.connect(serverTransport);
+    await client.connect(transport);
+    const candidate = 'hf-20261001000000-123456abcdef';
+    const denied = await client.callTool({ name: 'frontier_engine', arguments: { action: 'accept', candidate } });
+    assert.equal(denied.isError, true);
+    assert.equal(calls.length, 0);
+    const pending = await client.callTool({
+      name: 'frontier_engine',
+      arguments: { action: 'accept', candidate, review: '.frontier\\state\\review.json' },
+    });
+    assert.equal(pending.isError, false);
+    assert.equal(pending.structuredContent.status, 'pending_owner_review_or_verification');
+    assert.deepEqual(calls[0], ['engine', 'accept', candidate, '--review', '.frontier\\state\\review.json', '--json']);
+    const invalidLimit = await client.callTool({ name: 'frontier_run', arguments: { agent: 'engineer', prompt: 'task', max: 0 } });
+    assert.equal(invalidLimit.isError, true);
+    assert.equal(calls.length, 1);
+    await client.callTool({ name: 'frontier_engine', arguments: { action: 'recover', candidate } });
+    assert.deepEqual(calls[1], ['engine', 'recover', candidate, '--json']);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
+test('MCP leaves teardown time inside the HydraFusion deadline', async () => {
+  let options;
+  const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
+  const runner = createCliRunner(os.tmpdir(), {
+    platform: 'linux',
+    spawn: (_command, _args, launchOptions) => { options = launchOptions; return child; },
+  });
+  const result = runner.run(['run', 'engineer', 'task', '--engine', 'hydrafusion']);
+  assert.equal(options.env.FRONTIER_OPERATION_TIMEOUT_SECONDS, '570');
+  child.emit('close', 3);
+  assert.equal((await result).exitCode, 3);
+  await runner.stop();
+});
 
 function fixture(hooks = {}) {
   const children = [];
   const signals = [];
-  const runner = createCliRunner('/fixture', {
+  const runner = createCliRunner(os.tmpdir(), {
     platform: 'linux',
     spawn: () => {
       const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
@@ -24,6 +235,20 @@ function fixture(hooks = {}) {
   return { runner, children, signals };
 }
 
+test('CLI context calls pin the intended workspace instead of inheriting another session root', async () => {
+  let options;
+  const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
+  const { runner } = fixture({
+    spawn: (_command, _args, supplied) => { options = supplied; return child; },
+  });
+  const pending = runner.run(['context', '--json']);
+  assert.equal(options.cwd, os.tmpdir());
+  assert.equal(options.env.FRONTIER_WORKSPACE_ROOT, os.tmpdir());
+  child.emit('close', 0);
+  assert.equal((await pending).exitCode, 0);
+  await runner.stop();
+});
+
 test('explicit invalid roots throw; absent configuration discovers the runtime by walking up', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mcp-root-'));
   const runtimeDir = path.join(root, '.frontier', 'runtime');
@@ -33,10 +258,32 @@ test('explicit invalid roots throw; absent configuration discovers the runtime b
     for (const value of ['', 'relative', path.join(root, 'missing')]) {
       assert.throws(() => discoverRepoRoot({ FRONTIER_REPO_ROOT: value, AGENTX_REPO_ROOT: root }, root), /FRONTIER_REPO_ROOT/);
     }
-    for (const key of ['FRONTIER_REPO_ROOT', 'HVE_REPO_ROOT', 'AGENTX_REPO_ROOT']) {
-      assert.equal(discoverRepoRoot({ [key]: root }, root), root);
+    assert.equal(discoverRepoRoot({ FRONTIER_REPO_ROOT: root }, root), root);
+    for (const key of ['HVE_REPO_ROOT', 'AGENTX_REPO_ROOT']) {
+      assert.equal(discoverRepoRoot({ [key]: path.join(root, 'obsolete-target') }, root), root);
     }
     assert.equal(discoverRepoRoot({}, path.join(runtimeDir, 'mcp-server')), root);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('zero-copy consumer roots use their wrapper and retain consumer environment binding', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mcp-wrapper-'));
+  const wrapper = path.join(root, '.frontier', 'runtime', 'frontier.ps1');
+  fs.mkdirSync(path.dirname(wrapper), { recursive: true });
+  fs.writeFileSync(wrapper, '# consumer wrapper');
+  let launched;
+  const child = Object.assign(new EventEmitter(), { pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter() });
+  try {
+    assert.equal(discoverRepoRoot({ FRONTIER_REPO_ROOT: root }), root);
+    const runner = createCliRunner(root, {
+      spawn: (_command, args, options) => { launched = { args, options }; return child; },
+    });
+    const result = runner.run(['context', '--json']);
+    child.emit('close', 0);
+    await result;
+    assert.ok(launched.args.includes(wrapper));
+    assert.equal(launched.options.cwd, root);
+    assert.equal(launched.options.env.FRONTIER_WORKSPACE_ROOT, root);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -133,7 +380,7 @@ test('spawn errors return failure without leaking active children', async () => 
   await runner.stop();
 });
 
-test('SDK requests advertise exactly 19 tools, preserve aliases, and forward request cancellation', async () => {
+test('SDK requests advertise exactly 24 Frontier tools, reject obsolete aliases, and forward request cancellation', async () => {
   let cancelled;
   const cancellation = new Promise(resolve => { cancelled = resolve; });
   let started;
@@ -155,12 +402,16 @@ test('SDK requests advertise exactly 19 tools, preserve aliases, and forward req
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const catalog = await client.listTools();
-    assert.equal(catalog.tools.length, 19);
+    assert.equal(catalog.tools.length, 24);
+    assert.ok(catalog.tools.some(tool => tool.name === 'frontier_resume'));
     assert.ok(catalog.tools.every(tool => tool.name.startsWith('frontier_')));
-    for (const name of ['frontier_loop_status', 'agentx_loop_status']) {
-      assert.equal((await client.callTool({ name, arguments: {} })).isError, false);
+    assert.equal((await client.callTool({ name: 'frontier_loop_status', arguments: {} })).isError, false);
+    for (const name of ['agentx_loop_status', 'hve_loop_status']) {
+      const rejectedAlias = await client.callTool({ name, arguments: {} });
+      assert.equal(rejectedAlias.isError, true);
+      assert.match(rejectedAlias.content[0].text, /Unknown tool/);
     }
-    assert.deepEqual(calls, [['loop', 'status'], ['loop', 'status']]);
+    assert.deepEqual(calls, [['loop', 'status']]);
     const controller = new AbortController();
     const request = client.callTool({ name: 'frontier_ready', arguments: {} }, undefined, { signal: controller.signal });
     const rejected = assert.rejects(request);

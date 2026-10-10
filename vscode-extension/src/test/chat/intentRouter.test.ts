@@ -230,7 +230,7 @@ describe('intentRouter', () => {
       { phrase: 'sync the backlog with ado', subcommand: 'backlog-sync', args: ['ado', '--force'] },
       // git-sync
       { phrase: 'git-sync push', subcommand: 'git-sync', args: ['push'] },
-      { phrase: 'git pull via agentx', subcommand: 'git-sync', args: ['pull'] },
+      { phrase: 'git pull via frontier', subcommand: 'git-sync', args: ['pull'] },
       { phrase: 'run git-sync push', subcommand: 'git-sync', args: ['push'] },
       // hire
       { phrase: 'hire architect', subcommand: 'hire', args: ['architect'] },

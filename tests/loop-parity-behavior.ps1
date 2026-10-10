@@ -250,12 +250,14 @@ try {
     $missingCount = Invoke-IsolatedAgentx -WorkspaceRoot $minimumWorkspace -Arguments @(
         'loop', 'iterate', '-s', 'Missing passing count', '-e', $countEvidence
     )
-    Assert-True ($missingCount.ExitCode -ne 0) 'recorded baseline requires an explicit passing count'
+    Assert-Equal $missingCount.ExitCode 0 'recorded baseline allows omitted counts while test execution is deferred'
+    $regressionEvidence = New-EvidenceFile -WorkspaceRoot $minimumWorkspace -Name 'regressed-count.txt' -Content 'explicit regressed count checks'
     $regressedCount = Invoke-IsolatedAgentx -WorkspaceRoot $minimumWorkspace -Arguments @(
-        'loop', 'iterate', '-s', 'Passing count regressed', '-e', $countEvidence, '--passing', '9'
+        'loop', 'iterate', '-s', 'Passing count regressed', '-e', $regressionEvidence, '--passing', '9'
     )
     Assert-True ($regressedCount.ExitCode -ne 0) 'recorded baseline rejects a lower passing count'
-    Assert-Equal ([int](Read-LoopState $minimumWorkspace).iteration) 0 'rejected passing counts do not advance loop state'
+    Assert-Match $regressedCount.Output 'would regress passing tests' 'explicit count regression is still explained'
+    Assert-Equal ([int](Read-LoopState $minimumWorkspace).iteration) 1 'omitted count advances once; rejected count does not advance'
 } finally {
     Remove-Item -LiteralPath $minimumWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -304,6 +306,16 @@ try {
 
     $statusResult = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'status')
     Assert-Match $statusResult.Output 'Staleness:|Health: STUCK' 'loop status reports stale or stuck health fixture'
+
+    $agedValid = $oldState.PSObject.Copy()
+    $agedValid.history = @([PSCustomObject]@{ iteration=2; timestamp=$oldState.lastIterationAt; summary='Prior evidence'; status='in-progress' })
+    $agedValid | ConvertTo-Json -Depth 10 | Set-Content -Path $statePath -Encoding utf8
+    $agedStatus = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'status')
+    Assert-Match $agedStatus.Output 'Evidence checkpoint due:' 'aged valid active loop requests fresh evidence'
+    Assert-True ($agedStatus.Output -notmatch 'Health: STUCK|Reset the loop') 'age alone does not require resetting work'
+    $agedComplete = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'complete')
+    Assert-True ($agedComplete.ExitCode -ne 0) 'aged active loop cannot complete without fresh evidence'
+    Assert-Match $agedComplete.Output 'frontier loop iterate' 'completion gives the non-destructive checkpoint recovery command'
 
     $staleCompleted = $oldState.PSObject.Copy()
     $staleCompleted.active = $false

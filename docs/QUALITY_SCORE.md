@@ -20,7 +20,7 @@
 
 ---
 
-## Component Scores (v9.6.0)
+## Component Scores (v9.8.0)
 
 ### Agent Definitions (.github/agents/)
 
@@ -30,7 +30,7 @@
 | Product Manager | A | PRD workflow, child issue creation |
 | UX Designer | A | Wireframes + mandatory HTML/CSS prototypes |
 | Architect | A | ADR + Tech Spec, NO CODE EXAMPLES rule |
-| Engineer | A | Quality loop, 80% coverage gate, boundary enforcement |
+| Engineer | A | Evidence-backed loop, regression-case authoring, post-loop test consent and boundary enforcement |
 | Reviewer | A | 8-category review, structured findings |
 | Auto-Fix Reviewer | B | Preview maturity -- safe fix categories well-defined, needs more field testing |
 | DevOps Engineer | A | Pipeline creation, deployment docs |
@@ -76,7 +76,7 @@
 |------|-------|-------|
 | ai.instructions.md | A | Comprehensive AI/ML patterns |
 | python.instructions.md | A | Type hints, pytest, project layout |
-| csharp.instructions.md | A | .NET 8, async, EF Core, DI |
+| csharp.instructions.md | A | .NET, async, EF Core, DI |
 | typescript.instructions.md | A | Backend TS patterns |
 | react.instructions.md | A | React 19+, hooks, server components |
 | memory.instructions.md | A | Cross-session memory protocol |
@@ -86,8 +86,8 @@
 
 | Script | Grade | Notes |
 |--------|-------|-------|
-| frontier.ps1 / frontier-cli.ps1 | A | Launcher and main CLI with 14 commands |
-| frontier.sh | B | Bash wrapper -- covers core commands, missing some PS1-only features |
+| frontier.ps1 / frontier-cli.ps1 | A | Launcher and unified native CLI |
+| frontier.sh | B | Bash launcher forwarding arguments to the same PowerShell CLI; requires `pwsh` |
 | agentic-runner.ps1 | B | Standalone loop works, no sub-agent chaining by design |
 | local-issue-manager.ps1 | A | Full CRUD for local issues |
 
@@ -118,7 +118,7 @@
 
 | Document | Grade | Notes |
 |----------|-------|-------|
-| AGENTS.md | A | Slim TOC/map (v9.6.0) |
+| AGENTS.md | A | Slim TOC/map (v9.8.0) |
 | WORKFLOW.md | A- | Complete workflow reference with harness-oriented policy additions; enforcement is still partial |
 | Skills.md | A | Compressed index, Quick Reference table |
 | GUIDE.md | B | Quickstart solid, troubleshooting section could expand |
@@ -177,4 +177,4 @@
 
 ---
 
-**Last updated**: v9.6.0
+**Last updated**: v9.8.0

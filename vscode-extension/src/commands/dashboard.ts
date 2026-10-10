@@ -20,6 +20,12 @@ export function registerDashboardCommand(
             );
             return;
         }
+        let target: FrontierContext;
+        try { target = agentx.forWorkspace(await agentx.ensureWorkspaceReady()); }
+        catch (error) {
+            void vscode.window.showErrorMessage(`Frontier dashboard unavailable: ${error instanceof Error ? error.message : String(error)}`);
+            return;
+        }
 
         const panel = vscode.window.createWebviewPanel(
             'agentxDashboard',
@@ -32,10 +38,10 @@ export function registerDashboardCommand(
 
         const refresh = async () => {
             const [loop, ready, state, learnings] = await Promise.all([
-                safeRunCli(agentx, 'loop', ['status']),
-                safeRunCli(agentx, 'ready', []),
-                safeRunCli(agentx, 'state', []),
-                safeRunCli(agentx, 'learnings', ['list']),
+                safeRunCli(target, 'loop', ['status']),
+                safeRunCli(target, 'ready', []),
+                safeRunCli(target, 'state', []),
+                safeRunCli(target, 'learnings', ['list']),
             ]);
             panel.webview.html = buildDashboardHtml(loop, ready, state, learnings);
         };
@@ -59,7 +65,7 @@ export function registerDashboardCommand(
                     }
                     panel.webview.postMessage({ type: 'output', text: `> agentx ${subcommand} ${rest.join(' ')}\n` });
                     try {
-                        const out = await agentx.runCli(subcommand, rest);
+                        const out = await target.runCli(subcommand, rest);
                         panel.webview.postMessage({ type: 'output', text: out + '\n' });
                     } catch (err) {
                         const message = err instanceof Error ? err.message : String(err);
@@ -255,4 +261,3 @@ function escapeHtml(str: string): string {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
-

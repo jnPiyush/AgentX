@@ -35,11 +35,11 @@ Reject these six verification shortcuts.
 
 | Rationalization | Reality |
 |-----------------|---------|
-| "The tests passed last time I ran them, the diff is small." | A small diff does not make old evidence current. Re-run. |
+| "The tests passed last time I ran them, the diff is small." | Old results are not a current pass. Label their revision and ask for post-loop test execution instead of inventing a rerun. |
 | "The CI run on the previous commit was green." | Fresh commit, fresh run; a previous green run does not verify this commit. |
 | "I can see by reading the code that it works." | Code inspection is necessary but insufficient to detect compiler, interpreter, or runtime failures. Run it. |
 | "The change is too small to break anything." | Even a one-line change can break behavior. Run the verification. |
-| "Running the full suite is slow, I'll trust the targeted test." | Trusting an unrun targeted test is the problem, not the suite you skipped. Run the targeted check on the current commit and record its output. A full suite is required only for a complex or shared module -- one of the canonical suite triggers in `.github/AGENT-PROTOCOL.md` section 1.4 -- and for a bounded change the targeted check plus the acceptance-criterion mapping is sufficient. Record what you omitted and why. |
+| "I need tests to say the loop is complete." | Loop/review verification uses acceptance mapping, independent findings and non-test checks. Do not run suites in those phases; ask the user after loop completion. Tests remain not run until approved and executed. |
 | "The loop iteration count is satisfied, I can mark complete." | The count is a floor; the done criteria must pass on the current commit. |
 
 ## The Gate Function (5 Steps)
@@ -57,13 +57,20 @@ State the claim out loud, in writing, in one sentence. Examples:
 
 A vague claim ("it works", "looks good") is not a claim. Make it specific or do not claim.
 
+During loop/review work, claim only the non-test checks and review actually
+completed. Test-pass examples apply to separate user-approved execution or
+supplied CI results. Never convert `not run` into `passed` to close the loop.
+
 ### Step 2 -- RUN the verification command
 
-Execute the exact command that proves the claim, against the current commit. Examples:
+Execute the permitted command that proves the claim, against the current
+revision. Inside loops and reviews, this MUST be a non-test check. Suite
+execution follows `.github/AGENT-PROTOCOL.md` section 1.4 only after successful
+loop completion and an explicit user decision. Examples:
 
 | Claim | Command |
 |-------|---------|
-| Tests pass | `dotnet test` / `pytest -x` / `npm test` |
+| Tests pass, after separate approval | `dotnet test` / `pytest -x` / `npm test` |
 | Build is clean | `dotnet build -warnaserror` / `tsc --noEmit` / `cargo build --release` |
 | Endpoint works | `curl -sfS http://localhost:PORT/health` |
 | Linter clean | `eslint . --max-warnings 0` / `ruff check .` |
@@ -112,16 +119,13 @@ This skill is referenced from:
 - **`.frontier/runtime/frontier.ps1 loop complete`** -- the CLI gate that blocks handoff when the loop is not actually complete
 
 When this skill fires, the agent MUST cite the command and the output excerpt in the loop's `iterate` or `complete` summary.
+After `loop complete` succeeds, the owning agent MUST ask whether to run the
+test suite and wait. A delegated reviewer returns findings without launching
+suites or issuing the parent's consent question.
 
 ## Error Handling
 
-| Symptom | Action |
-|---------|--------|
-| Command fails on the current commit | Do not report completion. Fix the failure, then re-run the gate. |
-| Command hangs | Treat as failure. Investigate before claiming completion. |
-| Command output is suspiciously fast (no tests found, cached result) | Force a clean run. `dotnet test --no-build` is not a substitute for `dotnet test`. |
-| Cannot run the command locally | Run it in CI on the current commit and link the run. Do not claim completion from a prior run. |
-| The claim is unprovable in the current environment | Restate the claim as "claimed but not verified in this session" and surface the gap. |
+Responses to failing, flaky or unavailable verification: [Error handling](references/error-handling.md).
 
 ## Checklist
 

@@ -25,7 +25,12 @@ function createBot({
   if (config.browser.executablePath) clientOptions.puppeteer.executablePath = config.browser.executablePath;
 
   const client = new ClientClass(clientOptions);
-  const handler = handlerFactory(runtimeConfig);
+  const handler = handlerFactory(runtimeConfig, {
+    resolvePhoneNumber: async address => {
+      const contacts = await client.getContactLidAndPhone([address]);
+      return contacts.find(contact => contact.lid === address)?.pn;
+    },
+  });
   let watcher = null;
   let shutdownPromise = null;
 
@@ -36,7 +41,7 @@ function createBot({
   client.on('authenticated', () => console.log('[Frontier WhatsApp] Authenticated.'));
   client.on('auth_failure', (message) => {
     console.error('[Frontier WhatsApp] Auth failure:', message);
-    void shutdown();
+    void shutdown().catch(error => console.error('[Frontier WhatsApp] Shutdown failed:', error.message));
   });
   client.on('ready', () => {
     console.log(`[Frontier WhatsApp] Ready. Allowed operators: ${config.allowedNumbers.length}`);
@@ -75,6 +80,7 @@ if (require.main === module) {
     bot.start().catch((error) => {
       console.error('[Frontier WhatsApp] Failed to initialize:', error.message);
       process.exitCode = 1;
+      void bot.shutdown().catch(failure => console.error('[Frontier WhatsApp] Initialization cleanup failed:', failure.message));
     });
   } catch (error) {
     console.error('[Frontier WhatsApp] Configuration error:', error.message);
@@ -82,10 +88,13 @@ if (require.main === module) {
   }
 
   const stop = async () => {
-    if (bot) await bot.shutdown().catch((error) => console.error('[Frontier WhatsApp] Shutdown error:', error.message));
+    if (bot) await bot.shutdown().catch((error) => {
+      console.error('[Frontier WhatsApp] Shutdown error:', error.message);
+      process.exitCode = 1;
+    });
   };
-  process.once('SIGINT', () => { void stop().finally(() => process.exit()); });
-  process.once('SIGTERM', () => { void stop().finally(() => process.exit()); });
+  process.once('SIGINT', () => { void stop().finally(() => process.exit(process.exitCode || 0)); });
+  process.once('SIGTERM', () => { void stop().finally(() => process.exit(process.exitCode || 0)); });
 }
 
 module.exports = { createBot };

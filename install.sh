@@ -1,5 +1,5 @@
 #!/bin/bash
-# Frontier v9.6.0 Installer - Download, copy, configure.
+# Frontier v9.8.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -9,15 +9,16 @@
 # ./install.sh --path myproject # Install into a subfolder
 # ./install.sh --force # Full reinstall (overwrite)
 # ./install.sh --azure # Force Azure Skills companion install
+# ./install.sh --cursor # Configure Cursor and restore pinned MCP dependencies
 #
 # # One-liner install (local mode, no prompts, pinned to a release tag)
-# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.sh | bash
 #
 # # One-liner for GitHub mode
 # MODE=github curl -fsSL ... | bash
 #
 # # One-liner to include Azure companion support
-# AGENTX_AZURE=true curl -fsSL ... | bash
+# FRONTIER_AZURE=true bash install.sh
 
 set -e
 
@@ -27,16 +28,18 @@ if [ -z "$BASH_VERSION" ]; then
  exit 1
 fi
 
-MODE="${MODE:-}"
+MODE="${FRONTIER_MODE:-${MODE:-}}"
 FORCE="${FORCE:-false}"
-NO_SETUP="${NO_SETUP:-false}"
-INSTALL_PATH="${AGENTX_PATH:-}"
-AZURE="${AGENTX_AZURE:-false}"
-BRANCH="v9.6.0"
+NO_SETUP="${FRONTIER_NOSETUP:-${NO_SETUP:-false}}"
+INSTALL_PATH="${FRONTIER_PATH:-}"
+AZURE="${FRONTIER_AZURE:-false}"
+CURSOR_SETUP="false"
+GRAPH_PARSERS="false"
+BRANCH="v9.8.0"
 TMP=".frontier-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.tar.gz"
-ARCHIVE_SOURCE="${AGENTX_INSTALL_ARCHIVE:-$ARCHIVE_URL}"
+ARCHIVE_SOURCE="${FRONTIER_INSTALL_ARCHIVE:-$ARCHIVE_URL}"
 
 # -- Guaranteed cleanup (runs on success, error, or Ctrl+C) --
 cleanup() {
@@ -93,6 +96,8 @@ while [[ $# -gt 0 ]]; do
  --force) FORCE=true; shift ;;
  --local) MODE="local"; shift ;;
  --azure) AZURE=true; shift ;;
+ --cursor) CURSOR_SETUP=true; shift ;;
+ --graph-parsers) GRAPH_PARSERS=true; shift ;;
  --no-setup) NO_SETUP=true; shift ;;
  *) shift ;;
  esac
@@ -132,8 +137,8 @@ INSTALLED_VERSION=""
 if [ -f .frontier/version.json ]; then
  INSTALLED_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .frontier/version.json | head -1)
 fi
-if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != '9.6.0' ] && [ "$FORCE" != true ]; then
- echo "Frontier v$INSTALLED_VERSION is already installed. Re-run with --force to replace managed files with v9.6.0; no files were changed."
+if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != '9.8.0' ] && [ "$FORCE" != true ]; then
+ echo "Frontier v$INSTALLED_VERSION is already installed. Re-run with --force to replace managed files with v9.8.0; no files were changed."
  exit 1
 fi
 
@@ -204,7 +209,7 @@ ensure_dependency() {
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| Frontier v9.6.0 - AI Agent Orchestration |${N}"
+echo -e "${C}| Frontier v9.8.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -235,8 +240,8 @@ ensure_dependency pwsh powershell "PowerShell 7.4+ (pwsh)" || { echo "PowerShell
 # -- Upgrade detection --
 PREVIOUS_VERSION="$INSTALLED_VERSION"
 
-if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.6.0" ]; then
- echo -e "${Y}[!] Detected Frontier v$PREVIOUS_VERSION - upgrading to v9.6.0...${N}"
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.8.0" ]; then
+ echo -e "${Y}[!] Detected Frontier v$PREVIOUS_VERSION - upgrading to v9.8.0...${N}"
  echo -e "${D}  Existing runtime data and files absent from the release are retained.${N}"
 fi
 
@@ -262,6 +267,7 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/evaluation/rubrics" \
  "$PREFIX/.gitignore" \
  "$PREFIX/AGENTS.md" \
+ "$PREFIX/CLAUDE.md" \
  "$PREFIX/Skills.md" \
  "$PREFIX/LICENSE" \
  "$PREFIX/NOTICE" \
@@ -275,6 +281,9 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
 [ -d "$TMP/.frontier/runtime" ] || { echo "Download failed. Check network."; exit 1; }
 ok "Frontier downloaded (essential files only)"
 
+mkdir -p "$TMP/.frontier/runtime/cursor-assets"
+cp -R "$TMP/.cursor/." "$TMP/.frontier/runtime/cursor-assets/"
+
 # -- Step 2: Copy files ----------------------------------
 echo -e "${C}[2] Installing files...${N}"
 copied=0; skipped=0
@@ -283,7 +292,7 @@ while IFS= read -r src; do
  rel="${src#$TMP/}"
  case "$rel" in
   .frontier/runtime/*) ;;
-  .frontier/*|.vscode/mcp.json|.vscode/settings.json)
+  .frontier/*|.vscode/mcp.json|.vscode/settings.json|.cursor/mcp.json|.cursor/hooks.json)
    continue
    ;;
  esac
@@ -292,7 +301,7 @@ while IFS= read -r src; do
   *) dest="./$rel" ;;
  esac
  mkdir -p "$(dirname "$dest")"
- if [ "$rel" = "LICENSE" ] || [ "$rel" = "NOTICE" ] || [ "$FORCE" = "true" ] || [ ! -f "$dest" ]; then
+ if [ "$rel" = "LICENSE" ] || [ "$rel" = "NOTICE" ] || { [ "$FORCE" = "true" ] && [[ "$rel" != .cursor/* ]]; } || [ ! -f "$dest" ]; then
  cp "$src" "$dest"
  ((copied++)) || true
  else
@@ -338,8 +347,8 @@ fi
 
 # Version tracking
 VERSION_FILE=".frontier/version.json"
-echo "{ \"version\": \"9.6.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 9.6.0 recorded"
+echo "{ \"version\": \"9.8.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 9.8.0 recorded"
 
 # Merge Frontier entries into user's .gitignore
 MARKER_START="# --- Frontier (auto-generated, do not edit this block) ---"
@@ -567,7 +576,7 @@ COMPANION_EXTS="ms-azuretools.vscode-azure-mcp-server"
 COMPANION_NAMES="Azure MCP Extension"
 if ! detect_azure_workspace; then
  skip "Azure companion skipped (no Azure signals detected)"
- echo -e "${D} Re-run with --azure or AGENTX_AZURE=true to install Azure Skills support.${N}"
+ echo -e "${D} Re-run with --azure or FRONTIER_AZURE=true to install Azure Skills support.${N}"
 elif command -v code &>/dev/null; then
  INSTALLED_EXTS=$(code --list-extensions 2>/dev/null || true)
  if echo "$INSTALLED_EXTS" | grep -qF "$COMPANION_EXTS"; then
@@ -586,10 +595,24 @@ else
  echo -e "${D}  code --install-extension $COMPANION_EXTS${N}"
 fi
 
+if [ "$CURSOR_SETUP" = "true" ]; then
+ pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor setup --restore-mcp
+else
+ echo 'Cursor users: run pwsh -File .frontier/runtime/frontier.ps1 cursor setup --restore-mcp to enable MCP and native hooks.'
+fi
+pwsh -NoProfile -File "$TMP/scripts/install-manifest.ps1" -Action install \
+ -SourceManifest "$TMP/.frontier/runtime/install-manifest.json"
+if [ "$GRAPH_PARSERS" = true ]; then
+ pwsh -NoProfile -File .frontier/runtime/frontier.ps1 context-parsers restore
+fi
+if ! pwsh -NoProfile -File .frontier/runtime/frontier.ps1 context --start-refresh; then
+ echo 'Repository discovery did not start; run frontier context --sync to diagnose.'
+fi
+
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} Frontier v9.6.0 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} Frontier v9.8.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.frontier/runtime/frontier.sh help"

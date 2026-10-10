@@ -17,11 +17,12 @@ function Assert-True($condition, $message) {
 }
 
 function Invoke-ScrubJson {
-    param([string]$Path, [switch]$Production, [switch]$Fix)
+    param([string]$Path, [switch]$Production, [switch]$Fix, [switch]$Advisory)
 
     $args = @('-NoProfile', '-File', (Join-Path $script:root 'scripts/scrub.ps1'), '-Path', $Path, '-Json')
     if ($Production) { $args += '-Production' }
     if ($Fix) { $args += @('-Fix', '-Quiet') }
+    if ($Advisory) { $args += '-Advisory' }
 
     # Capture stdout and stderr separately. Findings/JSON is a stdout-only
     # contract; scan warnings and explicit-failure messages go to stderr and
@@ -42,13 +43,14 @@ function Invoke-ScrubJson {
 }
 
 function Invoke-FrontierScrubJson {
-    param([string]$Command, [string]$Path, [switch]$Production)
+    param([string]$Command, [string]$Path, [switch]$Production, [switch]$Advisory)
 
-    $args = @('-NoProfile', '-File', (Join-Path $script:root '.frontier/runtime/frontier.ps1'), $Command, '-Path', $Path, '-Json')
-    if ($Production) { $args += '-Production' }
+    $pwshArgs = @('-NoProfile', '-File', (Join-Path $script:root '.frontier/runtime/frontier.ps1'), $Command, '-Path', $Path, '-Json')
+    if ($Production) { $pwshArgs += '-Production' }
+    if ($Advisory) { $pwshArgs += '-Advisory' }
     $stderrFile = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-scrub-stderr-" + [guid]::NewGuid().ToString('N') + '.txt')
     try {
-        $stdout = & pwsh @args 2>$stderrFile
+        $stdout = & pwsh @pwshArgs 2>$stderrFile
         $exitCode = $LASTEXITCODE
         $stderrText = if (Test-Path -LiteralPath $stderrFile) { Get-Content -LiteralPath $stderrFile -Raw -ErrorAction SilentlyContinue } else { '' }
     } finally {
@@ -84,6 +86,25 @@ export function activeValue(enabled: boolean): number {
     Assert-True ($deadCodeResult.exitCode -eq 1) 'Dead-code findings fail the scrub gate as HIGH severity'
     Assert-True ($deadCodeFindings.Count -eq 4) 'Commented-out code block reports each removable line'
     Assert-True (($deadCodeFindings | Where-Object { $_.severity -ne 'HIGH' -or -not $_.safeFix }).Count -eq 0) 'Dead-code findings are HIGH safe-fix findings'
+
+    $beforeAdvisory = (Get-FileHash -LiteralPath $deadCodeFile).Hash
+    $advisoryResult = Invoke-ScrubJson -Path $deadCodeFile -Advisory
+    Assert-True ($advisoryResult.exitCode -eq 0) 'Advisory findings do not block local completion'
+    Assert-True ($advisoryResult.findings.Count -eq 4) 'Advisory mode retains all findings'
+    Assert-True (@($advisoryResult.findings | Where-Object {
+        $_.severity -ne 'LOW' -or $_.originalSeverity -ne 'HIGH' -or -not $_.advisory
+    }).Count -eq 0) 'Advisory findings are LOW with original tool severity preserved'
+    Assert-True (@($advisoryResult.findings | Where-Object { -not $_.productionBlocker }).Count -eq 0) 'Advisory mode does not erase strict-gate metadata'
+    Assert-True ((Get-FileHash -LiteralPath $deadCodeFile).Hash -eq $beforeAdvisory) 'Advisory scan never changes source bytes'
+    $advisoryFix = Invoke-ScrubJson -Path $deadCodeFile -Advisory -Fix
+    Assert-True ($advisoryFix.exitCode -eq 2 -and $advisoryFix.stderr -match 'cannot be combined') 'Advisory mode rejects a fix request before any write'
+    $advisoryProduction = Invoke-ScrubJson -Path $deadCodeFile -Advisory -Production
+    Assert-True ($advisoryProduction.exitCode -eq 2) 'Advisory mode cannot silently weaken an explicit production gate'
+    Assert-True ((Get-FileHash -LiteralPath $deadCodeFile).Hash -eq $beforeAdvisory) 'Rejected advisory combinations preserve source bytes'
+    $advisoryMissing = Invoke-ScrubJson -Path (Join-Path $tempRoot 'missing.ts') -Advisory
+    Assert-True ($advisoryMissing.exitCode -eq 2) 'Advisory mode still fails on an invalid scan target'
+    $advisoryFacade = Invoke-FrontierScrubJson -Command 'scrub' -Path $deadCodeFile -Advisory
+    Assert-True ($advisoryFacade.exitCode -eq 0 -and $advisoryFacade.findings.Count -eq 4) 'Frontier CLI forwards advisory mode'
 
     $fixFile = Join-Path $tempRoot 'dead-code-fix.ts'
     Copy-Item -LiteralPath $deadCodeFile -Destination $fixFile

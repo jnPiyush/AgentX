@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "Frontier - Hypervelocity Engineering",
   "description": "Frontier Corp deploys a fleet of specialized AI Forward Deployed Engineers that plan, build, review, test, and operate software through governed, evidence-backed workflows.",
-  "version": "9.6.0",
+  "version": "9.8.0",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -20,6 +20,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jnPiyush/AgentX"
+  },
+  "vsce": {
+    "baseContentUrl": "https://github.com/jnPiyush/AgentX/blob/master/vscode-extension",
+    "baseImagesUrl": "https://github.com/jnPiyush/AgentX/raw/master/vscode-extension"
   },
   "bugs": {
     "url": "https://github.com/jnPiyush/AgentX/issues"
@@ -55,10 +59,16 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "frontier.workspace",
+        "label": "Frontier workspace"
+      }
+    ],
     "commands": [
       {
         "command": "frontier.initializeLocalRuntime",
-        "title": "Initialize Local Runtime",
+        "title": "Initialize Repository Support",
         "category": "Frontier",
         "icon": "$(plug)"
       },
@@ -67,6 +77,12 @@
         "title": "Initialize CLI",
         "category": "Frontier",
         "icon": "$(terminal)"
+      },
+      {
+        "command": "frontier.initializeCursor",
+        "title": "Initialize Cursor",
+        "category": "Frontier",
+        "icon": "$(plug)"
       },
       {
         "command": "frontier.addRemoteAdapter",
@@ -115,6 +131,12 @@
         "title": "Generate Weekly Digest",
         "category": "Frontier",
         "icon": "$(notebook)"
+      },
+      {
+        "command": "frontier.refreshRepositoryContext",
+        "title": "Refresh Repository Context",
+        "category": "Frontier",
+        "icon": "$(type-hierarchy)"
       },
       {
         "command": "frontier.refresh",
@@ -447,6 +469,9 @@
           "command": "frontier.generateDigest"
         },
         {
+          "command": "frontier.refreshRepositoryContext"
+        },
+        {
           "command": "frontier.showWorkflowNextStep"
         },
         {
@@ -568,82 +593,108 @@
     ],
     "chatAgents": [
       {
-        "path": "./.github/frontier/agents/agile-coach.agent.md"
+        "path": "./.github/frontier/agents/agile-coach.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/architect.agent.md"
+        "path": "./.github/frontier/agents/architect.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/consulting-research.agent.md"
+        "path": "./.github/frontier/agents/consulting-research.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/data-scientist.agent.md"
+        "path": "./.github/frontier/agents/data-scientist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/devops.agent.md"
+        "path": "./.github/frontier/agents/devops.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/engineer.agent.md"
+        "path": "./.github/frontier/agents/engineer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/fabric-engineer.agent.md"
+        "path": "./.github/frontier/agents/fabric-engineer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/frontier.agent.md"
+        "path": "./.github/frontier/agents/frontier.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/ado-ops.agent.md"
+        "path": "./.github/frontier/agents/internal/ado-ops.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/ado-prd-to-wit.agent.md"
+        "path": "./.github/frontier/agents/internal/ado-prd-to-wit.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/architecture-reviewer.agent.md"
+        "path": "./.github/frontier/agents/internal/architecture-reviewer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/diagram-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/diagram-specialist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/eval-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/eval-specialist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/functional-reviewer.agent.md"
+        "path": "./.github/frontier/agents/internal/functional-reviewer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/github-ops.agent.md"
+        "path": "./.github/frontier/agents/internal/github-ops.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/ops-monitor.agent.md"
+        "path": "./.github/frontier/agents/internal/ops-monitor.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/prompt-engineer.agent.md"
+        "path": "./.github/frontier/agents/internal/prompt-engineer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/prototype-auditor.agent.md"
+        "path": "./.github/frontier/agents/internal/prototype-auditor.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/internal/rag-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/rag-specialist.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/power-platform-builder.agent.md"
+        "path": "./.github/frontier/agents/power-platform-builder.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/powerbi-analyst.agent.md"
+        "path": "./.github/frontier/agents/powerbi-analyst.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/product-manager.agent.md"
+        "path": "./.github/frontier/agents/product-manager.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/reviewer-auto.agent.md"
+        "path": "./.github/frontier/agents/reviewer-auto.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/reviewer.agent.md"
+        "path": "./.github/frontier/agents/reviewer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/tester.agent.md"
+        "path": "./.github/frontier/agents/tester.agent.md",
+        "when": "config.frontier.useBundledAgents"
       },
       {
-        "path": "./.github/frontier/agents/ux-designer.agent.md"
+        "path": "./.github/frontier/agents/ux-designer.agent.md",
+        "when": "config.frontier.useBundledAgents"
       }
     ],
     "chatInstructions": [
@@ -750,6 +801,9 @@
       },
       {
         "path": "./.github/frontier/prompts/evaluation.prompt.md"
+      },
+      {
+        "path": "./.github/frontier/prompts/guided-interaction.prompt.md"
       },
       {
         "path": "./.github/frontier/prompts/prd-gen.prompt.md"
@@ -1198,14 +1252,27 @@
         "frontier.rootPath": {
           "type": "string",
           "default": "",
-          "description": "Explicit path to the Frontier project root (folder containing AGENTS.md and .frontier/). Leave empty for auto-detection. Useful when Frontier is initialized in a subfolder or non-first workspace folder."
+          "description": "Explicit source root within an open workspace folder. Leave empty to use the active editor's folder, or choose a folder for an ambiguous multi-root operation. No initialization marker is required."
         },
         "frontier.searchDepth": {
           "type": "number",
           "default": 2,
           "minimum": 0,
           "maximum": 5,
-          "description": "How many subfolder levels to search when auto-detecting the Frontier root. Set to 0 to only check workspace folder roots."
+          "description": "Legacy recursive root-search setting.",
+          "deprecationMessage": "Frontier no longer selects nested repositories by marker discovery. Use frontier.rootPath or select the active workspace folder."
+        },
+        "frontier.automaticWorkspaceState": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Provision isolated private state on the first explicit Frontier operation in a trusted filesystem workspace. Disable to require repository setup."
+        },
+        "frontier.repositoryContext.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Allow local repository context indexing on task/context demand. Opening a folder does not start indexing. A disabled repository policy remains authoritative."
         },
         "frontier.skipStartupCheck": {
           "type": "boolean",
@@ -1225,10 +1292,30 @@
           "default": [],
           "description": "List of companion extension IDs for which the install prompt has been permanently dismissed."
         },
+        "frontier.useBundledAgents": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Expose the extension's bundled agents in the agent picker. Disable for a workspace that provides its own Frontier agents in .github/agents to avoid duplicate roles. Skills, instructions, prompts, commands, and sidebars remain available. Reload the window or start a new agent session after changing the source."
+        },
+        "frontier.initializationMode": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "minimal"
+          ],
+          "enumDescriptions": [
+            "Create runtime state, terminal launchers, starter memories, and empty output directories.",
+            "Create only runtime configuration, state, and terminal launchers. Do not seed memories or output directories. Requires seedRepoLocalAssets to be false."
+          ],
+          "default": "standard",
+          "scope": "resource",
+          "description": "Optional repository footprint for Initialize Repository Support. Ordinary extension use stores state privately. Both explicit setup modes add terminal launchers; minimal mode never removes existing files."
+        },
         "frontier.seedRepoLocalAssets": {
           "type": "boolean",
           "default": false,
-          "description": "When Initialize Local Runtime runs, also copy bundled agents, skills, instructions, prompts, templates, and schemas into the workspace .github/ folder. Required only for non-VS-Code surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery. VS Code chat, commands, and the Frontier runtime resolve these assets from the extension bundle and do not need this seed. Default: false (zero-copy)."
+          "description": "When standard Initialize Repository Support runs, also copy bundled agents, skills, instructions, prompts, templates, schemas and supporting files into the workspace. Only needed for workspace-based discovery outside VS Code. Frontier terminal commands do not need it. Must remain false with minimal initialization."
         },
         "frontier.cliAssetMode": {
           "type": "string",
@@ -1237,7 +1324,7 @@
             "symlink"
           ],
           "default": "copy",
-          "description": "Default mode used by 'Frontier: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' creates directory junctions/symlinks pointing at the installed extension bundle (zero-copy, single-user; .gitignore'd; auto-refreshed when the bundle moves on extension upgrade)."
+          "description": "Default mode used by 'Frontier: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' points at the installed bundle (single-user, ignored by Git); broken owned links prompt for explicit repair after an upgrade."
         }
       }
     }
@@ -1245,6 +1332,7 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\"",
     "sync:version": "node ../scripts/stamp-version.js",
+    "postinstall": "npm ci --prefix ../.frontier/runtime/repository-parser --ignore-scripts --no-audit --no-fund",
     "copy:assets": "node scripts/copy-assets.js",
     "prepare:chat": "node scripts/prepare-chat-contributions.js",
     "vscode:prepublish": "npm run sync:version && npm run prepare:chat && npm run clean && tsc -p ./",
@@ -1277,10 +1365,15 @@
   "overrides": {
     "diff": "8.0.3",
     "serialize-javascript": "^7.0.3",
-    "undici": "7.29.0",
-    "flatted": "3.4.2"
+    "undici": "7.29.1",
+    "flatted": "3.4.2",
+    "hono": "4.13.7",
+    "qs": "6.16.0",
+    "fast-uri": "3.1.8",
+    "ip-address": "10.7.2"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
     "yaml": "^2.8.2"
   }
 }

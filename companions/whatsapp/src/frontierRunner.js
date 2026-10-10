@@ -1,6 +1,7 @@
 const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { StringDecoder } = require('string_decoder');
 
 const FAILURE_PATTERN = /(^|\n)\s*\[FAIL\]|(^|\n)\s*ERROR:/i;
 const CHILD_ENV_KEYS = [
@@ -9,17 +10,40 @@ const CHILD_ENV_KEYS = [
   'PROCESSOR_ARCHITECTURE', 'PROGRAMDATA', 'PROGRAMFILES', 'PSMODULEPATH',
   'SYSTEMDRIVE', 'SYSTEMROOT', 'TEMP', 'TMP', 'USERPROFILE', 'WINDIR',
 ];
+const LLM_ENV_KEYS = new Set([
+  'GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_PAT', 'COPILOT_GITHUB_TOKEN',
+  'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'FRONTIER_LLM_PROVIDER',
+  'FRONTIER_OPENAI_API_KEY', 'FRONTIER_OPENAI_BASE_URL', 'FRONTIER_OPENAI_MODEL',
+  'FRONTIER_ANTHROPIC_API_KEY', 'FRONTIER_ANTHROPIC_BASE_URL', 'FRONTIER_ANTHROPIC_MODEL',
+]);
 
-function resolvePwsh() {
-  return process.env.AGENTX_PWSH || 'pwsh';
+function validateRuntimeEnv(names = []) {
+  if (!Array.isArray(names) || names.some(name => typeof name !== 'string' || !LLM_ENV_KEYS.has(name))) {
+    throw new Error('runtimeEnv may contain only supported LLM credential/provider variable names.');
+  }
+  return [...new Set(names)];
 }
 
-function childEnvironment() {
+function containsCliPath(root, target) {
+  const key = value => process.platform === 'win32'
+    ? path.resolve(value).replace(/[A-Z]/g, letter => letter.toLowerCase()) : path.resolve(value);
+  const parent = key(root);
+  const child = key(target);
+  return child !== parent && child.startsWith(parent.endsWith(path.sep) ? parent : parent + path.sep);
+}
+
+function resolvePwsh() {
+  return process.env.FRONTIER_PWSH || 'pwsh';
+}
+
+function childEnvironment(names = [], source = process.env) {
   const env = {};
-  for (const key of CHILD_ENV_KEYS) {
-    if (process.env[key] !== undefined) env[key] = process.env[key];
+  for (const key of [...CHILD_ENV_KEYS, ...validateRuntimeEnv(names)]) {
+    if (source[key] !== undefined) env[key] = source[key];
   }
-  env.AGENTX_NONINTERACTIVE = '1';
+  env.FRONTIER_NONINTERACTIVE = '1';
+  env.FRONTIER_NONINTERACTIVE_HUMAN = '1';
+  env.NO_COLOR = '1';
   return env;
 }
 
@@ -79,20 +103,33 @@ function terminateProcessTree(child, hooks = {}) {
 function runFrontierProcess(args, config, hooks = {}) {
   return new Promise((resolve) => {
     if (hooks.signal?.aborted) return resolve({ ok: false, text: 'Runner is shutting down.' });
-    const cli = path.resolve(config.repoPath, config.cliRelativePath);
-    if (!cli.startsWith(`${path.resolve(config.repoPath)}${path.sep}`) || !fs.existsSync(cli)) {
-      return resolve({ ok: false, text: `CLI not found inside repoPath: ${cli}` });
+    let cli;
+    let root;
+    try {
+      root = fs.realpathSync(config.repoPath);
+      cli = fs.realpathSync(path.resolve(root, config.cliRelativePath));
+      if (!containsCliPath(root, cli) || !fs.statSync(cli).isFile()) {
+        throw new Error('CLI must resolve to a file inside repoPath.');
+      }
+    } catch (error) {
+      return resolve({ ok: false, text: `CLI not found inside repoPath: ${error.message}`, exitCode: -1, stdout: '', stderr: '' });
     }
-
-    const child = (hooks.spawn || spawn)(resolvePwsh(), ['-NoProfile', '-NonInteractive', '-File', cli, ...args], {
-      cwd: config.repoPath,
-      env: childEnvironment(),
-      windowsHide: true,
-      detached: process.platform !== 'win32',
-    });
+    const structured = args[0] === 'run' && args.includes('--json');
+    const outputLimit = structured ? (config.maxRuntimeOutputChars ?? config.maxOutputChars) : config.maxOutputChars;
+    let child;
+    try {
+      child = (hooks.spawn || spawn)(resolvePwsh(), ['-NoProfile', '-NonInteractive', '-File', cli, ...args], {
+        cwd: root, env: { ...childEnvironment(config.runtimeEnv), FRONTIER_WORKSPACE_ROOT: root },
+        windowsHide: true, detached: process.platform !== 'win32',
+      });
+    } catch (error) {
+      return resolve({ ok: false, text: `Spawn error: ${error.message}`, exitCode: -1, stdout: '', stderr: '' });
+    }
     hooks.onChild && hooks.onChild(child);
 
     let output = '';
+    const streams = { stdout: '', stderr: '' };
+    const decoders = { stdout: new StringDecoder('utf8'), stderr: new StringDecoder('utf8') };
     let failure = '';
     let terminationError = '';
     let settled = false;
@@ -108,7 +145,7 @@ function runFrontierProcess(args, config, hooks = {}) {
       hooks.signal?.removeEventListener('abort', cancel);
       resolve(result);
     };
-    const failureResult = () => ({ ok: false, text: `${failure}\n${terminationError}\n${output.trim()}`.trim() });
+    const failureResult = () => ({ ok: false, ...streams, text: `${failure}\n${terminationError}\n${output.trim()}`.trim() });
     const finishStopped = () => {
       if (childClosed && treeTerminated) {
         hooks.onChildDone?.(child);
@@ -135,15 +172,19 @@ function runFrontierProcess(args, config, hooks = {}) {
       }
     };
     const cancel = () => terminate('Runner is shutting down.');
-    const capture = (chunk, prefix = '') => {
+    const capture = (chunk, stream, decoded = false) => {
       if (failure || settled) return;
-      const next = `${prefix}${chunk.toString()}`;
-      const remaining = config.maxOutputChars - output.length;
+      const text = decoded || typeof chunk === 'string' ? chunk : decoders[stream].write(chunk);
+      const prefix = stream === 'stderr' ? (output ? '\n[stderr]\n' : '[stderr]\n') : '';
+      const next = `${prefix}${text}`;
+      const remaining = outputLimit - output.length;
       if (next.length > remaining) {
         output += next.slice(0, Math.max(0, remaining));
-        terminate(`[FAIL] Output exceeded ${config.maxOutputChars} characters.`);
+        streams[stream] += text.slice(0, Math.max(0, remaining - prefix.length));
+        terminate(`[FAIL] Output exceeded ${outputLimit} characters.`);
       } else {
         output += next;
+        streams[stream] += text;
       }
     };
 
@@ -151,17 +192,26 @@ function runFrontierProcess(args, config, hooks = {}) {
       terminate(`Timed out after ${config.commandTimeoutMs / 1000}s.`);
     }, config.commandTimeoutMs);
 
-    child.stdout.on('data', (chunk) => capture(chunk));
-    child.stderr.on('data', (chunk) => capture(chunk, output ? '\n[stderr]\n' : '[stderr]\n'));
+    child.stdout.on('data', (chunk) => capture(chunk, 'stdout'));
+    child.stderr.on('data', (chunk) => capture(chunk, 'stderr'));
     child.on('close', (code) => {
       childClosed = true;
+      for (const stream of ['stdout', 'stderr']) {
+        const tail = decoders[stream].end();
+        if (tail) capture(tail, stream, true);
+      }
       if (failure) { finishStopped(); return; }
       hooks.onChildDone?.(child);
       const text = output.trim();
       const semanticFailure = FAILURE_PATTERN.test(`\n${text}`);
-      finish({ ok: code === 0 && !semanticFailure, text: text || `(exit ${code})`, exitCode: code });
+      finish({ ok: code === 0 && !semanticFailure, ...streams, text: text || `(exit ${code})`, exitCode: code });
     });
-    child.on('error', (error) => terminate(`Spawn error: ${error.message}`));
+    child.on('error', (error) => {
+      if (!Number.isInteger(child.pid) || child.pid <= 0) {
+        hooks.onChildDone?.(child);
+        finish({ ok: false, ...streams, exitCode: -1, text: `Spawn error: ${error.message}` });
+      } else { terminate(`Spawn error: ${error.message}`); }
+    });
     hooks.signal?.addEventListener('abort', cancel, { once: true });
     if (hooks.signal?.aborted) cancel();
   });
@@ -210,4 +260,4 @@ async function runFrontier(args, config) {
   try { return await runner.run(args); } finally { await runner.stop(); }
 }
 
-module.exports = { childEnvironment, createFrontierRunner, runFrontier, runFrontierProcess, terminateProcessTree };
+module.exports = { childEnvironment, validateRuntimeEnv, containsCliPath, createFrontierRunner, runFrontier, runFrontierProcess, terminateProcessTree };

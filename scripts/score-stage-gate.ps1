@@ -386,8 +386,6 @@ function Get-ArtifactChecks($Definition, $File, [string]$FullPath) {
 
 $rootCandidate = if ($WorkspaceRoot) { $WorkspaceRoot }
 elseif ($env:FRONTIER_WORKSPACE_ROOT) { $env:FRONTIER_WORKSPACE_ROOT }
-elseif ($env:HVE_WORKSPACE_ROOT) { $env:HVE_WORKSPACE_ROOT }
-elseif ($env:AGENTX_WORKSPACE_ROOT) { $env:AGENTX_WORKSPACE_ROOT }
 else { Join-Path $PSScriptRoot '..' }
 if (-not (Test-Path -LiteralPath $rootCandidate -PathType Container)) { Stop-Invalid "Workspace root not found: $rootCandidate" }
 $root = (Resolve-Path -LiteralPath $rootCandidate).Path

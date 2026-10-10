@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { createHash } from 'crypto';
 import * as http from 'http';
 import * as https from 'https';
 import * as path from 'path';
@@ -6,6 +7,8 @@ import * as vscode from 'vscode';
 import { resolveWindowsShell } from '../utils/shell';
 import { resolveAndValidate } from '../utils/ssrfValidator';
 import type { SsrfResolvedAddress } from '../utils/ssrfValidatorTypes';
+import { parseConfigurationJson } from '../utils/configurationJson';
+import { workspacePathKey } from '../utils/workspaceProfiles';
 
 export const BRANCH = 'master';
 export const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
@@ -110,6 +113,10 @@ export const COPILOT_CLI_ASSET_FILES: Array<{ source: string; destination: strin
   { source: path.join(SEED_ROOT, 'AGENTS.md'), destination: 'AGENTS.md' },
   { source: path.join(SEED_ROOT, 'Skills.md'), destination: 'Skills.md' },
   { source: path.join(SEED_ROOT, '.token-limits.json'), destination: '.token-limits.json' },
+  {
+    source: path.join(SEED_ROOT, '.frontier', 'runtime', 'workspace-state.ps1'),
+    destination: path.join('.frontier', 'runtime', 'workspace-state.ps1'),
+  },
 ];
 
 const WORKSPACE_WRAPPER_FILES = [
@@ -138,7 +145,9 @@ export const RUNTIME_DIRS = [
   'memories/session',
 ];
 
-export async function promptWorkspaceRoot(title: string): Promise<string | undefined> {
+export async function promptWorkspaceFolder(
+  title: string,
+): Promise<vscode.WorkspaceFolder | undefined> {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) {
     vscode.window.showErrorMessage('Frontier: Open a workspace folder first.');
@@ -146,7 +155,7 @@ export async function promptWorkspaceRoot(title: string): Promise<string | undef
   }
 
   if (folders.length === 1) {
-    return folders[0].uri.fsPath;
+    return folders[0];
   }
 
   const pick = await vscode.window.showQuickPick(
@@ -154,7 +163,11 @@ export async function promptWorkspaceRoot(title: string): Promise<string | undef
     { placeHolder: 'Select workspace folder', title },
   );
 
-  return pick?.folder.uri.fsPath;
+  return pick?.folder;
+}
+
+export async function promptWorkspaceRoot(title: string): Promise<string | undefined> {
+  return (await promptWorkspaceFolder(title))?.uri.fsPath;
 }
 
 export function readJsonWithComments<T>(filePath: string): T | undefined {
@@ -163,52 +176,7 @@ export function readJsonWithComments<T>(filePath: string): T | undefined {
   }
 
   try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    try {
-      return JSON.parse(raw) as T;
-    } catch {
-      let stripped = '';
-      let inStr = false;
-      let esc = false;
-      for (let index = 0; index < raw.length; index++) {
-        const char = raw[index];
-        if (esc) {
-          stripped += char;
-          esc = false;
-          continue;
-        }
-        if (inStr) {
-          if (char === '\\') {
-            esc = true;
-          } else if (char === '"') {
-            inStr = false;
-          }
-          stripped += char;
-          continue;
-        }
-        if (char === '"') {
-          inStr = true;
-          stripped += char;
-          continue;
-        }
-        if (char === '/' && raw[index + 1] === '/') {
-          while (index < raw.length && raw[index] !== '\n') {
-            index++;
-          }
-          continue;
-        }
-        if (char === '/' && raw[index + 1] === '*') {
-          index += 2;
-          while (index < raw.length && !(raw[index] === '*' && raw[index + 1] === '/')) {
-            index++;
-          }
-          index++;
-          continue;
-        }
-        stripped += char;
-      }
-      return JSON.parse(stripped) as T;
-    }
+    return parseConfigurationJson(fs.readFileSync(filePath, 'utf-8')) as T;
   } catch {
     return undefined;
   }
@@ -329,6 +297,35 @@ export function writeCliAssetState(workspaceRoot: string, state: CliAssetState):
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf-8');
 }
 
+export function findBrokenCopilotCliLinks(
+  workspaceRoot: string,
+  installation?: { readonly extensionRoot: string; readonly extensionId: string },
+): string[] {
+  const state = readCliAssetState(workspaceRoot);
+  if (state?.mode !== 'symlink' || typeof state.extensionRoot !== 'string') { return []; }
+  const broken: string[] = [];
+  for (const asset of COPILOT_CLI_ASSET_DIRS) {
+    const destination = path.join(workspaceRoot, asset.destination);
+    const entry = fs.lstatSync(destination, { throwIfNoEntry: false });
+    if (!entry?.isSymbolicLink()) { continue; }
+    const target = path.resolve(path.dirname(destination), fs.readlinkSync(destination));
+    const recordedTarget = workspacePathKey(target) === workspacePathKey(path.join(state.extensionRoot, asset.source));
+    let targetInstall = target;
+    for (const _segment of asset.source.split(/[\\/]/).filter(Boolean)) { targetInstall = path.dirname(targetInstall); }
+    const siblingInstall = installation && installation.extensionId
+      && workspacePathKey(path.dirname(targetInstall)) === workspacePathKey(path.dirname(installation.extensionRoot))
+      && path.basename(targetInstall).toLowerCase().startsWith(`${installation.extensionId.toLowerCase()}-`)
+      && workspacePathKey(target) === workspacePathKey(path.join(targetInstall, asset.source));
+    if (!recordedTarget && !siblingInstall) { continue; }
+    try { fs.statSync(destination); }
+    catch (error) {
+      if (!['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? '')) { throw error; }
+      broken.push(asset.destination);
+    }
+  }
+  return broken;
+}
+
 function symlinkType(): 'junction' | 'dir' {
   return process.platform === 'win32' ? 'junction' : 'dir';
 }
@@ -423,11 +420,13 @@ export function createCopilotCliSymlinks(
 export function refreshCopilotCliSymlinks(
   extensionRoot: string,
   workspaceRoot: string,
+  destinations?: readonly string[],
 ): { refreshed: string[]; stillValid: string[]; skipped: string[] } {
   const refreshed: string[] = [];  const stillValid: string[] = [];
   const skipped: string[] = [];
 
   for (const asset of COPILOT_CLI_ASSET_DIRS) {
+    if (destinations && !destinations.includes(asset.destination)) { continue; }
     const linkPath = path.join(workspaceRoot, asset.destination);
     if (!isSymlink(linkPath)) {
       if (fs.existsSync(linkPath)) {
@@ -457,14 +456,20 @@ export function refreshCopilotCliSymlinks(
   }
 
   // Support trees are copied, not linked, so they can go stale after an
-  // extension upgrade. Refresh is deliberately NON-destructive: this runs on
-  // every activation, and these destinations (docs/, scripts/, evaluation/,
+  // extension upgrade. Explicit refresh is deliberately NON-destructive:
+  // these destinations (docs/, scripts/, evaluation/,
   // AGENTS.md, Skills.md) are shared namespaces the user also authors in.
   // Overwriting here would silently destroy user content on every window open,
   // which is the exact failure this change set exists to eliminate. Missing
   // files are added; existing files are always preserved. Staleness of already
   // present files is tracked as TD-018.
-  copyCopilotCliSupportAssets(extensionRoot, workspaceRoot, false);
+  if (!destinations) { copyCopilotCliSupportAssets(extensionRoot, workspaceRoot, false); }
+  if (destinations && refreshed.length && !skipped.length) {
+    const state = readCliAssetState(workspaceRoot);
+    if (state?.mode === 'symlink') {
+      writeCliAssetState(workspaceRoot, { ...state, extensionRoot, updatedAt: new Date().toISOString() });
+    }
+  }
 
   return { refreshed, stillValid, skipped };
 }
@@ -516,9 +521,24 @@ function quoteShellLiteral(value: string): string {
   return value.replace(/'/g, `'"'"'`);
 }
 
-function renderPowerShellWrapper(entryFile: string, extensionRoot: string): string {
+function renderPowerShellWrapper(
+  entryFile: string,
+  extensionRoot: string,
+  cursorBinding = false,
+): string {
   const runtimeRelativePath = quotePowerShellLiteral(path.join('.github', 'frontier', '.frontier', 'runtime', entryFile));
   const preferredExtensionRoot = quotePowerShellLiteral(extensionRoot);
+  const cursorCheck = (variable: string): string => cursorBinding
+    ? ` -and (Test-Path -LiteralPath (Join-Path ${variable} '.github/frontier/.frontier/runtime/cursor.js') -PathType Leaf)`
+    : '';
+  const preferredLookup = [
+    `  $preferredExtensionRoot = '${preferredExtensionRoot}'`,
+    `  $preferredRuntimeEntry = Join-Path $preferredExtensionRoot '${runtimeRelativePath}'`,
+    `  if ((Test-Path -LiteralPath $preferredRuntimeEntry -PathType Leaf)${cursorCheck('$preferredExtensionRoot')}) {`,
+    '    return (Resolve-Path $preferredExtensionRoot).Path',
+    '  }',
+    '',
+  ];
 
   return [
     '#!/usr/bin/env pwsh',
@@ -526,17 +546,25 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path",
     '',
     'function Resolve-FrontierExtensionRoot {',
-    '  $extensionRootOverride = if ($env:FRONTIER_EXTENSION_ROOT) { $env:FRONTIER_EXTENSION_ROOT } elseif ($env:HVE_EXTENSION_ROOT) { $env:HVE_EXTENSION_ROOT } else { $env:AGENTX_EXTENSION_ROOT }',
+    '  $extensionRootOverride = $env:FRONTIER_EXTENSION_ROOT',
     '  if ($extensionRootOverride) {',
     `    $runtimeEntry = Join-Path $extensionRootOverride '${runtimeRelativePath}'`,
-    '    if (Test-Path -LiteralPath $runtimeEntry -PathType Leaf) {',
+    `    if ((Test-Path -LiteralPath $runtimeEntry -PathType Leaf)${cursorCheck('$extensionRootOverride')}) {`,
     '      return (Resolve-Path $extensionRootOverride).Path',
     '    }',
+    ...(cursorBinding ? ["    throw 'The explicit Frontier runtime override does not support Cursor.'"] : []),
     '  }',
     '',
+    ...(cursorBinding ? preferredLookup : []),
     '  $searchRoots = @(',
-    "    (Join-Path $HOME '.vscode\\extensions'),",
-    "    (Join-Path $HOME '.vscode-insiders\\extensions')",
+    ...(cursorBinding ? [
+      `    (Split-Path -Parent '${preferredExtensionRoot}'),`,
+      "    (Join-Path $HOME '.cursor/extensions'),",
+      "    (Join-Path $HOME '.cursor-server/extensions')",
+    ] : [
+      "    (Join-Path $HOME '.vscode\\extensions'),",
+      "    (Join-Path $HOME '.vscode-insiders\\extensions')",
+    ]),
     '  )',
     '',
     '  $matches = @(',
@@ -555,23 +583,17 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     '',
     '  foreach ($match in $matches) {',
     `    $runtimeEntry = Join-Path $match.Path '${runtimeRelativePath}'`,
-    '    if (Test-Path -LiteralPath $runtimeEntry -PathType Leaf) {',
+    `    if ((Test-Path -LiteralPath $runtimeEntry -PathType Leaf)${cursorCheck('$match.Path')}) {`,
     '      return $match.Path',
     '    }',
     '  }',
     '',
-    `  $preferredExtensionRoot = '${preferredExtensionRoot}'`,
-    `  $preferredRuntimeEntry = Join-Path $preferredExtensionRoot '${runtimeRelativePath}'`,
-    '  if (Test-Path -LiteralPath $preferredRuntimeEntry -PathType Leaf) {',
-    '    return (Resolve-Path $preferredExtensionRoot).Path',
-    '  }',
-    '',
+    ...(!cursorBinding ? preferredLookup : []),
     "  throw 'Frontier extension runtime not found. Reinstall the Frontier extension or set FRONTIER_EXTENSION_ROOT.'",
     '}',
     '',
     '$extensionRoot = Resolve-FrontierExtensionRoot',
     '$env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot',
-    '$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot',
     `& (Join-Path $extensionRoot '${runtimeRelativePath}') @args`,
     '$succeeded = $?',
     '$exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }',
@@ -585,9 +607,27 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
   ].join('\n');
 }
 
-function renderBashWrapper(entryFile: string, extensionRoot: string): string {
+function renderBashWrapper(
+  entryFile: string,
+  extensionRoot: string,
+  cursorBinding = false,
+): string {
   const runtimeRelativePath = quoteShellLiteral(toPosixPath(path.join('.github', 'frontier', '.frontier', 'runtime', entryFile)));
   const preferredExtensionRoot = quoteShellLiteral(toPosixPath(extensionRoot));
+  const cursorCheck = (variable: string): string => cursorBinding
+    ? ` && -f "\${${variable}}/.github/frontier/.frontier/runtime/cursor.js"`
+    : '';
+  const preferredLookup = [
+    `  candidate='${preferredExtensionRoot}'`,
+    `  if [[ -f "\${candidate}/\${runtime_relative}"${cursorCheck('candidate')} ]]; then`,
+    "    printf '%s\\n' \"$candidate\"",
+    '    return 0',
+    '  fi',
+    '',
+  ];
+  const searchRoots = cursorBinding
+    ? `'${quoteShellLiteral(toPosixPath(path.dirname(extensionRoot)))}' "$HOME/.cursor/extensions" "$HOME/.cursor-server/extensions"`
+    : '"$HOME/.vscode/extensions" "$HOME/.vscode-insiders/extensions"';
 
   return [
     '#!/usr/bin/env bash',
@@ -598,17 +638,24 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     '',
     'resolve_frontier_extension_root() {',
     '  local candidate=""',
-    '  local extension_root_override="${FRONTIER_EXTENSION_ROOT:-${HVE_EXTENSION_ROOT:-${AGENTX_EXTENSION_ROOT:-}}}"',
+    '  local extension_root_override="${FRONTIER_EXTENSION_ROOT:-}"',
     '',
-    '  if [[ -n "$extension_root_override" && -f "${extension_root_override}/${runtime_relative}" ]]; then',
+    `  if [[ -n "$extension_root_override" && -f "\${extension_root_override}/\${runtime_relative}"${cursorCheck('extension_root_override')} ]]; then`,
     "    printf '%s\n' \"$extension_root_override\"",
     '    return 0',
     '  fi',
     '',
+    ...(cursorBinding ? [
+      '  if [[ -n "$extension_root_override" ]]; then',
+      "    echo 'The explicit Frontier runtime override does not support Cursor.' >&2",
+      '    return 1',
+      '  fi',
+      ...preferredLookup,
+    ] : []),
     '  local match=""',
     '  while IFS=$\'\\t\' read -r _ match; do',
     '    [[ -n "$match" ]] || continue',
-    '    if [[ -f "${match}/${runtime_relative}" ]]; then',
+    `    if [[ -f "\${match}/\${runtime_relative}"${cursorCheck('match')} ]]; then`,
     "      printf '%s\\n' \"$match\"",
     '      return 0',
     '    fi',
@@ -616,7 +663,7 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     '    local search_root=""',
     '    local version=""',
     '    local version_key=""',
-    '    for search_root in "$HOME/.vscode/extensions" "$HOME/.vscode-insiders/extensions"; do',
+    `    for search_root in ${searchRoots}; do`,
     '      [[ -d "$search_root" ]] || continue',
     '      while IFS= read -r match; do',
     '        version="${match##*/jnpiyush.agentx-}"',
@@ -628,34 +675,59 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     "    done | sort -t $'\\t' -k1,1r",
     '  )',
     '',
-    `  candidate='${preferredExtensionRoot}'`,
-    '  if [[ -f "${candidate}/${runtime_relative}" ]]; then',
-    "    printf '%s\\n' \"$candidate\"",
-    '    return 0',
-    '  fi',
-    '',
+    ...(!cursorBinding ? preferredLookup : []),
     "  echo 'Frontier extension runtime not found. Reinstall the Frontier extension or set FRONTIER_EXTENSION_ROOT.' >&2",
     '  return 1',
     '}',
     '',
     'extension_root="$(resolve_frontier_extension_root)"',
     'export FRONTIER_WORKSPACE_ROOT="$workspace_root"',
-    'export AGENTX_WORKSPACE_ROOT="$workspace_root"',
     'exec "${extension_root}/${runtime_relative}" "$@"',
     '',
   ].join('\n');
 }
 
-export function writeWorkspaceRuntimeWrappers(extensionRoot: string, workspaceRoot: string): void {
+export function writeWorkspaceRuntimeWrappers(
+  extensionRoot: string,
+  workspaceRoot: string,
+  cursorBinding = false,
+): void {
   for (const wrapper of WORKSPACE_WRAPPER_FILES) {
     const targetPath = path.join(workspaceRoot, wrapper.relativePath);
     const content = wrapper.shell === 'pwsh'
-      ? renderPowerShellWrapper(wrapper.entryFile, extensionRoot)
-      : renderBashWrapper(wrapper.entryFile, extensionRoot);
+      ? renderPowerShellWrapper(wrapper.entryFile, extensionRoot, cursorBinding)
+      : renderBashWrapper(wrapper.entryFile, extensionRoot, cursorBinding);
 
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, content, 'utf-8');
   }
+  const hookPath = path.join(workspaceRoot, '.frontier', 'runtime', 'policy-hook.js');
+  const body = [
+    "'use strict';",
+    "const fs = require('node:fs');",
+    "const path = require('node:path');",
+    `const preferred = ${JSON.stringify(extensionRoot)};`,
+    "const relative = '.github/frontier/.frontier/runtime/policy-hook.js';",
+    "const home = require('node:os').homedir();",
+    "const roots = [path.dirname(preferred), ...['.vscode', '.vscode-insiders', '.cursor', '.cursor-server'].map(name => path.join(home, name, 'extensions'))];",
+    "const candidates = roots.flatMap(root => fs.existsSync(root) ? fs.readdirSync(root).filter(name => /^jnpiyush\\.agentx-\\d+\\.\\d+\\.\\d+$/.test(name)).map(name => path.join(root, name)) : []);",
+    "candidates.sort((left, right) => path.basename(right).localeCompare(path.basename(left), 'en', { numeric: true }));",
+    "const selected = process.env.FRONTIER_EXTENSION_ROOT || [...candidates, preferred].find(root => fs.existsSync(path.join(root, relative)));",
+    "if (!selected || !path.isAbsolute(selected)) throw Error('Frontier runtime unavailable; reinstall Frontier or initialize repository support.');",
+    "module.exports = require(path.join(selected, relative));",
+    '',
+  ].join('\n');
+  const marker = '// Frontier managed hook ';
+  if (fs.existsSync(hookPath)) {
+    const current = fs.readFileSync(hookPath, 'utf8').replace(/\r\n/g, '\n');
+    const newline = current.indexOf('\n');
+    const recorded = current.slice(marker.length, newline);
+    if (!current.startsWith(marker) || newline < 0
+      || createHash('sha256').update(current.slice(newline + 1)).digest('hex') !== recorded) {
+      return;
+    }
+  }
+  fs.writeFileSync(hookPath, `${marker}${createHash('sha256').update(body).digest('hex')}\n${body}`, 'utf8');
 }
 
 export async function downloadFile(url: string, dest: string, timeoutMs = 60_000): Promise<void> {

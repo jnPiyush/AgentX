@@ -151,7 +151,6 @@ function Register-FrontierMcpServer {
     if (-not $existing.PSObject.Properties['mcpServers']) {
       $existing | Add-Member -NotePropertyName mcpServers -NotePropertyValue ([pscustomobject]@{})
     }
-    $existing.mcpServers.PSObject.Properties.Remove('agentx')
     $existing.mcpServers | Add-Member -NotePropertyName 'frontier' -NotePropertyValue ([pscustomobject]$entry) -Force
     $json = $existing | ConvertTo-Json -Depth 8
   } else {
@@ -216,7 +215,7 @@ foreach ($legalFile in @('LICENSE', 'NOTICE')) {
 # Version stamp
 $stamp = [ordered]@{
   plugin      = 'frontier-copilot-cli-user'
-  version     = '9.6.0'
+  version     = '9.8.0'
   installedAt = (Get-Date).ToUniversalTime().ToString('o')
   source      = $Source
   mcpRegistered = [bool]$RegisterMcp

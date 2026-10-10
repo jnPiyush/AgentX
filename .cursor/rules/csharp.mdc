@@ -7,7 +7,8 @@ alwaysApply: false
 # C# / .NET (Frontier)
 
 Canonical: `.github/instructions/csharp.instructions.md` and
-`.github/skills/languages/csharp/SKILL.md` -- read for full standards.
+`.github/skills/languages/csharp/SKILL.md` -- read through
+`pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor read <canonical-path>`.
 
 - Nullable reference types enabled; async/await end to end (no `.Result`).
 - Dependency injection; EF Core with parameterized queries only.

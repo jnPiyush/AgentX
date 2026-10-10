@@ -2,25 +2,25 @@
 name: Frontier ADO Ops FDE
 description: 'ADO Backlog Manager -- orchestrates Azure DevOps backlog management workflows including triage, discovery, sprint planning, execution, PRD planning, and pull requests.'
 visibility: internal
-model: Claude Sonnet 5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: false
 disable-model-invocation: false
 hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
-      timeout: 10
+        node -e "try{require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()}catch(e){console.error(e);process.exitCode=2;try{let b=Buffer.alloc(65537),n=require('fs').readSync(0,b);if(/^(read_file|file_search|grep_search|list_dir|get_errors)$/.test(JSON.parse(b.subarray(0,n)).tool_name))process.exitCode=0}catch{}}"
+      timeout: 15
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
 reasoning:
   mode: adaptive
   level: low
@@ -63,7 +63,7 @@ tools:
   - web
   - agent
 agents:
-  - Frontier Orchestration FDE
+  - Frontier E2E SDLC
   - Frontier ADO Planning FDE
 ---
 
@@ -260,7 +260,7 @@ When creating Epic, Feature, User Story, Requirement, Issue, or Scrum Product Ba
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

@@ -1,0 +1,22 @@
+---
+title: Frontier architecture flow
+config:
+  theme: neutral
+  fontFamily: Arial, sans-serif
+  flowchart:
+    htmlLabels: false
+    rankSpacing: 24
+    padding: 12
+---
+%% Owner: ../../README.md#architecture-flow; updated 2026-09-28.
+%% Mermaid is the maintained source; PNG is the portable README export.
+%% Render with Mermaid CLI 11.12.0 from this directory:
+%% mmdc -i architecture-flow.mmd -o architecture-flow.png -b white -s 2
+flowchart TB
+    accTitle: Frontier architecture flow
+    accDescr: Solid arrows show execution flow; dashed arrows show surfaced outputs.
+    Chat["Copilot Chat"] --> Context["Frontier Context"] --> Engine["Execution Engine"]
+    Engine --> View["Sidebar and Live State"]
+    Engine --> File["Repo-Defined Assets"]
+    View -.->|"Queues and Workflows"| UI["VS Code UI"]
+    File -.->|"Skills and Templates"| Workspace["Local Files"]

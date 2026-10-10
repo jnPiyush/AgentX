@@ -66,7 +66,7 @@ export interface PluginManifest {
   readonly tags?: readonly string[];
   readonly maturity?: PluginMaturity;
   readonly engines?: {
-    readonly agentx?: string;
+    readonly frontier?: string;
   };
   readonly permissions?: PluginPermissions;
   readonly distribution?: PluginDistribution;
@@ -79,7 +79,7 @@ export interface PluginCatalogSummary {
   readonly label: string;
   readonly description: string;
   readonly version?: string;
-  readonly agentxRange?: string;
+  readonly frontierRange?: string;
 }
 
 export interface PluginRegistryRelease {
@@ -89,7 +89,7 @@ export interface PluginRegistryRelease {
   readonly checksum?: string;
   readonly publishedAt?: string;
   readonly engines?: {
-    readonly agentx?: string;
+    readonly frontier?: string;
   };
 }
 
@@ -384,14 +384,20 @@ function parseDistribution(record: JsonRecord): PluginDistribution | undefined {
   };
 }
 
-function parseEngines(record: JsonRecord): { readonly agentx?: string } | undefined {
+function parseEngines(record: JsonRecord): { readonly frontier?: string } | undefined {
   const enginesRecord = asRecord(record.engines);
   if (!enginesRecord) {
     return undefined;
   }
 
-  const agentx = readNonEmptyString(enginesRecord, 'agentx');
-  return agentx ? { agentx } : undefined;
+  if ('agentx' in enginesRecord || 'hve' in enginesRecord) {
+    throw new Error('AgentX/HVE plugin engine keys are unsupported. Use engines.frontier.');
+  }
+  const frontier = readNonEmptyString(enginesRecord, 'frontier');
+  if ('frontier' in enginesRecord && !frontier) {
+    throw new Error('engines.frontier must be a non-empty version range.');
+  }
+  return frontier ? { frontier } : undefined;
 }
 
 function parseRegistryRelease(value: unknown): PluginRegistryRelease | undefined {
@@ -474,12 +480,13 @@ export function readPluginManifestFromDir(pluginDir: string): PluginManifest | u
     return undefined;
   }
 
+  let raw: unknown;
   try {
-    const raw = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as unknown;
-    return parsePluginManifest(raw);
+    raw = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
   } catch {
     return undefined;
   }
+  return parsePluginManifest(raw);
 }
 
 export function summarizePluginManifest(
@@ -499,7 +506,7 @@ export function summarizePluginManifest(
     label,
     description,
     version: manifest?.version,
-    agentxRange: manifest?.engines?.agentx,
+    frontierRange: manifest?.engines?.frontier,
   };
 }
 
@@ -546,7 +553,11 @@ export function parsePluginRegistryIndex(raw: unknown): PluginRegistryIndex | un
     const releases: PluginRegistryRelease[] = [];
     if (Array.isArray(entryRecord.releases)) {
       for (const release of entryRecord.releases) {
-        const parsedRelease = parseRegistryRelease(release);
+        let parsedRelease: PluginRegistryRelease | undefined;
+        try { parsedRelease = parseRegistryRelease(release); } catch (error) {
+          console.warn(`Frontier skipped an unsupported release of ${publisher}.${pluginId}:`, error);
+          continue;
+        }
         if (parsedRelease) {
           releases.push(parsedRelease);
         }
@@ -588,5 +599,5 @@ export function getLatestCompatibleRelease(
 ): PluginRegistryRelease | undefined {
   return [...entry.releases]
     .sort((left, right) => compareNormalizedSemver(right.version, left.version))
-    .find((release) => isFrontierVersionSupported(release.engines?.agentx, hostVersion));
+    .find((release) => isFrontierVersionSupported(release.engines?.frontier, hostVersion));
 }

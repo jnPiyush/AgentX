@@ -1,7 +1,7 @@
 ---
 name: 'Doc Gardener'
 description: 'Automated documentation freshness checker. Verifies counts, cross-references, and consistency.'
-agent: 'Frontier Orchestration FDE'
+agent: 'Frontier E2E SDLC'
 ---
 
 # Doc Gardener

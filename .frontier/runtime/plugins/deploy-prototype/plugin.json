@@ -50,7 +50,7 @@
   "tags": ["deploy", "prototype", "hosting", "vercel", "netlify", "cloudflare", "github-pages", "surge"],
   "maturity": "preview",
   "engines": {
-    "agentx": "^8.4.0"
+    "frontier": ">=8.4.0 <10.0.0"
   },
   "permissions": {
     "filesystem": "read",

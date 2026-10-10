@@ -1,6 +1,6 @@
 ---
 name: "AI Agent Builder"
-agent: "Frontier Engineering FDE"
+agent: "Frontier Engineer"
 description: "Scaffold and build an AI agent application using Microsoft Agent Framework and AI Toolkit."
 inputs:
  issue_number:

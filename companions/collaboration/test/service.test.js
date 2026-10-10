@@ -56,7 +56,7 @@ test('isolates confirmations and jobs by sender and conversation', async () => {
     } finally { await current.cleanup(); }
 });
 
-test('queues follow-up instructions after the active turn', async () => {
+test('follow-up instructions are new jobs only after the prior turn is terminal', async () => {
     let release;
     const gate = new Promise(resolve => { release = resolve; });
     const calls = [];
@@ -65,11 +65,14 @@ test('queues follow-up instructions after the active turn', async () => {
         current.confirm(current.message('run engineer Original task'));
         await new Promise(resolve => setImmediate(resolve));
         const parent = calls[0];
-        current.confirm(current.message(`instruct ${parent.id} Keep compatibility`));
+        assert.throws(() => current.message(`instruct ${parent.id} Keep compatibility`), /still active/);
         assert.equal(calls.length, 1);
         release();
         await current.service.idle();
+        current.confirm(current.message(`instruct ${parent.id} Keep compatibility`));
+        await current.service.idle();
         assert.equal(calls.length, 2);
+        assert.notEqual(calls[1].id, parent.id);
         assert.equal(calls[1].parentId, parent.id);
         assert.match(calls[1].instruction, /Original task[\s\S]+Keep compatibility/);
     } finally { release(); await current.cleanup(); }

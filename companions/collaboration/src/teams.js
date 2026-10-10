@@ -28,6 +28,30 @@ export function isAllowedActivity(activity, config) {
         && allowedServiceUrl(activity.serviceUrl);
 }
 
+async function sendText(context, text) {
+    if (typeof text !== 'string' || Buffer.byteLength(JSON.stringify(text), 'utf8') > 256000) {
+        throw new Error('Teams reply exceeds the bounded message size.');
+    }
+    const chunks = [];
+    let chunk = '';
+    let bytes = 0;
+    for (const character of text) {
+        const size = Buffer.byteLength(JSON.stringify(character), 'utf8') - 2;
+        if (bytes + size > 11000) {
+            chunks.push(chunk);
+            chunk = '';
+            bytes = 0;
+        }
+        chunk += character;
+        bytes += size;
+    }
+    chunks.push(chunk);
+    for (const [index, part] of chunks.entries()) {
+        const heading = chunks.length > 1 ? `Part ${index + 1}/${chunks.length}\n` : '';
+        await context.sendActivity({ type: 'message', textFormat: 'plain', text: heading + part });
+    }
+}
+
 export function createTeams(config, service, injectedAdapter) {
     const auth = {
         clientId: config.clientId, tenantId: config.tenantId, clientSecret: config.clientSecret,
@@ -58,7 +82,7 @@ export function createTeams(config, service, injectedAdapter) {
         } catch {
             reply = 'Command rejected. Send help; confirm the agent, job ID and service capacity.';
         }
-        await context.sendActivity(reply);
+        await sendText(context, reply);
     };
     return {
         authorize, turn,
@@ -70,7 +94,7 @@ export function createTeams(config, service, injectedAdapter) {
             if (!allowedServiceUrl(destination.reference?.serviceUrl)
                 || !config.conversations.includes(destination.reference?.conversation?.id)) throw new Error('Forbidden destination');
             await adapter.continueConversation(config.clientId, destination.reference, async context => {
-                await context.sendActivity(text);
+                await sendText(context, text);
             });
         },
     };

@@ -5,6 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $cliPath = Join-Path $repoRoot '.frontier/runtime/frontier-cli.ps1'
+. (Join-Path $repoRoot '.frontier/runtime/workspace-state.ps1')
 $script:passed = 0
 $script:failed = 0
 $script:skipped = 0
@@ -19,7 +20,7 @@ function Write-Skip([string]$Name) {
     Write-Host "[SKIP] $Name"
 }
 
-function Invoke-PolicyHook([string]$WorkspaceRoot, [string]$InputJson) {
+function Invoke-PolicyHook([string]$WorkspaceRoot, [string]$InputJson, [string]$StateRoot = '') {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
     $startInfo.WorkingDirectory = $WorkspaceRoot
@@ -32,6 +33,14 @@ function Invoke-PolicyHook([string]$WorkspaceRoot, [string]$InputJson) {
     $startInfo.ArgumentList.Add($cliPath)
     $startInfo.ArgumentList.Add('policy-hook')
     $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $WorkspaceRoot
+    foreach ($name in @('FRONTIER_STATE_ROOT', 'FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY')) {
+        [void]$startInfo.Environment.Remove($name)
+    }
+    if ($StateRoot) {
+        $startInfo.Environment['FRONTIER_STATE_ROOT'] = $StateRoot
+        $startInfo.Environment['FRONTIER_STATE_WORKSPACE'] = $WorkspaceRoot
+        $startInfo.Environment['FRONTIER_STATE_AUTHORITY'] = ''
+    }
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $process.StandardInput.Write($InputJson)
     $process.StandardInput.Close()
@@ -59,14 +68,28 @@ try {
         @{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = 'src/app.ts' } } |
             ConvertTo-Json -Compress | Set-Content -LiteralPath $hookInputFile -NoNewline -Encoding ascii
         Push-Location $workspace
+        $previousHookRuntime = $env:FRONTIER_HOOK_RUNTIME
+        $previousHookProfiles = $env:FRONTIER_HOOK_PROFILES
         try {
+            $env:FRONTIER_HOOK_RUNTIME = $null
+            $env:FRONTIER_HOOK_PROFILES = $null
             if ($IsWindows) {
                 cmd /d /c "type `"$hookInputFile`" | $($inlineHook.Groups[1].Value.Trim())" *> $null
             } else {
                 sh -c "cat '$hookInputFile' | $($inlineHook.Groups[1].Value.Trim())" *> $null
             }
-            Assert-True ($LASTEXITCODE -eq 0) 'Shipped inline hook degrades without blocking an uninitialized workspace'
+            Assert-True ($LASTEXITCODE -eq 2) 'Shipped inline mutation hook fails explicitly when no runtime binding exists'
+            @{ hook_event_name = 'PreToolUse'; tool_name = 'read_file'; tool_input = @{ filePath = 'README.md' } } |
+                ConvertTo-Json -Compress | Set-Content -LiteralPath $hookInputFile -NoNewline -Encoding ascii
+            if ($IsWindows) {
+                cmd /d /c "type `"$hookInputFile`" | $($inlineHook.Groups[1].Value.Trim())" *> $null
+            } else {
+                sh -c "cat '$hookInputFile' | $($inlineHook.Groups[1].Value.Trim())" *> $null
+            }
+            Assert-True ($LASTEXITCODE -eq 0) 'Missing hook module preserves bounded diagnostic reads'
         } finally {
+            $env:FRONTIER_HOOK_RUNTIME = $previousHookRuntime
+            $env:FRONTIER_HOOK_PROFILES = $previousHookProfiles
             Pop-Location
         }
     }
@@ -85,6 +108,28 @@ try {
     Write-LoopState $workspace $true 'active'
     $activeEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = 'src/app.ts' } } | ConvertTo-Json -Compress)
     Assert-True ($activeEdit.ExitCode -eq 0) 'Active quality loop permits file edits'
+    $privateRoot = "$workspace-private"
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $privateRoot 'state') -Force | Out-Null
+        [ordered]@{ schemaVersion=1; mode='private'; identity=(Get-FrontierWorkspaceIdentity $workspace);
+            authority=''; workspaceRoot=$workspace; stateRoot=$privateRoot } |
+            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $privateRoot 'workspace-binding.json') -Encoding utf8
+        '{}' | Set-Content -LiteralPath (Join-Path $privateRoot 'config.json') -Encoding utf8
+        [IO.File]::WriteAllText((Join-Path $privateRoot 'operation.lock'), '')
+        Copy-Item -LiteralPath (Join-Path $workspace '.frontier/state/loop-state.json') -Destination (Join-Path $privateRoot 'state/loop-state.json')
+        foreach ($relative in @('state/loop-state.json', 'state/tests-baseline.json', 'state/code-quality-baseline.json', 'sessions/session.json', 'workspace-binding.json')) {
+            $privateEdit = Invoke-PolicyHook $workspace (@{ hook_event_name='PreToolUse'; tool_name='apply_patch';
+                tool_input=@{ filePath=(Join-Path $privateRoot $relative) } } | ConvertTo-Json -Compress) $privateRoot
+            Assert-True ($privateEdit.ExitCode -eq 2) "Private gate-bearing state remains protected: $relative"
+            Assert-True ($privateEdit.Output -match 'gate-bearing loop state') "Private fixture reaches policy validation: $relative"
+        }
+        $privateAllowed = Invoke-PolicyHook $workspace (@{ hook_event_name='PreToolUse'; tool_name='apply_patch';
+            tool_input=@{ filePath=(Join-Path $privateRoot 'notes.md') } } | ConvertTo-Json -Compress) $privateRoot
+        Assert-True ($privateAllowed.ExitCode -eq 0) 'Private fixture permits non-protected edits during an active loop'
+        $repositoryProtected = Invoke-PolicyHook $workspace (@{ hook_event_name='PreToolUse'; tool_name='apply_patch';
+            tool_input=@{ filePath='.frontier/state/loop-state.json' } } | ConvertTo-Json -Compress) $privateRoot
+        Assert-True ($repositoryProtected.ExitCode -eq 2) 'Private mode retains protection of repository gate state'
+    } finally { Remove-Item -LiteralPath $privateRoot -Recurse -Force -ErrorAction SilentlyContinue }
     foreach ($protectedPath in @('.frontier/state/loop-state.json', '.frontier/state/tests-baseline.json', '.frontier/state/code-quality-baseline.json')) {
         $protectedEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = $protectedPath } } | ConvertTo-Json -Compress)
         Assert-True ($protectedEdit.ExitCode -eq 2) "Active loop blocks direct protected-state edit: $protectedPath"

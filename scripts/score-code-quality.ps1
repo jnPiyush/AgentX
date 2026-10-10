@@ -17,14 +17,17 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
 
 $root = if ($WorkspaceRoot) {
     (Resolve-Path -LiteralPath $WorkspaceRoot -ErrorAction Stop).Path
+} elseif ($env:FRONTIER_WORKSPACE_ROOT) {
+    (Resolve-Path -LiteralPath $env:FRONTIER_WORKSPACE_ROOT -ErrorAction Stop).Path
 } else {
     (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
 if (-not $BaselinePath) {
-    $BaselinePath = Join-Path $root '.frontier/state/code-quality-baseline.json'
+    $BaselinePath = Join-FrontierStatePath $root @('state', 'code-quality-baseline.json')
 }
 
 $rubricVersion = '2.0.0'
@@ -43,7 +46,7 @@ $dimensions = @(
 $implementationExtensions = @(
     '.c', '.cpp', '.cs', '.go', '.h', '.java', '.js', '.jsx', '.kt', '.m',
     '.ps1', '.psm1', '.py', '.rb', '.rs', '.sh', '.sql', '.swift', '.tf',
-    '.ts', '.tsx', '.bicep'
+    '.ts', '.tsx', '.mjs', '.cjs', '.mts', '.cts', '.bicep'
 )
 $maxReviewedAtClockSkew = [TimeSpan]::FromMinutes(5)
 $placeholderEvidenceValues = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)

@@ -11,7 +11,7 @@ $evaluatorPath = Join-Path $repoRoot 'scripts/score-code-quality.ps1'
 $script:passed = 0
 $script:failed = 0
 $workspace = Join-Path ([IO.Path]::GetTempPath()) ("frontier-loop-scope-{0}" -f [guid]::NewGuid().ToString('N'))
-# A CLI copy without scripts/ beside it, so the code-quality evaluator is missing.
+# An installed-runtime copy without scripts/score-code-quality.ps1, so the code-quality evaluator is missing.
 $installCopy = "$workspace-install"
 
 function Assert-True([bool]$Condition, [string]$Name) {
@@ -147,6 +147,12 @@ try {
         $invalid = Invoke-Loop @('iterate', '-s', 'Invalid count', '-e', (New-Evidence 'invalid.txt'), '--passing', $invalidValue)
         Assert-True ($invalid.ExitCode -ne 0 -and $invalid.Output -match 'requires --passing') "malformed count '$invalidValue' is rejected"
     }
+    $missingValue = Invoke-Loop @('iterate', '-s', 'Explicit count flag without a value', '-e', (New-Evidence 'empty-count.txt'), '--passing')
+    Assert-True ($missingValue.ExitCode -ne 0 -and $missingValue.Output -match 'requires a value after --passing') 'an explicitly empty count flag is rejected rather than treated as deferred metadata'
+    foreach ($firstValue in @('10', 'tool=5')) {
+        $trailingEmpty = Invoke-Loop @('iterate', '-s', 'Trailing repeated count flag without a value', '-e', (New-Evidence 'repeated-empty-count.txt'), '--passing', $firstValue, '--passing')
+        Assert-True ($trailingEmpty.ExitCode -ne 0 -and $trailingEmpty.Output -match 'requires --passing') "a trailing empty --passing is not discarded after '$firstValue'"
+    }
     $invalidBaseline = Invoke-Loop @('baseline', '-c', 'tool')
     Assert-True ($invalidBaseline.ExitCode -ne 0 -and [int](Read-State 'loop-state.json').iteration -eq 2) 'rejected counts and baselines exit non-zero without advancing the loop'
 
@@ -172,14 +178,80 @@ try {
     $lowComplete = Invoke-Loop @('complete', '-s', 'Attempt with a lower suite count', '-e', (New-Evidence 'final-2.txt'), '--passing', 'tool=3')
     Assert-True ($lowComplete.ExitCode -ne 0 -and $lowComplete.Output -match 'would regress passing tests for tool: current=3 last=4') 'loop complete rejects a lower suite count'
     New-Item -ItemType Directory -Path (Join-Path $installCopy '.frontier/runtime') -Force | Out-Null
-    Copy-Item -LiteralPath $cliPath -Destination (Join-Path $installCopy '.frontier/runtime/frontier-cli.ps1')
+    # Mirror an installed runtime that lacks only the evaluator; loop complete loads sibling modules first.
+    Get-ChildItem -LiteralPath (Split-Path $cliPath -Parent) -File | Copy-Item -Destination (Join-Path $installCopy '.frontier/runtime')
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts') -Destination (Join-Path $installCopy 'scripts') -Recurse
+    Remove-Item -LiteralPath (Join-Path $installCopy 'scripts/score-code-quality.ps1')
     $noEvaluator = Invoke-Process @('-File', (Join-Path $installCopy '.frontier/runtime/frontier-cli.ps1'), 'loop', 'complete', '-s', 'No evaluator', '-e', (New-Evidence 'final-x.txt'), '--passing', 'widget=3')
     Assert-True ($noEvaluator.ExitCode -ne 0 -and $noEvaluator.Output -match 'Code-quality evaluator is missing' -and $noEvaluator.Output -match 'Code-quality verification failed') 'loop complete reports a missing code-quality evaluator'
     $complete = Invoke-Loop @('complete', '-s', 'Loop scope fixture complete', '-e', (New-Evidence 'final-3.txt'), '--passing', 'widget=3')
     Assert-True ($complete.ExitCode -eq 0 -and $complete.Output -match 'Code-quality: passed\. Code-quality rubric passed at 100/100' -and $complete.Output.Length -lt 1500) 'loop complete prints a one-line code-quality result'
+    Assert-True ($complete.Output -match 'Would you like to run the test suite now\?' -and
+        (Get-Property (Read-State 'loop-state.json') 'postLoopTestPrompt') -eq 'Would you like to run the test suite now?') 'successful completion exposes an explicit post-loop test question without running suites'
 
+    $notRunStatus = Invoke-Loop @('status')
+    $historyCount = @((Read-State 'loop-state.json').history).Count
+    $badResult = Invoke-Loop @('verify', '--result', 'skipped')
+    $missingLog = Invoke-Loop @('verify', '--result', 'passed')
+    $staleLog = New-Evidence 'stale-suite.log'
+    [IO.File]::SetLastWriteTimeUtc($staleLog, [datetime]::UtcNow.AddDays(-1))
+    $staleVerification = Invoke-Loop @('verify', '--result', 'failed', '-e', $staleLog)
+    Assert-True ($notRunStatus.Output -match 'Post-loop verification: not run' -and $badResult.ExitCode -ne 0 -and $missingLog.ExitCode -ne 0 -and
+        $staleVerification.ExitCode -ne 0 -and $staleVerification.Output -match 'evidence artifact is older' -and
+        $null -eq (Get-Property (Read-State 'loop-state.json') 'verification')) 'loop verify rejects unknown results, missing logs and logs from before completion without recording a result'
+    $initialDecline = Invoke-Loop @('verify', '--result', 'declined')
+    $declinedState = Read-State 'loop-state.json'
+    Assert-True ($initialDecline.ExitCode -eq 0 -and
+        (Get-Property (Get-Property $declinedState 'verification') 'result') -eq 'declined' -and
+        @(Get-Property $declinedState 'verificationHistory').Count -eq 1) 'loop verify records an initial decline without implying a test result'
+    $verified = Invoke-Loop @('verify', '--result', 'passed', '-e', (New-Evidence 'suite.log'), '--command', 'pwsh tests/loop-scope-behavior.ps1')
+    $verifiedState = Read-State 'loop-state.json'
+    $verification = Get-Property $verifiedState 'verification'
+    $verifiedStatus = Invoke-Loop @('status')
+    Assert-True ($verified.ExitCode -eq 0 -and (Get-Property $verification 'result') -eq 'passed' -and
+        (Get-Property $verification 'evidenceSha256') -match '^[0-9A-F]{64}$' -and (Get-Property $verification 'command') -eq 'pwsh tests/loop-scope-behavior.ps1' -and
+        @($verifiedState.history).Count -eq $historyCount -and $verifiedStatus.Output -match 'Post-loop verification: passed') 'loop verify records a passed suite with its log hash outside loop history'
+    $failedVerification = Invoke-Loop @('verify', '--result', 'failed', '-e', (New-Evidence 'suite.log'))
+    $failedState = Read-State 'loop-state.json'
+    $failedRecord = Get-Property $failedState 'verification'
+    Assert-True ($failedVerification.ExitCode -eq 0 -and (Get-Property $failedRecord 'result') -eq 'failed' -and
+        (Get-Property $failedRecord 'evidence') -ne (Get-Property $verification 'evidence') -and
+        (Get-FileHash -LiteralPath $verification.evidence -Algorithm SHA256).Hash -eq $verification.evidenceSha256) 'a later verification keeps the earlier log intact even when the input log name is reused'
+    $declined = Invoke-Loop @('verify', '--result', 'declined')
+    $afterDecline = Read-State 'loop-state.json'
+    $verificationHistory = @(Get-Property $afterDecline 'verificationHistory')
+    $afterDeclineStatus = Invoke-Loop @('status')
+    Assert-True ($declined.ExitCode -eq 0 -and $declined.Output -match 'not a pass' -and
+        (Get-Property (Get-Property $afterDecline 'verification') 'result') -eq 'failed' -and
+        ($verificationHistory.result -join ',') -eq 'declined,passed,failed,declined' -and
+        @($afterDecline.history).Count -eq $historyCount -and
+        $afterDeclineStatus.Output -match 'Post-loop verification: failed' -and
+        $afterDeclineStatus.Output -match 'latest entry: declined') 'declining a rerun preserves the failed result and every verification record outside approval history'
+    $frozenClock = @'
+function Get-Date {
+    param([string]$Format)
+    $fixed = [datetime]::new(2026, 10, 6, 12, 0, 0, [DateTimeKind]::Utc)
+    if ($Format) { return $fixed.ToString($Format) }
+    return $fixed
+}
+'@
+    $frozenRecords = @()
+    foreach ($attempt in @(1, 2)) {
+        $reusedLog = New-Evidence 'collision-suite.log'
+        $sameTimestamp = Invoke-Process @('-Command', ($frozenClock + "`n& '$cliPath' loop verify --result failed -e '$reusedLog'"))
+        Assert-True ($sameTimestamp.ExitCode -eq 0) "verification attempt $attempt records with a fixed clock"
+        $frozenRecords += Get-Property (Read-State 'loop-state.json') 'verification'
+    }
+    Assert-True ($frozenRecords[0].evidence -ne $frozenRecords[1].evidence -and
+        (Get-FileHash -LiteralPath $frozenRecords[0].evidence -Algorithm SHA256).Hash -eq $frozenRecords[0].evidenceSha256 -and
+        (Get-FileHash -LiteralPath $frozenRecords[1].evidence -Algorithm SHA256).Hash -eq $frozenRecords[1].evidenceSha256) 'verification archives with identical timestamps and input names preserve both logs'
     $legacyStart = Invoke-Loop @('start', '-p', 'Loop scope integer fixture')
+    $activeVerification = Invoke-Loop @('verify', '--result', 'declined')
+    Assert-True ($activeVerification.ExitCode -ne 0 -and
+        $null -eq (Get-Property (Read-State 'loop-state.json') 'verificationHistory')) 'a new loop clears verification records and rejects verification before completion'
     $legacyBaseline = Invoke-Loop @('baseline', '-c', '10')
+    $legacyMissing = Invoke-Loop @('iterate', '-s', 'Tests deferred for post-loop consent', '-e', (New-Evidence 'l0.txt'))
+    Assert-True ($legacyMissing.ExitCode -eq 0 -and $null -eq (Get-Property (@((Read-State 'loop-state.json').history)[-1]) 'passingTests')) 'legacy integer baselines do not force tests or fabricate counts when metadata is omitted'
     $legacySuiteBaseline = Invoke-Loop @('baseline', '-c', 'widget=3')
     $legacySuite = Invoke-Loop @('iterate', '-s', 'Suite count only', '-e', (New-Evidence 'l1.txt'), '--passing', 'widget=3')
     $legacyLow = Invoke-Loop @('iterate', '-s', 'Integer below baseline', '-e', (New-Evidence 'l2.txt'), '--passing', '9')
@@ -187,6 +259,21 @@ try {
     Assert-True ($legacyStart.ExitCode -eq 0 -and $legacyBaseline.ExitCode -eq 0 -and $legacySuiteBaseline.ExitCode -ne 0 -and $legacySuiteBaseline.Output -match 'integer baseline') 'a suite baseline is refused while an integer baseline is recorded'
     Assert-True ($legacySuite.ExitCode -ne 0 -and $legacySuite.Output -match 'requires --passing <count>') 'an integer baseline still requires an integer count'
     Assert-True ($legacyLow.ExitCode -ne 0 -and $legacyLow.Output -match 'current=9 baseline=10' -and $legacyOk.ExitCode -eq 0) 'an integer baseline still rejects a lower count'
+    $legacyReview = Invoke-ApprovedReview (Write-Review 'legacy-review.json' 4) 'Independent review; suites deferred'
+    $legacyComplete = Invoke-Loop @('complete', '-s', 'Reviewed without running suites', '-e', (New-Evidence 'legacy-final.txt'))
+    Assert-True ($legacyReview.ExitCode -eq 0 -and $legacyComplete.ExitCode -eq 0 -and
+        $legacyComplete.Output -match 'Would you like to run the test suite now\?') 'legacy baseline permits reviewed completion without test counts and asks about separate testing'
+    $legacyVerification = Invoke-Loop @('verify', '--result', 'failed', '-e', (New-Evidence 'legacy-suite.log'))
+    $legacyState = Read-State 'loop-state.json'
+    $legacyState.PSObject.Properties.Remove('verificationHistory')
+    Write-WorkspaceFile '.frontier\state\loop-state.json' ($legacyState | ConvertTo-Json -Depth 20)
+    $legacyDecline = Invoke-Loop @('verify', '--result', 'declined')
+    $migratedState = Read-State 'loop-state.json'
+    $migratedHistory = @(Get-Property $migratedState 'verificationHistory')
+    Assert-True ($legacyVerification.ExitCode -eq 0 -and $legacyDecline.ExitCode -eq 0 -and
+        ($migratedHistory.result -join ',') -eq 'failed,declined' -and
+        $migratedHistory[0].evidenceSha256 -eq $legacyState.verification.evidenceSha256 -and
+        $migratedState.verification.result -eq 'failed') 'loop verify preserves a legacy singleton result when starting verification history'
 } finally {
     Remove-Item -LiteralPath $workspace, $installCopy -Recurse -Force -ErrorAction SilentlyContinue
 }

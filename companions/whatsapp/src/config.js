@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { validateRuntimeEnv, containsCliPath } = require('./frontierRunner');
+const { AGENT } = require('./guidedInteraction');
 
 const ALLOWED_EVENTS = new Set(['started', 'iteration', 'complete', 'status', 'init']);
 const ALLOWED_TOP_LEVEL = new Set([
@@ -8,6 +10,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   'confirmationTtlMs', 'capabilities', 'browser', 'whisperModel',
   'whisperLanguage', 'voiceAutoExecuteReadOnly', 'voiceMaxBytes',
   'voiceTimeoutMs', 'logMessageContent', 'notifications',
+  'runtimeEnv', 'maxRuntimeOutputChars',
 ]);
 const DEFAULT_CAPABILITIES = Object.freeze({
   ship: false,
@@ -79,6 +82,7 @@ function loadConfig({ env = process.env, configPath } = {}) {
   assertKnownKeys(fileConfig, ALLOWED_TOP_LEVEL, 'config');
 
   optionalArray(fileConfig.allowedNumbers, 'allowedNumbers');
+  optionalArray(fileConfig.runtimeEnv, 'runtimeEnv');
   optionalString(fileConfig.repoPath, 'repoPath');
   optionalString(fileConfig.cliRelativePath, 'cliRelativePath');
   optionalString(fileConfig.defaultAgent, 'defaultAgent');
@@ -87,7 +91,12 @@ function loadConfig({ env = process.env, configPath } = {}) {
   optionalBoolean(fileConfig.voiceAutoExecuteReadOnly, 'voiceAutoExecuteReadOnly');
   optionalBoolean(fileConfig.logMessageContent, 'logMessageContent');
 
-  const envAllowed = String(env.AGENTX_WA_ALLOWED || '').split(',').map((value) => value.trim()).filter(Boolean);
+  for (const name of ['FRONTIER_REPO', 'FRONTIER_WA_ALLOWED', 'FRONTIER_PWSH']) {
+    if (Object.hasOwn(env, name) && (typeof env[name] !== 'string' || !env[name].trim())) {
+      throw new Error(`${name} is present but empty.`);
+    }
+  }
+  const envAllowed = String(env.FRONTIER_WA_ALLOWED || '').split(',').map((value) => value.trim()).filter(Boolean);
   const allowedNumbers = unique((envAllowed.length ? envAllowed : fileConfig.allowedNumbers || [])
     .map((value) => normalizeNumber(value, 'allowedNumbers')));
   if (!allowedNumbers.length) throw new Error('At least one allowedNumbers entry is required.');
@@ -110,7 +119,7 @@ function loadConfig({ env = process.env, configPath } = {}) {
   optionalArray(notificationsConfig.targets, 'notifications.targets');
   optionalArray(notificationsConfig.events, 'notifications.events');
 
-  const repoPath = path.resolve(env.AGENTX_REPO || fileConfig.repoPath || path.resolve(root, '..', '..'));
+  const repoPath = path.resolve(env.FRONTIER_REPO || fileConfig.repoPath || path.resolve(root, '..', '..'));
   if (!fs.existsSync(repoPath) || !fs.statSync(repoPath).isDirectory()) {
     throw new Error(`repoPath does not exist or is not a directory: ${repoPath}`);
   }
@@ -123,6 +132,12 @@ function loadConfig({ env = process.env, configPath } = {}) {
   if (!cliPath.startsWith(`${repoPath}${path.sep}`) || !fs.existsSync(cliPath)) {
     throw new Error(`Frontier CLI not found inside repoPath: ${cliPath}`);
   }
+  const realRepo = fs.realpathSync(repoPath);
+  const realCli = fs.realpathSync(cliPath);
+  if (!containsCliPath(realRepo, realCli) || !fs.statSync(realCli).isFile()) {
+    throw new Error('Frontier CLI must resolve to a file inside repoPath; use a repository wrapper rather than an external symlink.');
+  }
+  if (!AGENT.test(fileConfig.defaultAgent || 'engineer')) throw new Error('defaultAgent must be a valid agent identifier.');
 
   const notificationTargets = unique((notificationsConfig.targets || allowedNumbers)
     .map((value) => normalizeNumber(value, 'notifications.targets')));
@@ -152,6 +167,8 @@ function loadConfig({ env = process.env, configPath } = {}) {
     defaultAgent: fileConfig.defaultAgent || 'engineer',
     commandTimeoutMs: positiveInteger(fileConfig.commandTimeoutMs, 600000, 'commandTimeoutMs', 3600000),
     maxOutputChars: positiveInteger(fileConfig.maxOutputChars, 6000, 'maxOutputChars', 50000),
+    maxRuntimeOutputChars: positiveInteger(fileConfig.maxRuntimeOutputChars, 256000, 'maxRuntimeOutputChars', 1048576),
+    runtimeEnv: validateRuntimeEnv(fileConfig.runtimeEnv),
     maxInputChars: positiveInteger(fileConfig.maxInputChars, 2000, 'maxInputChars', 10000),
     maxQueueDepth: positiveInteger(fileConfig.maxQueueDepth, 5, 'maxQueueDepth', 50),
     confirmationTtlMs: positiveInteger(fileConfig.confirmationTtlMs, 120000, 'confirmationTtlMs', 600000),

@@ -6,8 +6,8 @@ alwaysApply: false
 
 # TypeScript / Node (Frontier)
 
-Canonical: `.github/instructions/typescript.instructions.md` -- read for full
-standards.
+Read the canonical `.github/instructions/typescript.instructions.md` through
+`pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor read <canonical-path>`.
 
 - Strict mode; no `any`; ESM imports; Zod for runtime input validation.
 - Parameterized queries only; validate inputs at boundaries.

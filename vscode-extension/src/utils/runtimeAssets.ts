@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { resolveFrontierStateDirectory } from './frontierPaths';
 
 const WORKSPACE_PREFIXES = [
   '.github/agents/',
@@ -82,7 +81,7 @@ export function getRuntimeAssetPath(root: string | undefined, relativePath: stri
     return undefined;
   }
 
-  const absolutePath = toAbsolutePath(resolveFrontierStateDirectory(root), runtimeRelativePath);
+  const absolutePath = toAbsolutePath(path.join(root, '.frontier'), runtimeRelativePath);
   return fs.existsSync(absolutePath) ? absolutePath : undefined;
 }
 
@@ -153,7 +152,7 @@ export function collectAssetFiles(
     collectDirEntries(toAbsolutePath(extensionPath, bundledRelativeDir), predicate, files);
   }
   if (workspaceRoot && runtimeRelativeDir) {
-    collectDirEntries(toAbsolutePath(resolveFrontierStateDirectory(workspaceRoot), runtimeRelativeDir), predicate, files);
+    collectDirEntries(toAbsolutePath(path.join(workspaceRoot, '.frontier'), runtimeRelativeDir), predicate, files);
   }
   if (workspaceRoot) {
     collectDirEntries(toAbsolutePath(workspaceRoot, normalizedDir), predicate, files);
@@ -207,7 +206,7 @@ export function rewriteAssetReferences(
     const runtimeRelative = workspaceRoot && runtimeRelativePath
       ? path.relative(
         workspaceRoot,
-        toAbsolutePath(resolveFrontierStateDirectory(workspaceRoot), runtimeRelativePath),
+        toAbsolutePath(path.join(workspaceRoot, '.frontier'), runtimeRelativePath),
       ).replace(/\\/g, '/')
       : undefined;
     if (runtimeRelative) {

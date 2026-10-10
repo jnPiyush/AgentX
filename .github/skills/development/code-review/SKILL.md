@@ -11,7 +11,7 @@ metadata:
 ## When to Use
 
 Use this after code, config, infra, migration, or automation changes that can
-change shipped behavior. Review after the author has run the relevant checks.
+change shipped behavior. Review the author's source and non-test verification.
 For docs-only work verify claims, links and instruction behavior without
 inventing a code score. For exploit hunting, use the security-review specialist.
 
@@ -51,7 +51,8 @@ the repository rubric instead of style-only comments or model-brand prestige.
 1. Verify the issue, acceptance criteria, and approved design.
 2. Read the full relevant surface, not just a line quota: implementation, tests,
    config, migrations, scripts, and docs that define the behavior.
-3. Run the repository's native checks. Use
+3. Run relevant non-test checks only. Do not execute test or coverage suites,
+   including through pre-review scripts. Use
    [run-checklist.ps1](scripts/run-checklist.ps1) only when it matches the stack.
 4. Capture exact scope with `pwsh scripts/score-code-quality.ps1 -Mode Scope -Json`.
 5. Score the change against
@@ -77,12 +78,20 @@ the repository rubric instead of style-only comments or model-brand prestige.
   Python, TypeScript, PowerShell, or infra changes.
 - A single verified HIGH or MEDIUM issue blocks approval regardless of score.
 - Do not fabricate approval, score, reviewer strength, or timestamp freshness.
+- Cosmetic lint/style findings are LOW and non-blocking for local review.
+  Report them and the proposed scope to the owner for explicit cleanup consent;
+  do not auto-format, remove imports or demand cleanup as Done Criteria.
+  Verified functional/build/security defects retain their normal severity.
+- Do not run or delegate suites during review. Recommend a scope and leave the
+  explicit post-loop question to the owning agent under
+  `.github/AGENT-PROTOCOL.md` section 1.4. Review approval is not test
+  certification; unexecuted suites and unmeasured coverage stay explicit.
 
 ## Troubleshooting
 
 - Hash mismatch -> recapture scope and rerun the review.
-- Placeholder evidence such as `TODO` or `untested` -> replace with real test,
-  command, or code references.
+- Placeholder evidence such as `TODO` or bare `untested` -> provide concrete
+  code/non-test evidence and the deferred test scope, not invented test results.
 - Future timestamp -> fix the review record, not the clock story.
 - Too many comments about style only -> convert them to automation or drop them.
 

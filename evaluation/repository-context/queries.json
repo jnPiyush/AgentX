@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "baselineCommit": "28cdbcea",
+  "description": "Repository-context judgments authored before v2 ranking implementation. The extension-discovery case was later used for operational latency/evidence inspection and is explicitly classified as dev before any evaluation run. Remaining held-out cases must not be used to tune weights; no judgments or acceptance thresholds were changed.",
+  "budgets": [1000, 2000, 4000],
+  "hardFailures": ["over_budget", "blocked_evidence", "stale_labeled_live", "curation_lost"],
+  "queries": [
+    {
+      "id": "dev-context-engine",
+      "split": "dev",
+      "query": "Get-FrontierRepositoryContext",
+      "agent": "engineer",
+      "files": [".frontier/runtime/repository-context.ps1"],
+      "symbols": ["Get-FrontierRepositoryContext"]
+    },
+    {
+      "id": "dev-late-runner-symbol",
+      "split": "dev",
+      "query": "Get-ApproxTokenCount",
+      "agent": "engineer",
+      "files": [".frontier/runtime/agentic-runner.ps1"],
+      "symbols": ["Get-ApproxTokenCount"]
+    },
+    {
+      "id": "held-cli-run",
+      "split": "held-out",
+      "query": "Invoke-RunCmd",
+      "agent": "engineer",
+      "files": [".frontier/runtime/frontier-cli.ps1"],
+      "symbols": ["Invoke-RunCmd"]
+    },
+    {
+      "id": "held-cli-session-context",
+      "split": "held-out",
+      "query": "Get-RepositorySessionContext",
+      "agent": "engineer",
+      "files": [".frontier/runtime/frontier-cli.ps1"],
+      "symbols": ["Get-RepositorySessionContext"]
+    },
+    {
+      "id": "held-native-context",
+      "split": "held-out",
+      "query": "New-RunnerRepositoryContextMessage",
+      "agent": "engineer",
+      "files": [".frontier/runtime/agentic-runner.ps1"],
+      "symbols": ["New-RunnerRepositoryContextMessage"]
+    },
+    {
+      "id": "held-extension-discovery",
+      "split": "dev",
+      "query": "startRepositoryDiscovery",
+      "agent": "engineer",
+      "files": ["vscode-extension/src/commands/repositoryContext.ts"],
+      "symbols": ["startRepositoryDiscovery"]
+    },
+    {
+      "id": "held-hook-bridge",
+      "split": "held-out",
+      "query": "requestRepositoryContext",
+      "agent": "engineer",
+      "files": [".github/hooks/scripts/signal-capture.js"],
+      "symbols": ["requestRepositoryContext"]
+    },
+    {
+      "id": "held-native-budget",
+      "split": "held-out",
+      "query": "Get-RunnerTokenBudget",
+      "agent": "engineer",
+      "files": [".frontier/runtime/agentic-runner.ps1"],
+      "symbols": ["Get-RunnerTokenBudget"]
+    },
+    {
+      "id": "held-natural-language-repository-tool",
+      "split": "held-out",
+      "query": "retrieve bounded source pointers from the cached repository graph before broad searches",
+      "agent": "engineer",
+      "files": [".frontier/runtime/agentic-runner.ps1"],
+      "symbols": ["Get-ToolSchemaList"]
+    },
+    {
+      "id": "held-partial-repository-refresh",
+      "split": "held-out",
+      "query": "RunnerRepositoryContextRefresh",
+      "agent": "engineer",
+      "files": [".frontier/runtime/agentic-runner.ps1"],
+      "symbols": ["Start-RunnerRepositoryContextRefresh"]
+    },
+    {
+      "id": "held-hop-refresh-command-state-check",
+      "split": "held-out",
+      "query": "refresh repository context command",
+      "agent": "engineer",
+      "files": ["vscode-extension/src/commands/repositoryContext.ts", "vscode-extension/src/utils/frontierPaths.ts"],
+      "symbols": ["registerRepositoryContextCommand", "hasFrontierState"]
+    },
+    {
+      "id": "held-no-answer",
+      "split": "held-out",
+      "query": "FrontierUnimplementedQuantumFluxResolver",
+      "agent": "engineer",
+      "files": [],
+      "symbols": [],
+      "expectNoExactMatch": true
+    }
+  ]
+}

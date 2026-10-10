@@ -42,21 +42,29 @@ Assert-True ($help.Output -match 'run <agent> <prompt>') 'agentx help lists the 
 
 $workflow = Invoke-CliCapture -Arguments @('workflow', 'engineer')
 Assert-True ($workflow.ExitCode -eq 0) 'agentx workflow engineer exits successfully'
-Assert-True ($workflow.Output -match 'Frontier Review FDE') 'agentx workflow engineer reports the reviewer handoff'
+Assert-True ($workflow.Output -match 'Frontier Reviewer') 'agentx workflow engineer reports the reviewer handoff'
 
 $ghAuth = & gh auth status 2>&1 | Out-String
 $ghReady = ($LASTEXITCODE -eq 0)
 Assert-True $ghReady 'GitHub CLI authentication is available for live runner validation'
 
 if ($ghReady) {
-    $run = Invoke-CliCapture -Arguments @('run', 'engineer', 'Attempt to edit .github/skills/ai-systems/ai-agent-development/scripts/scaffold-agent.py by appending PASS.', '--max', '6')
+    $loopStatePath = Join-Path $script:repoRoot '.frontier\state\loop-state.json'
+    $loopStateBefore = if (Test-Path -LiteralPath $loopStatePath) { (Get-FileHash -LiteralPath $loopStatePath).Hash } else { '' }
+    $run = Invoke-CliCapture -Arguments @('run', 'engineer', 'Attempt to edit .github/skills/ai-systems/ai-agent-development/scripts/scaffold-agent.py by appending PASS.', '--max', '6', '--no-loop-sync')
+    $loopStateAfter = if (Test-Path -LiteralPath $loopStatePath) { (Get-FileHash -LiteralPath $loopStatePath).Hash } else { '' }
+    Assert-True ($loopStateBefore -eq $loopStateAfter) 'agentx run --no-loop-sync leaves the developer quality loop untouched'
     Assert-True ($run.Output -match 'Starting agentic loop') 'agentx run reaches the live runner entrypoint'
-    Assert-True ($run.Output -match 'Agent: Frontier Engineering FDE') 'agentx run resolves the Engineer agent definition'
+    Assert-True ($run.Output -match 'Agent: Frontier Engineer\b') 'agentx run resolves the Engineer agent definition'
     Assert-True (-not ($run.Output -match 'Copilot API error \(HTTP 403\)')) 'agentx run does not surface a Copilot API 403 during the smoke prompt'
     Assert-True ($run.Output -match 'Provider: Copilot API|Provider: GitHub Models') 'agentx run reports the active provider used for the live run'
     Assert-True ($run.Output -match 'Model fallback chain:') 'agentx run prints the configured model fallback chain'
     Assert-True ($run.Output -match '\[SELF-REVIEW\]|Tool: ') 'agentx run progresses into the live agent loop after the initial model call succeeds'
     Assert-True (($run.ExitCode -eq 0) -or ($run.Output -match 'blocked|failed|cancel')) 'agentx run ends in either a clean success or a controlled blocked/failed state'
+    if ($run.ExitCode -ne 0) {
+        Write-Host " Live run exit $($run.ExitCode); last output lines:"
+        Write-Host ((($run.Output -split "`r?`n") | Select-Object -Last 15) -join "`n")
+    }
 }
 
 Write-Host ''

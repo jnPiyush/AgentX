@@ -254,13 +254,11 @@ $Prompt
 
 # --- Main ---
 
-# Honor the workspace root the agentx CLI exports so council files land in the
+# Honor the workspace root the Frontier CLI exports so council files land in the
 # user's workspace, not the bundled extension dir, after a zero-copy
 # "Initialize Local Runtime". Fall back to the repo layout when run directly.
 if ($env:FRONTIER_WORKSPACE_ROOT -and (Test-Path $env:FRONTIER_WORKSPACE_ROOT)) {
     $repoRoot = (Resolve-Path $env:FRONTIER_WORKSPACE_ROOT).Path
-} elseif ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path $env:AGENTX_WORKSPACE_ROOT)) {
-    $repoRoot = (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
 } else {
     $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
 }
@@ -363,7 +361,7 @@ foreach ($m in $roster) {
         if (-not $succeeded -and [string]::IsNullOrWhiteSpace($resp)) { $resp = '[FAIL] Empty model response.' }
         $instruction = if ($pack.ContainsKey($m.Role)) { $pack[$m.Role] } else { 'Speak from your assigned role.' }
         $encodedInstruction = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($instruction))
-        [void]$sb.AppendLine("<!-- agentx:role-instruction:base64 $encodedInstruction -->")
+        [void]$sb.AppendLine("<!-- frontier:role-instruction:base64 $encodedInstruction -->")
         [void]$sb.AppendLine($resp)
     } else {
         [void]$sb.AppendLine("[AGENT-TODO] Invoke this role independently through an authorized host. Record the selected model and source with the actual response. Never simulate multiple model identities. Unavailable calls remain incomplete.")

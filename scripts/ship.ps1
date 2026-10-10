@@ -54,7 +54,14 @@ $fromIdx = [array]::IndexOf($Order, $From)
 $toIdx   = [array]::IndexOf($Order, $To)
 if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $toIdx -lt $fromIdx) { throw "Invalid step range: $From -> $To" }
 
-$FrontierCli = Join-Path (Resolve-Path .).Path '.frontier/runtime/frontier.ps1'
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
+$privateState = (Get-FrontierStateBinding (Get-Location).Path).mode -eq 'private'
+$FrontierCli = if ($privateState) {
+    Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'frontier.ps1'
+} else { Join-Path (Resolve-Path .).Path '.frontier/runtime/frontier.ps1' }
+if (-not (Test-Path $FrontierCli)) {
+    $FrontierCli = Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'frontier.ps1'
+}
 if (-not (Test-Path $FrontierCli)) { throw "Frontier CLI not found at $FrontierCli" }
 
 function Invoke-Frontier {
@@ -126,7 +133,7 @@ $steps = @(
         gate = { $true }
     },
     @{
-        name = 'compound'; agent = 'agent-x';
+        name = 'compound'; agent = 'frontier';
         run  = { Write-Host "[ship] Compound: confirming learning capture or skip rationale" -ForegroundColor Cyan
                   if (Test-LearningArtifact) { return 0 }
                   Write-Host "  No learning capture found under docs/artifacts/learnings/. Either create one or document a skip rationale on the issue." -ForegroundColor Yellow
@@ -139,6 +146,21 @@ if ($DryRun) {
     Write-Host "[ship] Dry run plan for issue #$Issue ($From -> $To):" -ForegroundColor Cyan
     for ($i = $fromIdx; $i -le $toIdx; $i++) { Write-Host ("  - {0} ({1})" -f $steps[$i].name, $steps[$i].agent) }
     return
+}
+
+$candidateState = Join-FrontierStatePath (Get-Location).Path @('state', 'hydrafusion')
+if (Test-Path -LiteralPath $candidateState -PathType Container) {
+    $candidateRuntime = Join-Path $PSScriptRoot '../.frontier/runtime/hydrafusion.ps1'
+    if (-not (Test-Path -LiteralPath $candidateRuntime -PathType Leaf)) {
+        throw 'HydraFusion state exists but its delivery guard is unavailable.'
+    }
+    . $candidateRuntime
+    $ownerLoop = Read-HydraFusionJson (Join-FrontierStatePath (Get-Location).Path @('state', 'loop-state.json'))
+    try { Assert-HydraFusionLoopDelivery (Get-Location).Path $ownerLoop }
+    catch {
+        Write-Host "[ship] [PENDING] $($_.Exception.Message)"
+        exit 3
+    }
 }
 
 $failures = New-Object 'System.Collections.Generic.List[string]'

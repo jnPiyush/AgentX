@@ -26,7 +26,7 @@ export interface IntentSpec {
   readonly examples: ReadonlyArray<string>;
   /**
    * Validate raw arguments produced by the LM (or any other source) and
-   * return the canonical CLI args[] that `agentx <subcommand>` expects.
+   * return the canonical CLI args[] that `frontier <subcommand>` expects.
    * Returns `undefined` when the args are invalid or fail allowlist checks.
    */
   readonly validate: (rawArgs: ReadonlyArray<string>) => ReadonlyArray<string> | undefined;
@@ -370,7 +370,7 @@ export const INTENT_CATALOG: ReadonlyArray<IntentSpec> = [
     destructive: true,
     description: 'Run git push or pull through Frontier git-sync',
     cliShape: 'frontier git-sync <push|pull>',
-    examples: ['git-sync push', 'git pull via agentx'],
+    examples: ['git-sync push', 'git pull via frontier'],
     validate: (a) => {
       const d = (a[0] ?? '').toLowerCase();
       return GIT_DIRECTIONS.has(d) ? [d] : undefined;
@@ -398,7 +398,7 @@ export const INTENT_CATALOG: ReadonlyArray<IntentSpec> = [
     id: 'promote-patterns',
     subcommand: 'promote',
     destructive: true,
-    description: 'Graduate stable patterns into skills',
+    description: 'Stage stable patterns as skills for review',
     cliShape: 'frontier promote',
     examples: ['promote patterns', 'graduate stable patterns', 'run promote'],
     validate: (a) => expectNoArgs(a, []),

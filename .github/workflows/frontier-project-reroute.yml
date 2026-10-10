@@ -212,7 +212,7 @@ jobs:
               await github.rest.actions.createWorkflowDispatch({
                 owner,
                 repo,
-                workflow_id: 'agent-x.yml',
+                workflow_id: 'frontier.yml',
                 ref: defaultBranch,
                 inputs: {
                   issue_number: String(candidate.issueNumber),

@@ -1,12 +1,12 @@
 ---
 name: "iterative-loop"
-description: 'Implement Ralph Loop iterative refinement for AI agent tasks. Use when a task needs multiple passes to reach quality: TDD red-green-refactor cycles, incremental feature building, self-correcting code generation, or any work with verifiable completion criteria. Covers loop setup, completion promises, progress tracking, and escape hatches.'
+description: 'Run evidence-backed refinement with independent review and non-test verification. Covers loop setup, completion criteria, progress, bounded recovery, and explicit user consent for separate post-loop test execution.'
 user-invocable: false
 metadata:
   author: "Frontier"
-  version: "1.0.0"
+  version: "1.1.0"
   created: "2026-02-24"
-  updated: "2026-02-24"
+  updated: "2026-09-28"
 compatibility:
   frameworks: ["frontier", "copilot", "claude-code"]
 ---
@@ -16,13 +16,29 @@ compatibility:
 > **Purpose**: Iterative self-referential refinement loops for AI agent tasks.
 > **Scope**: Loop setup, completion criteria, progress tracking, self-correction patterns.
 
+## Test Execution Boundary
+
+Quality loops and reviews MUST NOT launch test suites, coverage, mutation,
+property or fuzz runs, directly or through wrappers. Author and inspect tests;
+verify with appropriate build, typecheck, lint, syntax and schema checks.
+The canonical policy is `.github/AGENT-PROTOCOL.md` section 1.4.
+
+After `loop complete` succeeds, the owning agent MUST ask, "Would you like to
+run the test suite now?" Identify the proposed scope and wait for explicit
+approval through the host's input tool/UI. No answer, dismissal or a decline
+means not run. If approved, run the selected suite as a separate verification
+task. A failure requires a new fix/review loop, not an automatic suite rerun.
+
+CI/release gates and explicit standalone testing requests remain separate.
+Review approval never implies tests passed or coverage was measured.
+
 ---
 
 ## When to Use This Skill
 
-- Tasks requiring multiple passes to reach quality (TDD cycles, refactoring)
+- Tasks requiring multiple passes to reach quality (implementation, refactoring)
 - Incremental feature building with verifiable milestones
-- Self-correcting code generation (write -> test -> fix -> repeat)
+- Self-correcting code generation (write -> inspect/check -> fix -> review)
 - Any work with clear, machine-verifiable completion criteria
 - Greenfield implementations where autonomous iteration beats one-shot
 
@@ -37,7 +53,7 @@ compatibility:
 
 - Frontier CLI installed (`.frontier/runtime/frontier.ps1` or `.frontier/runtime/frontier.sh`)
 - Clear completion criteria defined before starting
-- Test framework configured (for TDD loops)
+- Non-test verification commands identified; proposed suites reserved for the post-loop offer
 
 ## Rationalization Table
 
@@ -50,7 +66,7 @@ The loop is the gate, not a suggestion. Push back against these common ways of s
 | "I hit the minimum iteration count, I'm done." | The minimum is a floor, not a ceiling. The loop is complete when the done criteria pass, not when the counter ticks over. |
 | "Self-review found nothing, no need for another pass." | Self-review with no findings on a non-trivial change usually means you reviewed too generously. Re-read against the spec, not against the code. |
 | "Tests pass, so the loop is complete." | Tests passing is neither necessary nor sufficient. The loop requires that the done criteria pass, the acceptance criteria are mapped, the sub-agent review is approved, evidence is fresh, and `loop complete` is recorded. |
-| "I need to run the suite to have something to attach as evidence." | No. The default evidence is the acceptance-criteria compliance mapping plus the sub-agent review findings. Run a suite when the change warrants it, not to fill an iteration. |
+| "I need to run the suite to have something to attach as evidence." | No. Use acceptance mapping, independent findings and non-test evidence. Ask about suites after completion; never run them to fill iterations. |
 | "I'll run `loop complete` now and add the verification later." | `loop complete` is the artifact that gates handoff. Backfilling evidence after the gate defeats the gate. Verify first, then close. |
 
 ## Decision Tree
@@ -59,7 +75,7 @@ The loop is the gate, not a suggestion. Push back against these common ways of s
 Need iterative refinement?
 +- Has verifiable completion criteria?
 |  +- Tests exist or can be written?
-|  |  -> TDD Loop (red-green-refactor)
+|  |  -> Test-aware authoring loop (cases + implementation + non-test checks)
 |  +- Linter/build checks available?
 |  |  -> Quality Loop (build -> check -> fix)
 |  - Clear done-state in output?
@@ -76,12 +92,12 @@ Need iterative refinement?
 
 | Pattern | Iterations | Best For | Completion Signal |
 |---------|-----------|----------|-------------------|
-| **TDD Loop** | 5-20 | Code + tests | All tests passing |
+| **Test-aware authoring** | 5-20 maximum budget | Code + authored test cases | Implementation reviewed; test execution offered afterward |
 | **Quality Loop** | 3-10 | Linting, formatting | Zero errors/warnings |
 | **Build Loop** | 5-15 | Compilation fixes | Clean build |
 | **Phased Loop** | 10-50 | Large features | All phases complete |
 | **Review Loop** | 2-5 | Self-review | No issues found |
-| **Adversarial Loop** | 1 (mandatory pass) | Bug-finding before ship | Mutation score met + zero HIGH findings |
+| **Adversarial review** | 1 scoped pass | Inspect failure paths and design cases | Risks reviewed; suites deferred for user decision |
 | **Subagent Review Loop** | 1 (mandatory pass) | Blind-spot detection | Zero HIGH/MEDIUM findings from a clean reviewer, recorded as `loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0` on the final work iteration |
 
 ---
@@ -91,14 +107,17 @@ Need iterative refinement?
 The Engineer's quality loop is gated by the CLI, not by judgment:
 
 1. `loop start` resets `.frontier/state/tests-baseline.json` and cleans the prior loop's evidence archive; `loop affected` lists tests naming code changed since then.
-2. `loop iterate -e <path>` REQUIRES an existing evidence file. A Spec/ADR/PRD acceptance-criteria compliance mapping or a sub-agent review report is valid evidence on its own; a test report, coverage xml, scan json or mutation report is equally valid when the step actually ran one. The CLI copies it to `.frontier/state/loop-evidence/iter-<N>/<timestamp>-<filename>`, keeps the source, and records `{ evidence, evidenceOriginal }` in loop history.
-3. `--passing <suite>=<count>[,<suite>=<count>]` is OPTIONAL: report it only for suites a step actually ran. A suite may not drop below its own last count; unrun suites need no count and are never rerun for the flag's sake; `loop baseline -c <suite>=<count>` records an intentional drop. A legacy integer baseline (`loop baseline -c <count>`) requires an integer `--passing` on every iterate and complete.
+2. `loop iterate -e <path>` REQUIRES existing evidence: acceptance mapping, independent findings or relevant non-test check output. Supplied earlier test results retain their original revision and timestamp; do not rerun suites or manufacture fresh results. The CLI archives evidence under `.frontier/state/loop-evidence/`.
+3. `--passing <suite>=<count>[,<suite>=<count>]` is OPTIONAL metadata for actual supplied results. Omission is allowed even with a legacy integer baseline and does not record zero or passed. Explicit malformed or regressed counts are still rejected; `loop baseline -c <suite>=<count>` records an intentional baseline change.
 4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact, and every iteration after #1 must still have its archived evidence file. The final artifact is copied to `.frontier/state/loop-evidence/complete/`.
 5. The commit-msg hook rejects `fix:` commits that change production code under `.frontier/runtime/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
+6. After successful completion, CLI output and `postLoopTestPrompt` carry the
+   test-suite question. VS Code offers Run Test Task / Not Now. This offer is
+   not itself consent and does not certify the test task succeeded.
 
 Practical consequence: **generate a fresh file per iteration**. The source remains available, but freshness and SHA-256 reuse guards reject an old or identical artifact on the next iteration.
 
-Bypass envs (use only for legacy/manual flows): `AGENTX_SKIP_EVIDENCE_GATE=1` skips evidence-file requirements only; it does not disable baseline pass-count enforcement. `AGENTX_SKIP_FIX_TEST_GATE=1` bypasses the fix-commit regression-test hook.
+Manual-flow controls: `FRONTIER_SKIP_EVIDENCE_GATE=1` skips evidence-file requirements only; it does not disable baseline pass-count enforcement. `FRONTIER_SKIP_FIX_TEST_GATE=1` bypasses the fix-commit regression-test hook. These controls require the applicable owner's authorization; AgentX/HVE variable names are not supported.
 
 ---
 
@@ -112,7 +131,7 @@ The iterative loop follows a simple cycle:
 1. Agent receives task with completion criteria
 2. Agent works on the task
 3. Agent evaluates progress against criteria
-4. If criteria met -> DONE (output completion promise)
+4. If review/non-test criteria met -> complete loop, then ask about tests
 5. If not met -> Record what failed, iterate (go to step 2)
 6. Safety: Stop after max_iterations regardless
 ```
@@ -123,10 +142,11 @@ A **completion promise** is a specific phrase that signals the loop is done.
 The agent MUST only output this promise when the criteria are genuinely met.
 
 ```
-Completion promise: "ALL_TESTS_PASSING"
+Completion promise: "IMPLEMENTATION_REVIEWED"
 
 Rules:
-- MUST only output when ALL tests actually pass
+- MUST only output when the declared review/non-test criteria hold
+- MUST report suites as not run unless actual execution evidence exists
 - MUST NOT output to escape the loop prematurely
 - MUST NOT lie about completion status
 ```
@@ -141,13 +161,13 @@ Loop state is tracked in `.frontier/state/loop-state.json`:
   "prompt": "Implement REST API with CRUD operations",
   "iteration": 3,
   "maxIterations": 20,
-  "completionPromise": "ALL_TESTS_PASSING",
+  "completionCriteria": "IMPLEMENTATION_REVIEWED",
   "startedAt": "2026-02-24T10:00:00Z",
   "lastIterationAt": "2026-02-24T10:05:00Z",
   "history": [
     { "iteration": 1, "summary": "Created endpoint stubs", "status": "incomplete" },
-    { "iteration": 2, "summary": "Added validation, 3/5 tests pass", "status": "incomplete" },
-    { "iteration": 3, "summary": "Fixed edge cases, 5/5 tests pass", "status": "complete" }
+    { "iteration": 2, "summary": "Added validation and inspected boundary cases", "status": "in-progress" },
+    { "iteration": 3, "summary": "Independent review approved; suites not run", "status": "in-progress" }
   ]
 }
 ```
@@ -156,169 +176,8 @@ Loop state is tracked in `.frontier/state/loop-state.json`:
 
 ## Loop Patterns
 
-### 1. TDD Loop (Red-Green-Refactor)
-
-Best for implementing features with test coverage.
-
-**Setup:**
-```powershell
-.\.frontier\runtime\frontier.ps1 loop start `
-  -Prompt "Implement user authentication with JWT. Write tests first (TDD)." `
-  -MaxIterations 20 `
-  -CompletionCriteria "ALL_TESTS_PASSING" `
-  -IssueNumber 42
-```
-
-**Agent behavior per iteration:**
-```
-Iteration 1: Write failing tests for all requirements
-Iteration 2: Implement code to make first test pass
-Iteration 3: Implement code to make second test pass
-...
-Iteration N: All tests pass -> output completion promise
-```
-
-**Prompt template:**
-```
-Implement {{feature}} following TDD:
-1. Write failing tests for all acceptance criteria
-2. Implement minimal code to pass one test
-3. Run tests: `npm test` or `dotnet test`
-4. If any fail, debug and fix
-5. Refactor if needed (keep tests green)
-6. Repeat until ALL tests pass
-
-Acceptance criteria:
-{{criteria}}
-
-When ALL tests pass, output: <promise>ALL_TESTS_PASSING</promise>
-```
-
-### 2. Quality Loop (Build-Check-Fix)
-
-Best for achieving zero lint errors, clean builds, or code quality targets.
-
-**Setup:**
-```powershell
-.\.frontier\runtime\frontier.ps1 loop start `
-  -Prompt "Fix all TypeScript strict mode errors in src/" `
-  -MaxIterations 15 `
-  -CompletionCriteria "ZERO_ERRORS"
-```
-
-**Prompt template:**
-```
-Fix all {{tool}} errors in {{scope}}:
-1. Run: {{check_command}}
-2. Read error output carefully
-3. Fix errors one file at a time
-4. Re-run check after each fix
-5. Repeat until zero errors
-
-When zero errors reported, output: <promise>ZERO_ERRORS</promise>
-```
-
-### 2b. Adversarial Loop (Break-it-Before-Ship)
-
-Mandatory only for work classified `high-risk`. The goal is NOT to demonstrate
-correctness -- it is to actively try to break security-, data-, release-, and
-production-critical changes before independent review.
-
-Select checks from the changed surface; do not run an inapplicable technique merely
-to satisfy a checklist:
-
-| Changed surface | Required adversarial check |
-|-----------------|----------------------------|
-| Pure security/correctness-critical logic | Property tests for stated invariants |
-| Security/correctness-critical branches | Mutation testing on changed lines |
-| Parser, deserializer, schema, or LLM-output handler | Fuzzing with structured and random inputs |
-| Public endpoint or exported boundary | Malformed, boundary, and authorization/error-path tests |
-| Stateful external dependency flow | Timeout and partial-failure injection |
-
-Record `not applicable` with the changed-surface reason for rows that do not apply.
-
-**Prompt template:**
-```
-HIGH-RISK ADVERSARIAL PASS.
-Your only goal is to find bugs in the diff for {{issue}}.
-
-For each applicable high-risk function in the diff:
-  1. Write a property-based test that asserts an invariant (idempotence,
-     monotonicity, round-trip equality, no panic on bounded input).
-  2. Run mutation testing on changed lines. List every surviving mutant.
-  3. Write at least 3 negative tests (malformed/boundary/concurrent).
-
-For each changed parser/deserializer/LLM-output handler:
-  4. Run a 60s fuzzing pass with seed corpus + random bytes.
-
-For changed stateful external-dependency flows:
-  5. Inject latency, timeouts, partial failures. Confirm graceful degradation.
-
-Report:
-  - Surviving mutants killed: list with new test name.
-  - Property failures found: list and fix.
-  - Crashes/hangs from fuzzing: file + input + fix.
-  - Negative test list: 3+ per endpoint.
-
-When mutation score >= 60% on diff AND zero surviving mutants AND zero
-unhandled fuzz crashes, output: <promise>ADVERSARIAL_PASSED</promise>
-```
-
-**Evidence to attach to `loop iterate -e`**: one summary linking the applicable
-reports and recording why skipped techniques were not relevant.
-
-### 3. Phased Loop (Multi-Phase Implementation)
-
-Best for large features that can be broken into sequential phases.
-
-**Setup:**
-```powershell
-.\.frontier\runtime\frontier.ps1 loop start `
-  -Prompt "Build e-commerce cart: Phase 1: Data model, Phase 2: API, Phase 3: Tests" `
-  -MaxIterations 50 `
-  -CompletionCriteria "ALL_PHASES_COMPLETE"
-```
-
-**Prompt template:**
-```
-Implement in phases:
-
-Phase 1: {{phase1_description}}
-  Done when: {{phase1_criteria}}
-
-Phase 2: {{phase2_description}}
-  Done when: {{phase2_criteria}}
-
-Phase 3: {{phase3_description}}
-  Done when: {{phase3_criteria}}
-
-Track progress in docs/execution/progress/ISSUE-{{id}}-log.md.
-When ALL phases complete, output: <promise>ALL_PHASES_COMPLETE</promise>
-```
-
-### 4. Review Loop (Self-Improvement)
-
-Best for iterative self-review and quality improvement.
-
-**Setup:**
-```powershell
-.\.frontier\runtime\frontier.ps1 loop start `
-  -Prompt "Review and improve error handling in src/services/" `
-  -MaxIterations 5 `
-  -CompletionCriteria "NO_ISSUES_FOUND"
-```
-
-**Prompt template:**
-```
-Review {{scope}} for {{quality_dimension}}:
-1. Read all files in scope
-2. Identify issues (list each with file:line)
-3. Fix each issue
-4. Re-review to verify fixes and find new issues
-5. Repeat until no issues remain
-
-When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
-```
+Test-aware authoring, build-check-fix, adversarial review and test planning, phased
+and review loops are described in [Loop patterns](references/loop-patterns.md).
 
 ---
 
@@ -329,16 +188,16 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 ```powershell
 # PowerShell
 .\.frontier\runtime\frontier.ps1 loop start `
-  -Prompt "Your task description" `
-  -MaxIterations 20 `
-  -CompletionCriteria "DONE" `
-  -IssueNumber 42
+  -p "Your task description" `
+  -m 20 `
+  -c "IMPLEMENTATION_REVIEWED" `
+  -i 42
 
 # Bash
 ./.frontier/runtime/frontier.sh loop start \
-  "Your task description" \
-  --max-iterations 20 \
-  --completion-criteria "DONE" \
+  --prompt "Your task description" \
+  --max 20 \
+  --criteria "IMPLEMENTATION_REVIEWED" \
   --issue 42
 ```
 
@@ -349,18 +208,42 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 # Output: Iteration 3/20 | Started: 10:00 | Last: 10:05 | Promise: DONE
 ```
 
+### Prepare Checks and Review
+
+```powershell
+.\.frontier\runtime\frontier.ps1 loop preflight --json
+.\.frontier\runtime\frontier.ps1 loop review-packet --stage boundary --requirements docs\contract.md
+.\.frontier\runtime\frontier.ps1 loop review-packet --requirements docs\contract.md
+.\.frontier\runtime\frontier.ps1 loop reviewer-check --packet <generated-path> --reviewer <id>
+.\.frontier\runtime\frontier.ps1 loop timing --phase implementation
+.\.frontier\runtime\frontier.ps1 loop timing --phase waiting
+.\.frontier\runtime\frontier.ps1 loop timing --stop
+```
+
+Preflight uses built-in non-test checks and one batched advisory scrub. Reuse
+preserves the original check time and receipt; changed inputs invalidate it.
+Semantic checks with unknown dependency closure run fresh. Check errors remain
+blockers. The packet prioritizes changed inputs and affected consumers, but never
+inherits approval or narrows the required full final verdict.
+
+Run reviewer diagnostics in the actual reviewer host. A parent-side result
+does not prove the child has tools, and the diagnostic grants no permissions.
+Use boundary packets during existing high-risk planning, not as another
+mandatory checkpoint for small tasks. See protocol section 1.5 for the complete
+contract. None of these commands executes a test suite.
+
 ### Record Iteration Progress
 
 ```powershell
-.\.frontier\runtime\frontier.ps1 loop iterate -Summary "Fixed 3 tests, 2 remaining"
+.\.frontier\runtime\frontier.ps1 loop iterate -s "Reviewed changed paths; typecheck passed" -e .frontier/state/iteration-evidence.json
 # Increments iteration counter and logs summary
 ```
 
 ### Complete a Loop
 
 ```powershell
-.\.frontier\runtime\frontier.ps1 loop complete -Summary "All tests passing, coverage at 85%"
-# Marks loop as complete, records final summary
+.\.frontier\runtime\frontier.ps1 loop complete -s "Reviewed; suites not run" -e .frontier/state/final-evidence.json
+# Requires the final independent approval and evidence; then ask about tests.
 ```
 
 ### Cancel a Loop
@@ -384,11 +267,13 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 
 | Criteria | Verification Command |
 |----------|---------------------|
-| `ALL_TESTS_PASSING` | `npm test` exits 0 |
+| `IMPLEMENTATION_REVIEWED` | Current independent approval and acceptance mapping |
 | `ZERO_LINT_ERRORS` | `eslint . --max-warnings 0` exits 0 |
 | `BUILD_SUCCEEDS` | `dotnet build` exits 0 |
-| `COVERAGE_80_PERCENT` | Coverage report shows >= 80% |
-| `ALL_ENDPOINTS_WORKING` | Integration test suite passes |
+| `SCHEMA_VALID` | Repository schema validator exits 0 |
+
+Test-pass and coverage targets belong to separate consented verification,
+not to an implementation loop that deliberately does not execute suites.
 
 ### Bad Examples
 
@@ -411,16 +296,16 @@ Each iteration SHOULD update the progress log:
 
 ## Iteration 1 (2026-02-24T10:00:00Z)
 - Created test stubs for 5 endpoints
-- Status: 0/5 tests passing
+- Status: regression cases authored; suites not run
 
 ## Iteration 2 (2026-02-24T10:02:00Z)
 - Implemented GET /users and POST /users
-- Status: 2/5 tests passing
+- Status: typecheck passed; suites not run
 
 ## Iteration 3 (2026-02-24T10:04:00Z)
 - Implemented PUT, DELETE, PATCH endpoints
 - Fixed validation on POST body
-- Status: 5/5 tests passing -> COMPLETE
+- Status: review approved; complete loop and ask whether to run suites
 ```
 
 ---
@@ -429,11 +314,11 @@ Each iteration SHOULD update the progress log:
 
 ### Max Iterations
 
-ALWAYS set `--max-iterations` as a safety net:
+ALWAYS set `--max` as a safety net:
 
 ```powershell
 # Recommended: Set reasonable limits based on task complexity
-.\.frontier\runtime\frontier.ps1 loop start -Prompt "..." -MaxIterations 20
+.\.frontier\runtime\frontier.ps1 loop start -p "..." -m 20
 ```
 
 | Task Complexity | Recommended Max |
@@ -472,7 +357,7 @@ title = "Implement code and tests"
 agent = "engineer"
 iterate = true
 max_iterations = 20
-completion_criteria = "ALL_TESTS_PASSING"
+completion_criteria = "IMPLEMENTATION_REVIEWED"
 ```
 
 ### In Agent Definitions
@@ -518,7 +403,7 @@ contract: output it only when the statement is TRUE.
 - **Premature Promise**: Claiming completion before verification commands actually pass -> Always run the verification command and confirm exit code 0 before outputting the completion promise
 - **Infinite Drift**: Iterating without progress, changing approach every cycle -> If no progress after 3 iterations, stop, document blockers, and request human input
 - **Gold Plating Loop**: Continuing to iterate after criteria are met to add unrequested improvements -> Stop as soon as completion criteria are satisfied; file separate issues for enhancements
-- **Skipping Verification**: Assuming code works without running tests or build commands -> Run the actual verification command every iteration, not just visual inspection
+- **Skipping Verification**: Confusing deferred tests with no verification -> Record actual non-test checks and review evidence; ask about suites after completion
 - **Vague Criteria**: Using subjective completion criteria like "code looks good" -> Define binary, machine-verifiable criteria (test exit code, lint error count, build success)
 - **Memory Loss**: Repeating the same failed fix across iterations without tracking what was tried -> Log each iteration's approach and outcome in the progress file; read before each new attempt
 - **Loop Avoidance**: Avoiding the loop for complex tasks to save time -> Use the loop for any task with verifiable criteria; iteration beats one-shot for quality

@@ -105,9 +105,10 @@ $templates = foreach ($f in $templateFiles) {
     $relPath = $f.FullName.Substring($RepoRoot.Length + 1) -replace '\\','/'
     $content = Get-Content -LiteralPath $f.FullName -Encoding UTF8
 
-    # Inputs from "<!-- Inputs: ... -->" comment (anywhere in first 10 lines)
+    # Metadata may be longer than the input declaration window.
+    $body = ($content -join "`n") -replace '(?s)\A---[ \t]*\n.*?\n---[ \t]*(?:\n|\z)', ''
     $declaredInputs = @()
-    $head = $content | Select-Object -First 10
+    $head = $body -split "`n" | Select-Object -First 10
     foreach ($line in $head) {
         if ($line -match '<!--\s*Inputs:\s*(.*?)\s*-->') {
             $raw = $matches[1]
@@ -116,9 +117,11 @@ $templates = foreach ($f in $templateFiles) {
         }
     }
 
-    # Title placeholders -- variables in the first H1
+    # Prefer the metadata title, as the Markdown contract omits H1 when it is present.
     $titlePlaceholders = @()
-    foreach ($line in $content) {
+    $frontmatter = Get-Frontmatter $f.FullName
+    $titleLines = if ($frontmatter['title']) { @("# $($frontmatter['title'])") } else { $content }
+    foreach ($line in $titleLines) {
         if ($line -match '^#\s+') {
             $regex = [regex]'\$\{([A-Za-z0-9_]+)\}|\{([A-Za-z0-9_]+)\}'
             foreach ($m in $regex.Matches($line)) {

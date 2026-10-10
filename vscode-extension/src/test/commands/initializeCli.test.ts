@@ -15,6 +15,8 @@ import {
   createCopilotCliSymlinks,
   readCliAssetState,
   refreshCopilotCliSymlinks,
+  findBrokenCopilotCliLinks,
+  writeCliAssetState,
 } from '../../commands/initializeInternals';
 
 describe('Initialize CLI symlink helpers', () => {
@@ -77,6 +79,55 @@ describe('Initialize CLI symlink helpers', () => {
       fs.rmSync(originalRoot, { recursive: true, force: true });
       fs.rmSync(replacementRoot, { recursive: true, force: true });
     }
+  });
+
+  it('detects dangling managed links without writes and repairs only after an explicit request', () => {
+    const asset = COPILOT_CLI_ASSET_DIRS[0];
+    const oldRoot = path.join(extensionRoot, 'old-version');
+    const currentRoot = path.join(extensionRoot, 'current-version');
+    fs.mkdirSync(path.join(oldRoot, asset.source), { recursive: true });
+    fs.mkdirSync(path.join(currentRoot, asset.source), { recursive: true });
+    createCopilotCliSymlinks(oldRoot, workspaceRoot);
+    writeCliAssetState(workspaceRoot, {
+      mode: 'symlink', extensionRoot: oldRoot, destinations: [asset.destination], updatedAt: 'fixture',
+    });
+
+    fs.rmSync(oldRoot, { recursive: true, force: true });
+    const before = fs.readlinkSync(path.join(workspaceRoot, asset.destination));
+    const broken = findBrokenCopilotCliLinks(workspaceRoot);
+    assert.deepEqual(broken, [asset.destination]);
+    assert.equal(fs.readlinkSync(path.join(workspaceRoot, asset.destination)), before);
+    const repaired = refreshCopilotCliSymlinks(currentRoot, workspaceRoot, broken);
+    assert.deepEqual(repaired.refreshed, [asset.destination]);
+    assert.equal(fs.existsSync(path.join(workspaceRoot, asset.destination)), true);
+    assert.equal(readCliAssetState(workspaceRoot)?.extensionRoot, currentRoot);
+    fs.rmSync(currentRoot, { recursive: true, force: true });
+    assert.deepEqual(findBrokenCopilotCliLinks(workspaceRoot), [asset.destination]);
+  });
+
+  it('recognizes legacy auto-refreshed version siblings without taking unrelated extension links', () => {
+    const first = COPILOT_CLI_ASSET_DIRS[0];
+    const second = COPILOT_CLI_ASSET_DIRS[1];
+    const recorded = path.join(extensionRoot, 'jnpiyush.agentx-9.4.0');
+    const refreshed = path.join(extensionRoot, 'jnpiyush.agentx-9.6.0');
+    const current = path.join(extensionRoot, 'jnpiyush.agentx-9.7.0');
+    const unrelated = path.join(extensionRoot, 'another.extension-9.6.0');
+    fs.mkdirSync(path.join(refreshed, first.source), { recursive: true });
+    fs.mkdirSync(path.join(unrelated, second.source), { recursive: true });
+    fs.mkdirSync(path.join(workspaceRoot, '.github'), { recursive: true });
+    const kind = process.platform === 'win32' ? 'junction' : 'dir';
+    fs.symlinkSync(path.join(refreshed, first.source), path.join(workspaceRoot, first.destination), kind);
+    fs.symlinkSync(path.join(unrelated, second.source), path.join(workspaceRoot, second.destination), kind);
+    writeCliAssetState(workspaceRoot, {
+      mode: 'symlink', extensionRoot: recorded,
+      destinations: [first.destination, second.destination], updatedAt: 'legacy',
+    });
+    fs.rmSync(refreshed, { recursive: true, force: true });
+    fs.rmSync(unrelated, { recursive: true, force: true });
+    assert.deepEqual(findBrokenCopilotCliLinks(workspaceRoot), []);
+    assert.deepEqual(findBrokenCopilotCliLinks(workspaceRoot, {
+      extensionRoot: current, extensionId: 'jnpiyush.agentx',
+    }), [first.destination]);
   });
 
   it('never overwrites user-authored files when refreshing support assets', () => {
@@ -151,6 +202,7 @@ describe('runInitializeCliCommand', () => {
 
     fakeAgentx = {
       invalidateCache: sandbox.stub(),
+      workspaceState: { assertAvailable: (root: string) => root, inspect: () => undefined },
     } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     fakeContext = {

@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { FrontierContext } from '../../frontierContext';
+import { registerFrontierStateDirectory } from '../../utils/frontierPaths';
 import { registerAddPluginCommand } from '../../commands/plugins';
 import {
   getPublishedPluginSummaryOrThrow,
@@ -116,6 +117,109 @@ describe('runAddPluginCommand', () => {
     sinon.assert.calledOnce(errorStub);
     assert.ok(String(errorStub.firstCall.args[0]).includes('Open a workspace folder first'));
   });
+
+  it('requires explicit repository support before accessing the plugin catalog in private mode', async () => {
+    const initialization = await import('../../commands/initializeInternals');
+    const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugin-private-')));
+    const root = path.join(base, 'source');
+    const state = path.join(base, 'private');
+    try {
+      fs.mkdirSync(root);
+      fs.mkdirSync(state);
+      fs.writeFileSync(path.join(state, 'config.json'), '{}');
+      registerFrontierStateDirectory(root, state);
+      sandbox.stub(initialization, 'promptWorkspaceRoot').resolves(root);
+      const download = sandbox.stub(initialization, 'downloadFile');
+      const warning = sandbox.stub(vscode.window, 'showWarningMessage');
+      const frontier = sandbox.createStubInstance(FrontierContext);
+      Object.defineProperty(frontier, 'workspaceState', {
+        value: { assertAvailable: (value: string) => value, inspect: () => undefined },
+      });
+      await runAddPluginCommand(fakeContext, frontier);
+      sinon.assert.notCalled(download);
+      assert.ok(String(warning.firstCall.args[0]).includes('Initialize Repository Support'));
+    } finally {
+      registerFrontierStateDirectory(root);
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  for (const source of ['bundled', 'archive'] as const) {
+    for (const outcome of ['install', 'cancel', 'failure'] as const) {
+      it(`keeps ${source} picks available through ${outcome} and cleans owned staging`, async () => {
+        const initialization = await import('../../commands/initializeInternals');
+        const base = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugin-lifetime-'));
+        const root = path.join(base, 'workspace');
+        const extensionPath = path.join(base, 'extension');
+        const cancellation = new vscode.CancellationTokenSource();
+        let pluginDir = '';
+        let staging = '';
+        const makePlugin = (catalogRoot: string): void => {
+          pluginDir = path.join(catalogRoot, 'fixture');
+          fs.mkdirSync(pluginDir, { recursive: true });
+          fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({
+            schemaVersion: 2, name: 'fixture', id: 'fixture', publisher: 'fixture',
+            description: 'Lifetime fixture', version: '1.0.0', type: 'tool',
+            engines: { frontier: '>=9.0.0 <10.0.0' }, entry: { pwsh: 'run.ps1' },
+          }));
+          fs.writeFileSync(path.join(pluginDir, 'run.ps1'), 'Write-Output "fixture"');
+        };
+        try {
+          fs.mkdirSync(path.join(root, '.frontier'), { recursive: true });
+          fs.writeFileSync(path.join(root, '.frontier', 'config.json'), '{}');
+          Object.defineProperty(fakeContext, 'extensionPath', { value: extensionPath });
+          Object.defineProperty(fakeContext, 'extension', { value: { packageJSON: { version: '9.7.0' } } });
+          if (source === 'bundled') {
+            makePlugin(path.join(extensionPath, '.github', 'frontier', '.frontier', 'runtime', 'plugins'));
+          }
+          sandbox.stub(initialization, 'promptWorkspaceRoot').resolves(root);
+          const download = sandbox.stub(initialization, 'downloadFile').callsFake(async (url, destination) => {
+            staging = path.dirname(destination);
+            fs.writeFileSync(destination, url.endsWith('.json') ? '{"schemaVersion":1,"plugins":[]}' : 'fixture archive');
+          });
+          sandbox.stub(initialization, 'extractZip').callsFake(async (_zip, directory) => {
+            makePlugin(path.join(directory, 'archive', '.frontier', 'runtime', 'plugins'));
+          });
+          sandbox.stub(vscode.window, 'withProgress').callsFake(async (_options, task) =>
+            task({ report: () => undefined }, cancellation.token));
+          sandbox.stub(vscode.window, 'showQuickPick').callsFake(async (items) => {
+            assert.ok(fs.existsSync(path.join(pluginDir, 'plugin.json')), 'selection paths still exist');
+            return outcome === 'cancel' ? undefined : (await items)[0];
+          });
+          const errors = sandbox.stub(vscode.window, 'showErrorMessage');
+          const success = sandbox.stub(vscode.window, 'showInformationMessage');
+          sandbox.stub(vscode.commands, 'executeCommand').resolves();
+          if (outcome === 'failure') {
+            sandbox.stub(initialization, 'copyDirRecursive').throws(new Error('fixture copy failure'));
+          }
+          const frontier = sandbox.createStubInstance(FrontierContext);
+          Object.defineProperty(frontier, 'workspaceState', {
+            value: { assertAvailable: (value: string) => value, inspect: () => undefined },
+          });
+          await runAddPluginCommand(fakeContext, frontier);
+          if (outcome === 'install') {
+            assert.ok(fs.existsSync(path.join(root, '.frontier', 'plugins', 'fixture', 'run.ps1')));
+            assert.equal(readPluginInstallAuditState(root).installs.length, 1);
+            sinon.assert.calledOnce(success);
+          } else {
+            sinon.assert.notCalled(success);
+          }
+          if (outcome === 'failure') {
+            assert.ok(String(errors.firstCall.args[0]).includes('fixture copy failure'));
+          } else { sinon.assert.notCalled(errors); }
+          if (source === 'bundled') {
+            sinon.assert.notCalled(download);
+            assert.ok(fs.existsSync(pluginDir), 'bundled sources are never cleaned as staging');
+          } else {
+            assert.ok(staging && !fs.existsSync(staging), 'owned temporary directory is removed');
+          }
+        } finally {
+          cancellation.dispose();
+          fs.rmSync(base, { recursive: true, force: true });
+        }
+      });
+    }
+  }
 });
 
 describe('pluginsCommandInternals helpers', () => {
@@ -215,14 +319,14 @@ describe('pluginsCommandInternals helpers', () => {
             {
               version: '2.0.0',
               artifactUrl: 'https://example.test/2.0.0.zip',
-              engines: { agentx: '>=9.0.0 <10.0.0' },
+              engines: { frontier: '>=9.0.0 <10.0.0' },
             },
             {
               version: '1.0.0',
               artifactUrl: 'https://example.test/1.0.0.zip',
               checksum: 'sha256:abc123',
               pluginPath: '.frontier/runtime/plugins/convert-docs',
-              engines: { agentx: '^8.4.0' },
+              engines: { frontier: '^8.4.0' },
             },
           ],
         },
@@ -234,6 +338,17 @@ describe('pluginsCommandInternals helpers', () => {
     assert.equal(picks[0].artifactUrl, 'https://example.test/1.0.0.zip');
     assert.equal(picks[0].checksum, 'sha256:abc123');
     assert.equal(picks[0].pluginPath, '.frontier/runtime/plugins/convert-docs');
+  });
+
+  it('offers the six compatible bundled plugins without invented published artifacts', () => {
+    const root = path.join(__dirname, '..', '..', '..', '..', '.frontier', 'runtime', 'plugins');
+    const picks = getLocalPluginPicks(root, '9.7.0');
+    assert.equal(picks.length, 6);
+    for (const pick of picks) {
+      assert.ok(fs.existsSync(path.join(pick.pluginDir, 'plugin.json')));
+    }
+    const registry: unknown = JSON.parse(fs.readFileSync(path.join(root, 'registry.json'), 'utf-8'));
+    assert.deepEqual(getRegistryPluginPicks(registry, '9.7.0'), []);
   });
 
   it('validates published plugin identity against the registry entry', () => {
@@ -336,6 +451,22 @@ describe('pluginsCommandInternals helpers', () => {
     const picks = getLocalPluginPicks(tempRoot);
     assert.equal(picks[0].qualifiedId, 'jnpiyush.convert-docs');
     assert.equal(picks[0].pluginId, 'convert-docs');
+  });
+
+  it('skips local plugins with retired engine keys instead of failing the catalog', () => {
+    for (const [name, engines] of [['current', { frontier: '>=8.4.0 <10.0.0' }], ['legacy', { agentx: '^8.4.0' }]] as const) {
+      const pluginDir = path.join(tempRoot, name);
+      fs.mkdirSync(pluginDir, { recursive: true });
+      fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({
+        name, version: '1.0.0', description: `${name} plugin`, type: 'tool',
+        entry: { pwsh: `${name}.ps1` }, engines,
+      }), 'utf-8');
+    }
+    const warn = sinon.stub(console, 'warn');
+    try {
+      assert.deepEqual(getLocalPluginPicks(tempRoot).map(pick => pick.pluginId), ['current']);
+      sinon.assert.calledOnce(warn);
+    } finally { warn.restore(); }
   });
 
   it('verifies plugin artifact checksums', () => {

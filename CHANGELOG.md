@@ -1,5 +1,275 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Agent hooks resolve the loaded Frontier runtime and skip PowerShell for known
+  read-only tools. Missing runtimes deny mutations while preserving a small
+  diagnostic-read fallback; portable managed shims discover installed updates.
+- Valid active loops with old evidence now request a fresh checkpoint instead
+  of an age-only reset. Evidence freshness and independent-review gates remain.
+- Lesson promotion is bounded, serialized and deduplicated on retry. Optional
+  host-memory saves defer after a diagnosed bounded retry rather than stalling.
+- `frontier graduate run` now stages generated skills under
+  `.frontier/patterns/staged-skills/` instead of writing them into
+  `.github/skills/`. Review a staged skill, then run
+  `frontier graduate publish <name>` to make it discoverable. Invalid domain
+  slugs and already staged or published skills are skipped; their patterns
+  stay active. Each graduation keeps a separate archive, including runs with
+  the same timestamp.
+- Clarification handoffs keep the sub-agent's full final answer; the
+  600-character truncation is removed.
+
+### Added
+
+- `frontier loop verify --result passed|failed|declined [-e <log>]` records the
+  post-loop test-suite outcome (log SHA-256, commit, dirty flag) on the
+  completed loop; `loop status` shows "not run" until one is recorded.
+  Verification history retains earlier outcomes and logs until the next
+  `loop start`. Declining a rerun does not replace the last executed result.
+- Native runs append one JSON line per model call to
+  `.frontier/sessions/<session>.usage.jsonl` (tokens, model, purpose, duration;
+  no prompt content), so usage survives an interrupted run.
+
+## 9.8.0 - 2026-10-05
+
+### Upgrade notes
+
+- AgentX/HVE compatibility aliases are removed: old `AGENTX_*`/`HVE_*`
+  variables, `agentx.*` settings, `agentx-mcp`, `engines.agentx` and legacy
+  `.agentx/`/`.hve/` state are no longer read. The extension ID
+  `jnPiyush.agentx` and repository coordinate are unchanged. See
+  [Frontier-only interfaces](docs/GUIDE.md#frontier-only-interfaces).
+- Ordinary extension use no longer requires per-workspace initialization.
+  Frontier creates private, workspace-isolated state on first use;
+  **Initialize Repository Support** remains optional for team-visible setup.
+
+### Added
+
+- Extend repository context with hierarchical subsystem cards, native
+  PowerShell/managed TypeScript and Tree-sitter syntax extraction, complete
+  symbol ranges/signatures beyond the former64-symbol cap, and typed
+  evidence-qualified relationships.
+- Add exact/BM25 retrieval, bounded graph expansion, current safe source spans,
+  estimated token budgets, retained-history evidence deduplication, parser
+  capability reporting and a frozen offline comparison harness.
+- Add shared guided interaction across Frontier roles: consequential
+  clarification, high-level plan approval and milestone reporting.
+- Add native versioned plan/input state, guarded execution, atomic session
+  persistence and explicit resume/revision/cancellation. Preserve caller-authorized
+  automation without treating it as user approval.
+- Connect full plan review and live milestones to Frontier chat, and add
+  host-elicited MCP continuation with explicit unsupported-host behavior.
+- Add automatic private workspace state with multi-root selection,
+  workspace-scoped credentials, interrupted-transition recovery and no passive
+  repository scanning or scaffolding.
+- Add native loop preparation: `loop preflight`, `loop review-packet`,
+  `loop reviewer-check` and `loop timing`, with immutable check receipts,
+  safe input-bound reuse and attributed phase timing. Suites still run only
+  after loop completion and explicit approval.
+- Integrate the optional WhatsApp and Teams/GitHub App companions with native
+  guided sessions: owner-bound plan approval, answers, resume, read-only
+  inspection and bounded runner execution.
+- Preserve the Frontier feature inventory in `docs/FEATURES.md`.
+
+### Changed
+
+- Native runs default to guided execution. HydraFusion requires explicit
+  bounded automation authorization; it does not silently use another planner.
+- Document direct editor-host guidance separately from native enforcement.
+- `docs/GUIDE.md` keeps short pointers; HydraFusion, guided interaction,
+  Cursor, loop operations and Frontier-only interfaces now live in topic guides
+  under `docs/guides/`. Detailed skill sections moved to skill `references/`.
+
+### Fixed
+
+- Start repository discovery from standalone installers and ship all required
+  graph/guided runtime helpers in the Bash Copilot CLI package.
+- Resolve all Cursor role commands through the installed canonical contracts,
+  including the renamed Frontier router, and use the shared risk-based policy.
+- Add explicit, user-configuration-preserving Cursor setup with native session
+  context and pre-tool policy hooks. Bundle the MCP runtime dependencies for
+  extension consumers; standalone setup restores its pinned lock explicitly.
+- Bind MCP execution to initialized consumer wrappers and include Cursor
+  configuration/commands/rules in install integrity tracking.
+- An authentication failure no longer moves an approved guided plan to another
+  provider; provider, model and role drift block model responses and tool effects.
+- Bound the Claude Code bridge and direct Anthropic requests with a 600-second
+  deadline, output limits and owned process-tree termination. Non-ASCII input
+  and literal arguments reach shimmed CLIs unchanged.
+- Commit, handoff and finish gates revalidate the approved review against current
+  sources. Scored review and semantic checks include `.mjs`, `.cjs`, `.mts` and
+  `.cts`; Git diff checks always run fresh.
+- GitHub issue reads use the configured repository and ignore stderr warnings;
+  ADO text-only MCP results parse; missing or unreadable dependencies block
+  readiness; replacing parallel units resets reconciliation approval.
+- Singleton issue responses drive workflow guidance; the registered learning
+  template is ranked by retrieval and promotion uses its metadata title.
+- Add Plugin keeps extracted sources until installation finishes and prefers
+  compatible plugins bundled with the extension. Unverifiable 8.x registry
+  releases and placeholder checksums were withdrawn; no new plugin release is
+  implied.
+- Parallel closeout requires every unit to be `Done`, unblocked and marked
+  `Ready For Reconciliation`. Units are set by `parallel start`; re-run it with
+  final unit states, which also resets prior reconciliation approval.
+- Clean checkouts build the extension again: `npm ci` in `vscode-extension`
+  now installs the locked managed graph parser, which asset generation needs.
+- Workspace binding, pending-input and legacy session reads check size and read
+  through one file descriptor, and the initial agent status file is created
+  atomically, closing check-then-use races reported by CodeQL. Plugin catalog
+  fallback warnings log a single-line reason.
+
+### Release qualification
+
+- Native execution remains the default; HydraFusion remains experimental and
+  opt-in. Live provider, Linux/macOS and messaging-account qualification remain
+  separate from local validation. Validation results are recorded with the
+  release package; unrun checks are not represented as passes.
+
+## 9.7.0 - 2026-10-01
+
+### Added
+
+- Add HydraFusion as an opt-in isolated candidate adapter for bounded read/edit tasks
+  (`frontier run --engine hydrafusion`, `executionEngine` config default, MCP
+  `frontier_run` `engine`, and `frontier engine` readiness). Runs delegate to
+  Copilot CLI with an unpinned agent in an independent snapshot repository.
+  Native policy hooks constrain reads/edits; strict events, bounded processes
+  and an owner-loop ledger govern execution. Candidates require archived,
+  hash-bound independent review and explicit promotion; final owner verification
+  remains separate. Native stays the default and no automatic fallback occurs.
+- Preserve applied-candidate audit history across every attempt; disallow
+  discarding applied or partial promotions and accepting superseded candidates.
+  Add identity-bound recovery for interrupted workers, byte-preserving patches,
+  all-attempt no-progress checks and pending exit propagation through pipelines.
+
+- Add a local repository graph, incremental source discovery and a Mermaid map
+  with preserved curated notes as a Frontier workspace capability. Expose bounded
+  queries through `frontier context`, the `frontier_context` MCP tool, native
+  agents' `repository_context` tool and `Frontier: Refresh Repository Context`.
+- Build the graph in the background on initialization and refresh it in a
+  detached worker when stale. Session-start hooks inject a small cached primer in
+  about 1.4 seconds, deduplicate per session and fingerprint, and never index
+  folders where Frontier is not initialized.
+
+### Changed
+
+- Route the Engineer, Architect and UX Designer to GPT-6 Astra (Copilot only)
+  and every other agent to Claude Opus 5.5. These preferences apply to separately
+  invoked roles; CLI automatic self-review retains the author's model and effort.
+  Recalibrate Opus 5.5 authoring agents to `medium` effort.
+- Add frontier-model execution rules (precedence, clarify-or-proceed, turn
+  endings, no reasoning transcripts, untrusted content) to `AGENTS.md` and
+  `AGENT-PROTOCOL.md`; remove wall-clock timeouts and the contradictory
+  "absolute first tool call" pre-edit wording from agents.
+- Refresh reasoning, prompt, Claude and tool-use skills for Opus 5.5 effort,
+  always-on thinking and GPT-6 Astra Responses requirements.
+
+### Fixed
+
+- Register `claude-opus-5.5` (Copilot) and `claude-opus-5-5` (Anthropic API,
+  Claude Code) in the runner, force adaptive thinking, send its effort on the
+  Anthropic API path, use a 16384-token default when no output cap is supplied,
+  preserve explicit caller caps,
+  replay signed thinking blocks before tool results, and omit the non-default
+  `temperature` that Opus 5.5 rejects. The Opus 5.5 label downgrades to
+  `gpt-4.1` on GitHub Models and `gpt-5.6-sol` on the OpenAI API.
+- Tag persisted replay blocks by transport. When a resumed session switches
+  transports, convert normalized text and tool calls rather than forwarding
+  foreign opaque blocks. Existing untagged histories remain supported.
+- Resolve renamed agent display names (Frontier TPM, Researcher, E2E SDLC,
+  Auto-Fix Reviewer, Power Platform Engineer, Power BI Analyst) to runtime agent
+  IDs so clarification routing reaches the intended collaborator.
+- Return the standard tool-result contract from `repository_context`; a live run
+  previously stopped with a StrictMode error on the first graph query.
+- Add `frontier run --no-loop-sync` so smoke and diagnostic runs do not record
+  iterations into the active quality loop; the live smoke test uses it.
+- Rewrite the bundled/seeded GUIDE link to the extension README as a GitHub URL,
+  and ignore the generated `public/` landing build output.
+- Replace the temporary MCP `fast-uri` commit override with patched release
+  3.1.8 and refresh the compatible `ip-address` lock to 10.7.2.
+- Wait briefly for Windows process executable metadata before recording
+  HydraFusion recovery identity; incomplete identities still fail closed.
+
+### Release qualification
+
+- Native execution remains the default. HydraFusion is an experimental,
+  opt-in candidate adapter, not an automatically accepted task result.
+- Local release validation includes the extension coverage suite, real Windows
+  Extension Host, MCP lifecycle/smoke tests, core scripts and companion suites.
+  The full run identified a process-start race and stale framework assertions;
+  results for their final fixes are recorded with the release artifact.
+- Live hardened-CLI qualification and Linux/macOS execution remain separate
+  requirements for the experimental adapter. Historical provider probes do
+  not establish current quality, cost or platform behavior.
+- Local packaging does not authorize publication. Release CI and required
+  source approval remain separate gates.
+
+## 9.6.2 - 2026-09-28
+
+### Changed
+
+- Treat cosmetic lint/style findings as LOW advisories in local loops/reviews.
+  Require explicit cleanup approval and add a read-only scrub `-Advisory` mode;
+  preserve strict CI/commit/production gates and genuine defect severity.
+- Remove automatic test-suite execution from quality-loop and review guidance.
+  Keep non-test verification, independent review and evidence gates; ask the
+  user after loop completion before a separate test run.
+- Offer the configured VS Code test task only after successful completion and
+  explicit approval. Decline/dismissal runs nothing; CLI/MCP output carries the
+  post-loop question.
+- Remove editor passing-count prompts. Legacy baselines permit omitted counts
+  without inventing a pass; explicit malformed or regressed counts still fail.
+  CI/release test gates remain unchanged.
+
+### Added
+
+- Add opt-in `frontier.initializationMode: minimal` to create workspace state
+  and terminal launchers without starter memory files or empty output folders.
+  Standard initialization remains the default; existing files are never deleted.
+- Document how Frontier's terminal CLI uses the installed runtime without
+  workspace asset seeding, and distinguish it from Copilot CLI plugin discovery.
+
+### Fixed
+
+- Preserve the selected workspace folder URI when resolving initialization
+  settings, including remote and multi-root workspaces.
+- Reject invalid initialization modes and conflicting minimal-plus-seeding
+  settings before writing files. Preserve existing GitHub MCP auto-configuration.
+- Correct extension README image and content URL bases for the repository's
+  extension subdirectory. Use the canonical Frontier PNG in both READMEs.
+- Display three workflow diagrams as portable PNGs while retaining editable
+  Mermaid sources, source links, and compact layouts.
+
+### Verification Scope
+
+- Author filesystem-footprint, preservation, invalid-setting, remote-folder,
+  GitHub adapter, and lazy-output regressions, plus a native Extension Host
+  setting check.
+- Author branding, vsce URL-rewriting, diagram-source/export, and workflow-edge
+  checks. Inspect packaged README assets and local light/dark browser previews.
+- Test- and lint-consent changes received non-test checks and independent source
+  review. Their new behavioral cases are not reported as executed; suite
+  execution is offered after the loop and CI remains independently required.
+
+## 9.6.1 - 2026-09-27
+
+### Fixed
+
+- Add the workspace-scoped `frontier.useBundledAgents` preference to prevent
+  duplicate local and extension-provided Frontier agents. Bundled discovery
+  stays enabled by default; this source repository selects its local agents.
+- Preserve skills, instructions, prompts, commands and sidebars when bundled
+  agents are disabled.
+- Align collaborator, handoff and prompt targets with the current agent display
+  names while preserving instruction bodies, tools, models and boundaries.
+
+### Tested
+
+- Add generator/source-selection regression checks and validate the setting
+  against real VS Code extension contribution filtering.
+
 ## 9.6.0 - 2026-09-27
 
 ### Changed

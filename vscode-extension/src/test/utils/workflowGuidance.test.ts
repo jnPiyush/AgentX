@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import {
   evaluateWorkflowGuidance,
+  fetchProviderAwareIssues,
   renderOperatorEnablementChecklistMarkdown,
   renderWorkflowEntryPointMarkdown,
   renderWorkflowGuidanceMarkdown,
@@ -85,6 +86,23 @@ describe('workflow guidance utility', () => {
     assert.equal(snapshot?.planDeepening.allowed, true);
     assert.equal(snapshot?.reviewKickoff.allowed, true);
     assert.equal(snapshot?.rolloutRows[0]?.state, 'pilot-ready');
+  });
+
+  it('accepts singleton provider responses without using stale local issues', async () => {
+    const issue = { number: 450, title: 'Provider singleton', state: 'open' };
+    const singleton = await fetchProviderAwareIssues(async () => JSON.stringify(issue), tmpDir);
+    const array = await fetchProviderAwareIssues(async () => JSON.stringify([issue]), tmpDir);
+    assert.deepEqual(singleton, [issue]);
+    assert.deepEqual(singleton, array);
+  });
+
+  it('preserves an empty provider backlog instead of reviving local issues', async () => {
+    const issues = await fetchProviderAwareIssues(async () => '[]', tmpDir);
+    writeFile(tmpDir, '.frontier/state/harness-state.json', JSON.stringify({
+      version: 1, threads: [], turns: [], items: [], evidence: [],
+    }));
+    assert.deepEqual(issues, []);
+    assert.equal(evaluateWorkflowGuidance(tmpDir, false, issues)?.issueNumber, undefined);
   });
 
   it('fails closed to plan guidance when no plan is linked', () => {

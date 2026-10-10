@@ -192,7 +192,7 @@ function Get-MarkdownFiles([string]$Target, [string]$Root) {
 
 try {
     # Same order as the CLI; without an override, measure the tree this script ships in.
-    $workspaceOverride = @($env:FRONTIER_WORKSPACE_ROOT, $env:HVE_WORKSPACE_ROOT, $env:AGENTX_WORKSPACE_ROOT) | Where-Object { $_ } | Select-Object -First 1
+    $workspaceOverride = $env:FRONTIER_WORKSPACE_ROOT
     $root = if ($workspaceOverride) {
         (Resolve-Path -LiteralPath $workspaceOverride -ErrorAction Stop).Path
     } else {

@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Provider behavior tests for local and GitHub CLI paths
 
-param([switch]$ProjectIdentityOnly, [switch]$PromotionOnly)
+param([switch]$ProjectIdentityOnly, [switch]$PromotionOnly, [switch]$BoundaryOnly)
 
 $ErrorActionPreference = 'Stop'
 $script:pass = 0
@@ -97,6 +97,12 @@ function Test-LearningPromotion {
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-LessonsPromote'
     }, $true)
     . ([scriptblock]::Create($definition.Extent.Text))
+    $processDefinition = $ast.Find({ param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-LoopCheckProcess'
+    }, $true)
+    . ([scriptblock]::Create($processDefinition.Extent.Text))
+    . (Join-Path $script:repoRoot '.frontier/runtime/workspace-state.ps1')
+    $script:INSTALL_RUNTIME_DIR = Join-Path $script:repoRoot '.frontier/runtime'
     function Get-Flag { return '' }
     function Test-Flag([string[]]$names) { return '--dry-run' -in $names }
     function Write-CliOutput([string]$message) { Write-Output $message }
@@ -104,6 +110,8 @@ function Test-LearningPromotion {
     $script:SubArgs = @('--dry-run')
     Set-Variable -Name C -Value @{ c = ''; y = ''; n = ''; d = ''; r = ''; g = '' }
     $tempRoot = Join-Path ([IO.Path]::GetTempPath()) "frontier-promotion-test-$([guid]::NewGuid().ToString('N'))"
+    $script:ROOT = $tempRoot
+    $script:FRONTIER_STATE_DIR = Join-Path $tempRoot '.frontier'
     $learningDir = Join-Path $tempRoot 'docs/artifacts/learnings'
     New-Item -ItemType Directory -Path $learningDir -Force | Out-Null
     $fixtures = @{
@@ -129,6 +137,22 @@ function Test-LearningPromotion {
             Assert-True ($output -notmatch "would promote LEARNING-$name.md") "automatic promotion excludes $name learning"
         }
         Assert-True ($output -match 'promoted=2 skipped=4') 'dry-run reports exact eligible and skipped counts'
+        $metadataLearning = Join-Path $learningDir 'LEARNING-metadata-title.md'
+        [IO.File]::WriteAllText($metadataLearning, "---`ntitle: Metadata title survives promotion`nconfidence: 0.9`nobservations: 3`nstatus: reviewed`n---`n## Summary`nA template-shaped learning.`n")
+        Push-Location $tempRoot
+        try { $metadataOutput = (Invoke-LessonsPromote) -join "`n" }
+        finally { Pop-Location }
+        Assert-True ($metadataOutput -match 'Metadata title survives promotion \(LEARNING \[LEARNING-metadata-title\]') 'learning promotion preserves a frontmatter title without an H1'
+        Remove-Item -LiteralPath $metadataLearning -Force
+
+        $templateDirectory = Join-Path $tempRoot '.github/templates'
+        New-Item -ItemType Directory -Path $templateDirectory, (Join-Path $tempRoot '.github/skills') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $script:repoRoot '.github/templates/LEARNING-TEMPLATE.md') -Destination $templateDirectory
+        $generatorOutput = & pwsh -NoProfile -File (Join-Path $script:repoRoot 'scripts/generate-registries.ps1') -RepoRoot $tempRoot 2>&1
+        Assert-True ($LASTEXITCODE -eq 0) "template registry generation succeeds: $generatorOutput"
+        $templateRegistry = Get-Content -LiteralPath (Join-Path $tempRoot '.github/registries/templates.json') -Raw | ConvertFrom-Json
+        $entry = @($templateRegistry.templates)[0]
+        Assert-True ($entry.declaredInputs -contains 'issue' -and $entry.titlePlaceholders -contains 'Title' -and $entry.sections -contains 'Guidance') 'registry keeps inputs after frontmatter and reads metadata title placeholders'
         Assert-True ($output -match 'LEARNING-archived.md \(conf=0.95, obs=7, status=archived\)') 'skipped learning retains real metadata'
         Assert-True (-not (Test-Path (Join-Path $tempRoot 'memories'))) 'dry-run does not write conventions'
         $after = @(Get-ChildItem $learningDir | Get-FileHash | Select-Object -ExpandProperty Hash)
@@ -151,6 +175,15 @@ function Test-LearningPromotion {
                 $beforeRepeat = [IO.File]::ReadAllText($conventionsPath)
                 $null = Invoke-LessonsPromote
                 Assert-True ([IO.File]::ReadAllText($conventionsPath) -ceq $beforeRepeat) 'repeated promotion does not append another convention'
+                [IO.File]::WriteAllText($learningPath, "---`nconfidence: 0.95`nobservations: 7`nstatus: reviewed`n---`n$body")
+                $null = Invoke-LessonsPromote
+                Assert-True ([IO.File]::ReadAllText($conventionsPath) -ceq $beforeRepeat) 'interrupted promotion retry deduplicates an already appended learning'
+                $lease = [IO.File]::Open((Join-Path $script:FRONTIER_STATE_DIR 'state/lesson-promotion.lock'),
+                    [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+                $busyRejected = $false
+                try { $null = Invoke-LessonsPromote } catch { $busyRejected = $_.Exception.Message -match 'Another lesson promotion is active' }
+                finally { $lease.Dispose() }
+                Assert-True $busyRejected 'concurrent promotion fails promptly instead of waiting or losing memory'
             } finally { Pop-Location }
         }
         Get-ChildItem -LiteralPath $learningDir | Remove-Item
@@ -167,11 +200,121 @@ function Test-LearningPromotion {
             finally { Pop-Location }
             Assert-True $rejected "invalid promotion metadata fails closed: $($invalid -replace '\r?\n', '; ')"
         }
+        $entryRoot = Join-Path $tempRoot 'entry-workspace'
+        $entryLearning = Join-Path $entryRoot 'docs/artifacts/learnings/LEARNING-entry.md'
+        [void][IO.Directory]::CreateDirectory((Split-Path $entryLearning -Parent))
+        [IO.File]::WriteAllText($entryLearning, "---`nconfidence: 0.95`nobservations: 3`nstatus: reviewed`n---`n# Entry-point learning`n")
+        foreach ($dry in @($true, $false)) {
+            $start = [Diagnostics.ProcessStartInfo]::new('pwsh')
+            $start.WorkingDirectory = $script:repoRoot
+            foreach ($argument in @('-NoProfile', '-NonInteractive', '-File',
+                (Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'), 'lessons', 'promote', 'entry')) {
+                $start.ArgumentList.Add($argument)
+            }
+            if ($dry) { $start.ArgumentList.Add('--dry-run') }
+            foreach ($name in @('FRONTIER_STATE_ROOT', 'FRONTIER_STATE_WORKSPACE', 'FRONTIER_STATE_AUTHORITY')) {
+                [void]$start.Environment.Remove($name)
+            }
+            $start.Environment['FRONTIER_WORKSPACE_ROOT'] = $entryRoot
+            $result = Invoke-LoopCheckProcess -StartInfo $start -TimeoutMilliseconds 60000
+            Assert-True ($result.exitCode -eq 0) "real promotion entry point succeeds (dry=$dry): $($result.output)"
+            if ($dry) {
+                Assert-True ($result.output -match 'would promote LEARNING-entry.md') 'real dry-run resolves its dependencies and selected workspace'
+                Assert-True (-not [IO.File]::Exists((Join-Path $entryRoot 'memories/conventions.md'))) 'real dry-run leaves memory untouched'
+            } else {
+                Assert-True ([IO.File]::ReadAllText($entryLearning) -match 'status: promoted') 'real promotion writes the source status'
+                Assert-True ([IO.File]::ReadAllText((Join-Path $entryRoot 'memories/conventions.md')) -match 'LEARNING-entry') 'real promotion writes memory in the bound workspace'
+            }
+        }
     } finally {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force
     }
 }
 
+function Test-ProviderBoundaryContracts {
+    Set-StrictMode -Version Latest
+    $tokens = $null; $errors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseFile(
+        (Join-Path $script:repoRoot '.frontier/runtime/frontier-cli.ps1'), [ref]$tokens, [ref]$errors)
+    foreach ($name in @('ConvertFrom-AdoMcpToolResult', 'Get-ConfigValue', 'Invoke-GitHubCli',
+        'Get-GitHubIssue', 'Get-ProviderIssues', 'Convert-GitHubIssueToFrontierIssue', 'ConvertFrom-GitHubCliJson',
+        'Convert-GitHubIssueStateToIssueState', 'Get-IssueDeps', 'Get-UnresolvedIssueDependencies')) {
+        $definition = $ast.Find({ param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
+        }, $true)
+        if (-not $definition) { throw "Missing provider function: $name" }
+        . ([scriptblock]::Create($definition.Extent.Text))
+    }
+    $item = [pscustomobject]@{ id = 501; fields = [pscustomobject]@{ 'System.Title' = 'Text result' } }
+    $textResult = [pscustomobject]@{ content = @([pscustomobject]@{ type = 'text'; text = ($item | ConvertTo-Json -Depth 5) }) }
+    Assert-True ((ConvertFrom-AdoMcpToolResult $textResult).id -eq 501) 'text-only MCP results work under strict mode'
+    Assert-True ((ConvertFrom-AdoMcpToolResult ([pscustomobject]@{ structuredContent = $item })).id -eq 501) 'structured-only MCP results still work'
+    foreach ($bad in @($null, [pscustomobject]@{ content = @() },
+        [pscustomobject]@{ content = @([pscustomobject]@{ type = 'text'; text = 'not JSON' }) })) {
+        $rejected = $false
+        try { $null = ConvertFrom-AdoMcpToolResult $bad } catch { $rejected = $true }
+        Assert-True $rejected 'missing or malformed MCP payload remains an explicit error'
+    }
+
+    function Assert-GitHubCliAvailable {}
+    function Get-GitHubRepoSlug { 'configured/target' }
+    function Get-FrontierProvider { 'github' }
+    function Test-GitHubProjectConfigured { $false }
+    $calls = [Collections.Generic.List[string]]::new()
+    function gh {
+        $calls.Add(($args -join ' '))
+        $global:LASTEXITCODE = 0
+        $issue = @{ number = 42; title = 'Configured target'; body = ''; state = 'OPEN'; labels = @(); url = 'https://github.com/configured/target/issues/42' }
+        if ($args -contains 'list') { ConvertTo-Json -InputObject @($issue) -Depth 5 -Compress }
+        else { $issue | ConvertTo-Json -Depth 5 -Compress }
+    }
+    $null = Get-GitHubIssue 42
+    $null = Get-ProviderIssues
+    Assert-True ($calls.Count -eq 2 -and @($calls | Where-Object { $_ -notmatch '-R configured/target' }).Count -eq 0) 'GitHub list and readback use the configured repository'
+    function gh {
+        $global:LASTEXITCODE = 0
+        Write-Error 'fixture gh warning on stderr' -ErrorAction Continue
+        $issue = @{ number = 7; title = 'Warned'; body = ''; state = 'OPEN'; labels = @(); url = 'https://github.com/configured/target/issues/7' }
+        if ($args -contains 'list') { ConvertTo-Json -InputObject @($issue) -Depth 5 -Compress }
+        else { $issue | ConvertTo-Json -Depth 5 -Compress }
+    }
+    Assert-True ((Get-GitHubIssue 7).number -eq 7 -and @(Get-ProviderIssues)[0].number -eq 7) 'GitHub stderr warnings do not corrupt successful JSON reads'
+    function gh { $global:LASTEXITCODE = 0; Write-Error 'fixture warning only' -ErrorAction Continue }
+    foreach ($read in @({ Get-GitHubIssue 7 }, { Get-ProviderIssues })) {
+        $emptyRejected = $false
+        try { $null = & $read } catch { $emptyRejected = $_.Exception.Message -match 'no JSON output' }
+        Assert-True $emptyRejected 'a successful gh exit with only stderr is an explicit read failure'
+    }
+    function gh { $global:LASTEXITCODE = 1; 'fixture provider failure' }
+    $fetchFailed = $false
+    try { $null = Get-ProviderIssues } catch { $fetchFailed = $_.Exception.Message -match 'fixture provider failure' }
+    Assert-True $fetchFailed 'provider list failure is not an empty successful backlog'
+
+    $dependency = [pscustomobject]@{ number = 1; state = 'open'; title = 'Older blocker' }
+    function Get-ProviderIssue { param($num) return $dependency }
+    $dependent = [pscustomobject]@{ number = 250; dependencies = @(1); body = '' }
+    Assert-True (@(Get-UnresolvedIssueDependencies $dependent @()).Count -eq 1) 'an open dependency outside the first page blocks readiness'
+    $dependency.state = 'closed'
+    Assert-True (@(Get-UnresolvedIssueDependencies $dependent @()).Count -eq 0) 'a separately resolved closed dependency permits readiness'
+    $dependency = $null
+    Assert-True (@(Get-UnresolvedIssueDependencies $dependent @()).Count -eq 1) 'a missing local dependency blocks readiness'
+    function Get-ProviderIssue { param($num) throw 'fixture read denied' }
+    $dependencyFailed = $false
+    try { $null = Get-UnresolvedIssueDependencies $dependent @() } catch { $dependencyFailed = $true }
+    Assert-True $dependencyFailed 'unreadable dependencies cannot silently become ready'
+    function gh { $global:LASTEXITCODE = 1; 'GraphQL: Could not resolve to an Issue with the number of 1. (repository.issue)' }
+    function Get-ProviderIssue { param($num) Get-GitHubIssue $num }
+    $remoteMissing = $false
+    try { $null = Get-UnresolvedIssueDependencies $dependent @() }
+    catch { $remoteMissing = $_.Exception.Message -match 'Could not resolve to an Issue' }
+    Assert-True $remoteMissing 'a remote not-found dependency fails readiness explicitly through the real GitHub read wrapper'
+}
+
+if (-not $ProjectIdentityOnly -and -not $PromotionOnly) { Test-ProviderBoundaryContracts }
+if ($BoundaryOnly) {
+    Write-Host "Results: $($script:pass)/$($script:pass + $script:fail) passed"
+    exit $script:fail
+}
 if (-not $PromotionOnly) { Test-ProjectIssueIdentity }
 if ($ProjectIdentityOnly) {
     Write-Host "Results: $($script:pass)/$($script:pass + $script:fail) passed"
@@ -968,17 +1111,18 @@ task_prefix: 'task'
     Assert-True ([int]$loopAfterInvalid.iteration -eq [int]$loopBeforeInvalid.iteration) 'loop iterate does not advance when --passing is invalid'
     Assert-True ((Test-Path $invalidEvidenceA) -and (Test-Path $invalidEvidenceB)) 'loop iterate leaves source evidence in place when --passing validation fails'
 
-    # AGENTX_SKIP_EVIDENCE_GATE=1 bypass: iterate skips evidence requirement but still enforces baseline passing count.
+    # FRONTIER_SKIP_EVIDENCE_GATE=1 bypass: iterate skips evidence requirement but still enforces baseline passing count.
     $loopAfterValid = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $loopIterateBypass = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass', '--passing', '7') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    $loopIterateBypass = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass', '--passing', '7') @{ FRONTIER_SKIP_EVIDENCE_GATE = '1' }
     $loopAfterBypass = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    Assert-True ($loopIterateBypass.Output -notmatch '\[FAIL\]') 'loop iterate emits no [FAIL] when AGENTX_SKIP_EVIDENCE_GATE=1 and baseline passing count is provided'
-    Assert-True ([int]$loopAfterBypass.iteration -eq ([int]$loopAfterValid.iteration + 1)) 'loop iterate advances under AGENTX_SKIP_EVIDENCE_GATE bypass when baseline passing count is satisfied'
+    Assert-True ($loopIterateBypass.Output -notmatch '\[FAIL\]') 'loop iterate emits no [FAIL] when FRONTIER_SKIP_EVIDENCE_GATE=1 and baseline passing count is provided'
+    Assert-True ([int]$loopAfterBypass.iteration -eq ([int]$loopAfterValid.iteration + 1)) 'loop iterate advances under FRONTIER_SKIP_EVIDENCE_GATE bypass when baseline passing count is satisfied'
 
-    $loopIterateBypassMissingPassing = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass missing passing') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    # Tests are deferred to post-loop consent, so an omitted --passing is accepted even with an integer baseline.
+    $loopIterateBypassMissingPassing = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass missing passing') @{ FRONTIER_SKIP_EVIDENCE_GATE = '1' }
     $loopAfterBypassMissingPassing = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    Assert-True ($loopIterateBypassMissingPassing.Output -match 'requires --passing <count>') 'loop iterate still requires --passing when a baseline exists even if AGENTX_SKIP_EVIDENCE_GATE=1'
-    Assert-True ([int]$loopAfterBypassMissingPassing.iteration -eq [int]$loopAfterBypass.iteration) 'loop iterate does not advance under evidence bypass when baseline passing count is missing'
+    Assert-True ($loopIterateBypassMissingPassing.Output -notmatch 'requires --passing') 'loop iterate treats an omitted --passing as deferred tests even when a baseline exists'
+    Assert-True ([int]$loopAfterBypassMissingPassing.iteration -eq ([int]$loopAfterBypass.iteration + 1)) 'loop iterate advances under evidence bypass when tests are deferred'
 
     $adoRoot = New-TestWorkspace 'ado'
     $adoToolsDir = Initialize-AdoMock $adoRoot

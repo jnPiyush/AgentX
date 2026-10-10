@@ -1,6 +1,6 @@
 ---
 name: "UX Design"
-agent: "Frontier Experience FDE"
+agent: "Frontier UX Designer"
 description: Generate UX designs, wireframes, and prototypes from PRD requirements
 inputs:
  issue_number:

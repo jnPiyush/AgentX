@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { SESSION, AGENT, startArguments } = require('./guidedInteraction');
 
 const READ_ONLY_COMMANDS = new Set(['ready', 'state', 'status', 'deps', 'workflow']);
 const CAPABILITY_BY_COMMAND = Object.freeze({
@@ -7,6 +8,7 @@ const CAPABILITY_BY_COMMAND = Object.freeze({
   ask: 'run',
   loop: 'loopMutation',
   raw: 'raw',
+  respond: 'run',
 });
 
 function createNonce() {
@@ -52,7 +54,7 @@ class ConfirmationStore {
       ok: true,
       nonce,
       text: [
-        'Confirmation required for a mutating command.',
+        'Confirmation required for this capability-gated command.',
         `Command: ${describeArgs(plan.args)}`,
         `Reply: confirm ${nonce}`,
         `Expires in ${Math.ceil(this.ttlMs / 1000)} seconds.`,
@@ -92,11 +94,14 @@ function classifyCommand(tokens, config) {
       return { ok: false, text: `Usage: ${cmd} <${cmd === 'deps' ? 'issue' : 'agent'}>` };
     }
     if (!takesArgument && rest.length) return { ok: false, text: `Usage: ${cmd}` };
+    if (cmd === 'deps' && !/^[1-9][0-9]{0,9}$/.test(rest[0])) return { ok: false, text: 'Usage: deps <issue>' };
+    if (cmd === 'workflow' && !AGENT.test(rest[0])) return { ok: false, text: 'Usage: workflow <agent>' };
     const args = cmd === 'status' ? ['loop', 'status'] : [cmd, ...rest];
     return { ok: true, args, risk: 'read', capability: null };
   }
 
   if (cmd === 'loop' && ((rest[0] || '').toLowerCase() === 'status' || !rest[0])) {
+    if (rest.length > 1) return { ok: false, text: 'Usage: loop status' };
     return { ok: true, args: ['loop', 'status'], risk: 'read', capability: null };
   }
 
@@ -109,22 +114,42 @@ function classifyCommand(tokens, config) {
 
   let args;
   if (cmd === 'ship') {
-    if (!rest[0]) return { ok: false, text: 'Usage: ship <issue>' };
+    if (rest.length !== 1 || !/^[1-9][0-9]{0,9}$/.test(rest[0])) return { ok: false, text: 'Usage: ship <issue>' };
     args = ['ship', '-Issue', rest[0]];
   } else if (cmd === 'run') {
     const agent = rest[0];
     const task = rest.slice(1).join(' ');
     if (!agent || !task) return { ok: false, text: 'Usage: run <agent> "<task>"' };
-    args = ['run', agent, task];
+    try { args = startArguments(agent, task); } catch (error) { return { ok: false, text: error.message }; }
   } else if (cmd === 'ask') {
     const task = rest.join(' ');
     if (!task) return { ok: false, text: 'Usage: ask "<question>"' };
-    args = ['run', config.defaultAgent, task];
+    try { args = startArguments(config.defaultAgent, task); } catch (error) { return { ok: false, text: error.message }; }
+  } else if (cmd === 'respond') {
+    if (!SESSION.test(rest[0] || '') || !['answer', 'approve', 'revise', 'cancel'].includes(rest[1])) {
+      return { ok: false, text: 'Usage: respond <session> <answer|approve|revise|cancel> [text]' };
+    }
+    const text = rest.slice(2).join(' ');
+    if ((['answer', 'revise'].includes(rest[1]) && !text.trim()) || (['approve', 'cancel'].includes(rest[1]) && text)) {
+      return { ok: false, text: 'Answers and revisions require text; approval and cancellation must not include edits.' };
+    }
+    args = ['respond', ...rest];
   } else if (cmd === 'loop' && (rest[0] || '').toLowerCase() === 'start') {
-    args = ['loop', 'start', '-p', rest.slice(1).join(' ') || 'WhatsApp-initiated task'];
+    const task = rest.slice(1).join(' ') || 'WhatsApp-initiated task';
+    if (task.startsWith('-')) return { ok: false, text: 'Loop task text cannot be a CLI flag.' };
+    args = ['loop', 'start', '-p', task];
   } else if (cmd === 'raw') {
-    if (!rest.length) return { ok: false, text: 'Usage: raw <agentx args>' };
-    args = rest;
+    if (!rest.length) return { ok: false, text: 'Usage: raw <Frontier args>' };
+    const name = rest[0].toLowerCase();
+    if (['version', 'help'].includes(name) && rest.length === 1) {
+      args = [name];
+    } else if (READ_ONLY_COMMANDS.has(name) || (name === 'loop' && rest[1]?.toLowerCase() === 'status')) {
+      const read = classifyCommand(rest, config);
+      if (!read.ok || read.risk !== 'read') return { ok: false, text: 'Raw supports only validated read-only commands.' };
+      args = read.args;
+    } else {
+      return { ok: false, text: 'Raw supports only read-only ready/state/status/deps/workflow, loop status, version and help. Use owned run/respond commands for execution.' };
+    }
   } else {
     return { ok: false, text: `Unknown command: ${cmd}` };
   }
@@ -138,7 +163,11 @@ function classifyCommand(tokens, config) {
     };
   }
 
-  return { ok: true, args, risk: 'mutate', capability };
+  return {
+    ok: true, args, risk: 'mutate', capability,
+    ...(cmd === 'run' || cmd === 'ask' ? { guided: true } : {}),
+    ...(cmd === 'respond' ? { response: { sessionId: rest[0], decision: rest[1], text: rest.slice(2).join(' ') } } : {}),
+  };
 }
 
 module.exports = {

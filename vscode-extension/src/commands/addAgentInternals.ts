@@ -5,6 +5,8 @@ import { AgentScaffoldDetails } from './scaffoldGeneration';
 export type AgentDetails = AgentScaffoldDetails;
 
 const MODEL_OPTIONS = [
+  { label: 'Claude Opus 5.5 (copilot)', value: 'Claude Opus 5.5 (copilot)' },
+  { label: 'GPT-6 Astra (copilot)', value: 'GPT-6 Astra (copilot)' },
   { label: 'Claude Opus 5 (copilot)', value: 'Claude Opus 5 (copilot)' },
   { label: 'Claude Sonnet 5 (copilot)', value: 'Claude Sonnet 5 (copilot)' },
   { label: 'Claude Opus 4.8 (copilot)', value: 'Claude Opus 4.8 (copilot)' },

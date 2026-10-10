@@ -7,7 +7,8 @@ alwaysApply: false
 # React / TSX (Frontier)
 
 Canonical: `.github/instructions/react.instructions.md` and
-`.github/skills/languages/react/SKILL.md` -- read for full standards.
+`.github/skills/languages/react/SKILL.md` -- read through
+`pwsh -NoProfile -File .frontier/runtime/frontier.ps1 cursor read <canonical-path>`.
 
 - Functional components with typed props; custom hooks prefixed `use`.
 - useCallback/useMemo/React.memo where it matters; TanStack Query for server

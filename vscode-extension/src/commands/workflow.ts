@@ -28,6 +28,7 @@ export function registerWorkflowCommand(
  agentx: FrontierContext
 ) {
  const showWorkflowSteps = async (workflowLabel?: string) => {
+ const selectedRoot = agentx.workspaceRoot;
  if (!await agentx.checkInitialized()) {
  vscode.window.showWarningMessage('Frontier is not initialized.');
  return;
@@ -42,7 +43,7 @@ export function registerWorkflowCommand(
  if (!workflowType) { return; }
 
  try {
-     const output = await agentx.runCli('workflow', [workflowType.label]);
+     const output = await agentx.runCli('workflow', [workflowType.label], selectedRoot);
    const channel = vscode.window.createOutputChannel('Frontier Workflow Steps');
  channel.clear();
    channel.appendLine(`=== Frontier Workflow Steps: ${workflowType.label} ===\n`);
@@ -53,14 +54,14 @@ export function registerWorkflowCommand(
  // Auto-start iterative loop for workflows with iterate=true steps
  // ---------------------------------------------------------------
  const hasIterateStep = /\[LOOP\]/i.test(output);
- const root = agentx.workspaceRoot;
+ const root = selectedRoot ?? agentx.workspaceRoot;
  if (hasIterateStep && root && shouldAutoStartLoop(root)) {
    const autoStart = await vscode.window.showInformationMessage(
      'This workflow has an iterative loop step. Start a quality loop now?',
      'Start Loop', 'Skip'
    );
    if (autoStart === 'Start Loop') {
-     await vscode.commands.executeCommand('frontier.loopStart');
+     await vscode.commands.executeCommand('frontier.loopStart', root);
    }
  } else if (hasIterateStep && root) {
    vscode.window.showInformationMessage(

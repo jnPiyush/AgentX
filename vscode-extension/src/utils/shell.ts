@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'child_process';
+import { StringDecoder } from 'string_decoder';
 import {
  buildShellArgs,
  compareSemver,
@@ -133,6 +134,7 @@ export function execShellStreaming(
 export interface ShellExecutionOptions {
  readonly signal?: AbortSignal;
  readonly timeoutMs?: number;
+ readonly allowedExitCodes?: readonly number[];
 }
 
 interface RunShellOptions extends ShellExecutionOptions {
@@ -247,6 +249,8 @@ function runShell(
 
   const stdoutChunks: string[] = [];
   const stderrChunks: string[] = [];
+  const stdoutDecoder = new StringDecoder('utf8');
+  const stderrDecoder = new StringDecoder('utf8');
   let stdoutBuffer = '';
   let stderrBuffer = '';
   let outputBytes = 0;
@@ -261,7 +265,7 @@ function runShell(
   };
 
   child.stdout.on('data', (chunk: Buffer | string) => {
-   const text = chunk.toString();
+   const text = typeof chunk === 'string' ? chunk : stdoutDecoder.write(chunk);
    if (!acceptChunk(text)) { return; }
    stdoutChunks.push(text);
    stdoutBuffer += text;
@@ -269,7 +273,7 @@ function runShell(
   });
 
   child.stderr.on('data', (chunk: Buffer | string) => {
-   const text = chunk.toString();
+   const text = typeof chunk === 'string' ? chunk : stderrDecoder.write(chunk);
     if (!acceptChunk(text)) { return; }
    stderrChunks.push(text);
    stderrBuffer += text;
@@ -285,6 +289,12 @@ function runShell(
    if (settled) { return; }
     if (stoppingError) { finishStopped(); return; }
 
+   const stdoutTail = stdoutDecoder.end();
+   const stderrTail = stderrDecoder.end();
+   stdoutChunks.push(stdoutTail);
+   stderrChunks.push(stderrTail);
+   stdoutBuffer += stdoutTail;
+   stderrBuffer += stderrTail;
    if (stdoutBuffer.trim().length > 0) {
     onLine?.(stdoutBuffer.trim(), 'stdout');
    }
@@ -294,7 +304,7 @@ function runShell(
 
   const stdout = stdoutChunks.join('').replace(/\r/g, '');
   const stderr = stderrChunks.join('').replace(/\r/g, '');
-  if (code !== 0) {
+  if (code === null || !(options.allowedExitCodes ?? [0]).includes(code)) {
    finish(new Error(redactSecrets(`Command failed: exit code ${code}\n${stderr}`)));
     return;
    }

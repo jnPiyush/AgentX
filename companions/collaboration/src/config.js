@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createPrivateKey } from 'node:crypto';
+import runner from '../../whatsapp/src/frontierRunner.js';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
@@ -27,11 +28,10 @@ export function loadConfig(env = process.env) {
     const channels = list('FRONTIER_CHANNELS');
     if (channels.some(channel => !['teams', 'github'].includes(channel))) throw new Error('Unsupported FRONTIER_CHANNELS value.');
     const repoPath = fs.realpathSync(required('FRONTIER_WORKSPACE_ROOT'));
-    const cliRelativePath = env.FRONTIER_CLI_PATH || '.frontier/runtime/frontier.ps1';
+    const cliRelativePath = env.FRONTIER_CLI_PATH ?? '.frontier/runtime/frontier.ps1';
     const cliPath = fs.realpathSync(path.resolve(repoPath, cliRelativePath));
-    const relative = path.relative(repoPath, cliPath);
-    if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.statSync(cliPath).isFile()) throw new Error('CLI must be a file inside the workspace.');
-    const agents = (env.FRONTIER_REMOTE_AGENTS || 'engineer,reviewer').split(',').map(value => value.trim());
+    if (!runner.containsCliPath(repoPath, cliPath) || !fs.statSync(cliPath).isFile()) throw new Error('CLI must be a file inside the workspace.');
+    const agents = (env.FRONTIER_REMOTE_AGENTS ?? 'engineer,reviewer').split(',').map(value => value.trim());
     if (!agents.length || agents.some(agent => !/^[a-z][a-z0-9-]{0,63}$/.test(agent))) throw new Error('Invalid remote agent allowlist.');
     if (env.FRONTIER_REMOTE_EXECUTION && !['true', 'false'].includes(env.FRONTIER_REMOTE_EXECUTION)) throw new Error('FRONTIER_REMOTE_EXECUTION must be true or false.');
     const config = {
@@ -43,6 +43,7 @@ export function loadConfig(env = process.env) {
         progressMs: integer('FRONTIER_PROGRESS_MS', 30000, 5000, 300000),
         commandTimeoutMs: integer('FRONTIER_RUN_TIMEOUT_MS', 900000, 1000, 3600000),
         maxOutputChars: 256000,
+        runtimeEnv: runner.validateRuntimeEnv((env.FRONTIER_RUNTIME_ENV || '').split(',').map(name => name.trim()).filter(Boolean)),
     };
     if (channels.includes('github')) {
         const repository = required('FRONTIER_GITHUB_REPOSITORY').toLowerCase();

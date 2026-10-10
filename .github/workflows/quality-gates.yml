@@ -379,16 +379,14 @@ jobs:
             fi
           }
 
-          check_count "AGENTS.md" '\b[0-9]* agent definition files' "$AGENT_COUNT agent definition files" "agent count"
-          check_count "AGENTS.md" '\b[0-9]* skill files' "$SKILL_COUNT skill files" "skill count"
-          check_count "AGENTS.md" '\b[0-9]* instruction files' "$INSTRUCTION_COUNT instruction files" "instruction count"
-          check_count "AGENTS.md" '\b[0-9]* templates' "$TEMPLATE_COUNT templates" "template count"
-          check_count "AGENTS.md" '\b[0-9]* reusable prompt templates' "$PROMPT_COUNT reusable prompt templates" "prompt count"
           check_count "README.md" '\*\*[0-9]+ total\*\*' "**$AGENT_COUNT total**" "agent count"
           check_count "README.md" '\*\*[0-9]+ skills\*\*' "**$SKILL_COUNT skills**" "skill count"
+          check_count "README.md" '\*\*[0-9]+ root instruction files\*\*' "**$INSTRUCTION_COUNT root instruction files**" "instruction count"
+          check_count "README.md" '\*\*[0-9]+ templates\*\*' "**$TEMPLATE_COUNT templates**" "template count"
+          check_count "README.md" '\*\*[0-9]+ reusable prompt templates\*\*' "**$PROMPT_COUNT reusable prompt templates**" "prompt count"
 
           if [ -f "vscode-extension/.github/AGENTS.md" ]; then
-            check_count "vscode-extension/.github/AGENTS.md" '\b[0-9]* agent definition files' "$AGENT_COUNT agent definition files" "bundled agent count"
+            check_count "vscode-extension/README.md" '\b[0-9]+ declarative chat agents' "$AGENT_COUNT declarative chat agents" "extension agent count"
           fi
 
           if [ "$ERRORS" -gt 0 ]; then

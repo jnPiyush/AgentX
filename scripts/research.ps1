@@ -57,7 +57,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RootDir   = (Resolve-Path .).Path
-$StateDir  = Join-Path $RootDir '.frontier/state/research'
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
+$StateDir  = Join-FrontierStatePath $RootDir @('state', 'research')
 $StateFile = Join-Path $StateDir 'session.json'
 
 function Get-Timestamp { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') }

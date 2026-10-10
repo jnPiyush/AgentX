@@ -12,6 +12,9 @@ Paths below are plain text: read them when a task needs them.
 
 ## Before Editing
 
+Apply the runtime transport and guided interaction rules in `AGENTS.md`; do not
+initialize a repository merely to satisfy a command-path example.
+
 Run `.frontier/runtime/frontier.ps1 loop start -p "<task>"` before the first file
 mutation and finish with `loop complete` after an independent reviewer approves the final
 state (`--verdict approved --reviewer <id> --high 0 --medium 0`).

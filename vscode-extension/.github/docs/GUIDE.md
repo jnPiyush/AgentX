@@ -9,7 +9,7 @@ Hypervelocity Engineering platform, Frontier.
 
 ## Table of Contents
 
-- [5-Minute Quickstart](#5-minute-quickstart)
+- [Quickstart](#quickstart)
 - [Installation](#installation)
 - [GitHub Project Setup](#github-project-setup)
 - [Local Mode (No GitHub)](#local-mode-no-github)
@@ -19,38 +19,28 @@ Hypervelocity Engineering platform, Frontier.
 
 ---
 
-## 5-Minute Quickstart
+<a id="5-minute-quickstart"></a>
 
-> **Build a reviewed feature with Frontier in 5 minutes.**
+## Quickstart
 
-### What You'll Do
+Start with a trusted project and a small task. Completion time depends on the
+repository, provider and required checks; setup is not proof of tested delivery.
 
-1. Install Frontier into your project
-2. Create your first issue
-3. Run the Product FDE -> Engineering FDE -> Review FDE pipeline
-4. Ship a reviewed, tested feature
-
-**Time**: ~5 minutes (with an existing project)
-
-### Step 1: Install (30 seconds)
+### Step 1: Install
 
 ```powershell
-# PowerShell -- into an existing project directory
-cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.ps1 | iex
+code --install-extension jnPiyush.agentx
 ```
 
-```bash
-# Bash
-cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash
-```
+Or install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
+Open a trusted workspace. Ordinary extension use loads the bundled agents and
+skills and creates private workspace state on first use; it does not copy those
+trees into your project.
 
-**What happens**: Frontier copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
+For portable launchers, run **Frontier: Initialize Repository Support**.
+See [Installation](#installation) for standalone setup and package availability.
 
-> **No GitHub?** Add `-Local` (PowerShell) or `--local` (Bash) for offline mode.
-
-### Step 2: Create Your First Issue (30 seconds)
+### Step 2: Create Your First Issue
 
 Open VS Code with Copilot Chat. Type:
 
@@ -60,32 +50,26 @@ Open VS Code with Copilot Chat. Type:
 
 **Or via CLI** (GitHub mode):
 ```bash
-gh issue create --title "[Story] Add /health endpoint" --label "type:story"
+gh issue create --title "[Story] Add /health endpoint" --body "Return a successful health status." --label "type:story"
 ```
 
-**Or via CLI** (Local mode):
+**Or via CLI** (Local mode, after repository support is initialized):
 ```powershell
-.\.frontier\runtime\local-issue-manager.ps1 -Action create -Title "[Story] Add /health endpoint" -Labels "type:story"
+.\.frontier\runtime\frontier.ps1 issue create -t "[Story] Add /health endpoint" -b "Return a successful health status." -l "type:story"
 ```
 
-The Orchestration FDE classifies this as a simple `type:story` and can complete it using the Engineering FDE workflow.
+### Step 3: Implement with a Frontier FDE
 
-### Step 3: Implement with a Frontier FDE (2 minutes)
-
-Stay with **Frontier Orchestration FDE** for end-to-end execution, or select
-**Frontier Engineering FDE** for strict role isolation:
+Use the Orchestrator or select the Engineer for this phase:
 
 ```
 Implement the health endpoint for issue #1
 ```
 
-The implementation workflow will:
-
-1. **Read the issue** and check prerequisites
-2. **Load the right skills** automatically (`api-design`, `testing`, `error-handling`)
-3. **Generate code** that follows your project's instruction guardrails
-4. **Write tests** (enforced: >=80% coverage)
-5. **Commit** with proper format: `feat: add health endpoint (#1)`
+The implementation workflow reads the issue and approved artifacts, loads
+relevant instructions, implements the change and authors regression cases.
+Independent review and current non-test evidence complete the quality loop;
+delivery follows the approved scope and normal Git hooks.
 
 #### What Guardrails Are Active?
 
@@ -96,31 +80,32 @@ The implementation workflow will:
 | `*.ts` | `typescript.instructions.md` | Strict mode, Zod validation, ESM imports |
 | `*.tsx` | `react.instructions.md` | Hooks, TypeScript props, accessibility |
 
-You don't configure this -- it's automatic via `applyTo` glob matching.
+Compatible editor hosts apply `applyTo` globs. Other hosts load the matching
+instructions through their own supported context mechanism.
 
-### Step 4: Review with Reviewer Agent (1 minute)
+### Step 4: Review with the Reviewer
 
-Once the Engineer moves the issue to `In Review`:
+With the Reviewer selected:
 
 ```
-@Reviewer Review the code for issue #1
+Review the code for issue #1
 ```
 
-The Reviewer will:
+Review covers code quality, regression cases and security controls, using only
+checks actually performed. Findings go in `docs/artifacts/reviews/REVIEW-1.md`
+with an approval or changes-requested decision. Approval alone implies neither
+a test pass nor release readiness.
 
-1. **Check code quality** (naming, patterns, SOLID principles)
-2. **Verify tests** (80% coverage, test pyramid)
-3. **Security scan** (no hardcoded secrets, parameterized SQL)
-4. **Create review doc** at `docs/artifacts/reviews/REVIEW-1.md`
-5. **Approve** -> Status moves to `Done`
+### Step 5: Decide on Post-Loop Tests
 
-### Step 5: Done! What Just Happened?
+After `loop complete` succeeds, Frontier offers the relevant test suite and
+waits for explicit approval. An unanswered or declined offer means not run;
+coverage remains unmeasured. An approved run reports the actual command and
+results. A failure requires a new fix/review loop, not a fabricated pass.
 
-Frontier enforced:
-- **Code standards** via auto-loaded instruction files
-- **Test coverage** (80%+ required by Engineer constraints)
-- **Security** (blocked commands, secrets scanning)
-- **Process** (issue-first, status tracking, review before merge)
+CLI-capable hosts can record the outcome using `frontier loop verify`; see
+[recording post-loop verification](guides/LOOP-OPERATIONS.md#recording-post-loop-verification)
+for evidence and retention requirements. CI and release gates remain separate.
 
 ### Next: Try a Complex Feature
 
@@ -130,35 +115,36 @@ For larger work, use the **full pipeline**:
 @frontier Create an epic for user authentication with OAuth
 ```
 
-This triggers the full flow:
-
-```
-PM (creates PRD)
- -> UX Designer (wireframes + prototypes)
- -> Architect (ADR + Tech Spec)
- -> Engineer (implementation)
- -> Reviewer (code review)
-```
-
-Each agent produces a deliverable, validates it, and hands off to the next.
+The [workflow guide](WORKFLOW.md) describes product, UX, architecture,
+implementation and review handoffs.
 
 ---
 
 ## Installation
 
-### Quick Install
+### Extension or Portable Install
+
+For ordinary VS Code use, follow the [Quickstart](#quickstart). Repository
+initialization remains optional.
+
+For a standalone workspace, obtain and inspect the installer from a
+[published release](https://github.com/jnPiyush/AgentX/releases), then run it
+from the target project directory. A source-version badge is not evidence that
+the matching tag or package has been published. Do not construct download URLs
+for an unpublished version.
 
 ```powershell
-# PowerShell (Windows)
-.\install.ps1
-
-# Bash (Linux/Mac)
-./install.sh
-
-# One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash  # Bash
+# Downloaded, published PowerShell installer; local mode
+pwsh -NoProfile -File .\install.ps1 -Local
 ```
+
+```bash
+# Downloaded, published Bash installer; local mode
+bash install.sh --local
+```
+
+Standalone installers copy their managed assets and configure portable
+repository support. That is distinct from the extension's zero-copy runtime.
 
 PowerShell install path note:
 `install.ps1` requires PowerShell 7.4+ (`pwsh`). If you are on older Windows PowerShell, install PowerShell 7 and rerun with `pwsh -File .\install.ps1`.
@@ -180,49 +166,43 @@ shell-argument, review-state, parity, rollback and code-quality tests on native
 Ubuntu and macOS runners. A configured job is not a passing result: inspect its
 run for the current commit before claiming native platform verification.
 
-`--passing` is optional. The default evidence for an iteration is a Spec/ADR/PRD
-acceptance-criteria compliance mapping plus the sub-agent review findings, so an
-iteration that ran no suite simply omits the flag. When a step did run suites,
-report their counts: `--passing unit=12,api=40`. Each suite is compared only with
-its own last count, so a step reruns only the suites its change affects;
-`frontier loop affected` lists tests naming code changed since loop start.
-`loop baseline -c <suite>=<count>`
-records an intentional drop. An integer baseline (`loop baseline -c <count>`) keeps
-the older rule: each later iterate and complete needs an integer count no lower.
-A count proves neither a test run nor review independence; evidence and an
-attributed final review are still required.
+Quality loops and reviews do not execute test suites. They use acceptance
+mapping, independent review and non-test verification such as builds,
+typechecks, lint and schema checks. Tests can be authored and inspected without
+being reported as executed.
 
-For small changes, run checks covering the affected behavior and direct callers,
-recording commands and omitted surfaces with rationale; expand for shared
-contracts, broad changes or required CI/release gates, not for iteration count.
-The VS Code dialogs accept either count form, including zero.
+After successful `loop complete`, the owning agent asks whether to run the
+test suite and waits. The VS Code completion command offers **Run Test Task**
+or **Not Now**. Run Test Task uses VS Code's configured test task; configure a
+task in the `test` group if your workspace has none. It does not guess a shell
+command or report a test pass merely because the task was opened. Terminal and
+MCP completion output includes the same question for the host to surface.
+
+Approval to test is not approval to edit source or bypass workspace guards.
+Use the host test runner/configured task. If a host's terminal-write guard
+blocks an agent after loop completion, run the agreed command directly in
+your terminal; do not reopen a loop merely to unlock a test run.
+
+Declining or dismissing the offer leaves suites not run and coverage not
+measured. Approval starts a separate verification task. A failing suite still
+requires investigation; code corrections use a new fix/review loop.
+
+`--passing` remains optional metadata for actual supplied test evidence. An
+integer baseline no longer forces a count when tests are deferred. Explicit
+malformed or lower counts still fail; omission never invents a zero/pass count.
+The editor no longer asks for test counts during iterate/complete.
+`frontier loop affected` only lists candidate tests for the post-loop offer.
+
+CI jobs and mandatory release/certification checks remain unchanged. Local
+code-review approval is not a waiver of those gates or a claim that tests pass.
+
+### Advisory lint and optional cleanup
+
+See [Quality loop operations](guides/LOOP-OPERATIONS.md#advisory-lint-and-optional-cleanup).
 
 ### Recovering evidence verification
 
-Loop audit subprocesses drain stdout and stderr concurrently under a 30-second
-deadline; the code-quality evaluator has 90 seconds, leaving headroom within the
-extension's two-minute command limit. A timeout or nonzero checker exit is a
-failure, never evidence approval. Completion checks passing counts and final
-artifact freshness before the expensive evaluator.
-
-- Checker timeout/startup failure: inspect the reported checker and its dependencies,
-  then retry; do not regenerate unrelated test suites or disable verification.
-- Missing or regressed passing count: rerun that suite and report its real result;
-  lower a suite's count only for an intentional change, never with another suite.
-- Stale final evidence: run a fresh, scoped final check after the review iteration
-  and submit its real output. Never touch timestamps or copy old evidence to pass.
-- Changed hashes or review findings: rerun affected tests and obtain a new review.
-- Complete the loop before committing; an active loop is rejected by the commit hook.
-
-Architect and UX Designer request `GPT-6 Astra (copilot)`. Copilot API catalog
-metadata verified `gpt-6-astra` with Responses transport; other providers are not
-silently substituted. Catalog availability is not a measured architecture or UX
-quality comparison, and each end user's account must expose the selected model.
-
-The lifecycle signal hook records event, session and tool metadata only. It does
-not persist prompts, tool arguments, tool results or error payloads. This change
-does not sanitize historical signal logs; review their retention and access
-separately before sharing a workspace or its logs.
+See [Quality loop operations](guides/LOOP-OPERATIONS.md#recovering-evidence-verification).
 
 ### Upgrading Existing Workspaces
 
@@ -238,35 +218,29 @@ Configuration, issues, state, sessions, memory and digests are preserved under
 those folders and leaves them untouched. Copy anything you still need out of them
 manually, then delete them.
 
-### Install Profiles
+### Frontier-only interfaces
 
-Control what gets installed with the `-Profile` flag:
+AgentX/HVE compatibility aliases are no longer supported. See [Frontier-only interfaces](guides/FRONTIER-ONLY-INTERFACES.md) for the current names.
 
-| Profile | Skills | Instructions | Prompts | Hooks | VS Code |
-|---------|--------|-------------|---------|-------|---------|
-| **full** (default) | All 107 | All 7 | Yes | Yes | Yes |
-| **minimal** | None | None | No | No | No |
-| **python** | Python, testing, data, architecture | python, api | Yes | Yes | Yes |
-| **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | Yes | Yes | Yes |
-| **react** | React, TypeScript, UI, design, architecture | react, api | Yes | Yes | Yes |
+<a id="install-profiles"></a>
 
-**All profiles always include**: agents, templates, CLI, instructions, issue templates, documentation.
+### Installer Options
+
+The root installers no longer accept language or minimal-profile flags.
+Their supported options include local/GitHub mode, explicit overwrite and
+skipping interactive setup. Use scripts from the selected published version.
 
 ```powershell
-# PowerShell examples
-.\install.ps1 -Profile python          # Python stack
-.\install.ps1 -Profile minimal -Local  # Core only, local mode
-.\install.ps1 -Force                   # Reinstall (overwrite existing)
-.\install.ps1 -NoSetup                 # Skip interactive prompts (CI/scripts)
+pwsh -File .\install.ps1 -Local
+pwsh -File .\install.ps1 -Mode github
+pwsh -File .\install.ps1 -Force
+pwsh -File .\install.ps1 -NoSetup
+```
 
-# Bash examples
-./install.sh --profile python
-./install.sh --profile minimal --local
-./install.sh --force
-./install.sh --no-setup
-
-# One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.sh | bash
+```bash
+bash install.sh --local
+bash install.sh --force
+bash install.sh --no-setup
 ```
 
 ### What the Installer Does
@@ -287,8 +261,34 @@ Frontier supports three host surfaces. Pick the one that matches how you work.
 ### 1. VS Code extension (default)
 
 Install the Frontier extension. It contributes all 26 agents, 134 skills and the
-instruction files directly to the host -- nothing is copied into your
-workspace. This is the zero-copy path.
+instruction files directly to the host without copying those framework trees
+into your workspace. Initialization still writes workspace configuration,
+state and terminal launchers.
+
+For the smallest initial scaffold, configure:
+
+```json
+{
+  "frontier.initializationMode": "minimal",
+  "frontier.seedRepoLocalAssets": false
+}
+```
+
+Ordinary extension use now provisions private state lazily; repository setup is
+optional. For these portable launchers run `Frontier: Initialize Repository
+Support`, not `Initialize CLI`. The generated
+launchers also support Frontier terminal commands:
+
+```powershell
+pwsh -NoProfile -File .\.frontier\runtime\frontier.ps1 help
+```
+
+Minimal mode skips starter memory files and empty documentation/output
+directories; those can be created when work needs them. It preserves existing
+files and requires asset seeding to be disabled. The default `standard` mode
+retains the previous scaffold. See the [initialization
+contract](../vscode-extension/README.md#minimal-workspace-setup) for the exact
+files and the conditional GitHub MCP configuration.
 
 To use Frontier in the **Agents window** (VS Code's dedicated agent surface),
 opt the extension in:
@@ -307,14 +307,33 @@ opt the extension in:
 
 ### 2. GitHub Copilot CLI -- native plugin
 
-The repository root ships a `plugin.json`, so Copilot CLI can register Frontier's
-agents, skills and lifecycle hooks without copying anything:
+The repository root ships a `plugin.json`. A managed plugin installation keeps
+its framework assets outside each application workspace:
 
 ```bash
 copilot plugin install jnPiyush/AgentX
 copilot plugin list
-copilot --agent engineer -p "Implement the health endpoint"
 ```
+
+Alternatively, launch Copilot from your application directory and point
+`--plugin-dir` at one shared Frontier checkout. On Windows, for example:
+
+```powershell
+copilot --plugin-dir "C:\Tools\AgentX" plugin list
+copilot --plugin-dir "C:\Tools\AgentX"
+```
+
+Replace the example path with your shared checkout. This does not install the
+VS Code extension or initialize Frontier state, and a managed plugin has its
+own version/update lifecycle.
+
+Plugin discovery is not a full workflow compatibility test. Current Frontier
+hooks and some gate commands contain workspace-relative paths. Before relying
+on a plugin-only application workspace, verify hook execution, reference
+resolution, and gate output locations. Do not assume `--plugin-dir` rewrites
+shell commands or makes every workflow portable. Use the bundled Frontier CLI
+launchers for Frontier runtime operations; use workspace seeding below when
+repo-local Copilot assets are required.
 
 ### 3. GitHub Copilot CLI -- workspace seeding
 
@@ -330,7 +349,13 @@ Two modes are available via the `frontier.cliAssetMode` setting:
 | Mode | Behaviour | Use when |
 |------|-----------|----------|
 | `copy` (default) | Duplicates bundled assets into the workspace | You want the assets committed and shared with a team |
-| `symlink` | Creates directory junctions into the installed extension bundle | Single-user, zero-copy; entries are added to `.gitignore` and refreshed on upgrade |
+| `symlink` | Links the eight `.github/` asset trees to the installed bundle; copies supporting files | Single-user, reduced duplication; linked entries are gitignored. Activation detects broken recorded targets and matching versioned installs in this host's extension directory, then offers an explicit Repair links action |
+
+Select the desired mode in the initialization dialog. Symlink mode still copies
+supporting docs, scripts, evaluation rubrics, packs, runtime plugins and
+standalone reference documents. Existing real directories are preserved, not
+converted to links. Neither setting changes nor reinitialization remove old
+copies; cleanup requires distinguishing generated files from project content.
 
 Seeding never overwrites existing files, and never writes host-owned files such
 as `.github/workflows`, `.github/ISSUE_TEMPLATE`, `CODEOWNERS` or `LICENSE`.
@@ -341,9 +366,13 @@ registrations so each agent appears once in the picker:
 ```jsonc
 // .vscode/settings.json
 {
-  "chat.agentFilesLocations": { ".github/agents": false }
+  "frontier.useBundledAgents": false,
+  "chat.agentFilesLocations": { ".github/agents": true }
 }
 ```
+
+This selects workspace agents instead of extension agents. Reload the window
+and start a new agent session after changing the selection.
 
 ### Standalone install (no VS Code extension)
 
@@ -374,72 +403,17 @@ new-ADR council gate. A single model playing three roles is incomplete, even if
 all roles respond. VS Code host vendor names do not prove training diversity.
 Historical councils are not rewritten by these checks.
 
-### HydraFusion Research Preview
+### Guided Interaction
 
-Use GitHub's native HydraFusion workflow when available; do not emulate it by
-adding a guessed model ID to Frontier's API model map. Frontier's `copilot`
-provider uses model APIs (chat completions or Responses), whereas HydraFusion orchestrates a complete
-native Copilot CLI task. Model Council and Frontier's independent review gates
-are separate capabilities and remain required.
+See [Guided interaction](guides/GUIDED-INTERACTION.md).
 
-The native-first evaluation on 2026-09-15 confirmed Copilot CLI `1.0.84-2` can
-start an experimental ACP session. Its account-specific session catalog returned
-23 model choices, including Auto, but no HydraFusion entry. This blocks a
-verified automated integration on that tested surface. It does not establish
-that HydraFusion is unavailable in the interactive picker or on other accounts.
-No HydraFusion solver run, custom-agent compatibility, usage aggregation or
-cancellation/patch behavior has been verified in Frontier yet.
+### HydraFusion Execution Engine
 
-#### Interactive Opt-In
+HydraFusion is opt-in and experimental; native execution remains the default. See [HydraFusion execution engine](guides/HYDRAFUSION.md).
 
-Use a disposable test checkout with Frontier's native plugin or seeded agents
-already configured. Do not run a second editing agent against an active checkout.
-Start the native CLI, keeping normal permission prompts:
+## Cursor
 
-```powershell
-copilot --experimental
-```
-
-In that interactive session:
-
-1. Check `/version`. Update through `/update` if needed, then restart. Multiple
-  installations and cached updates can resolve to different CLI versions.
-2. Select the intended Frontier agent through `/agent` and verify `/env` lists
-  the expected instructions and hooks. Do not disable them for a coding task.
-3. Open `/model` and select `HydraFusion (Research Preview)` if offered. Verify
-  the active model after agent selection; do not change global defaults.
-4. Review `/limits` and billing terms before sending one bounded task. The tested
-  CLI accepts a minimum of 30 AI credits for `--max-ai-credits`; this is a soft
-  limit, not an estimated charge or a hard spending guarantee.
-5. Inspect the resulting diff, run the task's tests and complete Frontier's
-  independent review. HydraFusion's internal critique is not proof that the
-  repository's review gate passed.
-
-If the picker does not offer HydraFusion, stop and check CLI updates and account
-or organization availability. Do not substitute Auto or another model while
-reporting the result as HydraFusion. Do not add `--allow-all` or `--yolo` to make
-an unattended probe work.
-
-#### Evaluation Findings And Next Gate
-
-The account catalog was read using ACP `initialize` and `session/new`, with no
-`session/prompt` call. An earlier `-p "/model"` probe instead invoked Sonnet once;
-it is not model-discovery or HydraFusion evidence. The same build treated an
-empty `--available-tools=` as default tools, not a tool-less configuration.
-Do not rely on either behavior for automation. No repository files were exposed
-to those probes; they used separate temporary workspaces and settings.
-
-Before adding an automated Frontier entry point, verify a supported native
-selector, explicit opt-in, model-selection fidelity, custom-agent/tool boundaries,
-timeout/cancellation behavior, one final validated patch, and complete usage
-reporting. Preserve unsupported, denied and failed states without silent model
-fallback. Keep the existing provider path unchanged until these checks pass.
-
-References: [HydraFusion announcement](https://github.blog/ai-and-ml/github-copilot/project-hydrafusion-frontier-quality-via-multi-model-orchestration/),
-[Copilot CLI command reference](https://docs.github.com/en/copilot/reference/cli-command-reference),
-and [ACP reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/acp-server).
-
----
+See the [Cursor guide](guides/CURSOR.md) for extension-based and standalone setup and runtime behavior.
 
 ## Companion Extensions
 
@@ -1173,7 +1147,9 @@ go install github.com/github/github-mcp-server@latest
 | **Inspect durable review findings** | Command Palette: `Frontier: Show Review Findings` or chat: `@frontier review findings` |
 | **Run advisory parity review** | Command Palette: `Frontier: Show Agent-Native Review` or chat: `@frontier agent-native review` |
 
----
+### Faster loop preparation without weaker gates
+
+See [Quality loop operations](guides/LOOP-OPERATIONS.md#faster-loop-preparation-without-weaker-gates).
 
 ## Troubleshooting
 
@@ -1181,7 +1157,7 @@ go install github.com/github/github-mcp-server@latest
 
 | Problem | Solution |
 |---------|----------|
-| Git hooks not working | Run `agentx hooks install`; it resolves Git's active `core.hooksPath`, installs all three hook sources, and verifies their bytes. |
+| Git hooks not working | Run `frontier hooks install`; it resolves Git's active `core.hooksPath`, installs all three hook sources, and verifies their bytes. |
 | Permission denied on scripts | Linux/Mac: `chmod +x .github/scripts/*.sh`; Windows: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | GitHub CLI not authenticated | `gh auth login` (install first: `winget install GitHub.cli` / `brew install gh`) |
 
@@ -1200,7 +1176,7 @@ go install github.com/github/github-mcp-server@latest
 |---------|-----|
 | PRD missing sections | Ensure: Problem Statement, Target Users, Goals, Requirements, User Stories |
 | ADR missing sections | Ensure: Context, Decision, Options Considered (3+), Consequences |
-| Test coverage below 80% | Run `dotnet test /p:CollectCoverage=true` or `pytest --cov=src`, add more tests |
+| Test coverage below the agreed target | After loop completion and test consent, run the appropriate coverage command (for example `pytest --cov=src`), inspect the result and address gaps in a new fix/review loop |
 
 ### Local Mode Issues
 

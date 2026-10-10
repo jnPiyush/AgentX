@@ -1,13 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-07T00:00:00Z",
+  "generatedAt": "2026-10-05T00:00:00Z",
   "plugins": [
     {
       "publisher": "jnpiyush",
       "pluginId": "convert-docs",
       "displayName": "Convert Docs",
       "description": "Convert Markdown to Microsoft Word (DOCX) using Pandoc, with automatic Mermaid diagram rendering when mermaid-cli is installed.",
-      "latestVersion": "1.1.0",
       "maturity": "stable",
       "capabilities": [
         "tool"
@@ -18,24 +17,13 @@
         "mermaid",
         "diagrams"
       ],
-      "releases": [
-        {
-          "version": "1.0.0",
-          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-convert-docs/releases/download/v1.0.0/agentx-plugin-convert-docs-1.0.0.zip",
-          "checksum": "sha256:1f1e4da255498f1ce92ec2f6ae8a31c290a8b4f89af82c5d1b6f743f1570dd7a",
-          "publishedAt": "2026-03-19T00:00:00Z",
-          "engines": {
-            "agentx": "^8.4.0"
-          }
-        }
-      ]
+      "releases": []
     },
     {
       "publisher": "jnpiyush",
       "pluginId": "convert-slides",
       "displayName": "Convert Slides",
       "description": "Convert Markdown to Microsoft PowerPoint (PPTX) using Pandoc, with automatic Mermaid diagram rendering when mermaid-cli is installed.",
-      "latestVersion": "1.1.0",
       "maturity": "stable",
       "capabilities": [
         "tool"
@@ -49,24 +37,13 @@
         "mermaid",
         "diagrams"
       ],
-      "releases": [
-        {
-          "version": "1.0.0",
-          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-convert-slides/releases/download/v1.0.0/agentx-plugin-convert-slides-1.0.0.zip",
-          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-          "publishedAt": "2026-05-07T00:00:00Z",
-          "engines": {
-            "agentx": "^8.4.0"
-          }
-        }
-      ]
+      "releases": []
     },
     {
       "publisher": "jnpiyush",
       "pluginId": "read-docs",
       "displayName": "Read Docs",
       "description": "Convert Microsoft Word, OpenDocument, RTF, HTML, and EPUB documents to Markdown using Pandoc.",
-      "latestVersion": "1.0.0",
       "maturity": "stable",
       "capabilities": [
         "tool"
@@ -83,24 +60,13 @@
         "pandoc",
         "markdown"
       ],
-      "releases": [
-        {
-          "version": "1.0.0",
-          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-read-docs/releases/download/v1.0.0/agentx-plugin-read-docs-1.0.0.zip",
-          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-          "publishedAt": "2026-05-07T00:00:00Z",
-          "engines": {
-            "agentx": "^8.4.0"
-          }
-        }
-      ]
+      "releases": []
     },
     {
       "publisher": "jnpiyush",
       "pluginId": "read-slides",
       "displayName": "Read Slides",
       "description": "Convert Microsoft PowerPoint (.pptx) decks to Markdown using python-pptx.",
-      "latestVersion": "1.0.0",
       "maturity": "stable",
       "capabilities": [
         "tool"
@@ -114,24 +80,13 @@
         "python-pptx",
         "markdown"
       ],
-      "releases": [
-        {
-          "version": "1.0.0",
-          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-read-slides/releases/download/v1.0.0/agentx-plugin-read-slides-1.0.0.zip",
-          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-          "publishedAt": "2026-05-07T00:00:00Z",
-          "engines": {
-            "agentx": "^8.4.0"
-          }
-        }
-      ]
+      "releases": []
     },
     {
       "publisher": "jnpiyush",
       "pluginId": "read-pdf",
       "displayName": "Read PDF",
       "description": "Convert PDF documents to Markdown with per-page anchors. Uses pdftotext (poppler) when available, falls back to pypdf.",
-      "latestVersion": "1.0.0",
       "maturity": "stable",
       "capabilities": [
         "tool"
@@ -145,24 +100,13 @@
         "pypdf",
         "markdown"
       ],
-      "releases": [
-        {
-          "version": "1.0.0",
-          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-read-pdf/releases/download/v1.0.0/agentx-plugin-read-pdf-1.0.0.zip",
-          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-          "publishedAt": "2026-05-07T00:00:00Z",
-          "engines": {
-            "agentx": "^8.4.0"
-          }
-        }
-      ]
+      "releases": []
     },
     {
       "publisher": "jnpiyush",
       "pluginId": "deploy-prototype",
       "displayName": "Deploy Prototype",
       "description": "Publish a UX prototype build (static HTML or SPA dist) to Vercel, Netlify, Cloudflare Pages, GitHub Pages, or Surge via the target's official CLI. Never embeds credentials.",
-      "latestVersion": "1.0.0",
       "maturity": "preview",
       "capabilities": [
         "tool"
@@ -177,17 +121,7 @@
         "github-pages",
         "surge"
       ],
-      "releases": [
-        {
-          "version": "1.0.0",
-          "artifactUrl": "https://github.com/jnPiyush/AgentX/releases",
-          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-          "publishedAt": "2026-05-12T00:00:00Z",
-          "engines": {
-            "agentx": "^8.4.0"
-          }
-        }
-      ]
+      "releases": []
     }
   ]
 }

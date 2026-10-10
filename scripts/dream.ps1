@@ -68,13 +68,12 @@ Set-StrictMode -Off
 # ---------------------------------------------------------------------------
 $script:ROOT = if ($env:FRONTIER_WORKSPACE_ROOT) {
     $env:FRONTIER_WORKSPACE_ROOT
-} elseif ($env:AGENTX_WORKSPACE_ROOT) {
-    $env:AGENTX_WORKSPACE_ROOT
 } else {
     (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
 
-$script:DREAMS_DIR = Join-Path $script:ROOT '.frontier' 'dreams'
+. (Join-Path $PSScriptRoot '..' '.frontier' 'runtime' 'workspace-state.ps1')
+$script:DREAMS_DIR = Join-FrontierStatePath $script:ROOT @('dreams')
 $script:exitCode   = 0
 
 # ---------------------------------------------------------------------------
@@ -143,7 +142,7 @@ function Resolve-Sessions {
 
     # Also harvest observer signals (.frontier/signals/sessions.jsonl).
     # See .github/hooks/scripts/signal-capture.js for the writer.
-    $signalFile = Join-Path $script:ROOT '.frontier/signals/sessions.jsonl'
+    $signalFile = Join-FrontierStatePath $script:ROOT @('signals', 'sessions.jsonl')
     if (Test-Path -LiteralPath $signalFile -PathType Leaf) {
         try {
             $lines = Get-Content $signalFile -Tail ([Math]::Max(50, $Max * 10)) -ErrorAction SilentlyContinue

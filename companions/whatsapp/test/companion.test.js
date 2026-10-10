@@ -43,7 +43,7 @@ test('routeCommand routes common WhatsApp commands to the Frontier CLI', async (
   const calls = [];
   runner.runFrontier = async (args, config) => {
     calls.push({ args, config });
-    return { ok: true, text: 'ok' };
+    return { ok: true, exitCode: 0, text: 'ok', stdout: JSON.stringify({ sessionId: 'engineer-fixture', finalText: 'ok' }) };
   };
 
   const { routeCommand } = freshRequire(routerPath);
@@ -60,8 +60,8 @@ test('routeCommand routes common WhatsApp commands to the Frontier CLI', async (
   assert.deepEqual(calls.map((entry) => entry.args), [
     ['ready'],
     ['loop', 'start', '-p', 'Fix login bug'],
-    ['run', 'engineer', 'Add /health endpoint'],
-    ['run', 'engineer', 'what should I work on next?'],
+    ['run', '-a', 'engineer', '-p', 'Add /health endpoint', '--json'],
+    ['run', '-a', 'engineer', '-p', 'what should I work on next?', '--json'],
   ]);
 });
 
@@ -96,7 +96,7 @@ test('loadConfig prefers environment overrides for allowlist and repo path', () 
   try {
     const { loadConfig } = freshRequire(path.resolve(__dirname, '..', 'src', 'config.js'));
     const config = loadConfig({ configPath, env: {
-      AGENTX_WA_ALLOWED: '14155550100, 14155550101', AGENTX_REPO: tempRoot,
+      FRONTIER_WA_ALLOWED: '14155550100, 14155550101', FRONTIER_REPO: tempRoot,
     } });
 
     assert.deepEqual(config.allowedNumbers, ['14155550100', '14155550101']);

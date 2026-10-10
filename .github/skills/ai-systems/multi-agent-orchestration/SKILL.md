@@ -90,18 +90,16 @@ Explicit state machine of agent transitions with conditional edges and persisted
 
 ## Framework Selection
 
-| Framework | Best For | Notable |
-|-----------|----------|---------|
-| **OpenAI Agents SDK / Swarm** | Lightweight Python apps, handoff pattern | Built-in handoffs, guardrails |
-| **AutoGen v0.4+** | Research, complex group chats | Event-driven core, async |
-| **CrewAI** | Role-based teams, business workflows | Process abstraction (sequential / hierarchical) |
-| **LangGraph** | Production, durable, human-in-the-loop | Checkpointing, time-travel, interrupts |
-| **Microsoft Agent Framework** | Enterprise .NET / Python with Foundry | Workflow + agent unified API |
-| **Google ADK + A2A** | Cross-org agent communication | A2A is the agent-to-agent open protocol |
+Choose the framework after the topology. See [Framework selection](references/framework-selection.md).
 
 ---
 
 ## Handoff Contract (MUST)
+
+The user-facing parent MUST follow the shared guided interaction contract in
+`.github/AGENT-PROTOCOL.md`. Delegates inherit its approved scope and plan
+revision; they report uncertainty and milestone outcomes to that parent rather
+than restarting user intake. A delegate cannot approve or widen its own scope.
 
 Every handoff MUST carry:
 
@@ -112,6 +110,7 @@ Every handoff MUST carry:
 - `success_criteria` -- how the caller will judge completion
 - `max_turns` or `deadline` -- prevents runaway loops
 - `return_schema` -- structured output the supervisor expects
+- Approved scope and plan reference, when executing a guided parent task
 
 Anti-pattern: dumping the full conversation history into the handoff. Always summarize.
 

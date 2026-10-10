@@ -1,24 +1,24 @@
 ---
-name: Frontier Power BI FDE
+name: Frontier Power BI Analyst
 description: 'Design and build Power BI reports, dashboards, semantic models, and DAX measures for data-driven insights.'
-model: Claude Opus 5 (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: true
 hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
-      timeout: 10
+        node -e "try{require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()}catch(e){console.error(e);process.exitCode=2;try{let b=Buffer.alloc(65537),n=require('fs').readSync(0,b);if(/^(read_file|file_search|grep_search|list_dir|get_errors)$/.test(JSON.parse(b.subarray(0,n)).tool_name))process.exitCode=0}catch{}}"
+      timeout: 15
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
 reasoning:
   mode: adaptive
   level: medium
@@ -62,10 +62,10 @@ tools:
   - think
   - agent
 agents:
-  - Frontier AI Systems FDE
-  - Frontier Engineering FDE
+  - Frontier Data Scientist
+  - Frontier Engineer
   - Frontier GitHub Ops FDE
-  - Frontier Product FDE
+  - Frontier TPM
 ---
 
 # Power BI Analyst Agent
@@ -233,7 +233,7 @@ If data sources are unavailable, schema is unclear, or business requirements are
 1. **Clarify first**: Use the clarification loop to request context from Data Scientist, Engineer, or PM
 2. **Post blocker**: Add `needs:help` label and comment describing what data or context is needed
 3. **Never fabricate data**: If sample data is needed, document the schema and expected patterns explicitly
-4. **Timeout rule**: If no response within 15 minutes, document assumptions and proceed with available context
+4. **Timeout rule**: If the clarification returns no answer, document assumptions and proceed with available context
 
 ## Inter-Agent Clarification Protocol
 
@@ -243,7 +243,7 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

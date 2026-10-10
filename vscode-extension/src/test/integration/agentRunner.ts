@@ -120,12 +120,12 @@ export function validateFrontierAutonomous(agents: AgentDef[]): AgentCheckResult
   const results: AgentCheckResult[] = [];
   const agentX = agents.find((a) => {
     const normalized = a.name.toLowerCase();
-    return normalized.includes('agent-x') || normalized.includes('agentx auto');
+    return /^(frontier|frontier orchestration fde|frontier e2e sdlc)$/.test(normalized);
   });
 
   if (!agentX) {
     results.push({
-      agent: 'agent-x',
+      agent: 'frontier',
       check: 'autonomous-capability',
       passed: false,
       detail: 'Frontier Orchestration FDE definition not found',

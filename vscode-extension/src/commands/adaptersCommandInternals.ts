@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
 import { promptWorkspaceRoot, readJsonWithComments } from './initializeInternals';
 import { runCriticalPreCheck } from './setupWizard';
-import { resolveFrontierStatePath } from '../utils/frontierPaths';
+import { isPrivateFrontierState, resolveFrontierStatePath } from '../utils/frontierPaths';
 
 export type AdapterMode = 'github' | 'ado' | 'local';
 
@@ -226,9 +226,10 @@ export async function applyRemoteAdapterConfiguration(
   settings?: GitHubAdapterSettings | AdoAdapterSettings,
   options?: { readonly runPreCheck?: boolean },
 ): Promise<RemoteAdapterApplyResult> {
-  const changed = mode === 'local'
+  root = await agentx.ensureWorkspaceReady(root);
+  const changed = await agentx.workspaceState.withMutation(root, async () => mode === 'local'
     ? switchToLocalAdapterConfig(root)
-    : await upsertRemoteAdapter(root, mode, settings as GitHubAdapterSettings | AdoAdapterSettings);
+    : await upsertRemoteAdapter(root, mode, settings as GitHubAdapterSettings | AdoAdapterSettings));
 
   agentx.invalidateCache();
   await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
@@ -237,7 +238,7 @@ export async function applyRemoteAdapterConfiguration(
 
   let preCheckPassed = true;
   if ((options?.runPreCheck ?? true) && mode !== 'local') {
-    const preCheck = await runCriticalPreCheck(agentx, true);
+    const preCheck = await runCriticalPreCheck(agentx, true, root);
     preCheckPassed = preCheck.passed;
   }
 
@@ -253,7 +254,8 @@ async function upsertRemoteAdapter(
   mode: AdapterMode,
   settings: GitHubAdapterSettings | AdoAdapterSettings,
 ): Promise<boolean> {
-  const mcpChanged = mode === 'github' ? upsertMcpServer(root, mode) : false;
+  const mcpChanged = mode === 'github' && !isPrivateFrontierState(root)
+    ? upsertMcpServer(root, mode) : false;
   const configChanged = mode === 'github'
     ? upsertGitHubAdapterConfig(root, settings as GitHubAdapterSettings)
     : upsertAdoAdapterConfig(root, settings as AdoAdapterSettings);
@@ -266,7 +268,7 @@ export async function syncDetectedGitHubAdapter(
   options?: { readonly notify?: boolean; readonly root?: string },
 ): Promise<boolean> {
   const root = options?.root ?? agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
-  if (!root) {
+  if (!root || !vscode.workspace.isTrusted || isPrivateFrontierState(root)) {
     return false;
   }
 
@@ -302,7 +304,7 @@ export async function syncDetectedAdoAdapter(
   options?: { readonly notify?: boolean; readonly root?: string },
 ): Promise<boolean> {
   const root = options?.root ?? agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
-  if (!root) {
+  if (!root || !vscode.workspace.isTrusted || isPrivateFrontierState(root)) {
     return false;
   }
 
@@ -458,13 +460,7 @@ export async function runAddRemoteAdapterCommand(
     return;
   }
 
-  const configFile = resolveFrontierStatePath(root, 'config.json');
-  if (!fs.existsSync(configFile)) {
-    vscode.window.showWarningMessage(
-      'Frontier remote adapters require workspace initialization. Run "Frontier: Initialize Local Runtime" first.',
-    );
-    return;
-  }
+  await agentx.ensureWorkspaceReady(root);
 
   const mode = await promptAdapterMode(preferredMode);
   if (!mode) {

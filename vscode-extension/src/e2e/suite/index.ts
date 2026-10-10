@@ -15,9 +15,9 @@ export async function run(): Promise<void> {
         return;
       }
 
-      const resultPath = process.env.AGENTX_E2E_RESULT_PATH;
+      const resultPath = process.env.FRONTIER_E2E_RESULT_PATH;
       if (!resultPath) {
-        reject(new Error('AGENTX_E2E_RESULT_PATH is not configured'));
+        reject(new Error('FRONTIER_E2E_RESULT_PATH is not configured'));
         return;
       }
       fs.writeFileSync(resultPath, JSON.stringify({ status: 'pass', tests: runner.stats?.passes ?? 0 }));

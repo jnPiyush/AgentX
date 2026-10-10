@@ -1,6 +1,6 @@
 ---
 name: "anthropic-claude"
-description: 'Implement production applications with Anthropic Claude models -- Messages API, tool use, prompt caching, extended thinking, vision, computer use, and the Claude Agent SDK. Use when coding directly against Anthropic APIs, Claude via AWS Bedrock, or Claude via GCP Vertex AI rather than a higher-level framework.'
+description: 'Implement production applications with Anthropic Claude models -- Messages API, tool use, prompt caching, adaptive thinking, vision, computer use, and the Claude Agent SDK. Use when coding directly against Anthropic APIs, Claude via AWS Bedrock, or Claude via GCP Vertex AI rather than a higher-level framework.'
 metadata:
  author: "Frontier"
  version: "1.0.0"
@@ -22,7 +22,7 @@ prerequisites: ["Anthropic API key OR Bedrock/Vertex access", "anthropic SDK 0.3
 - Calling Claude models directly with the Anthropic Messages API
 - Deploying Claude on AWS Bedrock or GCP Vertex AI
 - Building tool-using Claude agents with the Claude Agent SDK
-- Adding prompt caching, extended thinking, or vision to a Claude app
+- Adding prompt caching, adaptive thinking, or vision to a Claude app
 - Migrating from another LLM provider to Claude and preserving behavior
 
 ## Decision Tree
@@ -44,17 +44,17 @@ Need Claude in production?
 ## Core Rules
 
 1. Always send a `system` prompt separately from the `messages` array -- Claude separates system instruction from the turn history.
-2. Pin model IDs explicitly (for example `claude-opus-4.5`, `claude-opus-4.8`, `claude-haiku-4.5`). Do not rely on aliases in production.
-3. Reserve output tokens deliberately. Claude context is 200K total; treat `max_tokens` as a required cost and latency lever.
+2. Pin model IDs explicitly (for example `claude-opus-5-5`, `claude-haiku-4.5`). Do not rely on aliases in production.
+3. Reserve output tokens deliberately. `max_tokens` covers thinking plus answer on Opus 5.5; treat it as a required cost and latency lever.
 4. Use prompt caching for any prompt prefix reused across turns -- system prompt, tool schemas, long docs, few-shot examples.
 5. Prefer structured tool use over freeform JSON in prose. Let Claude emit tool_use blocks and validate on the server side.
 
-## Model Selection (April 2026)
+## Model Selection (September 2026)
 
 | Model | Best For | Context / Output | Notes |
 |---|---|---|---|
-| `claude-opus-4.8` | Deep reasoning, coding, computer use, complex agents | 200K / 64K | Frontier default Claude model |
-| `claude-opus-4.5` | Prior high-capability Opus generation | 200K / 64K | Use when pinned deployments require the prior Opus line |
+| `claude-opus-5-5` | Agentic coding, code review, knowledge work, computer use | 1M / 128K | Frontier default Claude model; thinking always on |
+| `claude-opus-4.8` | Pinned prior-Opus deployments | 200K / 64K | Allows disabled or budgeted thinking |
 | `claude-haiku-4.5` | High-volume, low-latency, simple classification | 200K / 8K | Cheapest, fastest |
 
 ## Minimal Pattern (Python)
@@ -65,15 +65,16 @@ import anthropic
 client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
 
 response = client.messages.create(
-    model="claude-opus-4.8",
-    max_tokens=1024,
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    output_config={"effort": "medium"},
     system="You are a concise technical assistant.",
     messages=[
         {"role": "user", "content": "Summarize the Frontier workflow in 3 bullets."}
     ],
 )
 
-print(response.content[0].text)
+print(next(b.text for b in response.content if b.type == "text"))
 ```
 
 ## Tool Use Pattern
@@ -92,13 +93,13 @@ tools = [
 ]
 
 response = client.messages.create(
-    model="claude-opus-4.8",
-    max_tokens=1024,
+    model="claude-opus-5-5",
+    max_tokens=16000,
     tools=tools,
     messages=[{"role": "user", "content": "Weather in Seattle?"}],
 )
 
-# Loop: if stop_reason == "tool_use", execute tool and feed tool_result back.
+# On "tool_use": append response.content as-is (thinking included), then tool_result.
 ```
 
 ## Prompt Caching
@@ -107,8 +108,8 @@ Cache static prefix content (system prompts, tool schemas, long docs) with `cach
 
 ```python
 response = client.messages.create(
-    model="claude-opus-4.8",
-    max_tokens=1024,
+    model="claude-opus-5-5",
+    max_tokens=16000,
     system=[
         {"type": "text", "text": LONG_SYSTEM_PROMPT,
          "cache_control": {"type": "ephemeral"}}
@@ -121,18 +122,14 @@ response = client.messages.create(
 - Cache TTL is 5 minutes by default, extendable.
 - Minimum cacheable length applies -- short prefixes will not cache.
 
-## Extended Thinking
+## Thinking and Effort
 
-Claude Opus 4.5 and Opus 4.8 support extended thinking (visible reasoning budget). Enable only when the task benefits from longer deliberation (hard coding, math, multi-step planning):
-
-```python
-response = client.messages.create(
-    model="claude-opus-4-5",
-    max_tokens=16000,
-    thinking={"type": "enabled", "budget_tokens": 8000},
-    messages=[{"role": "user", "content": "Design a sharded counter service."}],
-)
-```
+Opus 5.5 always uses adaptive thinking. Control depth with `output_config.effort`
+(`low`, `medium` default, `high`, `xhigh`, `max`); its `medium` matches Opus 5 at
+`high`. Disabled thinking, `budget_tokens`, non-default `temperature`/`top_p`/`top_k`,
+forced `tool_choice` and assistant prefill return 400 errors. Do not prompt for
+written-out reasoning: it can be refused as `reasoning_extraction`; request
+`thinking.display: "summarized"` when you need a reasoning summary.
 
 ## Deployment Targets
 
@@ -142,14 +139,13 @@ response = client.messages.create(
 | Amazon Bedrock | `boto3` with `bedrock-runtime` | AWS-resident workload, IAM-based auth |
 | GCP Vertex AI | `anthropic[vertex]` or Vertex SDK | GCP-resident workload, service-account auth |
 
-Model IDs and feature parity differ per target. Check feature availability (caching, extended thinking, computer use) per cloud before committing.
+Model IDs and feature parity differ per target. Check feature availability (caching, adaptive thinking, computer use) per cloud before committing.
 
 ## Migrating To Claude
 
 - Map `system` role messages from OpenAI-style to Claude's separate `system` parameter.
 - Replace function calling JSON with Claude `tool_use` blocks and `tool_result` turn responses.
 - Re-tune few-shot examples. Claude responds well to XML-tagged structure in prompts.
-- Re-evaluate token budgets. Claude output limits (`max_tokens`) are explicit and required.
 
 ## Design Guidance
 
@@ -157,7 +153,6 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 - Use XML tags (`<context>`, `<instructions>`, `<examples>`) in large prompts -- Claude follows tagged structure reliably.
 - Prefer structured output via tool_use with a schema over "respond in JSON" prose.
 - Stream long responses to reduce perceived latency and enable early cancellation.
-- Always record model ID, prompt version, and cache status in traces.
 
 ## Safety And Guardrails
 
@@ -169,10 +164,10 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 ## Anti-Patterns
 
 - **Role Confusion**: Embedding system instructions inside `messages` -> Use the separate `system` parameter.
-- **Unpinned Models**: Depending on provider aliases in production -> Pin explicit model IDs such as `claude-opus-4.8`.
+- **Unpinned Models**: Depending on provider aliases in production -> Pin explicit model IDs such as `claude-opus-5-5`.
 - **Uncached Prefixes**: Sending the same 20K-token system prompt every turn -> Use prompt caching.
 - **Prose JSON**: Asking Claude to "respond with JSON" -> Use tool_use with an input schema.
-- **Always-On Thinking**: Enabling extended thinking for every call -> Enable only for tasks that benefit; it increases latency and cost.
+- **Over-Provisioned Effort**: Running every call at `high` or above -> Start at `medium` and raise only where evals show a gain.
 - **Cross-Cloud Assumption**: Assuming Bedrock or Vertex supports every API-only feature -> Check per-target feature parity.
 
 ## Checklist
@@ -182,7 +177,7 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 - [ ] `max_tokens` is set deliberately based on expected output
 - [ ] Prompt caching is enabled for any stable prefix > ~1K tokens
 - [ ] Tool definitions use `input_schema` with strict types
-- [ ] Extended thinking is enabled only where it measurably helps
+- [ ] Effort is set explicitly and raised only where it measurably helps
 - [ ] Deployment target (API / Bedrock / Vertex) is documented per environment
 - [ ] Traces capture model ID, prompt version, cache-hit status, and stop_reason
 
@@ -192,7 +187,7 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 - [Claude Models Overview](https://docs.anthropic.com/en/docs/about-claude/models/overview)
 - [Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)
 - [Tool Use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview)
-- [Extended Thinking](https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking)
+- [Prompting Claude Opus 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5)
 - [Claude on Amazon Bedrock](https://docs.anthropic.com/en/api/claude-on-amazon-bedrock)
 - [Claude on Vertex AI](https://docs.anthropic.com/en/api/claude-on-vertex-ai)
 - [Claude Agent SDK](https://docs.anthropic.com/en/docs/agents-and-tools/claude-agent-sdk)
@@ -206,4 +201,4 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 | Tool call never fires | Check tool schema types; Claude is strict about required fields and enum constraints |
 | Cache miss every turn | Prefix is below minimum cache length or drifts across turns -- stabilize the prefix |
 | Feature missing on Bedrock/Vertex | Not all API features ship on every cloud -- fall back to direct Anthropic API or accept gap |
-| Extended thinking latency too high | Lower `budget_tokens` or disable for non-critical paths |
+| Thinking latency too high | Lower `effort`; Opus 5.5 cannot disable thinking |

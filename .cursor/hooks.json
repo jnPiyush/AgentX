@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node .frontier/runtime/cursor-hook.js sessionStart",
+        "timeout": 60
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node .frontier/runtime/cursor-hook.js preToolUse",
+        "timeout": 60,
+        "failClosed": true
+      }
+    ]
+  }
+}

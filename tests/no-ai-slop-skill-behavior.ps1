@@ -112,7 +112,7 @@ if ($bash) {
             Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget '.frontier/runtime/legal/NOTICE')) 'Bash-installed pack contains repository NOTICE'
         }
         Assert-True ($bashOutput -match 'Skills\s+: 134 across 14 categories') 'Bash installer reports the current skill inventory'
-        Assert-True ($bashOutput -match 'Prompts\s+: 23 reference templates') 'Bash installer reports the current prompt inventory'
+        Assert-True ($bashOutput -match 'Prompts\s+: 24 reference templates') 'Bash installer reports the current prompt inventory'
     } finally {
         Remove-Item -LiteralPath $bashInstallerCopy -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $bashInstallTarget -Recurse -Force -ErrorAction SilentlyContinue

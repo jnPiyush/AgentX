@@ -143,7 +143,7 @@ The current checkpoint is resolved from durable evidence, not chat history or mo
 | Transition | Required Before Transition | Blockers |
 |------------|----------------------------|----------|
 | `Brainstorm -> Plan` | The work is named and scoped to an issue, thread, or bounded task | Missing scope owner, unresolved problem statement |
-| `Plan -> Work` | A durable execution plan exists and the main constraints are explicit; for complex work, the next bounded slice is ready to be expressed as a work contract | No plan, no progress anchor for complex work, pending clarification |
+| `Plan -> Work` | The user-facing plan revision is explicitly approved or the scope is explicitly preauthorized; a durable execution plan exists for complex work and the next bounded slice has explicit constraints | Missing approval, material scope change, no plan/progress anchor for complex work, pending clarification |
 | `Work -> Review` | Validation evidence is ready, the quality loop is complete when applicable, and any active bounded work contract is satisfied or explicitly superseded | Incomplete validation, unresolved clarification, no plan context for review |
 
 #### Bounded Work Contracts
@@ -373,7 +373,7 @@ Frontier uses a **Hub-and-Spoke architecture** for agent coordination:
 
 **Key Principles:**
 
-1. **Centralized Coordination** - Frontier is the top-level autonomous executor. It SHOULD complete work in one session whenever feasible and use specialist stages as internal workflow phases. Manual agent switching is a fallback for isolation or platform limitations.
+1. **Centralized Coordination** - Frontier owns guided user interaction and executes approved or explicitly preauthorized work. It SHOULD complete that scope in one session and use specialist stages internally. Delegates report questions and progress to the parent. Manual agent switching is a fallback for isolation or platform limitations.
 2. **Role-Contract Preservation** - When Frontier executes a specialist phase internally, it MUST follow that specialist agent's constraints, boundaries, required templates, required skills, entry gates, exit gates, and deliverable rules. Internal execution is not permission to weaken the role contract.
 3. **Strict Role Separation** - Each agent produces one deliverable type (PRD, ADR, Code, Review)
 4. **Least-Privilege Tool Access** - Each agent receives only the tools needed for its role; parent agents own remote mutations and durable lifecycle closeout unless explicitly delegated
@@ -434,9 +434,12 @@ In Review + needs:testing -> Tester (pre-release certification)
 - UX: Wireframes + user flows + **HTML/CSS prototypes (MANDATORY)** complete, accessibility considered
 - Architect: ADR + Tech Spec exist, NO CODE EXAMPLES compliance, PM requirement-fit validation captured, and AI-bearing specs capture Data Scientist implementation-depth alignment
 - Data Scientist: ML pipeline design, evaluation plan, model card present
-- Engineer: Code committed, tests 80% coverage, docs updated, and required Architect/Data Scientist design alignment captured when the issue crosses those boundaries
+- Engineer: Implementation and regression cases reviewed, non-test checks recorded,
+  docs updated, and required design alignment captured. After loop completion,
+  ask whether to run suites; report not-run/not-measured status until executed.
 - Code-bearing implementation: final independent-review evidence passes `evaluation/rubrics/code-quality.md` at 80+ with exact changed-file hashes and no blocking findings
-- Reviewer: Review document complete, approval decision present
+- Reviewer: Review document complete, non-test evidence and deferred suite scope
+  recorded, approval decision present. Review does not launch suites.
 - DevOps: CI/CD pipelines validated, deployment docs present
 - Tester: Test suites pass, certification report complete
 - Fabric Engineer: data product artifacts, quality checks, lineage, recovery, and runtime-evidence status documented

@@ -7,15 +7,37 @@ import * as sinon from 'sinon';
 import { FrontierContext } from '../../frontierContext';
 import { ShellExecutionOptions } from '../../utils/shell';
 import { createMockResponseStream } from '../mocks/vscode';
+import { matchesInitializeIntent, tryHandleWorkspaceSetupRequest } from '../../chat/requestRouterInternals';
 import {
   getFrontierChatFollowups,
-  handleFrontierChatRequest,
+  handleFrontierChatRequest as handleRealFrontierChatRequest,
   registerChatParticipant,
   resetChatParticipantStateForTests,
 } from '../../chat/chatParticipant';
 
 describe('chatParticipant', () => {
   let tmpDir: string;
+
+  it('does not treat AgentX or HVE names as workspace command aliases', async () => {
+    for (const text of ['initialize agentx', 'init agent x', 'agentx: initialize workspace', 'hve: initialize workspace']) {
+      assert.equal(matchesInitializeIntent(text), false, text);
+    }
+    assert.equal(matchesInitializeIntent('frontier: initialize workspace'), true);
+    const response = createMockResponseStream();
+    assert.equal(await tryHandleWorkspaceSetupRequest('agentx: add plugin', response as unknown as vscode.ChatResponseStream), undefined);
+  });
+
+  const handleFrontierChatRequest: typeof handleRealFrontierChatRequest = (request, response, agentx, token) => {
+    agentx.ensureWorkspaceReady ??= async (root) => root ?? agentx.workspaceRoot ?? tmpDir;
+    agentx.ensureWorkspaceState ??= agentx.ensureWorkspaceReady;
+    agentx.forWorkspace ??= () => agentx;
+    if (!agentx.workspaceState) {
+      Object.defineProperty(agentx, 'workspaceState', {
+        value: { withMutation: async <T>(_root: string, action: () => Promise<T>) => action() },
+      });
+    }
+    return handleRealFrontierChatRequest(request, response, agentx, token);
+  };
 
   for (const prompt of ['run engineer test cancellation', 'continue use the existing API', 'use the existing API']) {
     it(`propagates Stop and disposes its subscription for ${prompt}`, async () => {
@@ -256,14 +278,14 @@ describe('chatParticipant', () => {
 
   it('launches Initialize Local Runtime for natural-language phrasings', async () => {
     const phrasings = [
-      'initialize agentx',
+      'initialize frontier',
       'Initialize Frontier',
-      'initalize agentx',
-      'init agent x',
-      'setup agentx',
-      'agentx initialize',
+      'initalize frontier',
+      'init frontier',
+      'setup frontier',
+      'frontier initialize',
       'Please initialize Frontier',
-      'agentx: initialize workspace',
+      'frontier: initialize workspace',
     ];
 
     for (const prompt of phrasings) {
@@ -320,6 +342,7 @@ describe('chatParticipant', () => {
     );
 
     assert.deepEqual(pending, {
+      workspaceRoot: tmpDir,
       kind: 'remote-adapter',
       step: 'choose-remote-adapter',
       prompt: 'add remote adapter',
@@ -380,7 +403,7 @@ describe('chatParticipant', () => {
           agentx as any,
         );
 
-        assert.deepEqual(pending, testCase.expectedPending);
+        assert.deepEqual(pending, { ...testCase.expectedPending, workspaceRoot: tmpDir });
         assert.ok(response.getMarkdown().includes(testCase.expectedText));
       }
     } finally {
@@ -473,6 +496,7 @@ describe('chatParticipant', () => {
     );
 
     assert.deepEqual(pending, {
+      workspaceRoot: tmpDir,
       kind: 'llm-adapter',
       step: 'choose-llm-provider',
       prompt: 'switch llm',
@@ -638,6 +662,7 @@ describe('chatParticipant', () => {
       );
 
       assert.deepEqual(pending, {
+        workspaceRoot: tmpDir,
         kind: 'remote-adapter',
         step: 'enter-ado-project',
         prompt: 'connect ado',
@@ -694,11 +719,12 @@ describe('chatParticipant', () => {
     assert.ok(response.getMarkdown().includes('Opened **Frontier: Add Plugin** for this workspace.'));
   });
 
-  it('explains that formal Frontier execution needs workspace initialization', async () => {
+  it('surfaces a first-use readiness failure without starting a task', async () => {
     const response = createMockResponseStream();
     const agentx = {
       checkInitialized: async () => true,
       hasCliRuntime: () => false,
+      ensureWorkspaceReady: async () => { throw new Error('Trust this workspace before running Frontier operations.'); },
       workspaceRoot: tmpDir,
     };
 
@@ -709,8 +735,8 @@ describe('chatParticipant', () => {
     );
 
     const markdown = response.getMarkdown();
-    assert.ok(markdown.includes('Frontier workspace initialization is not available in this workspace.'));
-    assert.ok(markdown.includes('Frontier: Initialize Local Runtime'));
+    assert.ok(markdown.includes('Frontier error'));
+    assert.ok(markdown.includes('Trust this workspace'));
   });
 
   it('returns ranked planning learnings from chat', async () => {
@@ -858,7 +884,7 @@ describe('chatParticipant', () => {
     fs.mkdirSync(path.join(tmpDir, 'vscode-extension', 'src', 'chat'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'vscode-extension', 'src'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'package.json'), JSON.stringify({ contributes: { commands: [{ command: 'frontier.runWorkflow' }, { command: 'frontier.showReviewLearnings' }, { command: 'frontier.showKnowledgeCaptureGuidance' }] } }), 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'views', 'workTreeProvider.ts'), 'Show workflow steps\nagentx.runWorkflow\nReview learnings\nagentx.showReviewLearnings\nCapture guidance\nagentx.showKnowledgeCaptureGuidance\n', 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'views', 'workTreeProvider.ts'), 'Show workflow steps\nfrontier.runWorkflow\nReview learnings\nfrontier.showReviewLearnings\nCapture guidance\nfrontier.showKnowledgeCaptureGuidance\n', 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'views', 'qualityTreeProvider.ts'), 'frontier.showAgentNativeReview\n', 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'chat', 'chatParticipant.ts'), 'run engineer\nrun reviewer\nrun architect\nlearnings review\nshowReviewLearnings\ncapture guidance\nshowKnowledgeCaptureGuidance\n', 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'frontierContext.ts'), 'workspaceRoot\ngetPendingClarification\nlistExecutionPlanFiles\ngetStatePath\n', 'utf-8');
@@ -940,6 +966,7 @@ describe('chatParticipant', () => {
     );
 
     assert.deepEqual(pending, {
+      workspaceRoot: tmpDir,
       sessionId: 'engineer-20260309120000-abcd',
       agentName: 'engineer',
       prompt: 'implement the login fix',
@@ -1016,6 +1043,7 @@ describe('chatParticipant', () => {
         agentName: 'engineer',
         prompt: 'implement the login fix',
       }),
+      runCli: async () => JSON.stringify({ sessionId: 'engineer-20260309120000-abcd', pendingInteraction: null }),
       runCliStreaming: async (
         _subcommand: string,
         cliArgs: string[],
@@ -1028,14 +1056,14 @@ describe('chatParticipant', () => {
     };
 
     await handleFrontierChatRequest(
-      { prompt: 'continue use the existing auth flow' } as any,
+      { prompt: 'continue "use the existing auth flow"' } as any,
       response as any,
       agentx as any,
     );
 
     assert.deepEqual(capturedArgs, [
       '--resume-session', 'engineer-20260309120000-abcd',
-      '--clarification-response', 'use the existing auth flow',
+      '--clarification-response', 'use the existing auth flow', '--json',
     ]);
     assert.equal(cleared, true);
     assert.ok(response.getMarkdown().includes('Final answer after human clarification'));
@@ -1050,6 +1078,7 @@ describe('chatParticipant', () => {
         agentName: 'engineer',
         prompt: 'implement the login fix',
       }),
+      runCli: async () => JSON.stringify({ sessionId: 'engineer-20260309120000-abcd', pendingInteraction: null }),
       runCliStreaming: async (
         _subcommand: string,
         _cliArgs: string[],
@@ -1078,11 +1107,12 @@ describe('chatParticipant', () => {
     assert.ok(markdown.includes('Final answer after human clarification'));
   });
 
-  it('blocks clarification resume when workspace initialization is missing', async () => {
+  it('blocks clarification resume when the workspace is no longer available', async () => {
     const response = createMockResponseStream();
     const agentx = {
       checkInitialized: async () => true,
       hasCliRuntime: () => false,
+      ensureWorkspaceReady: async () => { throw new Error('The selected workspace is no longer open.'); },
       getPendingClarification: async () => ({
         sessionId: 'engineer-20260309120000-abcd',
         agentName: 'engineer',
@@ -1097,8 +1127,8 @@ describe('chatParticipant', () => {
     );
 
     const markdown = response.getMarkdown();
-    assert.ok(markdown.includes('Frontier workspace initialization is not available in this workspace.'));
-    assert.ok(markdown.includes('Frontier: Initialize Local Runtime'));
+    assert.ok(markdown.includes('Frontier error'));
+    assert.ok(markdown.includes('workspace is no longer open'));
   });
 
   it('shows pending clarification context for bare continue', async () => {
@@ -1140,6 +1170,7 @@ describe('chatParticipant', () => {
         agentName: 'engineer',
         prompt: 'implement the login fix',
       }),
+      runCli: async () => JSON.stringify({ sessionId: 'engineer-20260309120000-abcd', pendingInteraction: null }),
       runCliStreaming: async (
         _subcommand: string,
         cliArgs: string[],
@@ -1159,7 +1190,7 @@ describe('chatParticipant', () => {
 
     assert.deepEqual(capturedArgs, [
       '--resume-session', 'engineer-20260309120000-abcd',
-      '--clarification-response', 'Use the existing auth flow and do not change token semantics.',
+      '--clarification-response', 'Use the existing auth flow and do not change token semantics.', '--json',
     ]);
     assert.ok(response.getMarkdown().includes('Resumed with natural-language clarification'));
   });

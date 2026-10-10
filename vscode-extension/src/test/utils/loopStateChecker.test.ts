@@ -487,12 +487,12 @@ describe('shouldAutoStartLoop', () => {
     assert.equal(shouldAutoStartLoop(wsRoot), false);
   });
 
-  it('returns true when an active loop is stale', () => {
+  it('preserves an aged active loop so a fresh evidence checkpoint can resume it', () => {
     writeLoopState(wsRoot, makeActiveState({
       startedAt: '2025-01-01T00:00:00Z',
       lastIterationAt: '2025-01-01T01:00:00Z',
     }));
-    assert.equal(shouldAutoStartLoop(wsRoot), true);
+    assert.equal(shouldAutoStartLoop(wsRoot), false);
   });
 });
 
@@ -695,7 +695,7 @@ describe('getLoopStatusDisplay', () => {
     assert.ok(getLoopStatusDisplay(wsRoot).includes('2/3'));
   });
 
-  it('shows stuck loops clearly when an active loop has not progressed recently', () => {
+  it('requests a fresh evidence checkpoint without resetting an aged active loop', () => {
     writeLoopState(wsRoot, makeActiveState({
       startedAt: isoMinutesAgo(120),
       lastIterationAt: isoMinutesAgo(100),
@@ -703,8 +703,9 @@ describe('getLoopStatusDisplay', () => {
 
     const gate = checkHandoffGate(wsRoot);
     assert.equal(gate.allowed, false);
-    assert.ok(gate.reason.includes('stuck'));
-    assert.ok(getLoopStatusDisplay(wsRoot).includes('stuck; loop last updated'));
+    assert.ok(gate.reason.includes('frontier loop iterate'));
+    assert.ok(!gate.reason.includes('reset'));
+    assert.ok(getLoopStatusDisplay(wsRoot).includes('checkpoint due; last evidence checkpoint'));
   });
 
   it('shows when minimum iterations are met for an active loop', () => {

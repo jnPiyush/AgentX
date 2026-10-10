@@ -1,11 +1,23 @@
 ---
 name: code-hygiene
-description: "Three-pass quality sweep detecting over-engineering, stale comments, and generic UI patterns produced during AI-assisted coding sessions. Reports findings with severity and optional safe auto-fix."
+description: "Read-only hygiene review that reports cosmetic lint/style findings as LOW advisories and requests explicit approval before cleanup. Genuine defects are assessed separately by impact."
 ---
 
 # Code Hygiene Sweep
 
 Three parallel analysis passes that detect and report common quality issues from AI-assisted coding -- over-engineering, stale or filler comments, and generic UI patterns that signal templated output.
+
+## Cleanup Boundary
+
+Cosmetic lint/style findings are LOW and do not block local loop/review Done
+Criteria. Report file/line, original tool severity, suggestion and scope; do not
+clean up automatically. The owning agent explicitly asks whether the user wants
+the findings fixed and waits. No response or a decline means leave them unchanged.
+
+Build/type failures and verified correctness, security, reliability or
+accessibility defects are not cosmetic lint; classify them separately by impact.
+Do not waive independent CI/commit/release gates. Full policy:
+`.github/AGENT-PROTOCOL.md` section 4.
 
 ## When to Use
 
@@ -21,7 +33,7 @@ Parse arguments for these tokens:
 
 | Token | Example | Effect |
 |-------|---------|--------|
-| `fix` | Run with fix mode | Auto-apply safe fixes after reporting |
+| `fix` | Explicit request to fix the listed cleanup scope | Apply only after affirmative approval; a role name, quoted/negated word or general bug-fix task is not consent |
 | `<path>` | `src/components/` | Scope to specific file or directory |
 | (none) | Default | Analyze all files changed since the base branch |
 
@@ -52,103 +64,7 @@ Skip UI Quality pass entirely if no UI/style files are in scope.
 
 ### Stage 2: Parallel Analysis
 
-Launch three analysis sub-tasks IN PARALLEL. Each receives the file list and diff content, and returns structured findings as text.
-
-#### Pass 1: Code Quality
-
-Analyze for complexity and abstraction issues:
-
-1. **Unnecessary complexity**
-   - Deep nesting (>3 levels) that could use early returns
-   - Nested ternary operators
-   - Dense one-liners sacrificing readability
-
-2. **Redundant abstractions**
-   - Interfaces/types used only once -- inline them
-   - Wrapper functions adding no logic
-   - Abstract base classes with a single implementation
-   - Premature generalization
-
-3. **YAGNI violations**
-   - Features not required by current use cases
-   - Configuration options nobody uses
-   - Generic solutions for specific problems
-
-4. **Dead weight**
-   - Commented-out code blocks (>3 lines)
-   - Unused imports, variables, or functions
-   - Duplicate error checks (caller already validates)
-   - Defensive code that can never trigger
-
-5. **Over-engineering**
-   - Factory patterns for creating a single type
-   - Strategy patterns with one strategy
-   - Event systems for synchronous single-consumer flows
-   - Dependency injection where direct instantiation is clearer
-
-**Output format:** Structured findings with file, line, issue, severity, fix_safe flag, and suggested fix.
-
-#### Pass 2: Comment Quality
-
-Analyze for comment issues:
-
-1. **Obvious restatements**
-   - `// increment counter` above `counter++`
-   - Comments repeating the function/variable name in prose
-
-2. **AI-generated filler phrases** (hard bans)
-   - "This function is responsible for handling..."
-   - "The following code implements..."
-   - "This is a comprehensive solution that..."
-   - "This method provides a robust and scalable..."
-   - "leverages" or "utilizes" (when "uses" works)
-   - "seamlessly integrates"
-   - "This class encapsulates the logic for..."
-
-3. **Factual inaccuracy**
-   - Documented parameters not matching the signature
-   - Return type descriptions not matching the actual return
-   - Edge case documentation for cases not handled
-
-4. **Stale comments**
-   - TODOs/FIXMEs for completed work
-   - References to removed/renamed functions
-   - Version-specific notes for unsupported versions
-   - "Temporary" markers on permanent code
-
-5. **Over-documentation**
-   - JSDoc/docstrings on trivial getters/setters
-   - Multi-line comments on self-explanatory one-liners
-   - Repeating type information already in the signature
-
-#### Pass 3: UI Quality (only when UI files in scope)
-
-Analyze UI files for generic, templated patterns:
-
-1. **Generic color patterns**
-   - Purple-to-blue gradients (AI default palette)
-   - Gratuitous gradients on everything
-   - Unintentional color usage (decorative, not semantic)
-
-2. **Template layouts**
-   - Default card grids with uniform spacing and no hierarchy
-   - Generic hero sections with no point of view
-   - Uniform radius, spacing, and shadows across every component
-
-3. **Missing interaction states**
-   - No hover states on interactive elements
-   - No focus states (accessibility gap)
-   - No loading/empty/error states
-
-4. **Lazy defaults**
-   - Unmodified library defaults with no customization
-   - Default font stacks with no intentional pairing
-   - Excessive scroll-triggered animations
-
-5. **No visual hierarchy**
-   - Flat layouts with no layering or depth
-   - Uniform emphasis on everything
-   - No intentional rhythm in spacing
+Run the analysis categories in parallel as described in [Parallel analysis checks](references/analysis-checks.md).
 
 ### Stage 3: Merge and Deduplicate
 
@@ -192,9 +108,9 @@ Code Hygiene Report: Clean! No issues detected in [N] files.
 
 ### Stage 5: Auto-Fix (only if fix mode)
 
-If fix mode was requested:
+Only after the user explicitly approves a specific cleanup scope:
 
-1. Collect all findings where fix is safe
+1. Collect only approved findings where the fix is safe
 2. Apply fixes in file order:
    - **Code Quality safe fixes:** Remove commented-out code blocks, remove unused imports
    - **Comment Quality safe fixes:** Delete obvious restatement comments, remove stale TODOs
@@ -209,11 +125,11 @@ If fix mode was requested:
 
 | Level | Meaning | Examples |
 |-------|---------|---------|
-| **High** | Actively misleading or creates maintenance burden | Inaccurate comment, missing hover states, large dead code block |
-| **Medium** | Noticeable quality reduction | Unnecessary abstraction, AI filler phrase, generic gradient |
-| **Low** | Minor quality improvement | Restatement comment, unused import, over-documentation |
+| **Low** | Cosmetic hygiene advisory; cleanup is optional | Formatting, naming/style, redundant comments, unused imports that do not block the build |
+| **Separate defect** | Classify by verified impact, not by the tool that found it | Build failure, unsafe exception handling, incorrect behavior, security/accessibility violation |
 
-Issues are never "Critical" -- they are quality concerns, not correctness or security problems.
+Unverified hygiene candidates stay advisory. Do not disguise a proven defect as
+LOW lint or invent a defect merely from a scanner rule name.
 
 ## Quality Gates
 
@@ -227,7 +143,7 @@ Before presenting findings:
 
 ## Notes
 
-- This skill is read-only by default. It reports but does not edit files unless fix mode is specified.
+- This skill is read-only unless the user has explicitly approved the cleanup scope.
 - UI Quality pass is automatically skipped for backend-only projects.
 - Works on any language/framework -- the patterns are universal.
 - Pairs well with the code-review skill (which checks correctness) -- code-hygiene checks aesthetics and quality.

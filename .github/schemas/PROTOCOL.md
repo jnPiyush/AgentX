@@ -50,7 +50,7 @@ This ensures traceability, validates prerequisites, and prevents incomplete tran
 
 | Slug | Agent |
 |------|-------|
-| `agent-x` | Hub Coordinator |
+| `frontier` | Hub Coordinator |
 | `pm` | Product Manager |
 | `ux` | UX Designer |
 | `architect` | Architect |

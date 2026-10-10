@@ -44,6 +44,8 @@ export interface LoopState {
   readonly budgetMinutes?: number;
   /** False after loop complete; set true by post-commit after Git creates the consuming commit. */
   readonly loopConsumed?: boolean;
+  /** Completion follow-up only; this question is not approval to execute tests. */
+  readonly postLoopTestPrompt?: string;
   readonly history: ReadonlyArray<{
     readonly iteration: number;
     readonly timestamp: string;
@@ -85,7 +87,7 @@ export interface LoopGateResult {
 }
 
 export type LoopTaskClass = 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x' | 'high-risk';
-export type LoopHealthKind = 'healthy' | 'stale' | 'stuck';
+export type LoopHealthKind = 'healthy' | 'checkpoint-due' | 'stale' | 'stuck';
 
 export interface LoopHealth {
   readonly kind: LoopHealthKind;
@@ -129,7 +131,7 @@ export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completion
 
   const role = (state.role ?? '').trim().toLowerCase();
   if (/^(auto-fix-reviewer|auto-fix|reviewer-auto)$/.test(role)) { return 'auto-fix-review'; }
-  if (/^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$/.test(role)) { return 'agent-x'; }
+  if (/^(autonomous|frontier|frontier-auto|frontier orchestration fde|frontier e2e sdlc)$/.test(role)) { return 'agent-x'; }
   if (/^(engineer|implementation)$/.test(role)) { return 'complex-delivery'; }
 
   // Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
@@ -138,7 +140,7 @@ export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completion
   if (/\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b/.test(fingerprint)) {
     return 'auto-fix-review';
   }
-  if (/\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b/.test(fingerprint)) {
+  if (/\b(autonomous|orchestrat|classify.*route)\b/.test(fingerprint)) {
     return 'agent-x';
   }
 
@@ -285,8 +287,8 @@ export function getLoopHealth(
   const ageMs = nowMs - lastTouchedMs;
   if (state.active && ageMs >= LOOP_STUCK_AFTER_MS) {
     return {
-      kind: 'stuck',
-      reason: `loop last updated ${(ageMs / (60 * 1000)).toFixed(0)} minutes ago`,
+      kind: 'checkpoint-due',
+      reason: `last evidence checkpoint was ${(ageMs / (60 * 1000)).toFixed(0)} minutes ago`,
     };
   }
 
@@ -383,6 +385,14 @@ export function evaluateHandoffGate(
   const health = getLoopHealth(state, expectedIssue, nowMs);
 
   if (state.active) {
+    if (health.kind === 'checkpoint-due') {
+      return {
+        allowed: false,
+        reason: `Quality loop needs an evidence checkpoint (${health.reason}). `
+          + 'Record fresh verification with frontier loop iterate; preserve the existing history.',
+        state,
+      };
+    }
     if (health.kind === 'stale') {
       return {
         allowed: false,
@@ -545,7 +555,8 @@ export function evaluateShouldAutoStart(
   }
 
   if (state.active) {
-    return getLoopHealth(state, expectedIssue, nowMs).kind !== 'healthy';
+    const health = getLoopHealth(state, expectedIssue, nowMs);
+    return health.kind === 'stale' || health.kind === 'stuck';
   }
 
   return true;
@@ -566,6 +577,9 @@ export function buildLoopStatusDisplay(state: LoopState | null, nowMs: number = 
     const readiness = state.iteration < minIterations
       ? `not ready to complete (${state.iteration}/${minIterations} min)`
       : 'minimum iterations met';
+    if (health.kind === 'checkpoint-due') {
+      return `Loop active ${state.iteration}/${state.maxIterations} (checkpoint due; ${health.reason}) [${state.completionCriteria}]${budgetSuffix}${scoreSuffix}`;
+    }
     if (health.kind === 'stale') {
       return `Loop active ${state.iteration}/${state.maxIterations} (stale; ${health.reason}) [${state.completionCriteria}]${budgetSuffix}${scoreSuffix}`;
     }

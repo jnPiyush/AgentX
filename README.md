@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="docs/assets/frontier-logo.svg" width="128" height="128" alt="Frontier Corp">
+  <img src="vscode-extension/resources/frontier-ai-coding-harness.png" width="128" height="128" alt="Frontier Corp">
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.6.0"><img src="https://img.shields.io/badge/Version-9.6.0-b11f4b?style=for-the-badge" alt="Version 9.6.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases"><img src="https://img.shields.io/badge/Version-9.8.0-b11f4b?style=for-the-badge" alt="Source version 9.8.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -14,34 +14,34 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 
 > Frontier combines specialized FDEs with the contracts and evidence required to ship dependable software.
 
-[Install](#install-in-vs-code) | [See the workflow](#the-operating-loop) | [Meet the fleet](#the-frontier-fde-fleet) | [Explore skills](Skills.md) | [Read the guide](docs/GUIDE.md) | [Security](SECURITY.md)
+[Install](#install-in-vs-code) | [Feature list](docs/FEATURES.md) | [See the workflow](#the-operating-loop) | [Meet the fleet](#the-frontier-fde-fleet) | [Explore skills](Skills.md) | [Read the guide](docs/GUIDE.md) | [Security](SECURITY.md)
 
 ---
 
 ## Frontier in 60 Seconds
 
-| What you get | Current release |
+| What you get | Current source |
 |:-------------|:----------------|
 | Frontier FDEs | **26 total**: 15 visible roles and 11 internal specialists |
 | Production knowledge | **134 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
+| Reusable delivery assets | **15 templates**, **24 reusable prompt templates**, and **7 root instruction files**, plus scoped instruction sets |
 | Quality discipline | **Risk-based evidenced iterations** (`1/2/3/5`), fresh verification, independent review, scrub, and completion gates |
 | Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
 | Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |
 | Work tracking | Local mode, GitHub, or Azure DevOps |
 | Model adapters | GitHub Copilot, Claude Subscription/API, OpenAI API, and Claude Code through LiteLLM + Ollama |
 
+Source version and published package availability are separate. As checked on
+2026-10-06, the [Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+serves extension 9.8.0, while [GitHub releases](https://github.com/jnPiyush/AgentX/releases)
+provide standalone assets through v9.6.0. The [feature inventory](docs/FEATURES.md)
+also includes Unreleased source improvements absent from the published 9.8.0 VSIX.
+
 ### The core idea
 
-```mermaid
-flowchart LR
-    Intent["User intent"] --> Route{"Frontier Orchestration FDE"}
-    Route --> Plan["Plan and design"]
-    Plan --> Build["Implement"]
-    Build --> Verify["Verify and review"]
-    Verify -->|"findings"| Build
-    Verify --> Capture["Capture learning"]
-    Capture --> Done["Done with evidence"]
-```
+<img src="vscode-extension/resources/diagrams/core-flow.png" width="320" alt="User intent is routed through planning, implementation, verification, learning capture, and completion. Review findings return to implementation.">
+
+[Editable Mermaid source](vscode-extension/resources/diagrams/core-flow.mmd)
 
 Frontier Orchestration FDE can run that path in one session. For tighter control, select a specialist role for only the phase you need.
 
@@ -82,12 +82,15 @@ Frontier uses six shared checkpoints across chat, CLI, issues, plans, reviews, a
 | **Brainstorm** | Frame the problem and retrieve prior learning | Issue or bounded task |
 | **Plan** | Record scope, alternatives, risks, and verification | Execution plan and optional work contract |
 | **Work** | Implement a bounded slice | Code, artifacts, progress, implementation evidence |
-| **Review** | Test the real surface and classify findings | Test output, runtime evidence, review decision |
+| **Review** | Inspect implementation, regression cases and non-test evidence | Structured findings, current checks and review decision |
 | **Compound Capture** | Preserve reusable outcomes or record a skip rationale | Learning artifact or closeout rationale |
 | **Done** | Close only when delivery and evidence agree | Completed loop, review, and capture state |
 
 ### Quality gates
 
+- Test suites run separately from local loops and reviews. After a completed
+  loop, Frontier asks whether to run the suite and waits for explicit approval.
+  Skipped suites remain not run; CI/release requirements are unchanged.
 - **Iterative loop:** evidence-backed minimums scale by risk: standard `1`, auto-fix `2`, complex delivery `3`, and high-risk `5`
 - **Independent review:** a subagent sees the deliverable, not the author's rationale
 - **Karpathy guidelines:** think before coding, keep it simple, change surgically, verify the goal
@@ -173,9 +176,14 @@ Model names are advisory. Role boundaries, evidence requirements, and tool permi
 
 Frontier also ships GitHub Copilot CLI packs, Claude Code commands, Cursor rules/commands, and PowerShell/Bash launchers.
 
+For Cursor, initialize the local runtime and run `Frontier: Initialize Cursor`.
+Standalone installs use `frontier cursor setup --restore-mcp`. Setup preserves
+user configuration and wires native context/policy hooks without copying agent
+or skill trees. See the [Cursor setup guide](docs/GUIDE.md#cursor).
+
 ---
 
-## Featured 8.7 Capabilities
+## Selected Capabilities
 
 ### Fabric Engineer
 
@@ -241,12 +249,14 @@ Requirements:
 - PowerShell 7.4+ (`pwsh`) on every OS; the Bash launcher also delegates to PowerShell
 - GitHub Copilot and GitHub Copilot Chat
 
-### 2. Initialize the workspace
+### 2. Use Frontier in a trusted workspace
 
-Open a repository and run this Command Palette action:
+Open a trusted repository and use Frontier chat or commands. Private state is
+created on first use; installation alone supplies the shared agents and skills.
+For optional portable launchers and repository configuration, run:
 
 ```text
-Frontier: Initialize Local Runtime
+Frontier: Initialize Repository Support
 ```
 
 Or use chat:
@@ -304,15 +314,41 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.6.0
+## New In 9.8.0
 
-This release uses the new Frontier AI Coding Harness icon across active branding:
+Frontier 9.8.0 adds guided collaboration and zero-setup workspaces:
 
-- Marketplace and chat use the transparent 256x256 PNG
-- the VS Code Activity Bar uses the matching monochrome SVG
-- documentation, the website header/favicon, and Teams icons share the same artwork
-- current release versions and generated artifacts are aligned to 9.6.0
-- functional icons, theme tokens, published history, and dependency versions are preserved
+- clarify, propose a versioned plan and wait for explicit approval before
+  guided native execution; report milestones and resume durable sessions
+- work in any folder without per-workspace initialization; private state is
+  created on first use and repository support stays optional
+- retrieve bounded repository context from hierarchical summaries, AST symbols
+  and typed relationships with token budgets
+- prepare quality loops faster with change-aware non-test preflight, reusable
+  receipts, factual review packets and phase timing
+- continue guided sessions from the optional WhatsApp and Teams/GitHub companions
+- revalidate approved reviews at commit and handoff, bound model and CLI calls,
+  and install compatible bundled plugins without a catalog download
+
+AgentX/HVE compatibility aliases are removed; see
+[Frontier-only interfaces](docs/GUIDE.md#frontier-only-interfaces). Frontier
+9.7.0 (repository graph, model routing and opt-in HydraFusion) is included.
+
+Local validation and remaining provider/platform limitations are recorded with
+the release package. Public publishing and experimental HydraFusion qualification
+remain separate from packaging and source review.
+
+### Unreleased source improvements
+
+- Stage learned skills for human review before explicit publication.
+- Record post-loop test outcomes through the CLI without treating review approval
+  as a test pass.
+- Append native model-usage metadata as responses arrive, and retain full final
+  clarification guidance without the former 600-character cut-off.
+
+These additions are described in [CHANGELOG.md](CHANGELOG.md#unreleased);
+an older installed VSIX does not acquire them merely because its version matches
+the source version.
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

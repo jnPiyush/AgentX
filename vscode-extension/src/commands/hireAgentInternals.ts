@@ -11,6 +11,8 @@ export interface AgentDetails {
 }
 
 const MODEL_OPTIONS = [
+  { label: 'Claude Opus 5.5', value: 'claude-opus-5.5' },
+  { label: 'GPT-6 Astra', value: 'gpt-6-astra' },
   { label: 'GPT-4.1', value: 'gpt-4.1' },
   { label: 'Claude Opus 4.8', value: 'claude-opus-4.8' },
   { label: 'Claude Opus 4', value: 'claude-opus-4' },

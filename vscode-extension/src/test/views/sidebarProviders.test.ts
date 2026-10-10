@@ -28,6 +28,7 @@ function createAgentxStub(root: string) {
     githubConnected: true,
     adoConnected: false,
     getPendingClarification: async () => undefined,
+    hasCliRuntime: () => true,
     runCli: async () => '[]',
     listExecutionPlanFiles: () => ['docs/execution/plans/EXEC-PLAN-1.md'],
     getStatePath: (fileName: string) => path.join(root, '.frontier', 'state', fileName),

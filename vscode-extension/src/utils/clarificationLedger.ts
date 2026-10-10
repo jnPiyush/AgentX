@@ -162,15 +162,15 @@ export function saveBrainstormRecord(
   const now = nowIso();
   const thread: ThreadEntry[] = [
     { round: 1, from: 'user', type: 'question', body: truncate(query, 2000), timestamp: now },
-    { round: 1, from: 'agent-x', type: 'answer', body: truncate(resultSummary, 2000), timestamp: now },
-    { round: 1, from: 'agent-x', type: 'resolution', body: 'Brainstorm session captured.', timestamp: now },
+    { round: 1, from: 'frontier', type: 'answer', body: truncate(resultSummary, 2000), timestamp: now },
+    { round: 1, from: 'frontier', type: 'resolution', body: 'Brainstorm session captured.', timestamp: now },
   ];
 
   return saveClarificationRecord({
     workspaceRoot,
     issueNumber,
     from: 'user',
-    to: 'agent-x',
+    to: 'frontier',
     topic: `Brainstorm: ${truncate(query, 200)}`,
     thread,
     resolved: true,

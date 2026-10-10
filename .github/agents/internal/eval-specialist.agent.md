@@ -2,27 +2,27 @@
 name: Frontier Evaluation FDE
 description: 'Design and execute AI evaluation pipelines including LLM-as-judge, benchmarks, quality gates, and model comparison. Invisible sub-agent spawned by Data Scientist and Reviewer.'
 visibility: internal
-model: GPT-5.6 Sol (copilot)
+model: Claude Opus 5.5 (copilot)
 user-invocable: false
 disable-model-invocation: false
 hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
-      timeout: 10
+        node -e "try{require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()}catch(e){console.error(e);process.exitCode=2;try{let b=Buffer.alloc(65537),n=require('fs').readSync(0,b);if(/^(read_file|file_search|grep_search|list_dir|get_errors)$/.test(JSON.parse(b.subarray(0,n)).tool_name))process.exitCode=0}catch{}}"
+      timeout: 15
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.frontier/runtime/frontier.ps1') { & '.frontier/runtime/frontier.ps1' policy-hook } else { exit 0 }"
-      timeout: 10
+        node -e "require(process.env.FRONTIER_HOOK_RUNTIME||'./.frontier/runtime/policy-hook.js').main()"
+      timeout: 15
 reasoning:
-  level: high
+  level: medium
 constraints:
   - "MUST define evaluation dimensions before running any tests"
   - "MUST use structured scoring rubrics (1-5 scale with criteria per level)"
@@ -208,7 +208,7 @@ Generate side-by-side comparison:
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

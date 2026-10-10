@@ -20,7 +20,7 @@ const rootDirs = [
     { src: path.join(repoRoot, '.github', 'hooks'), dest: path.join('.github', 'hooks') },
     { src: path.join(repoRoot, '.frontier', 'runtime', 'templates'), dest: path.join('.frontier', 'runtime', 'templates') },
     { src: path.join(repoRoot, '.frontier', 'runtime', 'plugins'), dest: path.join('.frontier', 'runtime', 'plugins') },
-    { src: path.join(repoRoot, '.cursor'), dest: '.cursor' },
+    { src: path.join(repoRoot, '.cursor'), dest: path.join('.frontier', 'runtime', 'cursor-assets') },
     { src: path.join(repoRoot, 'packs'), dest: 'packs' },
 ];
 
@@ -48,6 +48,8 @@ const runtimeScriptFiles = [
     'score-output.ps1',
     'generate-registries.ps1',
     'token-counter.ps1',
+    'evaluate-repository-context.ps1',
+    'repository-context-evaluation.ps1',
     'score-code-quality.ps1',
     'score-stage-gate.ps1',
     'score-skill.ps1',
@@ -71,6 +73,30 @@ const rootRuntimeFiles = [
     'frontier.sh',
     'frontier-cli.ps1',
     'agentic-runner.ps1',
+    'guided-interaction.ps1',
+    'repository-context.ps1',
+    'repository-symbols.ps1',
+    'repository-retrieval.ps1',
+    'repository-parser-worker.ps1',
+    'repository-process.cs',
+    'workspace-sandbox.ps1',
+    'workspace-state.ps1',
+    'loop-engineering.ps1',
+    'loop-static-checks.js',
+    'hydrafusion.ps1',
+    'hydrafusion-policy.ps1',
+    'hydrafusion-protocol.ps1',
+    'hydrafusion-workspace.ps1',
+    'cursor.js',
+    'cursor-mcp.js',
+    'cursor-hook.js',
+    'policy-hook.js',
+    'adapters/cursor/protocol.js',
+    'adapters/cursor/setup.js',
+    'mcp-server/index.js',
+    'mcp-server/package.json',
+    'mcp-server/package-lock.json',
+    'mcp-server/README.md',
     'local-issue-manager.ps1',
     'local-issue-manager.sh',
 ].map((file) => ({
@@ -91,12 +117,23 @@ const artifactDocFiles = [
     'evaluation/rubrics/stage-gates.md',
     'evaluation/rubrics/README.md',
     'evaluation/baseline.json',
+    'evaluation/repository-context/queries.json',
 ].map((relativePath) => ({
     src: path.join(repoRoot, ...relativePath.split('/')),
     dest: path.join(...relativePath.split('/')),
 }));
 
+// The extension README is not part of bundled or seeded docs; point GUIDE links at GitHub.
+const guideExtensionReadmeLink = '](../vscode-extension/README.md#minimal-workspace-setup)';
+const guideExtensionReadmeUrl = '](https://github.com/jnPiyush/AgentX/blob/master/vscode-extension/README.md#minimal-workspace-setup)';
+
 const bundledMarkdownRewrites = [
+    {
+        relativePath: path.join('docs', 'GUIDE.md'),
+        replacements: [
+            [guideExtensionReadmeLink, guideExtensionReadmeUrl],
+        ],
+    },
     {
         relativePath: 'AGENT-PROTOCOL.md',
         replacements: [
@@ -221,6 +258,19 @@ const bundledMarkdownRewrites = [
         ],
     },
 ];
+
+if (process.argv.includes('--check')) {
+    const mismatches = [];
+    for (const relative of compatibilityDocumentPaths()) {
+        const expected = compatibilityDocumentText(relative, fs.readFileSync(path.join(repoRoot, relative), 'utf8'));
+        const destination = path.join(compatibilityRoot, relative);
+        if (!fs.existsSync(destination) || fs.readFileSync(destination, 'utf8') !== expected) {
+            mismatches.push(relative);
+        }
+    }
+    console.log(JSON.stringify({ passed: mismatches.length === 0, mismatches, mode: 'read-only' }));
+    process.exit(mismatches.length ? 1 : 0);
+}
 
 // Clean destination
 if (fs.existsSync(destRoot)) {
@@ -358,6 +408,21 @@ if (runtimeFileCount > 0) {
     console.log('  Copied ' + runtimeFileCount + ' runtime files');
 }
 
+const parserSource = path.join(repoRoot, '.frontier', 'runtime', 'repository-parser');
+const parserDestination = path.join(destRoot, '.frontier', 'runtime', 'repository-parser');
+for (const dependency of ['typescript', '@vscode/tree-sitter-wasm']) {
+    if (!fs.existsSync(path.join(parserSource, 'node_modules', dependency, 'package.json'))) {
+        throw new Error('Missing managed graph parser dependency: ' + dependency
+            + '. Run npm ci --prefix .frontier/runtime/repository-parser --ignore-scripts.');
+    }
+}
+fs.cpSync(parserSource, parserDestination, {
+    recursive: true,
+    filter: file => !file.endsWith('.test.cjs') && !file.endsWith('.test.js'),
+});
+totalFiles += countFiles(parserDestination);
+console.log('  Copied managed offline repository parser and pinned dependencies');
+
 // Copy docs/ reference files to docs/ subdirectory
 const docsDestDir = path.join(destRoot, 'docs');
 if (!fs.existsSync(docsDestDir)) {
@@ -482,6 +547,8 @@ function buildCopilotCliSeedTree() {
     for (const file of [...runtimeScriptFiles, 'validate-handoff.ps1', 'score-output.ps1']) {
         copyFile(path.join(repoRoot, 'scripts', file), path.join('scripts', file));
     }
+    copyFile(path.join(repoRoot, '.frontier', 'runtime', 'workspace-state.ps1'),
+        path.join('.frontier', 'runtime', 'workspace-state.ps1'));
 
     // Trees referenced by individual agents.
     copyTree(path.join(repoRoot, 'packs'), 'packs');
@@ -505,6 +572,7 @@ function applySeedRewrites(seedRoot) {
             relativePath: path.join('docs', 'GUIDE.md'),
             replacements: [
                 ['](../CONTRIBUTING.md)', '](https://github.com/jnPiyush/AgentX/blob/master/CONTRIBUTING.md)'],
+                [guideExtensionReadmeLink, guideExtensionReadmeUrl],
             ],
         },
     ];
@@ -553,78 +621,58 @@ function applyBundledMarkdownRewrites() {
 
 function syncCompatibilityRootDocs() {
     for (const file of rootDocs) {
-        const bundledPath = path.join(destRoot, file);
-        if (fs.existsSync(bundledPath)) {
-            const compatibilityPath = path.join(compatibilityRoot, file);
-            fs.copyFileSync(bundledPath, compatibilityPath);
-
-            if (file === 'Skills.md') {
-                const original = fs.readFileSync(compatibilityPath, 'utf8');
-                const updated = original
-                    .split('(skills/').join('(frontier/skills/')
-                    .split('|skills/').join('|frontier/skills/');
-
-                if (updated !== original) {
-                    fs.writeFileSync(compatibilityPath, updated, 'utf8');
-                }
-            } else if (file === 'CONTRIBUTING.md') {
-                const original = fs.readFileSync(compatibilityPath, 'utf8');
-                const updated = original
-                    .split('(skills/').join('(frontier/skills/')
-                    .split('(ISSUE_TEMPLATE/').join('(frontier/ISSUE_TEMPLATE/')
-                    .split('(copilot-instructions.md)').join('(frontier/copilot-instructions.md)');
-
-                if (updated !== original) {
-                    fs.writeFileSync(compatibilityPath, updated, 'utf8');
-                }
-            }
+        const source = path.join(repoRoot, file);
+        if (fs.existsSync(source)) {
+            fs.writeFileSync(path.join(compatibilityRoot, file),
+                compatibilityDocumentText(file, fs.readFileSync(source, 'utf8')), 'utf8');
         }
     }
 }
 
 function rewriteCompatibilityDocs() {
-    const workflowPath = path.join(compatibilityRoot, 'docs', 'WORKFLOW.md');
-    if (fs.existsSync(workflowPath)) {
-        const original = fs.readFileSync(workflowPath, 'utf8');
-        const updated = original
-            .split('(../.github/templates/').join('(../frontier/templates/')
-            .split('(../.github/agents/').join('(../frontier/agents/')
-            .split('(../.github/skills/').join('(../frontier/skills/');
-
-        if (updated !== original) {
-            fs.writeFileSync(workflowPath, updated, 'utf8');
-        }
+    for (const relative of compatibilityDocumentPaths().filter(file => !rootDocs.includes(file))) {
+        const original = fs.readFileSync(path.join(repoRoot, relative), 'utf8');
+        const updated = compatibilityDocumentText(relative, original);
+        if (updated !== original) fs.writeFileSync(path.join(compatibilityRoot, relative), updated, 'utf8');
     }
+}
 
-    const techDebtPath = path.join(compatibilityRoot, 'docs', 'tech-debt-tracker.md');
-    if (fs.existsSync(techDebtPath)) {
-        const original = fs.readFileSync(techDebtPath, 'utf8');
-        const updated = original
-            .split('(artifacts/adr/').join('(../frontier/docs/artifacts/adr/')
-            .split('(artifacts/specs/').join('(../frontier/docs/artifacts/specs/');
+function compatibilityDocumentPaths() {
+    return [
+        ...rootDocs,
+        ...docFiles.map(file => path.join('docs', file)),
+        ...fs.readdirSync(docGuideDir).filter(file => file.endsWith('.md'))
+            .map(file => path.join('docs', 'guides', file)),
+    ].filter(file => fs.existsSync(path.join(repoRoot, file)));
+}
 
-        if (updated !== original) {
-            fs.writeFileSync(techDebtPath, updated, 'utf8');
-        }
-    }
-
-    const guideRewrites = [
-        ['EVALUATOR-CALIBRATION.md', [['(../../.github/agents/', '(../../frontier/agents/']]],
-        ['CODING-HARNESS.md', [
+function compatibilityDocumentText(relative, text) {
+    const bundled = rootDocs.includes(relative)
+        ? bundledMarkdownRewrites.find(entry => entry.relativePath === relative)?.replacements ?? [] : [];
+    const replacements = {
+        'Skills.md': [['(skills/', '(frontier/skills/'], ['|skills/', '|frontier/skills/']],
+        'CONTRIBUTING.md': [
+            ['(skills/', '(frontier/skills/'],
+            ['(ISSUE_TEMPLATE/', '(frontier/ISSUE_TEMPLATE/'],
+            ['(copilot-instructions.md)', '(frontier/copilot-instructions.md)'],
+        ],
+        'docs/WORKFLOW.md': [
+            ['(../.github/templates/', '(../frontier/templates/'],
+            ['(../.github/agents/', '(../frontier/agents/'],
+            ['(../.github/skills/', '(../frontier/skills/'],
+        ],
+        'docs/tech-debt-tracker.md': [
+            ['(artifacts/adr/', '(../frontier/docs/artifacts/adr/'],
+            ['(artifacts/specs/', '(../frontier/docs/artifacts/specs/'],
+        ],
+        'docs/guides/EVALUATOR-CALIBRATION.md': [['(../../.github/agents/', '(../../frontier/agents/']],
+        'docs/guides/CODING-HARNESS.md': [
             ['(../../.github/skills/', '(../../frontier/skills/'],
             ['(../../evaluation/', '(../../frontier/evaluation/'],
-        ]],
-    ];
-    for (const [name, replacements] of guideRewrites) {
-        const guidePath = path.join(compatibilityRoot, 'docs', 'guides', name);
-        if (!fs.existsSync(guidePath)) { continue; }
-        const original = fs.readFileSync(guidePath, 'utf8');
-        let updated = original;
-        for (const [from, to] of replacements) {
-            updated = updated.split(from).join(to);
-        }
-        if (updated !== original) {
-            fs.writeFileSync(guidePath, updated, 'utf8');
-        }
+        ],
+    };
+    for (const [from, to] of [...bundled, ...(replacements[relative.replace(/\\/g, '/')] ?? [])]) {
+        text = text.split(from).join(to);
     }
+    return text;
 }

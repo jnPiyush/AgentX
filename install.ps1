@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install Frontier v9.6.0 - Download, copy, configure.
+ Install Frontier v9.8.0 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -23,6 +23,10 @@
  Install Azure companion support when setting up Frontier. This is also auto-detected
  for existing Azure-oriented workspaces.
 
+.PARAMETER Cursor
+ Configure Cursor commands, native hooks and MCP after restoring pinned MCP
+ dependencies. Existing user Cursor configuration is preserved.
+
 .EXAMPLE
  .\install.ps1 # Local mode - no prompts
  .\install.ps1 -Mode github # GitHub mode - asks for repo/project
@@ -31,13 +35,13 @@
  .\install.ps1 -Azure # Force Azure Skills companion install
 
  # One-liner install (local mode, no prompts - pinned to a release tag)
- irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.ps1 | iex
+ irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.ps1 | iex
 
  # One-liner for GitHub mode
- $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.ps1 | iex
+ $env:FRONTIER_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.ps1 | iex
 
  # One-liner to include Azure companion support
- $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.6.0/install.ps1 | iex
+ $env:FRONTIER_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.8.0/install.ps1 | iex
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive installer output is intentionally written directly to the host.')]
@@ -47,7 +51,9 @@ param(
  [switch]$Force,
  [switch]$NoSetup,
  [switch]$Local,
- [switch]$Azure
+ [switch]$Azure,
+ [switch]$Cursor,
+ [switch]$GraphParsers
 )
 
 $MinimumPowerShellVersion = [Version]'7.4.0'
@@ -89,6 +95,7 @@ function Get-InstallRelaunchParameter {
  if ($NoSetup) { $relaunchParameters += '-NoSetup' }
  if ($Local) { $relaunchParameters += '-Local' }
  if ($Azure) { $relaunchParameters += '-Azure' }
+ if ($Cursor) { $relaunchParameters += '-Cursor' }
  return $relaunchParameters
 }
 
@@ -138,12 +145,10 @@ function Invoke-GitInstallIfMissing {
 }
 
 # Environment variable overrides (for irm | iex one-liner usage)
-if (-not $Mode -and $env:AGENTX_MODE) { $Mode = $env:AGENTX_MODE }
-if (-not $Path -and $env:AGENTX_PATH) { $Path = $env:AGENTX_PATH }
-# Legacy: support AGENTX_LOCAL=true -> Mode=local
-if (-not $Mode -and $env:AGENTX_LOCAL -eq "true") { $Mode = "local" }
-if (-not $PSBoundParameters.ContainsKey('NoSetup') -and $env:AGENTX_NOSETUP -eq "true") { $NoSetup = [switch]$true }
-if (-not $PSBoundParameters.ContainsKey('Azure') -and $env:AGENTX_AZURE -eq "true") { $Azure = [switch]$true }
+if (-not $Mode -and $env:FRONTIER_MODE) { $Mode = $env:FRONTIER_MODE }
+if (-not $Path -and $env:FRONTIER_PATH) { $Path = $env:FRONTIER_PATH }
+if (-not $PSBoundParameters.ContainsKey('NoSetup') -and $env:FRONTIER_NOSETUP -eq "true") { $NoSetup = [switch]$true }
+if (-not $PSBoundParameters.ContainsKey('Azure') -and $env:FRONTIER_AZURE -eq "true") { $Azure = [switch]$true }
 # -Local switch -> Mode=local shorthand
 if ($Local -and -not $Mode) { $Mode = "local" }
 
@@ -168,8 +173,8 @@ $metadataPath = '.frontier/version.json'
 if (Test-Path -LiteralPath $metadataPath) {
  $installedVersion = (Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json).version
 }
-if ($installedVersion -and $installedVersion -ne '9.6.0' -and -not $Force) {
- throw "Frontier v$installedVersion is already installed. Re-run with -Force to replace managed files with v9.6.0; no files were changed."
+if ($installedVersion -and $installedVersion -ne '9.8.0' -and -not $Force) {
+ throw "Frontier v$installedVersion is already installed. Re-run with -Force to replace managed files with v9.8.0; no files were changed."
 }
 
 if ($IsWindows -or $env:OS -eq 'Windows_NT') {
@@ -210,12 +215,12 @@ if ($PSVersionTable.PSVersion -lt $MinimumPowerShellVersion) {
 $isPiped = -not $MyInvocation.MyCommand.Path
 
 $ErrorActionPreference = "Stop"
-$BRANCH = "v9.6.0"
+$BRANCH = "v9.8.0"
 $TMP = ".frontier-install-tmp"
 $TMPRAW = ".frontier-install-raw"
 $ZIPFILE = ".frontier-install.zip"
 $ARCHIVE = "https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.zip"
-$ARCHIVE_SOURCE = if ($env:AGENTX_INSTALL_ARCHIVE) { $env:AGENTX_INSTALL_ARCHIVE } else { $ARCHIVE }
+$ARCHIVE_SOURCE = if ($env:FRONTIER_INSTALL_ARCHIVE) { $env:FRONTIER_INSTALL_ARCHIVE } else { $ARCHIVE }
 
 function Write-OK($m) { Write-Host "[OK] $m" -ForegroundColor Green }
 function Write-Skip($m) { Write-Host "[--] $m" -ForegroundColor DarkGray }
@@ -315,7 +320,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| Frontier v9.6.0 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| Frontier v9.8.0 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -340,8 +345,8 @@ if (-not (Invoke-GitInstallIfMissing)) {
 # -- Upgrade detection --
 $previousVersion = $installedVersion
 
-if ($previousVersion -and $previousVersion -ne "9.6.0") {
- Write-Host "[!] Detected Frontier v$previousVersion - upgrading to v9.6.0..." -ForegroundColor Yellow
+if ($previousVersion -and $previousVersion -ne "9.8.0") {
+ Write-Host "[!] Detected Frontier v$previousVersion - upgrading to v9.8.0..." -ForegroundColor Yellow
  Write-Host "  Existing runtime data and files absent from the release are retained." -ForegroundColor DarkGray
 }
 
@@ -374,6 +379,7 @@ $neededDirs = @(".frontier/runtime", ".github", ".claude", ".cursor", ".vscode",
 $neededFiles = @(
  ".gitignore",
  "AGENTS.md",
+ "CLAUDE.md",
  "Skills.md",
  "LICENSE",
  "NOTICE",
@@ -413,6 +419,15 @@ Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue
 if (-not (Test-Path "$TMP/.frontier/runtime")) { Write-Error "Download failed. Check network connection." }
 Write-OK "Frontier downloaded (essential files only)"
 
+# Keep canonical Cursor templates separate from the user's shared Cursor config.
+$cursorTemplates = Join-Path $TMP '.frontier/runtime/cursor-assets'
+if (Test-Path -LiteralPath (Join-Path $TMP '.cursor')) {
+ New-Item -ItemType Directory -Path $cursorTemplates -Force | Out-Null
+ Get-ChildItem -LiteralPath (Join-Path $TMP '.cursor') -Force | ForEach-Object {
+  Copy-Item -LiteralPath $_.FullName -Destination $cursorTemplates -Recurse -Force
+ }
+}
+
 # -- Step 2: Copy files ----------------------------------
 Write-Host "[2] Installing files..." -ForegroundColor Cyan
 
@@ -420,6 +435,7 @@ $tmpFull = (Resolve-Path $TMP).Path.TrimEnd('\', '/')
 $copied = 0; $skipped = 0
 $runtimeStatePatterns = @(
  '^\.frontier/(?!runtime/)',
+ '^\.cursor/(mcp|hooks)\.json$',
  '^\.vscode/mcp\.json$',
  '^\.vscode/settings\.json$'
 )
@@ -437,7 +453,7 @@ Get-ChildItem $TMP -Recurse -File -Force | ForEach-Object {
  }
  $dir = Split-Path $dest -Parent
  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
- if ($Force -or $normalizedRel -in @('LICENSE', 'NOTICE') -or -not (Test-Path $dest)) {
+ if (($Force -and $normalizedRel -notmatch '^\.cursor/') -or $normalizedRel -in @('LICENSE', 'NOTICE') -or -not (Test-Path $dest)) {
  Copy-Item $_.FullName $dest -Force
  $copied++
  } else { $skipped++ }
@@ -530,12 +546,12 @@ if (Test-Path $memoryTemplateSource) {
 # Version tracking
 $versionFile = ".frontier/version.json"
 @{
-  version = "9.6.0"
+  version = "9.8.0"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 9.6.0 recorded"
+Write-OK "Version 9.8.0 recorded"
 
 # Merge Frontier entries into user's .gitignore
 $MARKER_START = "# --- Frontier (auto-generated, do not edit this block) ---"
@@ -775,7 +791,7 @@ $companionExtensions = @(
 )
 if (-not $azureCompanionRequested) {
  Write-Skip "Azure companion skipped (no Azure signals detected)"
- Write-Host " Re-run with -Azure or set AGENTX_AZURE=true to install Azure Skills support." -ForegroundColor DarkGray
+ Write-Host " Re-run with -Azure or set FRONTIER_AZURE=true to install Azure Skills support." -ForegroundColor DarkGray
 } elseif (Get-Command code -ErrorAction SilentlyContinue) {
  $installedExts = code --list-extensions 2>$null
  foreach ($ext in $companionExtensions) {
@@ -799,10 +815,26 @@ if (-not $azureCompanionRequested) {
  }
 }
 
+if ($Cursor) {
+ & pwsh -NoProfile -File '.frontier/runtime/frontier.ps1' cursor setup --restore-mcp
+ if ($LASTEXITCODE -ne 0) { throw 'Cursor setup failed; existing Cursor configuration was preserved.' }
+} else {
+ Write-Host 'Cursor users: run .\.frontier\runtime\frontier.ps1 cursor setup --restore-mcp to enable MCP and native hooks.' -ForegroundColor DarkGray
+}
+& pwsh -NoProfile -File (Join-Path $TMP 'scripts/install-manifest.ps1') -Action install `
+ -SourceManifest (Join-Path $TMP '.frontier/runtime/install-manifest.json')
+if ($LASTEXITCODE -ne 0) { throw 'Installed manifest projection failed.' }
+if ($GraphParsers) {
+ & pwsh -NoProfile -File '.frontier/runtime/frontier.ps1' context-parsers restore
+ if ($LASTEXITCODE -ne 0) { throw 'Managed graph parser restoration failed.' }
+}
+& pwsh -NoProfile -File '.frontier/runtime/frontier.ps1' context --start-refresh
+if ($LASTEXITCODE -ne 0) { Write-Warning 'Repository discovery did not start; run frontier context --sync to diagnose.' }
+
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " Frontier v9.6.0 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " Frontier v9.8.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.frontier\runtime\frontier.ps1 help" -ForegroundColor White
@@ -829,4 +861,3 @@ Write-Host ""
  # Pop back to original directory if -Path was used
  if ($Path) { Pop-Location }
 }
-

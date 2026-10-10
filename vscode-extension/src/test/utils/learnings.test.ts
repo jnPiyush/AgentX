@@ -14,6 +14,25 @@ import {
 describe('learnings utility', () => {
   let tmpDir: string;
 
+  it('loads and ranks a completed registered learning template', () => {
+    const template = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..',
+      '.github', 'templates', 'LEARNING-TEMPLATE.md'), 'utf-8');
+    const completed = template
+      .replace(/\{id\}/g, '450')
+      .replace(/\{Title\}/g, 'Keep retrieval metadata aligned')
+      .replace(/\{category\}/g, 'memory')
+      .replace('validation: draft', 'validation: reviewed');
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'artifacts', 'learnings', 'LEARNING-450.md'), completed);
+    const record = loadLearningRecords(tmpDir).find((learning) => learning.id === 'LEARNING-450');
+    assert.ok(record);
+    assert.ok(record.summary.length > 0);
+    assert.ok(record.guidance.length > 0);
+    assert.deepEqual(record.keywords, []);
+    assert.deepEqual(record.sources, []);
+    assert.ok(rankLearnings(tmpDir, 'planning', 'retrieval metadata', 10)
+      .some((learning) => learning.id === 'LEARNING-450'));
+  });
+
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-learnings-'));
     fs.mkdirSync(path.join(tmpDir, 'docs', 'artifacts', 'learnings'), { recursive: true });

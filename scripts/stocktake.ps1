@@ -40,7 +40,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Same order as the CLI; bundled copies would otherwise inspect the extension folder.
-$workspaceOverride = @($env:FRONTIER_WORKSPACE_ROOT, $env:HVE_WORKSPACE_ROOT, $env:AGENTX_WORKSPACE_ROOT) | Where-Object { $_ } | Select-Object -First 1
+$workspaceOverride = $env:FRONTIER_WORKSPACE_ROOT
 $ROOT = (Resolve-Path -LiteralPath $(if ($workspaceOverride) { $workspaceOverride } else { Join-Path $PSScriptRoot '..' })).Path
 $scoreScript = Join-Path $PSScriptRoot 'score-skill.ps1'
 if (-not (Test-Path $scoreScript)) {
@@ -137,4 +137,3 @@ if ($WriteReport) {
 
 if ($flagged.Count -gt 0) { exit 1 }
 exit 0
-
