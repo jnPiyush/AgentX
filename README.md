@@ -3,7 +3,7 @@
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases"><img src="https://img.shields.io/badge/Version-9.8.0-b11f4b?style=for-the-badge" alt="Source version 9.8.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases"><img src="https://img.shields.io/badge/Version-9.8.1-b11f4b?style=for-the-badge" alt="Source version 9.8.1"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>

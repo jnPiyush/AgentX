@@ -323,7 +323,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
         path.join(root, '.github', 'agents', 'fixture.agent.md'), 'utf8'), 'fixture agent\n');
     });
 
-    it('creates exactly the state and launcher files in minimal mode', async () => {
+    it('creates exactly the state, launchers and managed hook in minimal mode', async () => {
       __setConfig('frontier.initializationMode', 'minimal');
       const configuration = sandbox.spy(vscode.workspace, 'getConfiguration');
 
@@ -340,6 +340,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
         '.frontier/runtime/frontier.sh',
         '.frontier/runtime/local-issue-manager.ps1',
         '.frontier/runtime/local-issue-manager.sh',
+        '.frontier/runtime/policy-hook.js',
         '.frontier/state/agent-status.json',
         '.frontier/version.json',
         '.gitignore',
