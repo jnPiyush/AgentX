@@ -1,6 +1,6 @@
 {
   "name": "@frontier/mcp-server",
-  "version": "9.8.0",
+  "version": "9.8.1",
   "description": "MCP stdio server that exposes Frontier CLI commands (loop, ready, state, workflow, validate, ship, ...) as Model Context Protocol tools so GitHub Copilot CLI, Claude Desktop, or any MCP host can drive Frontier quality gates from chat.",
   "private": true,
   "type": "commonjs",
@@ -12,7 +12,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0"
+    "@modelcontextprotocol/sdk": "1.32.0"
   },
   "overrides": {
     "hono": "4.13.7",

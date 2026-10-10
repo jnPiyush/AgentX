@@ -1,6 +1,6 @@
 {
-  "version": "9.8.0",
-  "createdAt": "2026-10-09T21:12:09.668Z",
+  "version": "9.8.1",
+  "createdAt": "2026-10-10T00:13:14.706Z",
   "files": [
     {
       "path": ".cursor/commands/ado-ops.md",
@@ -216,17 +216,17 @@
     },
     {
       "path": ".frontier/runtime/mcp-server/index.js",
-      "sha256": "cead515da2e365e6c9024715b1020c8732cc332b9179cba9619d6a3fe9a5a377",
+      "sha256": "31455d9d67ca0b0ad1e99e60726620f432440265dc1e2be877ca13d222bcd733",
       "category": "cli"
     },
     {
       "path": ".frontier/runtime/mcp-server/package-lock.json",
-      "sha256": "98f2ea8b2a9dc4c9a4838e3b03f0f2e44d74f5864f4aed7c5abff122efb44afe",
+      "sha256": "7d8918a5c472900541f02e61cd371c4b1eecae878ebac2316797c24878ff18a3",
       "category": "config"
     },
     {
       "path": ".frontier/runtime/mcp-server/package.json",
-      "sha256": "dcf69e8891a52ccc23d633bc131b52a2e18ed9d4cd570569cbec2e32c8bdbf07",
+      "sha256": "858d96bf5ac105734f1ad80833d3f0f655a217d5245fbd966b851f2f26613bc2",
       "category": "config"
     },
     {
@@ -1551,32 +1551,32 @@
     },
     {
       "path": "packs/frontier-copilot-cli/install-user.ps1",
-      "sha256": "a78e15fd7cd56477384033edf200e96c444a84bb1e037b915a781bc2fd182d9b",
+      "sha256": "687f1160a422b273de62cc74f2339ca6af535c76282662ba663d04b9752adc71",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.ps1",
-      "sha256": "0ffa4937209b47d57c653c83bddec2fdbd73526af08df6c5ab3dec229f1b6d63",
+      "sha256": "24bf0765aca59d279bec3c5a202f6117aa7e12789b8e0a8dc286ddf13c3444d9",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.sh",
-      "sha256": "5e7a7b90c7065384b384276030576853cfd41831e1a1f945ac5e2cce002d15b9",
+      "sha256": "18899404686af939bd337d2b57812b08df1dbf7db7777b60e652809baf91042a",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/manifest.json",
-      "sha256": "13ae478985bbf5cdbbb30c32e1d534410a8ee36b6d6c3256cdae3ec25855dd7c",
+      "sha256": "135ed035351e2d40a907807209f2b035d94d375ba1b47b2210d28e63c129f389",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/README.md",
-      "sha256": "8c53f1f2f49edab97657b3ddbe38679049e01f57be565ed2558f4d90a84db254",
+      "sha256": "678749111677522f20db643300681cb2ee0ac06e5e54955821d34ee5a45afdef",
       "category": "pack"
     },
     {
       "path": "packs/frontier-core/manifest.json",
-      "sha256": "b7571796e5994d9186f255af14cdc0fbdbdf7fb82694c0b5948b3d79ae896d15",
+      "sha256": "d4f6a3b71c53ccf3c632a09e9814028a252e3357fc6db69333d3ad999955d8c4",
       "category": "pack"
     },
     {
@@ -1756,7 +1756,7 @@
     },
     {
       "path": "scripts/stamp-version.js",
-      "sha256": "eb6e7a1aa1fd9d9952048335bab8883a20fc916cd2238fe6a14d8ccc30a3d1a0",
+      "sha256": "9c479b0a1d09160a6de96cc36842da09f06f322aa669c4f647e7d60b3774f229",
       "category": "script"
     },
     {
