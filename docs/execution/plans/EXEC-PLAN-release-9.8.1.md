@@ -62,6 +62,12 @@ Do not claim merge, tag creation or test passes without observed evidence.
 * Harness compliance against master now passes. Full runtime audit found an
   additional optional WhatsApp brace-expansion finding; updated its existing
   2.x override to 2.1.7 and verified that manifest's audit is clean.
+* PR 450 merged at 629e83d7 after all checks passed on 8bb11d3f. Release run
+  38060260841 then stopped before tagging: its MCP fixture omitted the required
+  workspace-state.ps1 module (28 passed, 1 failed).
+* Recovery adds the fixture dependency and runs the MCP suite/audit in PR CI.
+  An absent source-version tag retries the same release preflight on the next
+  master push; existing tags stay immutable and publication still needs success.
 
 ## Artifacts and Notes
 
