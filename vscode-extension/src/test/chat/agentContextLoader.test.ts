@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code mocks. */
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -165,11 +166,11 @@ describe('agentContextLoader', () => {
         'body should reference resolved bundled skill path',
       );
       assert.ok(
-        !/(?:^|[^\/])\.github\/templates\/ARCH-REVIEW-TEMPLATE\.md/.test(result!),
+        !/(?:^|[^/])\.github\/templates\/ARCH-REVIEW-TEMPLATE\.md/.test(result!),
         'unresolved canonical ARCH template reference must be rewritten',
       );
       assert.ok(
-        !/(?:^|[^\/])\.github\/skills\/development\/testing\/SKILL\.md/.test(result!),
+        !/(?:^|[^/])\.github\/skills\/development\/testing\/SKILL\.md/.test(result!),
         'unresolved canonical skill reference must be rewritten',
       );
     } finally {

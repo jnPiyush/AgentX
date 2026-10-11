@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial FrontierContext mocks. */
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as internals from '../../eval/harnessEvaluatorInternals';

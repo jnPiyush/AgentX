@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code and FrontierContext mocks. */
 import { strict as assert } from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';

@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
 import { FrontierContext } from '../frontierContext';
 import { resolveFrontierStatePath } from '../utils/frontierPaths';
 import { getConfiguredLlmProviderRecord } from '../frontierContextInternals';

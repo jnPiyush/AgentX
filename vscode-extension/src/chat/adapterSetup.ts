@@ -8,7 +8,6 @@ import {
   detectGitHubOriginRepo,
 } from '../commands/adaptersCommandInternals';
 import {
-  type LlmAdapterMode,
   type LlmAdapterSetupMode,
   applyLlmAdapterConfiguration,
 } from '../commands/llmAdaptersCommandInternals';
@@ -63,6 +62,7 @@ function renderPendingSetupMessage(pending: PendingSetup): string {
           ? `I detected [0m${pending.detectedValue}[0m from the origin remote. Reply [0muse detected[0m or send a different [0mowner/repo[0m.`
           : 'Reply with the GitHub repository as `owner/repo`.',
         'You can optionally append a project number, for example `owner/repo project=12`.',
+      // eslint-disable-next-line no-control-regex -- Intentionally replaces ANSI reset sequences.
       ].join('\n').replace(/\u001b\[0m/g, '`');
     case 'enter-ado-project':
       return [
@@ -71,6 +71,7 @@ function renderPendingSetupMessage(pending: PendingSetup): string {
         pending.detectedValue
           ? `I detected [0m${pending.detectedValue}[0m from the origin remote. Reply [0muse detected[0m or send a different [0morganization/project[0m.`
           : 'Reply with the Azure DevOps target as `organization/project`.',
+      // eslint-disable-next-line no-control-regex -- Intentionally replaces ANSI reset sequences.
       ].join('\n').replace(/\u001b\[0m/g, '`');
     default:
       return '**Adapter setup is waiting for more input.**';

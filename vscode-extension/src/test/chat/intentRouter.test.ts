@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code and chat mocks. */
 import { strict as assert } from 'assert';
 import { createMockResponseStream } from '../mocks/vscode';
 import { __setMockModels, __clearMockModels, MockLanguageModelChat } from '../mocks/vscode';

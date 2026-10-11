@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code mocks and CLI JSON fixtures. */
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
