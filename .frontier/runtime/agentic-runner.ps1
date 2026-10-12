@@ -3459,7 +3459,7 @@ function Read-Session([string]$sessionId, [string]$root) {
     if ((Get-Item -LiteralPath $file).Length -gt 32MB) { throw 'Session exceeds the 32 MB read limit.' }
     $session = Get-Content -LiteralPath $file -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30 -ErrorAction Stop
     if (-not (Get-MessageFieldValue $session 'meta') -or
-        (Get-MessageFieldValue $session 'messages') -isnot [array] -or
+        $session.messages -isnot [array] -or
         (Get-MessageFieldValue $session.meta 'sessionId') -cne $sessionId) {
         throw "Session '$sessionId' has invalid metadata or messages; existing data was preserved."
     }

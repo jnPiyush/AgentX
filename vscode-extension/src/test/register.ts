@@ -8,8 +8,8 @@
 
 /* eslint-disable @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any */
 
-const path = require('path');
-const Module = require('module');
+import * as path from 'path';
+import Module from 'module';
 
 // Intercept require('vscode') -> redirect to our mock
 const originalResolveFilename = (Module as any)._resolveFilename;

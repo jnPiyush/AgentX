@@ -195,11 +195,12 @@ test('real direct CLI with workspace state reaches MCP elicitation and preserves
       const result = await client.callTool({
         name: 'frontier_resume', arguments: { sessionId: 'real-cli-input' },
       });
-      assert.equal(result.isError, false);
+      assert.equal(result.isError, false, JSON.stringify(result.content));
       assert.equal(requests, 1);
       assert.equal(result.structuredContent.status, 'awaiting_user_input');
       const state = JSON.parse(fs.readFileSync(path.join(root, '.frontier', 'sessions',
         'real-cli-input.json'), 'utf8'));
+      assert.equal(state.messages.length, 1);
       assert.equal(state.meta.interaction.phase, 'awaiting_plan');
       assert.equal(state.meta.interaction.approval, null);
     } finally {

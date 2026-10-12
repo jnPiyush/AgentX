@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code and Sinon mocks. */
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';

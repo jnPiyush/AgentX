@@ -240,7 +240,7 @@ function evaluateComparator(token: string, hostVersion: string): boolean {
     return expanded ? expanded.every((part) => evaluateComparator(part, hostVersion)) : false;
   }
 
-  if (/[x\*]/i.test(normalizedToken)) {
+  if (/[x*]/i.test(normalizedToken)) {
     return matchesWildcardRange(normalizedToken, hostVersion);
   }
 

@@ -600,7 +600,7 @@ export async function runAddPluginCommand(
   const pluginTarget = resolvePluginTarget(root, pick.targetDirName);
   if (fs.existsSync(pluginTarget)) {
    const overwrite = await vscode.window.showWarningMessage(
-    `Frontier plugin \"${pick.label}\" is already installed. Reinstall?`,
+    `Frontier plugin "${pick.label}" is already installed. Reinstall?`,
     'Reinstall',
     'Cancel',
    );
