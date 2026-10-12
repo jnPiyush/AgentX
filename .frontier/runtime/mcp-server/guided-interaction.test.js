@@ -157,12 +157,12 @@ test('CLI transport preserves split UTF-8 and streams completed milestone lines'
   } finally { await runner.stop(); }
 });
 
-test('real direct CLI session-info reaches MCP elicitation and preserves declined input',
+test('real direct CLI with workspace state reaches MCP elicitation and preserves declined input',
   { timeout: 60000 }, async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-guided-mcp-'));
     const runtime = path.join(root, '.frontier', 'runtime');
     fs.mkdirSync(runtime, { recursive: true });
-    for (const name of ['frontier-cli.ps1', 'agentic-runner.ps1', 'guided-interaction.ps1', 'workspace-sandbox.ps1']) {
+    for (const name of ['frontier-cli.ps1', 'agentic-runner.ps1', 'guided-interaction.ps1', 'workspace-sandbox.ps1', 'workspace-state.ps1']) {
       fs.copyFileSync(path.join(__dirname, '..', name), path.join(runtime, name));
     }
     fs.writeFileSync(path.join(root, '.frontier', 'config.json'), '{"mode":"local"}');

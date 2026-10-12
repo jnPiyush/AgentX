@@ -43,3 +43,14 @@ Evidence: PR 439 CI runs 37995035783, 37995035810 and 37995035687;
 
 Evidence: PR 450 runs 38058505751 and 38058505810 on bc996d6d; local
 `build/pr450-repair1.json` records the focused non-test checks.
+
+## Release Preflight Recovery
+
+* Release run 38060260841 passed extension validation but failed one of 29 MCP
+  tests before creating v9.8.1. The real-CLI fixture copied guided-interaction.ps1
+  without its required workspace-state.ps1 dependency. Keep that fixture complete
+  and run the MCP test/audit gate in PR CI, not only after merge.
+* A failed untagged source version needs a retry path when its repair does not
+  change version.json. Gate retries on the tag being absent and retain successful
+  preflight as a publication requirement; never fabricate an early tag or move an
+  existing tag to work around a failed release.
