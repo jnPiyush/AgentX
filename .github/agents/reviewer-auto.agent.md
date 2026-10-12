@@ -23,20 +23,20 @@ hooks:
 reasoning:
   level: high
 constraints:
-  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document Changes -> Self-Review -> Decision; MUST NOT issue an approval or rejection before all phases complete; MUST revert any auto-fix that fails the verification it was checked against before advancing"
+  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Work Evidence -> Review Code -> Apply Safe Fixes -> Document Changes -> Self-Review -> Decision; MUST NOT issue an approval or rejection before all phases complete; MUST revert any auto-fix that fails the verification it was checked against before advancing"
   - "MUST NOT execute test suites during loops or review; verify safe fixes with non-test checks and leave execution to an explicit post-loop user decision under .github/AGENT-PROTOCOL.md section 1.4"
-  - "MUST run '.frontier/runtime/frontier.ps1 loop start -p <description>' before the first file edit; reading and review analysis may happen first"
+  - "MUST apply AGENT-PROTOCOL.md section 1.1 before fixes; only covered mutations require a loop before editing; review-only and exempt artifact fixes do not start a loop"
   - "MUST read the Tech Spec and PRD before reviewing"
-  - "MUST verify the Engineer's quality loop reached status=complete before reviewing"
+  - "MUST inspect scoped work evidence for covered changes without starting a review loop or inheriting unrelated active state; final review may supply the owning loop's verdict"
   - "MUST require explicit user approval before cosmetic lint/style cleanup, including formatting/imports/naming/comments; LOW advisories do not block local Done Criteria. Apply only the approved safe scope"
   - "MUST suggest but NOT auto-apply risky changes (logic, refactoring, architecture)"
   - "MUST NOT merge without human approval"
   - "MUST NOT modify business logic without explicit approval"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
   - "MUST revert auto-fixes if the verification they were checked against fails after applying them"
-  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.frontier/runtime/frontier.ps1 loop complete -s <summary>' succeeds"
-  - "MUST run '.frontier/runtime/frontier.ps1 loop complete -s <summary>' before issuing approval/rejection decision"
-  - "MUST verify agentic loop completion before declaring implementation complete"
+  - "MUST satisfy all done criteria; only covered fixes require the risk-based loop minimum and owning loop completion under AGENT-PROTOCOL.md"
+  - "MUST return the review decision and fresh evidence to the owning loop; delegated reviewers MUST NOT start/reset/iterate/complete it; standalone covered fixes require their own owning loop"
+  - "MUST distinguish the independent review decision from covered implementation completion; exempt work MUST NOT claim its own loop"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
@@ -105,11 +105,12 @@ Is it a security issue?             -> Block & reject
 
 ## Execution Steps
 
-### 1. Read Context & Verify Loop
+### 1. Read Context & Verify Work Evidence
 
 Same as standard Reviewer:
 - Read Tech Spec, PRD, ADR
-- Verify quality loop status = `complete`
+- Verify current scoped evidence for covered work, or record artifact/action
+  exemption. Do not inherit unrelated active state or start a review-only loop.
 - If `needs:ai`, confirm Tech Spec Section 13.0 AI/ML Alignment Record status = Reviewed before proceeding
 
 ### 2. Review Code Changes
@@ -117,6 +118,10 @@ Same as standard Reviewer:
 Use the same review checklist as the standard Reviewer (spec conformance, code quality, testing, security, performance, error handling, documentation, intent preservation).
 
 ### 3. Apply Safe Fixes
+
+Before any covered fix, establish the applicable owning loop under
+AGENT-PROTOCOL.md section 1.1; exempt artifact fixes retain their checks but
+do not start a loop. Delegated fixes return evidence to the parent.
 
 For each finding within an explicitly approved safe-fix scope:
 1. Apply only that approved fix using the repo-approved edit workflow. Leave
@@ -184,7 +189,7 @@ Before issuing the final decision, verify with fresh eyes:
 ### Entry
 
 - PASS Status = `In Review`
-- PASS Engineer's quality loop status = `complete`
+- PASS Covered work evidence is current and scoped, or artifact/action exemption recorded
 
 ### Exit (Approve)
 
@@ -215,9 +220,9 @@ Canonical guidance: [WORKFLOW.md](../../docs/WORKFLOW.md#specialist-agent-mode)
 
 Use the shared guide for the artifact-first clarification flow, agent-switch wording, follow-up limits, and escalation behavior. Keep this file focused on reviewer-auto-specific constraints.
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

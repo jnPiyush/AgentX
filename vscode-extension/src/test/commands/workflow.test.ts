@@ -4,6 +4,7 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerWorkflowCommand } from '../../commands/workflow';
 import { FrontierContext } from '../../frontierContext';
+import * as loopStateStore from '../../runtime/loopStateStore';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -94,5 +95,22 @@ describe('registerWorkflowCommand', () => {
     await registeredCallbacks['frontier.runWorkflow']!();
     assert.ok(errSpy.calledOnce);
     assert.ok(String(errSpy.firstCall.args[0]).includes('workflow error'));
+  });
+
+  it('inspects loop-bearing workflows without prompting, starting or reading a loop', async () => {
+    fakeAgentx.checkInitialized.resolves(true);
+    Object.defineProperty(fakeAgentx, 'workspaceRoot', { value: '/workspace' });
+    fakeAgentx.runCli.resolves('Step 1: Engineer [LOOP]\nStep 2: Reviewer');
+    const read = sandbox.stub(loopStateStore, 'readLoopStateFromFile')
+      .throws(new Error('Read-only workflow must not read loop state'));
+    const info = sandbox.spy(vscode.window, 'showInformationMessage');
+    const execute = sandbox.spy(vscode.commands, 'executeCommand');
+
+    await registeredCallbacks['frontier.runWorkflowType']!('story');
+
+    assert.ok(fakeAgentx.runCli.calledOnceWithExactly('workflow', ['story']));
+    assert.ok(read.notCalled);
+    assert.ok(info.notCalled);
+    assert.ok(execute.notCalled);
   });
 });

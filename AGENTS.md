@@ -38,13 +38,21 @@ file (in extension-only workspaces, inside the installed Frontier extension).
   current source and required artifacts, preserve curated map notes, and report
   unavailable or stale discovery. Token figures are estimates unless the host
   supplies a qualified counter.
-- Quality loop: before the first file mutation, run
+- Quality loop: only create/update/delete/rename of PRD, TechSpec, code or unit
+  tests requires a loop. Research/read/review-only/check/commit-only work and
+  other artifacts (plans, docs, config, instructions, declarations) are exempt;
+  applicable nonloop checks and council policy remain. Core protected executable
+  code stays covered, not declaration guidance. Before the first covered mutation, run
   `.frontier/runtime/frontier.ps1 loop start -p "<task>"`. Record each fix/verify
   cycle with `loop iterate -s "<summary>" -e <evidence>`. The final iteration carries an
   independent reviewer verdict (`--verdict approved --reviewer <id> --high 0
   --medium 0`); edits after it need a fresh review. Finish with
   `loop complete -s "<summary>" -e <fresh-evidence>`. Minimum iterations:
-  standard 1, auto-fix 2, complex/orchestrated 3, high-risk 5.
+  standard 1, auto-fix 2, complex/orchestrated 3, high-risk 5, AFTER applicability.
+  Role or keywords cannot exempt covered work. Review-only work inspects scoped
+  work evidence, never starts its own loop or inherits unrelated active state;
+  covered review fixes require the gate before editing. Delegates reuse only the
+  assigned parent loop and MUST NOT start/reset/iterate/complete it.
 - Test suites MUST NOT run inside loop iterations or reviews. After successful
   loop completion, the owning agent MUST ask whether the user wants the suite
   run and wait for explicit approval. Declined or unanswered means not run,

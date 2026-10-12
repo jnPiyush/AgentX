@@ -25,7 +25,7 @@ Frontier Corp builds and deploys specialized AI engineering teams inside the rep
 | Frontier FDEs | **26 total**: 15 visible roles and 11 internal specialists |
 | Production knowledge | **134 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
 | Reusable delivery assets | **15 templates**, **24 reusable prompt templates**, and **7 root instruction files**, plus scoped instruction sets |
-| Quality discipline | **Risk-based evidenced iterations** (`1/2/3/5`), fresh verification, independent review, scrub, and completion gates |
+| Quality discipline | **Artifact-scoped evidenced iterations** (`1/2/3/5` after applicability), fresh verification, independent review, scrub, and completion gates |
 | Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
 | Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |
 | Work tracking | Local mode, GitHub, or Azure DevOps |
@@ -84,14 +84,15 @@ Frontier uses six shared checkpoints across chat, CLI, issues, plans, reviews, a
 | **Work** | Implement a bounded slice | Code, artifacts, progress, implementation evidence |
 | **Review** | Inspect implementation, regression cases and non-test evidence | Structured findings, current checks and review decision |
 | **Compound Capture** | Preserve reusable outcomes or record a skip rationale | Learning artifact or closeout rationale |
-| **Done** | Close only when delivery and evidence agree | Completed loop, review, and capture state |
+| **Done** | Close only when delivery and evidence agree | Completed owning loop when applicable, review, and capture state |
 
 ### Quality gates
 
 - Test suites run separately from local loops and reviews. After a completed
   loop, Frontier asks whether to run the suite and waits for explicit approval.
   Skipped suites remain not run; CI/release requirements are unchanged.
-- **Iterative loop:** evidence-backed minimums scale by risk: standard `1`, auto-fix `2`, complex delivery `3`, and high-risk `5`
+- **Iterative loop:** only create/update/delete/rename of PRD, TechSpec, code or unit tests requires a loop. Research/read/review-only/check/commit-only and other artifacts (plans, docs, config, instructions, declarations) are exempt; nonloop checks and council policy remain. Core protected executable code stays covered. Roles and keywords do not exempt covered work. After applicability, minimums scale by risk: standard `1`, auto-fix `2`, complex delivery `3`, high-risk `5`.
+- **Review scope:** inspect the covered work's evidence without starting a review-only loop or inheriting unrelated active state. Covered fixes require the gate before editing; delegates reuse only the assigned parent loop and leave its lifecycle to the owner.
 - **Independent review:** a subagent sees the deliverable, not the author's rationale
 - **Karpathy guidelines:** think before coding, keep it simple, change surgically, verify the goal
 - **Model Council:** Analyst, Strategist, and Skeptic pressure-test high-stakes decisions

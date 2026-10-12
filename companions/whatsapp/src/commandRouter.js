@@ -1,5 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const { runFrontier } = require('./frontierRunner');
 const { classifyCommand } = require('./commandPolicy');
+const { readJsonSafe, summarize } = require('./loopWatcher');
 const {
     inspectArguments, parseRuntimeResult, responseArguments, samePendingRequest, formatPending,
 } = require('./guidedInteraction');
@@ -48,8 +51,24 @@ function planCommand(body, config) {
     return plan;
 }
 
+function readStatusSnapshot(config, fsImpl = fs) {
+    if (!config || !config.repoPath) return null;
+    const file = path.resolve(config.repoPath, '.frontier', 'state', 'loop-state.json');
+    try {
+        const updatedAt = fsImpl.statSync(file).mtime.toISOString();
+        const state = readJsonSafe(file);
+        if (!state) return null;
+        return { ok: true, text: `${summarize(state)}\n(raw state snapshot from ${updatedAt}; not health-checked. Use "raw loop status" when enabled, or the desktop, for stale/budget checks.)` };
+    } catch (_) { return null; }
+}
+
 async function executePlan(plan, config, runner = runFrontier) {
     if (!plan || !plan.ok) return plan || { ok: false, text: 'Invalid command plan.' };
+    // Status must not wait behind long-running writer commands.
+    if (plan.risk === 'read' && plan.args.join(' ') === 'loop status') {
+        const snapshot = readStatusSnapshot(config);
+        if (snapshot) return snapshot;
+    }
     const invoke = args => config.runner && typeof config.runner.run === 'function'
         ? config.runner.run(args) : runner(args, config);
     if (!plan.guided && !plan.response) return invoke(plan.args);
@@ -87,4 +106,4 @@ async function routeCommand(body, config, runner = runFrontier) {
     return executePlan(planCommand(body, config), config, runner);
 }
 
-module.exports = { executePlan, helpText, planCommand, routeCommand, tokenize };
+module.exports = { executePlan, helpText, planCommand, readStatusSnapshot, routeCommand, tokenize };

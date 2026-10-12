@@ -29,7 +29,7 @@ constraints:
   - "MUST calibrate depth and terminology to the target audience"
   - "MUST create a structured research plan before starting research and MUST actively search for contrary evidence before finalizing recommendations"
   - "MUST use diagrams, tables, matrices, timelines, process flows, or other clear visual structures when they improve understanding; presentation-oriented outputs MUST include explicit visual guidance"
-  - "MUST run an iterative quality loop before concluding: review evidence quality, audience fit, formatting clarity, and visual effectiveness; fix gaps; then re-check until the output is strong enough to deliver"
+  - "MUST review evidence quality, audience fit, formatting clarity, and visual effectiveness; fix gaps and re-check before delivery; a persisted quality loop is required only for covered mutations under AGENT-PROTOCOL.md section 1.1"
   - "MUST NOT provide legal, medical, or financial advice"
   - "MUST NOT fabricate statistics, case studies, or quotes"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
@@ -337,9 +337,9 @@ Validate the analysis before handoff.
 | Brief structure and formatting | [Documentation](../skills/development/documentation/SKILL.md) |
 | Final-pass refinement against evidence and formatting criteria | [Iterative Loop](../skills/development/iterative-loop/SKILL.md) |
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

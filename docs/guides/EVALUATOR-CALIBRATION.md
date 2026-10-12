@@ -135,8 +135,8 @@ grep_search: "loop status" or ".frontier/runtime/frontier.ps1 loop" in docs/arti
 ```
 
 **Correct verdict**:
-- Completeness: FAIL (quality loop verification not documented)
-- Finding: [HIGH] Completeness: Review document does not show quality loop status check
+- Completeness: FAIL (scoped covered-work evidence verification not documented)
+- Finding: [HIGH] Completeness: Review document does not verify the covered work's evidence; a review-only loop or unrelated loop status would not satisfy this check
 
 ### Example: PASS -- Thorough Review
 

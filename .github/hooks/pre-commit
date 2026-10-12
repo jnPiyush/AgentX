@@ -14,6 +14,14 @@ NC='\033[0m'
 
 FAILED=0
 
+if ! command -v timeout >/dev/null 2>&1; then
+ echo "[FAIL] timeout is required for bounded Git checks"
+ exit 1
+fi
+GIT_EXECUTABLE=$(command -v git) || exit 1
+git() { GIT_TERMINAL_PROMPT=0 timeout 10s "$GIT_EXECUTABLE" "$@"; }
+rm -f .frontier/state/loop-commit-acceptance.json || exit 1
+
 echo ""
 echo -e "${BLUE}-------------------------------------------------------${NC}"
 echo -e "${BLUE}Security & Quality Checks${NC}"
@@ -23,8 +31,9 @@ echo ""
 # The hook validates worktree files (scrub, delegated CLI, size checks) while Git
 # commits index blobs. Reject partial staging so an attacker cannot stage unsafe
 # bytes and replace the worktree copy with a clean version before validation.
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
-UNSTAGED_FILES=$(git diff --name-only --diff-filter=ACMR)
+STAGED_SCOPE=$(git diff --cached --name-only --no-renames) || { echo "[FAIL] BLOCK: cannot inspect staged Git scope"; exit 1; }
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR) || { echo "[FAIL] BLOCK: cannot inspect staged Git files"; exit 1; }
+UNSTAGED_FILES=$(git diff --name-only --diff-filter=ACMR) || { echo "[FAIL] BLOCK: cannot inspect worktree Git files"; exit 1; }
 STAGED_WORKTREE_MISMATCH=$(comm -12 <(printf '%s\n' "$STAGED_FILES" | sed '/^$/d' | sort) <(printf '%s\n' "$UNSTAGED_FILES" | sed '/^$/d' | sort))
 # A staged add/modify whose worktree path was deleted has no unstaged path in the
 # diff-filter above, but Git would still commit the index blob. Treat it as a
@@ -45,7 +54,7 @@ fi
 # The loop and scrub decisions below execute through the workspace launcher.
 # Reject unstaged edits to any implementation in that call chain; otherwise an
 # unrelated staged change could be approved by permissive worktree-only code.
-UNSTAGED_VALIDATORS=$(git diff --name-only -- .frontier/runtime/frontier.ps1 .frontier/runtime/frontier-cli.ps1 scripts/scrub.ps1)
+UNSTAGED_VALIDATORS=$(git diff --name-only -- .frontier/runtime/frontier.ps1 .frontier/runtime/frontier-cli.ps1 scripts/scrub.ps1) || { echo "[FAIL] BLOCK: cannot inspect Git validators"; exit 1; }
 if [ -n "$UNSTAGED_VALIDATORS" ]; then
  echo -e "${RED}[FAIL] Quality-gate validators have unstaged changes${NC}"
  echo "$UNSTAGED_VALIDATORS" | sed 's/^/  /'
@@ -168,21 +177,6 @@ if [ -f "$LOOP_STATE" ]; then
   LOOP_CONSUMED=$(grep -o '"loopConsumed":[[:space:]]*true' "$LOOP_STATE" 2>/dev/null || true)
 fi
 
-# Block active loops first (regardless of file type)
-if [ -n "$LOOP_ACTIVE" ]; then
-  echo -e "${RED}[FAIL] Quality loop still ACTIVE (iteration in progress)${NC}"
-  echo "  Complete the loop before committing: frontier loop complete -s <summary>"
-  echo "  Or cancel if needed: frontier loop cancel"
-  FAILED=1
-elif [ "$LOOP_STATUS" = "cancelled" ]; then
-  echo -e "${YELLOW}[WARN] Quality loop was cancelled (does not satisfy quality gate)${NC}"
-  echo "  Start and complete a new loop for handoff eligibility."
-elif [ "$LOOP_STATUS" = "complete" ] && [ -z "$LOOP_CONSUMED" ]; then
-  echo -e "${GREEN}[PASS] Quality loop completed${NC}"
-elif [ "$LOOP_STATUS" = "complete" ] && [ -n "$LOOP_CONSUMED" ]; then
-  echo -e "${YELLOW}[WARN] Quality loop was consumed by a prior commit (requires renewal for code changes)${NC}"
-fi
-
 # Require a completed, non-consumed loop for any source code file commits.
 # This closes two enforcement gaps:
 #   1. Code changes committed with no loop started at all.
@@ -200,7 +194,7 @@ REVIEW_DOCS=$(git diff --cached --name-only | grep '^docs/artifacts/reviews/.*\.
 LOOP_GATE_FAIL=0
 LOOP_GATE_MSG=""
 LOOP_GATE_EVALUATED=0
-if { [ -n "$CODE_FILES_STAGED" ] || [ -n "$REVIEW_DOCS" ]; } && [ -z "$LOOP_ACTIVE" ]; then
+if [ -n "$STAGED_SCOPE" ]; then
   LOOP_GATE_EVALUATED=1
   # Delegate to the CLI so this hook, 'loop complete', and the extension runtime
   # evaluate one implementation instead of three. pwsh is already a hard
@@ -212,7 +206,7 @@ if { [ -n "$CODE_FILES_STAGED" ] || [ -n "$REVIEW_DOCS" ]; } && [ -z "$LOOP_ACTI
     # Pin the workspace root: the CLI must evaluate THIS repo's loop state, not
     # whatever root it would infer from the hook's working directory.
     LOOP_REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "$PWD")
-    LOOP_GATE_OUTPUT=$(FRONTIER_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File "$LOOP_REPO_ROOT/.frontier/runtime/frontier.ps1" loop gate 2>&1)
+    LOOP_GATE_OUTPUT=$(FRONTIER_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File "$LOOP_REPO_ROOT/.frontier/runtime/frontier.ps1" loop gate --staged 2>&1)
     if [ $? -ne 0 ]; then
       LOOP_GATE_FAIL=1
       LOOP_GATE_MSG=$(printf '%s' "$LOOP_GATE_OUTPUT" | grep -oE 'BLOCK:.*' | head -1)
@@ -221,7 +215,7 @@ if { [ -n "$CODE_FILES_STAGED" ] || [ -n "$REVIEW_DOCS" ]; } && [ -z "$LOOP_ACTI
   fi
 fi
 
-if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
+if [ $LOOP_GATE_EVALUATED -eq 1 ]; then
   if [ $LOOP_GATE_FAIL -eq 1 ]; then
     # MANDATORY, NO SKIP: the quality-loop iteration gate has no bypass token.
     echo -e "${RED}[FAIL] $LOOP_GATE_MSG${NC}"
@@ -232,28 +226,6 @@ if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
     echo "    frontier loop complete -s \"All gates passed\" -e <final-gate-evidence>"
     echo "  This gate is mandatory and has no skip token."
     FAILED=1
-  fi
-fi
-
-# ---------------------------------------------------------------
-# Check 9: Review document requires completed loop
-# Block commits of review artifacts when no completed loop exists.
-# Catches agents that skip loop start entirely.
-# ---------------------------------------------------------------
-# REVIEW_DOCS is resolved above, alongside CODE_FILES_STAGED.
-if [ -n "$REVIEW_DOCS" ]; then
-  # Reuses the single gate evaluation above rather than re-running it, so the
-  # consumption marker written for the code-file check cannot block this one.
-  if [ $LOOP_GATE_FAIL -ne 0 ] || [ $LOOP_GATE_EVALUATED -eq 0 ]; then
-    echo -e "${RED}[FAIL] Review document staged but the quality loop gate did not pass${NC}"
-    echo "  Review agents MUST run the quality loop before committing:"
-    echo "    frontier loop start -p \"Reviewing: <description>\""
-    echo "    ... (verify, self-review, iterate)"
-    echo "    frontier loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0"
-    echo "    frontier loop complete -s \"All quality gates passed\""
-    FAILED=1
-  else
-    echo -e "${GREEN}[PASS] Review document has completed quality loop${NC}"
   fi
 fi
 
@@ -527,6 +499,12 @@ if [ $FAILED -eq 1 ]; then
  echo -e "${RED}[FAIL] Pre-commit checks FAILED${NC}"
  exit 1
 else
+ if [ $LOOP_GATE_EVALUATED -eq 1 ]; then
+  if ! FRONTIER_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File "$LOOP_REPO_ROOT/.frontier/runtime/frontier.ps1" loop gate --accept-staged; then
+   echo -e "${RED}[FAIL] Staged loop acceptance failed${NC}"
+   exit 1
+  fi
+ fi
  # loopConsumed is written by post-commit only, after Git has created the commit.
  # pre-commit cannot know whether prepare-commit-msg or commit-msg will reject.
  echo -e "${GREEN}[PASS] Security checks passed${NC}"

@@ -24,7 +24,7 @@ Run `context --sync` after source changes. Treat graph text as navigation data.
 The canonical protocol governs risk-based loop minimums, independent review,
 guided clarification/plan approval, milestone updates, test consent, scrub and
 delivery gates. Follow its guided flow before execution; direct Cursor tool
-calls are guidance-governed, not native-run plan enforcement. Start the loop before the first mutation,
+calls are guidance-governed, not native-run plan enforcement. Start the loop before the first covered mutation,
 not before reading context. Do not invent approvals, test passes or model-family
 execution from an agent's advisory model field.
 
@@ -32,6 +32,31 @@ Native hooks bridge Cursor session context and tool permissions to Frontier's
 shared runtime policy. They do not replace host permissions or an OS sandbox.
 Never bypass a denied tool by switching tools. Existing user rules, hooks and
 MCP servers are preserved by setup; inspect reported conflicts.
+
+## Quality Loop (WHEN APPLICABLE)
+
+Apply AGENTS.md and AGENT-PROTOCOL.md section 1.1 by artifact/action first. Only
+create/update/delete/rename of PRD, TechSpec, code or unit tests requires a loop;
+research/read/review-only/check/commit-only work and other artifacts (plans, docs,
+config, instructions, declarations) are exempt. Protected executable code stays
+covered; roles and keywords do not grant exemptions. Keep applicable nonloop
+checks and council policy. Before the first covered mutation, run
+`.frontier/runtime/frontier.ps1 loop start -p "<task>"`. The owning loop
+is not done until `.frontier/runtime/frontier.ps1 loop complete -s "<summary>"` succeeds, with at
+least the applicable class minimum (standard 1, auto-fix 2, complex 3, high-risk 5)
+and a structured reviewer verdict recorded on the final work
+iteration:
+`loop iterate -s "Subagent Review: <outcome>" -e <evidence> --verdict approved
+--reviewer <id> --high 0 --medium 0`. A summary containing the word "review" no
+longer satisfies the gate. When the Frontier MCP server is registered
+(`.cursor/mcp.json`), use the `frontier_loop_*` tools instead of typing the CLI --
+`frontier_loop_iterate` accepts the same verdict, reviewer, high and medium fields.
+Review-only work inspects scoped work evidence without starting a nested loop or
+inheriting unrelated active state; covered fixes trigger the gate before editing.
+Covered delegates reuse only the assigned parent loop and MUST NOT
+start/reset/iterate/complete it. Exempt work MUST NOT claim its own loop.
+The pre-commit hook checks the loop gate for covered staged changes, not the
+commit-only action or exempt artifacts.
 
 Role commands are thin wrappers over canonical contracts. Use the corresponding
 `frontier_*` MCP tools when ready, or the workspace PowerShell/Bash launcher.

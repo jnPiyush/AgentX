@@ -586,13 +586,28 @@ function getLocalIssues(root: string): LocalIssue[] {
     .sort((left, right) => (left.number ?? 0) - (right.number ?? 0));
 }
 
+const inFlightIssueLists = new Map<string, Promise<LocalIssue[]>>();
+
 /**
  * Fetch provider-aware issues via the CLI ('frontier issue list --json'), with
  * a local-file fallback. Use this from async callers (chat router, command
  * handlers) so workflow guidance reflects GitHub/ADO state rather than only
  * .frontier/issues/ JSON. Mirrors WorkTreeProvider.getOpenIssues.
+ * Concurrent callers for one workspace share a single in-flight fetch; results are not cached.
  */
-export async function fetchProviderAwareIssues(
+export function fetchProviderAwareIssues(
+  runCli: (subcommand: string, args: string[]) => Promise<string>,
+  workspaceRoot: string,
+): Promise<LocalIssue[]> {
+  const existing = inFlightIssueLists.get(workspaceRoot);
+  if (existing) { return existing; }
+  const request = loadProviderAwareIssues(runCli, workspaceRoot)
+    .finally(() => inFlightIssueLists.delete(workspaceRoot));
+  inFlightIssueLists.set(workspaceRoot, request);
+  return request;
+}
+
+async function loadProviderAwareIssues(
   runCli: (subcommand: string, args: string[]) => Promise<string>,
   workspaceRoot: string,
 ): Promise<LocalIssue[]> {

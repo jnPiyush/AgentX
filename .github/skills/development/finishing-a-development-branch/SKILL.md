@@ -36,7 +36,7 @@ Why agents leave branches half-finished.
 | Rationalization | Reality |
 |-----------------|---------|
 | "I will clean it up later." | Later never comes. Stale branches accumulate, merge conflicts compound, and reviewers can no longer tell which branch is current. Dispose now. |
-| "The tests pass, the work is done." | Tests passing is necessary, not sufficient. Done means: loop complete, compound capture resolved, branch disposition chosen, cleanup executed. |
+| "The tests pass, the work is done." | Tests passing is necessary, not sufficient. Done means: applicable engineering evidence complete, compound capture resolved, branch disposition chosen, cleanup executed. |
 | "I will leave the worktree around in case I need it." | Worktrees you do not need rot. Either remove the worktree or commit to using it again within the next session. |
 | "I will merge straight to master to avoid PR overhead." | Direct merge skips the review gate, the CI gate, and the audit trail. Only legal for trivial docs / config in solo Local Mode. |
 | "I will open a draft PR and come back to it." | A draft PR with no description and no reviewer assigned is a parking lot, not a workflow. Either it is ready for review, or close it and re-open later. |
@@ -46,7 +46,8 @@ Why agents leave branches half-finished.
 Run these checks on the branch HEAD. Any FAIL blocks disposition.
 
 ```pwsh
-# 1. Quality loop must be complete (NOT active, NOT cancelled)
+# 1. For PRD/TechSpec/code/unit-test changes, verify the owning loop is complete.
+# Research, review-only, docs/config and commit-only work starts no new loop.
 .\.frontier\runtime\frontier.ps1 loop status
 
 # 2. Tests must pass on the current commit, not a cached run
@@ -84,7 +85,8 @@ Allowed only when:
 
 - Local Mode is active (`provider = local` in `.frontier/config.json`)
 - Change is trivial: docs, comment, config tweak, or a one-line bug fix with a test
-- Quality loop is complete and tests pass
+- Applicable engineering evidence is complete and relevant checks pass; exempt
+    work MUST NOT start a loop or inherit unrelated active state
 - No external collaborators need to see the change
 
 ```pwsh

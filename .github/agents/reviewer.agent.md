@@ -23,15 +23,15 @@ reasoning:
   level: high
 constraints:
   - "MUST report cosmetic lint/style findings as LOW non-blocking advisories and MUST NOT require or apply cleanup for approval; send the proposed cleanup scope to the owning agent for explicit user consent. Genuine defects retain impact-based severity"
-  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Non-Test Verification -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
+  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Work Evidence -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Non-Test Verification -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
   - "MUST NOT execute or delegate test suites during review; inspect tests, supplied results and non-test evidence, and leave the post-loop test-suite question to the owning agent per .github/AGENT-PROTOCOL.md section 1.4"
   - "MUST score code-bearing reviews against evaluation/rubrics/code-quality.md and validate the exact-scope report with scripts/score-code-quality.ps1; score below 80, a blocking-floor breach, or unresolved HIGH/MEDIUM finding requires CHANGES REQUESTED"
   - "MUST read the Tech Spec and PRD before reviewing code"
-  - "MUST verify the Engineer's quality loop reached status=complete"
+  - "MUST inspect scoped work evidence for covered changes; review-only work MUST NOT start a loop or inherit unrelated active state; final review may contribute the owning loop's verdict before completion"
   - "MUST report coverage only from supplied measured evidence with its revision; otherwise label coverage not measured and suites not run, without inventing passes or treating review approval as test or release certification"
   - "MUST verify no hardcoded secrets, SQL injection, or unvalidated inputs"
   - "MUST NOT modify source code -- request changes via review comments"
-  - "MUST NOT approve code with active or cancelled quality loops"
+  - "MUST NOT claim covered delivery complete with an incomplete owning loop; a review verdict is evidence for that loop, not its completion"
   - "MUST use the canonical review templates without exception: code reviews MUST be created from .github/templates/REVIEW-TEMPLATE.md and saved as docs/artifacts/reviews/REVIEW-{issue}.md; architecture reviews (issue-driven OR standalone, regardless of input format) MUST be created from .github/templates/ARCH-REVIEW-TEMPLATE.md and saved as docs/artifacts/reviews/ARCH-REVIEW-{id}.md; the agent MUST read the template file FIRST, copy its full section structure into the new review file, then populate every section -- never write a review from memory or freeform"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
@@ -129,16 +129,23 @@ If a format cannot be extracted (e.g. password-protected `.vsd`, missing convert
 - Read ADR at `docs/artifacts/adr/ADR-{issue}.md` for design decisions
 - If `needs:ai`, confirm Tech Spec Section 13.0 AI/ML Alignment Record status = Reviewed before proceeding; a missing or incomplete alignment record is a blocking finding
 
-### 2. Verify Quality Loop
+### 2. Verify Work Evidence
 
-**This is a hard gate -- do not proceed if the loop is not complete.**
+**This is a hard gate for covered work evidence, not a reviewer-owned loop.**
+Determine applicability from the reviewed mutations under AGENT-PROTOCOL.md
+section 1.1. Exempt artifacts retain their relevant checks and council policy.
+For covered changes, inspect the owning work's scoped evidence and loop state:
 
 ```bash
 .frontier/runtime/frontier.ps1 loop status
 ```
 
-- Status MUST be `complete`
-- If `active` or `cancelled`: REJECT immediately, add `needs:changes` label
+- Verify the evidence belongs to the reviewed changes; unrelated active state is
+  not review evidence or a reason to block exempt work.
+- An active owning loop may request its final independent verdict. Return
+  findings to its owner; do not start, reset, iterate or complete a review loop.
+- Missing or stale covered work evidence blocks approval. Only the work owner
+  records the final verdict and completes delivery after all gates pass.
 
 ### 3. Pass A -- Spec & Intent Compliance (gate)
 
@@ -287,7 +294,7 @@ Before issuing the final decision, verify with fresh eyes:
 - [ ] All Critical and Major findings have clear reproduction steps
 - [ ] Severity levels correctly assigned (not over/under-classifying)
 - [ ] Feedback is actionable -- Engineer can fix without ambiguity
-- [ ] Quality loop status verified as `complete`
+- [ ] Applicability and scoped work evidence verified; no reviewer-owned loop
 - [ ] Model Council convened (or skip rationale recorded in the review document); `COUNCIL-{issue}.md` Synthesis section is complete and the Findings, Severity assignments, and final Decision reflect Consensus / resolved Divergences / Hidden Risks captured by the council (or override rationale is documented)
 - [ ] **UI-bearing check**: if the changeset triggers the UI-Bearing Change Review Gate (modifies `*.tsx`, `*.jsx`, `*.razor`, `*.razor.cs`, `*.vue`, `*.svelte`, UX prototypes, CSS/SCSS, or is labeled `needs:ux` / `type:powerbi`), confirm: (a) at least one screenshot per primary route captured via the `browser-automation` skill; (b) an axe-core or equivalent accessibility scan result is recorded in the review doc; (c) at least one scripted interaction verified per primary user task; (d) the Weighted Score Originality row is graded and not skipped
 
@@ -332,7 +339,7 @@ Update Status back to `In Progress`.
 ### Entry
 
 - PASS Status = `In Review`
-- PASS Engineer's quality loop status = `complete`
+- PASS Covered work evidence is current and scoped, or artifact/action exemption recorded
 
 ### Exit (Approve)
 
@@ -364,9 +371,9 @@ Canonical guidance: [WORKFLOW.md](../../docs/WORKFLOW.md#specialist-agent-mode)
 
 Use the shared guide for the artifact-first clarification flow, agent-switch wording, follow-up limits, and escalation behavior. Keep this file focused on reviewer-specific constraints.
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

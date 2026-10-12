@@ -4,6 +4,8 @@
 # normalized golden fixtures before the TypeScript writer is introduced.
 # Usage: pwsh tests/loop-parity-behavior.ps1
 
+param([switch]$ApplicabilityOnly, [switch]$HandoffOnly)
+
 $ErrorActionPreference = 'Stop'
 $script:pass = 0
 $script:fail = 0
@@ -161,6 +163,184 @@ function Start-ParityLoop {
         'loop', 'baseline', '-c', '10'
     )
     Assert-Equal $baselineResult.ExitCode 0 'loop baseline exits successfully'
+}
+
+function Invoke-ParityGit([string]$WorkspaceRoot, [string[]]$Arguments) {
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('git')
+    $startInfo.WorkingDirectory = $WorkspaceRoot
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    foreach ($argument in $Arguments) { $startInfo.ArgumentList.Add($argument) }
+    $process = [Diagnostics.Process]::Start($startInfo)
+    try {
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(10000)) { $process.Kill($true); throw 'Parity fixture Git timed out.' }
+        if ($process.ExitCode -ne 0) { throw $stderr.GetAwaiter().GetResult() }
+        return $stdout.GetAwaiter().GetResult()
+    } finally { $process.Dispose() }
+}
+
+function Test-ApplicabilityParity {
+    $workspaceRoot = New-IsolatedWorkspace
+    try {
+        $paths = @('src/tool.ts', 'tests/unit.test.ts', 'docs/artifacts/prd/PRD-1.md', 'docs/artifacts/specs/SPEC-1.md',
+            '.github/hooks/pre-commit', 'docs/execution/plans/EXEC-PLAN-1.md', 'docs/artifacts/reviews/REVIEW-1.md',
+            'tests/integration/case.test.ts', 'azure-pipelines.yml', 'src/widget.vue', 'scripts/custom-tool',
+            'src/integration/client.test.ts', 'tests/integration/helper.ts', '.frontier/state/tool.ps1',
+            'design/TechSpec-api.docx', 'tests/integration/../../src/client.test.ts',
+            '.frontier/runtime/tests/integration/guard.test.ps1', 'tests/integration/test_api.py',
+            'tests/integration/nested/test_api.py')
+        $cases = @($paths | ForEach-Object { [ordered]@{ operation = 'mutate'; paths = @($_) } })
+        $cases += @('read', 'research', 'review', 'commit', 'check') | ForEach-Object { [ordered]@{ operation = $_; paths = @('src/tool.ts') } }
+        $cases += [ordered]@{ operation = 'mutate'; paths = @('docs/GUIDE.md', 'src/tool.ts') }
+        $nodeCommand = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        $nodePath = if ($nodeCommand) { $nodeCommand.Source } elseif ($IsWindows -and $env:LOCALAPPDATA) {
+            Join-Path $env:LOCALAPPDATA 'Frontier/tools/node-v24.21.0-win-x64/node.exe'
+        } else { '' }
+        $modulePath = Join-Path $script:repoRoot 'vscode-extension/out/runtime/loopState.js'
+        if (-not $nodePath -or -not (Test-Path -LiteralPath $nodePath) -or -not (Test-Path -LiteralPath $modulePath)) {
+            throw 'Local Node or compiled loopState export unavailable for applicability parity.'
+        }
+        $startInfo = [Diagnostics.ProcessStartInfo]::new($nodePath)
+        $startInfo.UseShellExecute = $false
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        foreach ($argument in @('-e', 'console.log(JSON.stringify(JSON.parse(process.argv[2]).map(scope => require(process.argv[1]).requiresEngineeringLoop(scope))))',
+                $modulePath, (ConvertTo-Json -InputObject @($cases) -Depth 5 -Compress))) { $startInfo.ArgumentList.Add($argument) }
+        $process = [Diagnostics.Process]::Start($startInfo)
+        try {
+            $stdout = $process.StandardOutput.ReadToEndAsync()
+            $stderr = $process.StandardError.ReadToEndAsync()
+            if (-not $process.WaitForExit(10000)) { $process.Kill($true); throw 'Compiled loop parity timed out.' }
+            if ($process.ExitCode -ne 0) { throw $stderr.GetAwaiter().GetResult() }
+            $expected = ConvertFrom-Json $stdout.GetAwaiter().GetResult()
+        } finally { $process.Dispose() }
+        $runnerTokens = $null
+        $runnerErrors = $null
+        $runnerAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $script:repoRoot '.frontier/runtime/agentic-runner.ps1'), [ref]$runnerTokens, [ref]$runnerErrors)
+        $runnerPolicy = $runnerAst.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Test-RunnerLoopCoveredPath' }, $false)
+        Invoke-Expression $runnerPolicy.Extent.Text
+        for ($index = 0; $index -lt $cases.Count; $index++) {
+            $case = $cases[$index]
+            $result = Invoke-IsolatedAgentx $workspaceRoot @('loop', 'applicability', '--operation', $case.operation, '--paths',
+                (ConvertTo-Json -InputObject @($case.paths) -Compress))
+            $scope = if ($result.ExitCode -eq 0) { ConvertFrom-Json $result.Stdout } else { $null }
+            Assert-True ($result.ExitCode -eq 0 -and $scope.requiresEngineeringLoop -eq $expected[$index]) "CLI/compiled TypeScript applicability parity: $($case.operation) $($case.paths -join ',')"
+            $runnerRequiresLoop = $case.operation -eq 'mutate' -and @($case.paths | Where-Object { Test-RunnerLoopCoveredPath $_ }).Count -gt 0
+            Assert-True ($runnerRequiresLoop -eq $expected[$index]) "Runner/shared fixture applicability parity: $($case.operation) $($case.paths -join ',')"
+        }
+        foreach ($raw in @('{}', '[1]', '[]')) {
+            $invalid = Invoke-IsolatedAgentx $workspaceRoot @('loop', 'applicability', '--operation', 'mutate', '--paths', $raw)
+            Assert-True ($invalid.ExitCode -ne 0 -and $invalid.Output -match 'BLOCK: invalid applicability scope') "unresolved mutation scope fails closed: $raw"
+        }
+        Assert-True (-not (Test-Path (Join-Path $workspaceRoot '.frontier/state/loop-state.json'))) 'applicability inspection does not create or consume a loop'
+        $declared = @('docs/requirements.md', 'design/**/*.md')
+        @{ schemaVersion = 1; coveredArtifacts = $declared } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $workspaceRoot 'frontier-artifacts.json')
+        $declaredCases = [ordered]@{ 'docs/requirements.md' = $true; 'design/api/contract.md' = $true; 'docs/other.md' = $false; 'frontier-artifacts.json' = $true }
+        foreach ($declaredPath in $declaredCases.Keys) {
+            $declaredResult = Invoke-IsolatedAgentx $workspaceRoot @('loop', 'applicability', '--operation', 'mutate', '--paths', (ConvertTo-Json -InputObject @($declaredPath) -Compress))
+            $declaredScope = if ($declaredResult.ExitCode -eq 0) { ConvertFrom-Json $declaredResult.Stdout } else { $null }
+            Assert-True ($declaredScope -and $declaredScope.requiresEngineeringLoop -eq $declaredCases[$declaredPath]) "CLI honors declared artifacts: $declaredPath"
+            Assert-True ((Test-RunnerLoopCoveredPath $declaredPath $workspaceRoot) -eq $declaredCases[$declaredPath]) "Runner honors declared artifacts: $declaredPath"
+        }
+        $declaredStart = [Diagnostics.ProcessStartInfo]::new($nodePath)
+        $declaredStart.UseShellExecute = $false
+        $declaredStart.RedirectStandardOutput = $true
+        $declaredStart.RedirectStandardError = $true
+        $declaredScopes = @($declaredCases.Keys | ForEach-Object { [ordered]@{ operation = 'mutate'; paths = @($_); declaredArtifacts = $declared } })
+        foreach ($argument in @('-e', 'console.log(JSON.stringify(JSON.parse(process.argv[2]).map(scope => require(process.argv[1]).requiresEngineeringLoop(scope))))',
+                $modulePath, (ConvertTo-Json -InputObject $declaredScopes -Depth 5 -Compress))) { $declaredStart.ArgumentList.Add($argument) }
+        $declaredProcess = [Diagnostics.Process]::Start($declaredStart)
+        try {
+            if (-not $declaredProcess.WaitForExit(10000)) { $declaredProcess.Kill($true); throw 'Declared artifact parity timed out.' }
+            $declaredExpected = @(ConvertFrom-Json $declaredProcess.StandardOutput.ReadToEnd())
+        } finally { $declaredProcess.Dispose() }
+        Assert-Equal (($declaredExpected | ForEach-Object { [string]$_ }) -join ',') (($declaredCases.Values | ForEach-Object { [string]$_ }) -join ',') 'compiled TypeScript honors declared artifacts'
+        Set-Content -LiteralPath (Join-Path $workspaceRoot 'frontier-artifacts.json') -Value '{"schemaVersion":1,"coveredArtifacts":["../escape"]}'
+        $invalidDeclaration = Invoke-IsolatedAgentx $workspaceRoot @('loop', 'applicability', '--operation', 'mutate', '--paths', '["docs/other.md"]')
+        Assert-True ($invalidDeclaration.ExitCode -ne 0) 'CLI fails closed on invalid declarations'
+        Assert-True (Test-RunnerLoopCoveredPath 'docs/other.md' $workspaceRoot) 'Runner fails closed on invalid declarations'
+    } finally { Remove-Item -LiteralPath $workspaceRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+function Test-ReviewOnlyHandoff {
+    $workspaceRoot = New-IsolatedWorkspace
+    try {
+        [void](Invoke-ParityGit $workspaceRoot @('init', '--quiet'))
+        [void](Invoke-ParityGit $workspaceRoot @('config', 'user.email', 'handoff@example.invalid'))
+        [void](Invoke-ParityGit $workspaceRoot @('config', 'user.name', 'Handoff Fixture'))
+        $codePath = Join-Path $workspaceRoot 'tool.ps1'
+        Set-Content -LiteralPath $codePath -Value 'Write-Output 1'
+        [void](Invoke-ParityGit $workspaceRoot @('add', 'tool.ps1'))
+        [void](Invoke-ParityGit $workspaceRoot @('commit', '--quiet', '-m', 'test: review handoff baseline'))
+        $statePath = Join-Path $workspaceRoot '.frontier/state/loop-state.json'
+        foreach ($kind in @('none', 'active', 'stale', 'consumed')) {
+            Remove-Item -LiteralPath $statePath -Force -ErrorAction SilentlyContinue
+            if ($kind -ne 'none') {
+                [ordered]@{ active = ($kind -eq 'active'); status = $(if ($kind -eq 'active') { 'active' } else { 'complete' })
+                    loopConsumed = ($kind -eq 'consumed'); iteration = 5; maxIterations = 20
+                    lastIterationAt = [datetimeoffset]::UtcNow.AddDays(-2).ToString('o')
+                } | ConvertTo-Json | Set-Content -LiteralPath $statePath
+            }
+            $before = if (Test-Path $statePath) { (Get-FileHash $statePath).Hash } else { '' }
+            $start = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'start', 'reviewer')
+            $finish = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', 'reviewer')
+            $after = if (Test-Path $statePath) { (Get-FileHash $statePath).Hash } else { '' }
+            Assert-True ($start.ExitCode -eq 0 -and $finish.ExitCode -eq 0 -and $finish.Output -match 'reviewer -> done') "review-only finish is exempt with $kind loop"
+            Assert-True ($before -ceq $after) "review-only $kind handoff does not mutate another loop"
+            foreach ($role in @('engineer', 'auto-fix-reviewer')) {
+                $start = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'start', $role)
+                $finish = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', $role)
+                Assert-True ($start.ExitCode -eq 0 -and $finish.ExitCode -eq 0) "$role read-only handoff is exempt with $kind loop"
+            }
+        }
+        Remove-Item -LiteralPath $statePath -Force
+        foreach ($role in @('engineer', 'auto-fix-reviewer')) {
+            Set-Content -LiteralPath $codePath -Value 'Write-Output 1'
+            $start = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'start', $role)
+            Set-Content -LiteralPath $codePath -Value 'Write-Output 2'
+            $finish = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', $role)
+            Assert-True ($start.ExitCode -eq 0 -and $finish.ExitCode -ne 0) "$role covered fix requires engineering evidence"
+        }
+        Set-Content -LiteralPath $codePath -Value 'Write-Output 1'
+        [void](Invoke-IsolatedAgentx $workspaceRoot @('hook', 'start', 'reviewer'))
+        Set-Content -LiteralPath $codePath -Value 'Write-Output 2'
+        $fix = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', 'reviewer')
+        Assert-True ($fix.ExitCode -ne 0 -and $fix.Output -match 'Quality loop not completed') 'reviewer code fix cannot claim review-only exemption'
+        [ordered]@{ active = $false; status = 'complete'; loopConsumed = $false; iteration = 5
+            lastIterationAt = [datetimeoffset]::UtcNow.ToString('o'); history = @()
+        } | ConvertTo-Json | Set-Content -LiteralPath $statePath
+        $unrelated = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', 'reviewer')
+        Assert-True ($unrelated.ExitCode -ne 0 -and $unrelated.Output -match 'matching unconsumed covered approval') 'unrelated completed loop cannot approve reviewer code fixes'
+        Remove-Item -LiteralPath $statePath -Force
+        Remove-Item -LiteralPath (Join-Path $workspaceRoot '.frontier/state/agent-state.json') -Force -ErrorAction SilentlyContinue
+        $noStart = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', 'reviewer')
+        Assert-True ($noStart.ExitCode -ne 0) 'reviewer without a start-time snapshot has no role-only exemption'
+        foreach ($invalidState in @(
+            @{ loopConsumed = $true; iteration = 5; history = @() },
+            @{ loopConsumed = $false; iteration = 1; history = @() },
+            @{ loopConsumed = $false; iteration = 5; history = @() }
+        )) {
+            $invalidState.active = $false
+            $invalidState.status = 'complete'
+            $invalidState.lastIterationAt = [datetimeoffset]::UtcNow.ToString('o')
+            $invalidState | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $statePath
+            $unknownHandoff = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', 'engineer')
+            Assert-True ($unknownHandoff.ExitCode -ne 0) 'missing start snapshot cannot trust an invalid completed loop'
+        }
+    } finally { Remove-Item -LiteralPath $workspaceRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+if ($ApplicabilityOnly -or $HandoffOnly) {
+    try {
+        if ($ApplicabilityOnly) { Test-ApplicabilityParity }
+        if ($HandoffOnly) { Test-ReviewOnlyHandoff }
+    } catch { Assert-True $false "focused parity fixture raised: $($_.Exception.Message)" }
+    Write-Host "Results: $script:pass passed, $script:fail failed"
+    if ($script:fail -gt 0) { exit 1 }
+    exit 0
 }
 
 Write-Host ''
@@ -760,6 +940,13 @@ try {
 }
 
 Write-Host ''
+try {
+    Test-ApplicabilityParity
+} catch { Assert-True $false "applicability parity fixture raised: $($_.Exception.Message)" }
+try {
+    Test-ReviewOnlyHandoff
+} catch { Assert-True $false "review-only handoff fixture raised: $($_.Exception.Message)" }
+
 Write-Host ' ------------------------------------------------' -ForegroundColor DarkGray
 $total = $script:pass + $script:fail
 Write-Host " Results: $($script:pass)/$total passed" -ForegroundColor $(if ($script:fail -eq 0) { 'Green' } else { 'Red' })

@@ -574,20 +574,17 @@ export async function classifyIntentWithLM(
   if (lmDisabled) { return undefined; }
   const lm = (vscode as unknown as { lm?: LmApi }).lm;
   if (!lm?.selectChatModels) { return undefined; }
-  let model: { sendRequest?(messages: unknown[], options?: unknown, token?: unknown): Promise<unknown> } | undefined;
-  try {
-    const preferred = await lm.selectChatModels({ vendor: 'copilot' });
-    model = preferred[0] ?? (await lm.selectChatModels({}))[0];
-  } catch {
-    return undefined;
-  }
-  if (!model?.sendRequest) { return undefined; }
+  if (token?.isCancellationRequested) { return undefined; }
 
   const messages = [{ role: 'user', content: buildClassifierPrompt(userText) }];
 
+  // Model selection and generation share one deadline.
   const lmCall = (async () => {
     try {
-      const resp = await model!.sendRequest!(messages, {}, token);
+      const preferred = await lm.selectChatModels({ vendor: 'copilot' });
+      const model = preferred[0] ?? (await lm.selectChatModels({}))[0];
+      if (!model?.sendRequest || token?.isCancellationRequested) { return undefined; }
+      const resp = await model.sendRequest(messages, {}, token);
       const text = await collectStream(resp);
       return validateClassification(extractJsonObject(text));
     } catch {
@@ -595,9 +592,17 @@ export async function classifyIntentWithLM(
     }
   })();
 
-  const timeout = new Promise<undefined>((resolve) => {
-    setTimeout(() => resolve(undefined), timeoutMs);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancelListener: { dispose(): void } | undefined;
+  const deadline = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), timeoutMs);
+    cancelListener = token?.onCancellationRequested(() => resolve(undefined));
   });
 
-  return Promise.race([lmCall, timeout]);
+  try {
+    return await Promise.race([lmCall, deadline]);
+  } finally {
+    if (timer !== undefined) { clearTimeout(timer); }
+    cancelListener?.dispose();
+  }
 }

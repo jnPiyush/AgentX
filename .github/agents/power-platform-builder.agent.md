@@ -38,7 +38,7 @@ constraints:
   - "MUST NOT commit packed zip files or generated build output"
   - "MUST hand ALM and environment deployment automation to Frontier DevOps FDE"
   - "MUST create files locally and MUST NOT push files directly through remote repository tools"
-  - "MUST iterate until all done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; loop complete must succeed before handoff"
+  - "MUST satisfy all done criteria; only covered mutations require the risk-based loop minimum and successful owning loop completion under AGENT-PROTOCOL.md"
   - "MUST resolve Compound Capture before declaring Done"
 boundaries:
   can_modify:
@@ -205,9 +205,9 @@ Power Platform product surfaces remain skills inside this workflow. Do not split
 | Supporting docs | `docs/power-platform/**` |
 | Validation tests | `tests/power-platform/**` |
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: Before answering whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state. Never claim completion unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in the current session.
 
