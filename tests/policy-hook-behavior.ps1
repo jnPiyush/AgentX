@@ -334,10 +334,6 @@ try {
     Assert-True ($exemptShell.ExitCode -eq 0) 'Resolved ordinary document shell mutation is exempt'
     $commitOnly = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'git commit -m "docs: notes"' } } | ConvertTo-Json -Compress)
     Assert-True ($commitOnly.ExitCode -eq 0) 'Commit-only shell request does not require an active engineering loop'
-    foreach ($indexCommand in @('git status --short', 'git add docs/notes.md')) {
-        $indexOnly = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = $indexCommand } } | ConvertTo-Json -Compress)
-        Assert-True ($indexOnly.ExitCode -eq 0) "Read/index-only shell request does not require a loop: $indexCommand"
-    }
     $inactiveBuild = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'npm run build' } } | ConvertTo-Json -Compress)
     Assert-True ($inactiveBuild.ExitCode -eq 2) 'Unresolved build scope requires an active loop'
     Assert-True ($completedEdit.ExitCode -eq 2) 'Completed loop blocks follow-up edits'

@@ -166,15 +166,6 @@ shell-argument, review-state, parity, rollback and code-quality tests on native
 Ubuntu and macOS runners. A configured job is not a passing result: inspect its
 run for the current commit before claiming native platform verification.
 
-Loop applicability comes first: only create/update/delete/rename of PRD,
-TechSpec, code or unit tests requires a loop. Research/read/review-only/check/
-commit-only work and other artifacts (plans, docs, config, instructions,
-declarations) are exempt; protected executable code remains covered. Roles and
-keywords do not decide applicability. Nonloop checks and council policy remain.
-Only then apply minima 1/2/3/5. Review-only work inspects scoped work evidence,
-not its own loop or unrelated active state; covered fixes trigger before editing.
-Delegates reuse the assigned parent loop and leave lifecycle calls to its owner.
-
 Quality loops and reviews do not execute test suites. They use acceptance
 mapping, independent review and non-test verification such as builds,
 typechecks, lint and schema checks. Tests can be authored and inspected without
@@ -212,9 +203,6 @@ See [Quality loop operations](guides/LOOP-OPERATIONS.md#advisory-lint-and-option
 ### Recovering evidence verification
 
 See [Quality loop operations](guides/LOOP-OPERATIONS.md#recovering-evidence-verification).
-
-Complete the owning loop before committing covered staged changes; commit-only
-work starts no loop. Exempt-only commits do not inherit unrelated active state.
 
 ### Upgrading Existing Workspaces
 

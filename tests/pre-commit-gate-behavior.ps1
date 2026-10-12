@@ -289,7 +289,9 @@ function Invoke-HookGate {
                 if ($ReviewCurrent) {
                     $hooksDirectory = Join-Path $repo '.git/hooks'
                     Copy-Item -LiteralPath $script:hookPath -Destination (Join-Path $hooksDirectory 'pre-commit') -Force
-                    & git -c "core.hooksPath=$hooksDirectory" -c commit.gpgsign=false commit -m 'test: exercise the reviewed hook' *> $outFile
+                    # Call the native binary: the git wrapper above throws on a
+                    # non-zero exit, which would discard the expected BLOCK output.
+                    & (Get-Command git -CommandType Application | Select-Object -First 1).Source -c "core.hooksPath=$hooksDirectory" -c commit.gpgsign=false commit -m 'test: exercise the reviewed hook' *> $outFile
                 } else {
                     & $BashPath './.git/pre-commit' *> $outFile
                 }

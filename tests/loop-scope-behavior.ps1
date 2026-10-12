@@ -177,6 +177,11 @@ function Test-StagedScope {
     [void](Invoke-FixtureGit @('add', 'tool.ps1'))
     [void](Write-StagedApproval)
     [void](Invoke-FixtureGit @('update-index', '--chmod=+x', 'tool.ps1'))
+    if (-not $IsWindows) {
+        # With core.filemode=true the worktree mode must match the index, as after a real chmod +x.
+        $toolPath = Join-Path $workspace 'tool.ps1'
+        [IO.File]::SetUnixFileMode($toolPath, [IO.File]::GetUnixFileMode($toolPath) -bor [IO.UnixFileMode]::UserExecute -bor [IO.UnixFileMode]::GroupExecute -bor [IO.UnixFileMode]::OtherExecute)
+    }
     $mode = Invoke-Loop @('gate', '--staged')
     Assert-True ($mode.ExitCode -ne 0) 'index mode change invalidates approval'
     [void](Write-StagedApproval)
@@ -195,9 +200,9 @@ function Test-StagedScope {
     $tokens = $null
     $parseErrors = $null
     $ast = [Management.Automation.Language.Parser]::ParseFile($cliPath, [ref]$tokens, [ref]$parseErrors)
-    foreach ($name in @('Test-LoopCoveredPath', 'Invoke-LoopGit', 'Get-LoopCoveredSnapshot', 'Get-LoopCoveredScope')) {
+    foreach ($name in @('ConvertTo-LoopArtifactPattern', 'Get-LoopDeclaredArtifactPatterns', 'Test-LoopCoveredPath', 'Invoke-LoopGit', 'Get-LoopCoveredSnapshot', 'Get-LoopCoveredScope')) {
         $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $false)
-        Invoke-Expression $definition.Extent.Text
+        . ([scriptblock]::Create($definition.Extent.Text))
     }
     $Script:ROOT = $workspace
     [void](Invoke-FixtureGit @('read-tree', 'HEAD'))

@@ -7662,7 +7662,6 @@ function Invoke-PolicyHookCmd {
                 }
                 $isFileMutation = $false
             }
-            if (-not $hasShellComposition -and $command -match '(?i)^\s*git\s+(?:status|add)\b') { $isFileMutation = $false }
             if ($isTrustedLoopStart) { return }
             if ($isFileMutation -and -not (Get-HookInputValue $pathAnalysis 'ResolvedMutation')) {
                 $mutationPaths = @()

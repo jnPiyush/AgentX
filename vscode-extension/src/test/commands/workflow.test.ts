@@ -108,7 +108,7 @@ describe('registerWorkflowCommand', () => {
 
     await registeredCallbacks['frontier.runWorkflowType']!('story');
 
-    assert.ok(fakeAgentx.runCli.calledOnceWithExactly('workflow', ['story']));
+    assert.ok(fakeAgentx.runCli.calledOnceWithExactly('workflow', ['story'], '/workspace'));
     assert.ok(read.notCalled);
     assert.ok(info.notCalled);
     assert.ok(execute.notCalled);
