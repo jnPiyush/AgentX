@@ -11,6 +11,9 @@ conventions that are not stated there.
 
 - Apply the Karpathy guidelines to implementation and review; run
   `.frontier/runtime/frontier.ps1 scrub -Path <changed-area>` before review or handoff.
+- Loop applicability is artifact/action-based per AGENT-PROTOCOL.md, not role or
+  keywords. Exempt docs/research/review-only work retains relevant nonloop checks
+  and council policy, and MUST NOT claim its own loop or unrelated active state.
 - UI work defaults to browser validation: primary routes, an axe scan and one
   primary interaction. Report unavailable browser prerequisites instead of
   silently skipping them.

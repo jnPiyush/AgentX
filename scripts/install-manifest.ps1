@@ -52,6 +52,14 @@ function Get-FrontierVersion {
     return 'unknown'
 }
 
+function Get-LfNormalizedHash([string]$Path) {
+    # Latin1 maps bytes 1:1, so only CRLF pairs change.
+    $text = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes($Path)).Replace("`r`n", "`n")
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return [Convert]::ToHexString($sha.ComputeHash([Text.Encoding]::Latin1.GetBytes($text))).ToLowerInvariant() }
+    finally { $sha.Dispose() }
+}
+
 function Get-ManifestEntries {
     $entries = New-Object 'System.Collections.Generic.List[object]'
 
@@ -232,7 +240,8 @@ switch ($Action) {
         foreach ($e in $manifest.files) {
             if (-not (Test-Path $e.path)) { $missing.Add($e.path); continue }
             $h = (Get-FileHash -LiteralPath $e.path -Algorithm SHA256).Hash.ToLowerInvariant()
-            if ($h -ne $e.sha256) { $modified.Add($e.path) }
+            # Windows autocrlf checkouts differ from the LF content the manifest records.
+            if ($h -ne $e.sha256 -and (Get-LfNormalizedHash $e.path) -ne $e.sha256) { $modified.Add($e.path) }
         }
         Write-Host ("[manifest] Version: {0}  Files: {1}" -f $manifest.version, $manifest.files.Count) -ForegroundColor Cyan
         $currentVersion = Get-FrontierVersion

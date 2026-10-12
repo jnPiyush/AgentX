@@ -96,6 +96,15 @@ describe('workflow guidance utility', () => {
     assert.deepEqual(singleton, array);
   });
 
+  it('shares one in-flight provider fetch per workspace and does not cache completed results', async () => {
+    let calls = 0;
+    const runCli = async () => { calls++; await new Promise((resolve) => setTimeout(resolve, 5)); return '[]'; };
+    await Promise.all([fetchProviderAwareIssues(runCli, tmpDir), fetchProviderAwareIssues(runCli, tmpDir)]);
+    assert.equal(calls, 1);
+    await fetchProviderAwareIssues(runCli, tmpDir);
+    assert.equal(calls, 2);
+  });
+
   it('preserves an empty provider backlog instead of reviving local issues', async () => {
     const issues = await fetchProviderAwareIssues(async () => '[]', tmpDir);
     writeFile(tmpDir, '.frontier/state/harness-state.json', JSON.stringify({

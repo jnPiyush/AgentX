@@ -4058,7 +4058,7 @@ function Invoke-LoopCmd {
     $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
     $operation = $null
     try {
-        if ($action -in @('start', 'baseline', 'iterate', 'complete', 'cancel', 'rollback', 'verify')) {
+        if ($action -in @('start', 'baseline', 'adopt-scope', 'iterate', 'complete', 'cancel', 'rollback', 'verify', 'consume')) {
             . (Join-Path $Script:INSTALL_RUNTIME_DIR 'loop-engineering.ps1')
             $lockPath = Join-Path (Get-LoopStateDirectory) 'loop-operation.lock'
             $relative = [IO.Path]::GetRelativePath($Script:ROOT, $lockPath)
@@ -4071,6 +4071,7 @@ function Invoke-LoopCmd {
         switch ($action) {
             'start'    { Invoke-LoopStart }
             'baseline' { Invoke-LoopBaseline }
+            'adopt-scope' { Invoke-LoopAdoptScope }
             'status'   { Invoke-LoopStatus }
             'affected' { Invoke-LoopAffected }
             'preflight' { Invoke-LoopEngineeringAction 'preflight' }
@@ -4083,9 +4084,226 @@ function Invoke-LoopCmd {
             'verify'    { Invoke-LoopVerify }
             'rollback'  { Invoke-LoopRollback }
             'gate'      { Invoke-LoopGateCheck }
+            'applicability' { Invoke-LoopApplicability }
+            'consume' { Invoke-LoopConsume }
             default     { Write-CliOutput "Unknown loop action: $action" }
         }
     } finally { if ($operation) { $operation.Dispose() } }
+}
+
+function ConvertTo-LoopArtifactPattern([string]$Glob) {
+    $glob = ([string]$Glob).Replace('\', '/').Trim() -replace '^\./', ''
+    if (-not $glob -or $glob.StartsWith('/') -or $glob -match '^[a-zA-Z]:' -or $glob -match '(^|/)\.\.(/|$)') {
+        throw "Invalid declared artifact pattern '$Glob'; use workspace-relative globs."
+    }
+    $builder = [Text.StringBuilder]::new('^')
+    for ($index = 0; $index -lt $glob.Length; $index++) {
+        $char = $glob[$index]
+        if ($char -eq '*' -and $index + 1 -lt $glob.Length -and $glob[$index + 1] -eq '*') {
+            if ($index + 2 -lt $glob.Length -and $glob[$index + 2] -eq '/') { [void]$builder.Append('(?:.*/)?'); $index += 2 }
+            else { [void]$builder.Append('.*'); $index++ }
+        } elseif ($char -eq '*') { [void]$builder.Append('[^/]*') }
+        elseif ($char -eq '?') { [void]$builder.Append('[^/]') }
+        else { [void]$builder.Append([regex]::Escape([string]$char)) }
+    }
+    return $builder.Append('$').ToString().ToLowerInvariant()
+}
+
+function Get-LoopDeclaredArtifactPatterns {
+    # frontier-artifacts.json declares PRD/TechSpec paths whose names the built-in rules do not recognize.
+    $file = Join-Path $Script:ROOT 'frontier-artifacts.json'
+    if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { return @() }
+    $stamp = "$file|$((Get-Item -LiteralPath $file).LastWriteTimeUtc.Ticks)"
+    $cache = Get-Variable -Name LoopArtifactDeclarationCache -Scope Script -ValueOnly -ErrorAction SilentlyContinue
+    if ($cache -and $cache.stamp -ceq $stamp) { return $cache.patterns }
+    try {
+        $declaration = Get-Content -LiteralPath $file -Raw | ConvertFrom-Json -ErrorAction Stop
+        if ($declaration.schemaVersion -ne 1 -or $declaration.coveredArtifacts -isnot [array]) { throw 'expected schemaVersion 1 and a coveredArtifacts array' }
+        $patterns = @($declaration.coveredArtifacts | ForEach-Object { ConvertTo-LoopArtifactPattern $_ })
+    } catch {
+        throw "frontier-artifacts.json is invalid: $($_.Exception.Message)"
+    }
+    $Script:LoopArtifactDeclarationCache = [PSCustomObject]@{ stamp = $stamp; patterns = $patterns }
+    return $patterns
+}
+
+function Test-LoopCoveredPath([string]$Path) {
+    $normalized = $Path.Replace('\', '/').ToLowerInvariant()
+    if ($normalized -match '(^|/)\.\.?($|/)') { return $true }
+    if ($normalized -eq 'frontier-artifacts.json') { return $true }
+    foreach ($pattern in @(Get-LoopDeclaredArtifactPatterns)) { if ($normalized -match $pattern) { return $true } }
+    $exemptArtifact = $normalized -match '\.(md|mdc|txt|json|jsonc|json5|yaml|yml|toml|ini|cfg|config|xml|psd1|lock|env|properties|svg|png|jpg|jpeg|gif|webp|ico|pdf|docx|pptx|xlsx|csv|tsv|log|map|woff|woff2|ttf)$|(^|/)(\.gitignore|\.gitattributes|\.editorconfig|\.env)$'
+    if ($normalized -match '(^|/)(prd|specs|techspecs)/[^/]+$|(^|/)(prd|spec|techspec)[-_.][^/]+$') { return $true }
+    if ($normalized -match '(^|/)(\.frontier/runtime|\.github/hooks|scripts)/') { return -not $exemptArtifact }
+    if ($normalized -match '(^|/)(tests?|__tests__)/(?:[^/]+/)*(e2e|integration)/(.*(\.(test|spec)\.[^/]+|-behavior\.ps1|tests?\.(cs|java))|(?:.*/)?test_[^/]+\.py)$|(^|/)(tests?|__tests__)/.*\.(e2e|integration)\.(test|spec)\.[^/]+$') { return $false }
+    return -not $exemptArtifact
+}
+
+function Invoke-LoopApplicability {
+    $operation = Get-Flag @('--operation') ''
+    try {
+        $rawPaths = Get-Flag @('--paths') '[]'
+        $paths = ConvertFrom-Json -InputObject $rawPaths -NoEnumerate -ErrorAction Stop
+        if ($paths -isnot [array] -or @($paths | Where-Object { $_ -isnot [string] }).Count -gt 0) { throw 'Paths must be a JSON string array.' }
+        if ($operation -notin @('read', 'research', 'review', 'commit', 'check', 'mutate')) { throw 'Unknown operation.' }
+        if ($operation -eq 'mutate' -and ($paths.Count -eq 0 -or @($paths | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -gt 0)) { throw 'Mutation scope is required.' }
+    } catch {
+        Write-CliOutput "BLOCK: invalid applicability scope: $_"
+        exit 1
+    }
+    $covered = @($paths | Where-Object { Test-LoopCoveredPath $_ })
+    [Console]::Out.WriteLine(([ordered]@{ schemaVersion = 1; operation = $operation; paths = @($paths); coveredPaths = $covered; requiresEngineeringLoop = ($operation -eq 'mutate' -and $covered.Count -gt 0) } | ConvertTo-Json -Compress))
+}
+
+function Invoke-LoopGit([string[]]$Arguments, [AllowNull()][string]$InputText = $null) {
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('git')
+    $startInfo.WorkingDirectory = $Script:ROOT
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.RedirectStandardInput = $true
+    $startInfo.Environment['GIT_TERMINAL_PROMPT'] = '0'
+    foreach ($argument in $Arguments) { $startInfo.ArgumentList.Add($argument) }
+    $process = [Diagnostics.Process]::Start($startInfo)
+    try {
+        if ($null -ne $InputText) { $process.StandardInput.Write($InputText) }
+        $process.StandardInput.Close()
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(10000)) {
+            $process.Kill($true)
+            throw 'Git scope inspection timed out after 10000 ms.'
+        }
+        if ($process.ExitCode -ne 0) { throw $stderr.GetAwaiter().GetResult() }
+        return $stdout.GetAwaiter().GetResult()
+    } finally { $process.Dispose() }
+}
+
+function Get-LoopCoveredSnapshot([switch]$Staged) {
+    $entries = @()
+    if ($Staged) {
+        $records = (Invoke-LoopGit @('diff', '--cached', '--raw', '--no-abbrev', '--no-renames', '-z', '--')) -split "`0"
+        for ($index = 0; $index + 1 -lt $records.Count; $index += 2) {
+            $header = $records[$index] -split ' '
+            $path = $records[$index + 1]
+            if ($header.Count -ne 5 -or $header[4] -eq 'U') { throw 'Unresolved index scope.' }
+            if (Test-LoopCoveredPath $path) { $entries += [ordered]@{ path = $path; blob = $header[3]; mode = $header[1] } }
+        }
+    } else {
+        try { [void](Invoke-LoopGit @('rev-parse', '--git-dir')) } catch { return @() }
+        try { $base = (Invoke-LoopGit @('rev-parse', '--verify', 'HEAD')).Trim() }
+        catch { $base = (Invoke-LoopGit @('hash-object', '-t', 'tree', '--stdin')).Trim() }
+        $modeByPath = @{}
+        $worktreeRecords = (Invoke-LoopGit @('diff', $base, '--raw', '--no-abbrev', '--no-renames', '-z', '--')) -split "`0"
+        for ($index = 0; $index + 1 -lt $worktreeRecords.Count; $index += 2) {
+            $header = $worktreeRecords[$index] -split ' '
+            if ($header.Count -ne 5 -or $header[4] -eq 'U') { throw 'Unresolved worktree scope.' }
+            $modeByPath[$worktreeRecords[$index + 1]] = $header[1]
+        }
+        $paths = @(@($modeByPath.Keys) +
+            ((Invoke-LoopGit @('ls-files', '--others', '--exclude-standard', '-z')) -split "`0") | Where-Object { $_ } | Sort-Object -Unique)
+        $zero = '0' * $base.Length
+        foreach ($path in $paths) {
+            if (-not (Test-LoopCoveredPath $path)) { continue }
+            $fullPath = Join-Path $Script:ROOT $path
+            $blob = $zero
+            $mode = '000000'
+            $item = Get-Item -LiteralPath $fullPath -Force -ErrorAction SilentlyContinue
+            if ($item -and $item.LinkType -eq 'SymbolicLink') {
+                $blob = (Invoke-LoopGit @('hash-object', '--stdin') -InputText ([string]$item.LinkTarget)).Trim()
+                $mode = '120000'
+            } elseif ($item -and -not $item.PSIsContainer) {
+                $blob = (Invoke-LoopGit @('hash-object', "--path=$path", '--', $path)).Trim()
+                $mode = if ($modeByPath.ContainsKey($path)) { $modeByPath[$path] } else { '100644' }
+                if (-not $modeByPath.ContainsKey($path) -and -not $IsWindows -and
+                    (Invoke-LoopGit @('config', '--get', 'core.filemode')).Trim() -eq 'true') {
+                    $permissions = [IO.File]::GetUnixFileMode($fullPath)
+                    if ($permissions -band ([IO.UnixFileMode]::UserExecute -bor [IO.UnixFileMode]::GroupExecute -bor [IO.UnixFileMode]::OtherExecute)) {
+                        $mode = '100755'
+                    }
+                }
+            }
+            $entries += [ordered]@{ path = $path; blob = $blob; mode = $mode }
+        }
+    }
+    return @($entries | Sort-Object { $_.path })
+}
+
+function Get-LoopCoveredScope($State) {
+    $snapshot = @(Get-LoopCoveredSnapshot)
+    if ($snapshot.Count -gt 0 -and -not $State.PSObject.Properties['coveredBaseline']) {
+        throw 'Covered baseline is missing; unknown dirty changes cannot be included in scoped approval.'
+    }
+    $baseline = if ($State.PSObject.Properties['coveredBaseline']) { @($State.coveredBaseline) } else { @() }
+    return @($snapshot | Where-Object {
+        $current = $_
+        @($baseline | Where-Object { $_.path -ceq $current.path -and $_.blob -ceq $current.blob -and $_.mode -ceq $current.mode }).Count -eq 0
+    })
+}
+
+function ConvertTo-LoopScopeJson($Scope) {
+    return ConvertTo-Json -InputObject @($Scope | ForEach-Object { [ordered]@{ path = $_.path; blob = $_.blob; mode = $_.mode } } | Sort-Object { $_.path }) -Compress
+}
+
+function Invoke-LoopAdoptScope {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    $consumed = $state -and $state.PSObject.Properties['loopConsumed'] -and [bool]$state.loopConsumed
+    if (-not $state -or $state.active -ne $true -or $state.status -cne 'active' -or $consumed) {
+        throw 'Scope adoption requires the current active, unconsumed loop.'
+    }
+    if ($state.PSObject.Properties['coveredBaseline'] -or (Get-LoopLatestReviewEntry $state)) {
+        throw 'Scope adoption is only for legacy loops without a baseline or reviewer verdict; existing bindings cannot be replaced.'
+    }
+    if (-not (Test-Flag @('--include-existing-changes'))) {
+        throw 'Explicit --include-existing-changes authorization is required to adopt the current task mutations.'
+    }
+    $evidencePath = Get-Flag @('-e', '--evidence') ''
+    if (-not $evidencePath -or -not (Test-Path -LiteralPath $evidencePath -PathType Leaf)) {
+        throw 'Scope adoption requires fresh --evidence documenting authorization and the task scope.'
+    }
+    if (-not (Test-LoopEvidenceFreshness -EvidencePath $evidencePath -State $state -ContextLabel 'loop adopt-scope')) { exit 1 }
+    $evidenceHash = (Get-FileHash -LiteralPath $evidencePath -Algorithm SHA256).Hash
+    $acceptedHashes = if ($state.PSObject.Properties['acceptedEvidenceHashes']) { @($state.acceptedEvidenceHashes) } else { @() }
+    if ($acceptedHashes -contains $evidenceHash) { throw 'Scope adoption evidence was already accepted.' }
+    $baselineHash = (Get-FileHash -LiteralPath (Get-CodeQualityBaselineFilePath) -Algorithm SHA256).Hash
+    if ($baselineHash -cne $state.codeQualityBaselineSha256) { throw 'The original code-quality baseline binding is invalid.' }
+    $head = (Invoke-LoopGit @('rev-parse', '--verify', 'HEAD')).Trim()
+    $snapshot = @(Get-LoopCoveredSnapshot)
+    Assert-LoopEngineeringStillCurrent $state
+    $archiveDir = Join-Path (Get-LoopEvidenceRoot) 'scope-adoption'
+    [void][IO.Directory]::CreateDirectory($archiveDir)
+    $archivePath = Join-Path $archiveDir (([guid]::NewGuid().ToString('N')) + '-' + [IO.Path]::GetFileName($evidencePath))
+    Copy-Item -LiteralPath $evidencePath -Destination $archivePath -ErrorAction Stop
+    if ((Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash -cne $evidenceHash) {
+        throw 'Scope adoption evidence changed while being archived; no state was changed.'
+    }
+    $state | Add-Member -NotePropertyName coveredBaseline -NotePropertyValue @()
+    $state | Add-Member -NotePropertyName scopeAdoption -NotePropertyValue ([ordered]@{
+        schemaVersion = 1; timestamp = Get-Timestamp; head = $head
+        includesExistingChanges = $true; snapshot = $snapshot
+        evidencePath = $archivePath; evidenceSha256 = $evidenceHash
+    })
+    $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($evidenceHash)) -Force
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+    Write-CliOutput "Scope adopted for $($snapshot.Count) current covered mutation(s). Existing iteration history and baseline digests were preserved; fresh review is still required."
+}
+
+function Invoke-LoopConsume {
+    $acceptancePath = Join-Path (Get-LoopStateDirectory) 'loop-commit-acceptance.json'
+    $acceptance = Read-JsonFile $acceptancePath
+    if (-not $acceptance) { return }
+    try {
+        $stateHash = (Get-FileHash -LiteralPath $Script:LOOP_STATE_FILE -Algorithm SHA256).Hash
+        $tree = (Invoke-LoopGit @('rev-parse', 'HEAD^{tree}')).Trim()
+        if ($acceptance.stateSha256 -cne $stateHash -or $acceptance.tree -cne $tree) { throw 'Commit does not match accepted loop evidence.' }
+        $state = Read-JsonFile $Script:LOOP_STATE_FILE
+        if ($state.status -cne 'complete' -or $state.loopConsumed) { throw 'Loop evidence is not consumable.' }
+        $state | Add-Member -NotePropertyName loopConsumed -NotePropertyValue $true -Force
+        Write-JsonFile $Script:LOOP_STATE_FILE $state
+    } catch {
+        Write-CliOutput "BLOCK: $_"
+        exit 1
+    } finally { Remove-Item -LiteralPath $acceptancePath -Force -ErrorAction SilentlyContinue }
 }
 
 function Get-LoopStateLastTouchedUtc {
@@ -5072,6 +5290,7 @@ function Invoke-LoopStart {
         lastIterationAt    = Get-Timestamp
         codeQualityBaselineSha256 = [string]$codeQualitySnapshot.result.baselineSha256
         codeQualityScopeMode = if ($includeExistingChanges) { 'include-existing-changes' } else { 'new-changes-only' }
+        coveredBaseline    = @(if (-not $includeExistingChanges) { Get-LoopCoveredSnapshot })
         history            = @([PSCustomObject]@{ iteration = 0; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
     }
     Write-JsonFile $Script:LOOP_STATE_FILE $state
@@ -5436,7 +5655,10 @@ function Invoke-LoopIterate {
         fingerprint = $preflight.snapshot.fingerprint; passed = $preflight.passed
         deliveryFingerprint = $preflight.snapshot.deliveryFingerprint
     }
-    if ($reviewRecord) { $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord }
+    if ($reviewRecord) {
+        $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord
+        $entry | Add-Member -NotePropertyName coveredScope -NotePropertyValue @(Get-LoopCoveredScope $state)
+    }
     if ($archivedPath) {
         $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
         $entry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $evidenceAbs
@@ -5679,6 +5901,11 @@ function Invoke-LoopComplete {
         exit 1
     }
     $currentPassing = Get-LoopPassingCount 'loop complete'
+    if ($latestReviewEntry.PSObject.Properties.Name -contains 'coveredScope' -and
+        (ConvertTo-LoopScopeJson $latestReviewEntry.coveredScope) -cne (ConvertTo-LoopScopeJson @(Get-LoopCoveredScope $state))) {
+        Write-CliOutput 'BLOCK: covered files changed after the approved review'
+        exit 1
+    }
     if ($currentPassing -is [string]) { exit 1 }
     if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { exit 1 }
 
@@ -5879,6 +6106,26 @@ function Assert-LoopReviewCurrent($State) {
   grep and sed. Review metadata and current source must both remain valid.
 #>
 function Invoke-LoopGateCheck {
+    param([switch]$ReturnOnSuccess)
+
+    $staged = (Test-Flag @('--staged', '--accept-staged'))
+    if ($staged) {
+        if (Test-Flag @('--accept-staged')) {
+            Remove-Item -LiteralPath (Join-Path (Get-LoopStateDirectory) 'loop-commit-acceptance.json') -Force -ErrorAction SilentlyContinue
+        }
+        try {
+            if (Test-Flag @('--accept-staged')) { $stagedTree = (Invoke-LoopGit @('write-tree')).Trim() }
+            $stagedScope = @(Get-LoopCoveredSnapshot -Staged)
+        }
+        catch { Write-CliOutput "BLOCK: cannot inspect staged scope: $_"; exit 1 }
+        if ($stagedScope.Count -eq 0) {
+            if (Test-Flag @('--accept-staged')) {
+                Remove-Item -LiteralPath (Join-Path (Get-LoopStateDirectory) 'loop-commit-acceptance.json') -Force -ErrorAction SilentlyContinue
+            }
+            Write-CliOutput 'PASS: staged scope is exempt; no engineering evidence consumed'
+            exit 0
+        }
+    }
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state) {
         Write-CliOutput 'BLOCK: no quality loop found'
@@ -5979,7 +6226,34 @@ function Invoke-LoopGateCheck {
     try { Assert-LoopReviewCurrent $state }
     catch { Write-CliOutput "BLOCK: $($_.Exception.Message)"; exit 1 }
 
+    if ($staged) {
+        if ($latestReviewEntry.PSObject.Properties.Name -notcontains 'coveredScope' -or
+            (ConvertTo-LoopScopeJson $latestReviewEntry.coveredScope) -cne (ConvertTo-LoopScopeJson $stagedScope)) {
+            Write-CliOutput 'BLOCK: staged covered scope does not match approved evidence (legacy approvals require scoped review)'
+            exit 1
+        }
+        $reviewPath = [string]$latestReviewEntry.evidence
+        if (-not $reviewPath -or -not (Test-Path -LiteralPath $reviewPath -PathType Leaf) -or
+            (Get-FileHash -LiteralPath $reviewPath -Algorithm SHA256).Hash -cne [string]$latestReviewEntry.evidenceSha256) {
+            Write-CliOutput 'BLOCK: approved review evidence is missing or changed'
+            exit 1
+        }
+        if (Test-Flag @('--accept-staged')) {
+            try {
+                $acceptedTree = (Invoke-LoopGit @('write-tree')).Trim()
+                if ($acceptedTree -cne $stagedTree) { throw 'Index changed during covered scope acceptance.' }
+                Write-JsonFile (Join-Path (Get-LoopStateDirectory) 'loop-commit-acceptance.json') ([ordered]@{
+                    tree = $acceptedTree
+                    stateSha256 = (Get-FileHash -LiteralPath $Script:LOOP_STATE_FILE -Algorithm SHA256).Hash
+                })
+            } catch {
+                Write-CliOutput "BLOCK: cannot accept staged scope: $_"
+                exit 1
+            }
+        }
+    }
     Write-CliOutput "PASS: quality loop complete, approved by $($latestReview.reviewer) with zero HIGH and MEDIUM findings"
+    if ($ReturnOnSuccess) { return }
     exit 0
 }
 
@@ -6923,8 +7197,12 @@ function Get-StructuredHookPathCandidates($InputObject) {
         }
         foreach ($property in $value.PSObject.Properties) {
             $propertyName = $property.Name.ToLowerInvariant()
-            if ($property.Value -is [string] -and $propertyName -in @('path', 'filepath', 'file_path', 'source', 'target', 'destination')) {
+            if ($property.Value -is [string] -and $propertyName -in @('path', 'filepath', 'file_path', 'source', 'target', 'destination', 'oldpath', 'newpath')) {
                 [void]$pathCandidates.Add([string]$property.Value)
+            } elseif ($property.Value -is [string] -and $propertyName -in @('input', 'patch')) {
+                foreach ($match in [regex]::Matches($property.Value, '(?m)^\*\*\* (?:Add|Update|Delete) File: (.+)\r?$|^\*\*\* Move to: (.+)\r?$')) {
+                    [void]$pathCandidates.Add(($match.Groups[1].Value + $match.Groups[2].Value).Trim())
+                }
             } else {
                 $pendingValues.Push($property.Value)
             }
@@ -7084,7 +7362,8 @@ function Get-TerminalHookPathAnalysis([string]$Command) {
         'ren' = 'Rename-Item'; 'rni' = 'Rename-Item'; 'ni' = 'New-Item'
     }
     $trustedCommands = @('Get-Content', 'Set-Content', 'Add-Content', 'Clear-Content', 'Remove-Item', 'Out-File', 'Move-Item', 'Copy-Item', 'Rename-Item', 'New-Item')
-    $pathParameters = @('path', 'literalpath', 'filepath', 'destination')
+    $pathParameters = @('path', 'literalpath', 'filepath', 'destination', 'newname')
+    $resolvedMutation = $true
     $pathCandidates = [Collections.Generic.List[string]]::new()
     foreach ($redirection in @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FileRedirectionAst] }, $true))) {
         $resolved = ConvertFrom-HookPathExpression $redirection.Location
@@ -7100,11 +7379,13 @@ function Get-TerminalHookPathAnalysis([string]$Command) {
         $commandLeaf = ($commandName -split '[\\/]')[-1]
         $canonicalName = if ($commandAliases.ContainsKey($commandLeaf.ToLowerInvariant())) { $commandAliases[$commandLeaf.ToLowerInvariant()] } else { $commandLeaf }
         if ($canonicalName -notin $trustedCommands) {
+            $resolvedMutation = $false
             $arguments = (@($commandAst.CommandElements | Select-Object -Skip 1 | ForEach-Object { $_.Extent.Text }) -join ' ')
             $opaqueRuntimeExecution = switch -Regex ($commandLeaf.ToLowerInvariant()) {
                 '^(node|node\.exe|python|python3|py|python\.exe|python3\.exe|py\.exe)$' { $arguments -notmatch '^\s*--version\s*$'; break }
                 '^(pwsh|powershell|pwsh\.exe|powershell\.exe)$' { $arguments -notmatch '^\s*--version\s*$'; break }
                 '^(bash|sh)$' { $true; break }
+                '^(iex|invoke-expression|invoke-command|start-process|npx|npx\.cmd|perl|ruby|wsl|wsl\.exe)$' { $true; break }
                 '^cmd(?:\.exe)?$' { $arguments -match '(?i)(^|\s)/(?:c|k)'; break }
                 '^dotnet(?:\.exe)?$' { $arguments -notmatch '^\s*--version\s*$'; break }
                 default { $false }
@@ -7162,7 +7443,30 @@ function Get-TerminalHookPathAnalysis([string]$Command) {
         }
         if ($boundPathCount -eq 0) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
     }
-    return [PSCustomObject]@{ Safe = $true; Candidates = @($pathCandidates) }
+    return [PSCustomObject]@{ Safe = $true; Candidates = @($pathCandidates); ResolvedMutation = $resolvedMutation }
+}
+
+function Test-HookScopeRequiresLoop([string[]]$Paths) {
+    if (@($Paths).Count -eq 0) { return $true }
+    foreach ($path in $Paths) {
+        try {
+            $candidate = ConvertTo-HookPathCandidate $path
+            if (-not $candidate -or $candidate -match '\$') { return $true }
+            $absolute = if ([IO.Path]::IsPathRooted($candidate)) { $candidate } else { Join-Path $Script:ROOT $candidate }
+            $resolved = Resolve-HookPathComponents $absolute
+            if ((Test-Path -LiteralPath $resolved -PathType Leaf) -and
+                (Get-Item -LiteralPath $resolved -Force).LinkType -eq 'HardLink') { return $true }
+            $relative = [IO.Path]::GetRelativePath($Script:ROOT, [IO.Path]::GetFullPath($resolved))
+            if (Test-LoopCoveredPath $relative) { return $true }
+            if ([WildcardPattern]::ContainsWildcardCharacters($candidate)) { return $true }
+            if (Test-Path -LiteralPath $resolved -PathType Container) {
+                if (@(Get-ChildItem -LiteralPath $resolved -Recurse -File -Force | Where-Object {
+                    $_.LinkType -eq 'HardLink' -or (Test-LoopCoveredPath ([IO.Path]::GetRelativePath($Script:ROOT, $_.FullName)))
+                }).Count -gt 0) { return $true }
+            } elseif (-not [IO.Path]::GetExtension($resolved)) { return $true }
+        } catch { return $true }
+    }
+    return $false
 }
 
 function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) {
@@ -7172,9 +7476,11 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
     }
     $protectedRelativePaths += '.frontier/sessions'
     $protectedRelativePaths += '.frontier/workspace-binding.json'
+    $protectedRelativePaths += '.git/config'
+    $protectedRelativePaths += '.git/hooks'
 
     foreach ($relativePath in $protectedRelativePaths) {
-        $protectedPath = Join-Path $Script:FRONTIER_STATE_DIR $relativePath.Substring('.frontier/'.Length)
+        $protectedPath = if ($relativePath.StartsWith('.git/')) { Join-Path $Script:ROOT $relativePath } else { Join-Path $Script:FRONTIER_STATE_DIR $relativePath.Substring('.frontier/'.Length) }
 
         $aliases = @($protectedPath, (Join-Path $Script:ROOT $relativePath))
         foreach ($statePath in @($aliases | Select-Object -Unique)) {
@@ -7211,7 +7517,7 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
                     }
                     $fullCandidate = [IO.Path]::GetFullPath($resolvedCandidatePath)
                     if ($fullCandidate.Equals($fullAlias, [StringComparison]::OrdinalIgnoreCase)) { return $true }
-                    if ($relativePath -eq '.frontier/sessions' -and
+                    if ($relativePath -in @('.frontier/sessions', '.git/hooks') -and
                         $fullCandidate.StartsWith($fullAlias.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { return $true }
                     $candidatePrefix = $fullCandidate.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
                     if ($fullAlias.StartsWith($candidatePrefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
@@ -7255,20 +7561,61 @@ function Invoke-PolicyHookCmd {
         if ($toolName -match '(?i)(mcp_github|github).*(create_or_update_file|push_files|delete_file)$') {
             Stop-HookToolCall 'Frontier local-files-first policy blocks direct remote file mutation. Edit local files and let the user review them before commit or push.'
         }
-        $isFileMutation = $toolName -match '(?i)(^|[/._-])(apply_patch|create_file|replace_string_in_file|multi_replace_string_in_file|editfiles|edit_notebook_file|createfile)$'
+        $isFileMutation = $toolName -match '(?i)(^|[/._-])(apply_patch|create_file|replace_string_in_file|multi_replace_string_in_file|editfiles|edit_notebook_file|createfile|delete_file|rename_file|move_file)$'
         $isTerminalTool = $toolName -match '(?i)(runcommands|run_in_terminal|terminal_exec)$'
         $toolInput = Get-HookInputValue $hookInput 'tool_input'
         if ($isFileMutation) {
-            if (Test-HookPathCandidatesTargetProtectedState @(Get-StructuredHookPathCandidates $toolInput)) {
+            $mutationPaths = @(Get-StructuredHookPathCandidates $toolInput)
+            if (Test-HookPathCandidatesTargetProtectedState $mutationPaths) {
                 Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use frontier loop commands instead.'
             }
         }
         if ($isTerminalTool) {
             $command = [string](Get-HookInputValue $toolInput 'command')
+            $unescapedCommand = $command -replace '`', ''
+            if ($unescapedCommand -match '(?i)\b(?:core\.hooksPath|GIT_CONFIG_\w+|GIT_DIR|GIT_WORK_TREE|HUSKY)\b') {
+                Stop-HookToolCall 'Frontier policy blocks terminal overrides of Git verification configuration and environment.'
+            }
+            $gitTokens = $null
+            $gitErrors = $null
+            $gitAst = [Management.Automation.Language.Parser]::ParseInput($command, [ref]$gitTokens, [ref]$gitErrors)
+            $gitCommands = @($gitAst.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true) |
+                Where-Object { (([string]$_.GetCommandName()) -split '[\\/]')[-1] -match '(?i)^git(?:\.exe)?$' })
+            if ($gitCommands.Count -gt 0 -or $unescapedCommand -match '(?i)(?:^|[\s;&|(''"])(?:\S*[\\/])?git(?:\.exe)?(?:[\s''"]|$)') {
+                # Escapes and stop-parsing hide the argument values Git actually receives.
+                if ($command -match '`' -or $command -match '--%') {
+                    Stop-HookToolCall 'Frontier policy requires Git commands without escape characters or stop-parsing tokens.'
+                }
+            }
+            foreach ($gitCommand in $gitCommands) {
+                $gitElements = @($gitCommand.CommandElements | Select-Object -Skip 1)
+                if (@($gitElements | Where-Object {
+                    $_ -isnot [Management.Automation.Language.StringConstantExpressionAst] -and
+                    -not ($_ -is [Management.Automation.Language.CommandParameterAst] -and
+                        ($null -eq $_.Argument -or $_.Argument -is [Management.Automation.Language.StringConstantExpressionAst]))
+                }).Count -gt 0) {
+                    Stop-HookToolCall 'Frontier policy requires literal Git arguments; computed arguments can hide the operation Git receives.'
+                }
+                # Parsed values, not raw text, so quoting cannot hide the subcommand or keys.
+                $gitArgs = @($gitElements | ForEach-Object {
+                    if ($_ -is [Management.Automation.Language.StringConstantExpressionAst]) { $_.Value } else { $_.Extent.Text }
+                })
+                if (@($gitArgs | Where-Object { $_ -match '(?i)\b(?:alias|include|includeif)\.' }).Count -gt 0) {
+                    Stop-HookToolCall 'Frontier policy blocks Git alias and include configuration from agent terminals.'
+                }
+                if ($gitArgs -contains 'config' -and
+                    @($gitArgs | Where-Object { $_ -in @('--get', '--get-all', '--get-regexp', '--list', '-l') }).Count -eq 0) {
+                    Stop-HookToolCall 'Frontier policy blocks Git configuration writes from agent terminals; use git config --get to read values.'
+                }
+            }
+            if ($unescapedCommand -match '(?i)\bfrontier(?:-cli)?(?:\.ps1|\.sh)?\b' -and $unescapedCommand -match '(?i)\badopt-scope\b') {
+                Stop-HookToolCall 'Loop scope adoption is a user-only operation; run it from your own terminal.'
+            }
             if ($command -match '(?i)\bfrontier(?:-cli)?(?:\.ps1|\.sh)?\b' -and
                 $command -match '(?i)--(?:input-decision|input-id|plan-version|plan-digest|interaction|autonomous)\b') {
                 Stop-HookToolCall 'Frontier input decisions and autonomous authorization belong to the user or a trusted host input channel, not an agent terminal tool.'
             }
+            if ($command -match '(?i)^\s*cmd(?:\.exe)?\s+/d\s+/\?\s*$') { return }
             $isTrustedLoopStart = Test-TrustedFrontierCommand $command
             $isTrustedContext = (Test-TrustedFrontierCommand $command -Operation 'repository-context') -or
                 (Test-TrustedFrontierCommand $command -Operation 'cursor-read')
@@ -7283,8 +7630,48 @@ function Invoke-PolicyHookCmd {
                 $command -match '(?i)(^|\s)--(?:pre|hostname-bin)(?:=|\s|$)' -or
                 $command -match '(?i)^\s*git\s+(?:diff|log|show)\b.*(?:^|\s)--(?:no-)?(?:ext|textc)[a-z-]*(?:=|\s|$)'
             $isFileMutation = -not $isTrustedContext -and ($hasShellComposition -or $command -notmatch $readOnlyCommandPattern)
+            if ($command -match '(?i)^\s*(?:\S*[\\/])?git(?:\.exe)?\s+.*\bcommit\b' -and
+                $command -notmatch '(?i)^\s*git\s+commit\b') {
+                Stop-HookToolCall 'Frontier policy requires plain git commit without global overrides so verification hooks remain authoritative.'
+            }
+            if ($hasShellComposition) {
+                $composedTokens = $null
+                $composedErrors = $null
+                $composedAst = [Management.Automation.Language.Parser]::ParseInput($command, [ref]$composedTokens, [ref]$composedErrors)
+                foreach ($composedCommand in @($composedAst.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true))) {
+                    if ($composedCommand.GetCommandName() -match '(?i)(?:^|[\\/])git(?:\.exe)?$' -and
+                        @($composedCommand.CommandElements | Select-Object -Skip 1 | Where-Object { $_.Extent.Text.Trim("'", '"') -ieq 'commit' }).Count -gt 0) {
+                        Stop-HookToolCall 'Frontier policy requires a standalone Git commit so verification flags cannot be hidden in shell composition.'
+                    }
+                }
+            }
+            if (-not $hasShellComposition -and $command -match '(?i)^\s*git\s+commit\b') {
+                $commitTokens = $null
+                $commitErrors = $null
+                $commitAst = [Management.Automation.Language.Parser]::ParseInput($command, [ref]$commitTokens, [ref]$commitErrors)
+                $commitCommand = $commitAst.Find({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true)
+                $commitArguments = @($commitCommand.CommandElements | Select-Object -Skip 2)
+                $messageOperand = $false
+                foreach ($argument in $commitArguments) {
+                    if ($messageOperand) { $messageOperand = $false; continue }
+                    $argumentText = $argument.Extent.Text.Trim("'", '"')
+                    if ($argumentText -eq '--%' -or $argumentText -match '(?i)^--no-v' -or $argumentText -match '^-[A-Za-z]*n[A-Za-z]*$') {
+                        Stop-HookToolCall 'Frontier policy blocks commits that disable verification hooks.'
+                    }
+                    $messageOperand = $argumentText -in @('-m', '--message', '-F', '--file', '-C', '--reuse-message', '-c', '--reedit-message')
+                }
+                $isFileMutation = $false
+            }
+            if (-not $hasShellComposition -and $command -match '(?i)^\s*git\s+(?:status|add)\b') { $isFileMutation = $false }
+            if ($isTrustedLoopStart) { return }
+            if ($isFileMutation -and -not (Get-HookInputValue $pathAnalysis 'ResolvedMutation')) {
+                $mutationPaths = @()
+            } else {
+                $mutationPaths = @($pathAnalysis.Candidates)
+            }
         }
         if (-not $isFileMutation) { return }
+        if (-not (Test-HookScopeRequiresLoop $mutationPaths)) { return }
         if (-not $loopState) {
             if (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf) {
                 Stop-HookToolCall 'Frontier quality-loop state is missing or invalid. Run frontier loop start before editing files.'
@@ -7341,6 +7728,12 @@ function Invoke-AgentHookCmd {
     if ($phase -eq 'start') {
         $status = if ($agent -eq 'reviewer') { 'reviewing' } else { 'working' }
         $entry = [PSCustomObject]@{ status = $status; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }
+        try {
+            [void](Invoke-LoopGit @('rev-parse', '--git-dir'))
+            $entry | Add-Member -NotePropertyName coveredBaseline -NotePropertyValue @(Get-LoopCoveredSnapshot)
+        } catch {
+            Write-CliOutput "WARN: cannot establish mutation scope; handoff will require engineering evidence: $_"
+        }
         $data | Add-Member -NotePropertyName $agent -NotePropertyValue $entry -Force
         Write-JsonFile $Script:STATE_FILE $data
         $issueRef = if ($issue) { " (issue #$issue)" } else { '' }
@@ -7352,8 +7745,21 @@ function Invoke-AgentHookCmd {
         # Applies to: engineer, reviewer, auto-fix-reviewer, and all other
         # roles that run the iterative quality loop.
         # -----------------------------------------------------------------
-        $loopGatedRoles = @('engineer', 'reviewer', 'auto-fix-reviewer', 'architect', 'data-scientist', 'tester', 'devops-engineer', 'product-manager', 'ux-designer', 'consulting-research', 'fabric-engineer', 'power-platform-builder', 'powerbi-analyst', 'agile-coach')
-        if ($agent -in $loopGatedRoles) {
+        $reviewOnly = $false
+        if ($data.PSObject.Properties.Name -contains $agent) {
+            $reviewStart = $data.$agent
+            if ($reviewStart.status -in @('reviewing', 'working') -and $reviewStart.issue -eq $(if ($issue) { $issue } else { $null }) -and
+                $reviewStart.PSObject.Properties.Name -contains 'coveredBaseline') {
+                try {
+                    [void](Invoke-LoopGit @('rev-parse', '--git-dir'))
+                    $reviewOnly = (ConvertTo-LoopScopeJson $reviewStart.coveredBaseline) -ceq (ConvertTo-LoopScopeJson @(Get-LoopCoveredSnapshot))
+                } catch {
+                    Write-CliOutput "BLOCK: cannot verify review-only scope: $_"
+                    exit 1
+                }
+            }
+        }
+        if (-not $reviewOnly) {
             $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
             if ($loopState -and $loopState.active -eq $true) {
                 Write-CliOutput "$($C.r)  [FAIL] QUALITY LOOP STILL ACTIVE -- cannot finish yet.$($C.n)"
@@ -7377,6 +7783,18 @@ function Invoke-AgentHookCmd {
             }
             try { Assert-LoopReviewCurrent $loopState }
             catch { Write-CliOutput "$($C.r)  [FAIL] $($_.Exception.Message)$($C.n)"; exit 1 }
+            try {
+                $approvedEntry = Get-LoopLatestReviewEntry $loopState
+                if ($loopState.loopConsumed -or -not $approvedEntry -or
+                    $approvedEntry.PSObject.Properties.Name -notcontains 'coveredScope' -or
+                    (ConvertTo-LoopScopeJson $approvedEntry.coveredScope) -cne (ConvertTo-LoopScopeJson @(Get-LoopCoveredScope $loopState))) {
+                    throw 'Covered mutations require matching unconsumed covered approval.'
+                }
+            } catch {
+                Write-CliOutput "BLOCK: cannot finish covered mutations: $_"
+                exit 1
+            }
+            Invoke-LoopGateCheck -ReturnOnSuccess
         }
 
         $entry = [PSCustomObject]@{ status = 'done'; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }

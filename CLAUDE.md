@@ -8,8 +8,20 @@ and is imported below instead of being copied, so both stay in sync.
 @.github/instructions/project-conventions.instructions.md
 @.github/instructions/memory.instructions.md
 
-Honesty rule: report loop and gate state from `.frontier/runtime/frontier.ps1 loop status`
-and the staged artifacts; never claim a check or review happened without evidence.
+Apply AGENTS.md artifact/action applicability before risk classification: only
+create/update/delete/rename of PRD, TechSpec, code or unit tests requires a loop.
+Research/read/review-only/check/commit-only and other artifacts (plans, docs,
+config, instructions, declarations) are exempt; applicable nonloop checks and
+council policy remain. Core protected executable code stays covered. Roles and
+keywords do not exempt covered work; minima 1/2/3/5 apply after applicability.
+Review-only work inspects scoped work evidence without starting a nested loop or
+inheriting unrelated active state. Covered review fixes trigger the gate before
+editing; covered delegates reuse only the assigned parent loop and MUST NOT
+start/reset/iterate/complete it.
+
+Honesty rule: exempt work MUST NOT claim its own loop. Report applicable loop and
+gate state from `.frontier/runtime/frontier.ps1 loop status` and scoped artifacts;
+never claim a check or review happened without evidence.
 
 ---
 

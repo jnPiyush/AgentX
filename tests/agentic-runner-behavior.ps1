@@ -123,6 +123,9 @@ try {
     Assert-Equal $selectedClaude.id 'claude-code' 'Select-RunnerProviderFromRegistry selects claude-code when explicitly requested and ready'
 
     $providerRegistry['copilot'].ready = $true
+    Assert-Equal ((Get-RunnerProviderProbeCandidates -RequestedProviderId 'auto' -ReadinessMode 'advisory') -join ',') 'copilot,github-models' 'auto selection probes only its selection candidates'
+    Assert-Equal ((Get-RunnerProviderProbeCandidates -RequestedProviderId 'claude-code' -ReadinessMode 'advisory') -join ',') 'claude-code,github-models' 'advisory explicit selection probes the provider and its fallback'
+    Assert-Equal ((Get-RunnerProviderProbeCandidates -RequestedProviderId 'openai-api' -ReadinessMode 'strict') -join ',') 'openai-api' 'strict explicit selection probes only the requested provider'
 } finally {
     $env:FRONTIER_LLM_PROVIDER = $originalLlmProviderEnv
     $env:FRONTIER_LLM_READINESS_MODE = $originalReadinessModeEnv
@@ -662,6 +665,12 @@ Assert-True ($compacted.Count -lt $largeMessages.Count) 'Invoke-ContextCompactio
 Assert-True ($compacted[1].content -match '^\[Context Compaction(?: Summary)?\]') 'Invoke-ContextCompaction inserts a compaction summary message'
 Assert-True ($compactionUsage.totalTokens -le $compactionUsage.thresholdTokens) 'Invoke-ContextCompaction compacts to within the configured token threshold'
 
+$replayText = 'r' * 400
+$replayedAssistant = @{ role = 'assistant'; content = $replayText; response_items = @(@{ type = 'message'; content = $replayText }); response_items_transport = 'responses' }
+$plainAssistant = @{ role = 'assistant'; content = $replayText }
+Assert-True ((Get-ApproxMessageTokenCount $replayedAssistant) -lt (2 * (Get-ApproxMessageTokenCount $plainAssistant))) 'replayed assistant content is not counted twice'
+Assert-True ((Get-ApproxMessageTokenCount $replayedAssistant) -ge (Get-ApproxMessageTokenCount $plainAssistant)) 'replay estimate still covers the larger serialized form'
+
 $compactionSummaryContent = @"
 [Context Compaction Summary]
 Decisions
@@ -1020,10 +1029,11 @@ try {
     $script:selfReviewCalls = 0
     $script:selfReviewApproved = $true
     $script:lastSavedSessionMeta = $null
+    $script:runnerMutationPending = $true
 
     function Get-GitHubToken { return 'fake-token' }
     function Initialize-ApiMode { param([string]$ghToken) $Script:ApiMode = 'models' }
-    function Read-AgentDef { param([string]$agentName, [string]$root) return @{ name = $agentName; description = ''; model = ''; modelFallback = ''; body = ''; canModify = @(); cannotModify = @() } }
+    function Read-AgentDef { param([string]$agentName, [string]$root) return @{ name = $agentName; description = ''; model = ''; modelFallback = ''; body = ''; tools = @('file_write'); canModify = @('src/**'); cannotModify = @() } }
     function Get-ModelCandidateList { param([string]$preferredModel, [string]$modelFallback) return @('gpt-4o') }
     function Build-SystemPrompt { param($agentDef, [string]$agentName) return 'system prompt' }
     function Get-ToolSchemaList { return @() }
@@ -1040,6 +1050,12 @@ try {
         while ($latencyWatch.ElapsedMilliseconds -lt 2) { }
         $script:runnerLlmCalls++
         $script:runnerMessages.Add(($messages[-1]).content) | Out-Null
+        if ($script:runnerMutationPending) {
+            $script:runnerMutationPending = $false
+            return [PSCustomObject]@{ choices = @([PSCustomObject]@{ message = [PSCustomObject]@{
+                content = ''; tool_calls = @([PSCustomObject]@{ id = 'covered-write'; function = [PSCustomObject]@{ name = 'file_write'; arguments = '{"filePath":"src/fixture.ts","content":"export const fixture = 1;"}' } })
+            } }) }
+        }
         return [PSCustomObject]@{
             choices = @(
                 [PSCustomObject]@{
@@ -1092,12 +1108,13 @@ try {
 
     Assert-Equal $result.exitReason 'text_response' 'Invoke-AgenticLoop exits normally after one approved internal self-review'
     Assert-Equal $script:selfReviewCalls 1 'Invoke-AgenticLoop performs one approved internal self-review by default'
-    Assert-Equal $result.iterations 1 'Invoke-AgenticLoop does not add duplicate main-model passes after approval'
+    Assert-Equal $result.iterations 2 'Invoke-AgenticLoop uses a covered tool turn and one final answer'
     Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 1/1 required review iterations') 'Invoke-AgenticLoop appends the single internal-review summary'
     Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Iteration 1: APPROVED') 'Invoke-AgenticLoop records the approved internal review'
     Assert-True ([int]$result.stageTimings.modelMs -gt 0) 'Invoke-AgenticLoop returns measured model latency'
     Assert-True ([int]$result.stageTimings.selfReviewMs -gt 0) 'Invoke-AgenticLoop returns measured self-review latency'
     Assert-True ([int]$result.stageTimings.compactionMs -ge 0) 'Invoke-AgenticLoop returns cumulative compaction latency'
+    Assert-True ([double]$result.stageTimings.providerReadinessMs -ge 0 -and [double]$result.stageTimings.toolMs -gt 0 -and [double]$result.stageTimings.retrievalMs -ge 0) 'Invoke-AgenticLoop returns readiness, tool and retrieval phase timings'
     Assert-Equal $syncedLoopState.status 'active' 'Invoke-AgenticLoop leaves the loop active for independent review after a successful run'
     Assert-True ([bool]$syncedLoopState.active) 'Invoke-AgenticLoop preserves the active loop flag until independent review'
     Assert-Equal ([int]$syncedLoopState.iteration) 1 'Invoke-AgenticLoop preserves the external loop minimum for independent review'
@@ -1133,12 +1150,13 @@ try {
 
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
+    $script:runnerMutationPending = $true
     $bugResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Fix bug in login redirect handling' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $bugLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $bugResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully for standard bug work'
     Assert-Equal $script:selfReviewCalls 1 'Invoke-AgenticLoop does not copy the external loop minimum into internal self-review'
-    Assert-Equal $bugResult.iterations 1 'Invoke-AgenticLoop finishes standard work after one approved internal review'
+    Assert-Equal $bugResult.iterations 2 'Invoke-AgenticLoop finishes covered work after a tool turn and one approved internal review'
     Assert-True ($bugResult.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 1/1 required review iterations') 'Invoke-AgenticLoop records the single internal review for bug work'
     Assert-Equal ([int]$bugLoopState.iteration) 1 'Invoke-AgenticLoop leaves remaining external iterations to the quality loop'
 
@@ -1172,16 +1190,17 @@ try {
     Assert-Equal $unsyncedLoopState.status 'active' 'Invoke-AgenticLoop leaves the parent loop active when SkipLoopStateSync is used'
     Assert-True $unsyncedLoopState.active 'Invoke-AgenticLoop preserves the active loop flag when SkipLoopStateSync is used'
     Assert-Equal ([int]$unsyncedLoopState.iteration) 1 'Invoke-AgenticLoop does not mutate loop iterations when SkipLoopStateSync is used'
+    Assert-Equal $script:selfReviewCalls 0 'Read-only clarification turn does not start self-review'
 
     '{"harness":{"selfReview":{"minIterations":2,"maxIterations":4,"stallThreshold":2,"enableCategoryVerdicts":false,"enableCalibrationExamples":false,"enableStallDetection":false}}}' | Set-Content -Path (Join-Path $runnerTestRoot '.frontier\config.json') -Encoding UTF8
-    Remove-Item $loopStatePath -ErrorAction SilentlyContinue
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
+    $script:runnerMutationPending = $true
     $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
 
     Assert-Equal $configuredResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully with self-review config overrides'
     Assert-Equal $script:selfReviewCalls 2 'Invoke-AgenticLoop honors an explicit higher internal-review minimum'
-    Assert-Equal $configuredResult.iterations 2 'Invoke-AgenticLoop stops after the configured internal-review minimum'
+    Assert-Equal $configuredResult.iterations 3 'Invoke-AgenticLoop stops after the covered tool turn and configured internal-review minimum'
     Remove-Item -LiteralPath (Join-Path $runnerTestRoot '.frontier\config.json') -Force
 
     @{
@@ -1199,6 +1218,7 @@ try {
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
     $script:selfReviewApproved = $false
+    $script:runnerMutationPending = $true
     $failedReviewResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement a still-broken change' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot -InteractionMode autonomous
     $failedReviewState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
@@ -1268,6 +1288,14 @@ try {
     Assert-True $writeBlocked.error 'file_write rejects a traversal path'
     Assert-True (-not (Test-Path (Join-Path (Split-Path $sandboxRoot -Parent) 'escape.txt'))) 'blocked file_write creates nothing outside the workspace'
 
+    $nestedWorkspace = Join-Path $sandboxRoot 'scripts/consumer'
+    [IO.Directory]::CreateDirectory($nestedWorkspace) | Out-Null
+    $caseWriter = @{ body = ''; tools = @('file_write'); canModify = @('tests/**'); cannotModify = @() }
+    $exemptCaseWrite = Invoke-Tool 'file_write' @{ filePath = 'tests/integration/test_api.py'; content = 'assert True' } $nestedWorkspace 'engineer' $caseWriter
+    Assert-True (-not $exemptCaseWrite.error) 'Dedicated integration case remains exempt beneath a scripts-named workspace parent'
+    $sharedHelperWrite = Invoke-Tool 'file_write' @{ filePath = 'tests/integration/helper.py'; content = 'def helper(): pass' } $nestedWorkspace 'engineer' $caseWriter
+    Assert-True ($sharedHelperWrite.error -and $sharedHelperWrite.text -like '*LOOP BLOCKED*') 'Shared integration helper still requires a loop beneath a scripts-named workspace parent'
+
     $editBlocked = Invoke-Tool 'file_edit' @{ filePath = '.env'; oldString = 'a'; newString = 'b' } $sandboxRoot
     Assert-True $editBlocked.error 'file_edit rejects a sensitive file'
 
@@ -1328,6 +1356,19 @@ try {
     Assert-True (-not $tildeRead.error) "file_read can still read a real tilde-named file (text: $($tildeRead.text))"
 
     $hardlinkAlias = Join-Path $sandboxRoot 'loop-state-alias.json'
+    foreach ($excluded in @('node_modules/pkg', '.git/objects', 'out', 'dist')) {
+        New-Item -ItemType Directory -Path (Join-Path $sandboxRoot $excluded) -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $sandboxRoot "$excluded/hidden.txt") -Value 'needle-excluded' -Encoding utf8
+    }
+    New-Item -ItemType Directory -Path (Join-Path $sandboxRoot 'src/nested') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $sandboxRoot 'src/nested/a.txt') -Value @('needle-one', 'needle-two', 'needle-three') -Encoding utf8
+    $prunedSearch = Invoke-Tool 'grep_search' @{ pattern = 'needle'; includePattern = '*.txt'; maxResults = 2 } $sandboxRoot
+    Assert-True ($prunedSearch.text -notmatch 'excluded') 'grep_search prunes excluded directories before descent'
+    Assert-Equal @($prunedSearch.text -split "`n").Count 2 'grep_search stops at the result limit'
+    $invalidPattern = Invoke-Tool 'grep_search' @{ pattern = '('; includePattern = '*.txt' } $sandboxRoot
+    Assert-True ($invalidPattern.error -and $invalidPattern.text -match 'Invalid search pattern') 'grep_search reports an invalid regex instead of no matches'
+    $mixedCase = Invoke-Tool 'grep_search' @{ pattern = 'NEEDLE-ONE'; includePattern = '*.txt' } $sandboxRoot
+    Assert-True ($mixedCase.text -match 'a\.txt:1:') 'grep_search keeps case-insensitive matching'
     $hardlinkCreated = $false
     try {
         Set-Content -LiteralPath (Join-Path $sandboxRoot '.frontier\state\loop-state.json') -Value '{"protected":true}' -Encoding utf8
@@ -1750,7 +1791,7 @@ try {
         $adapterResult = Invoke-AgenticLoop -Agent $roleName -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 3 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $adapterResult.exitReason 'text_response' "Anthropic $roleName completes the real mocked loop"
         Assert-Equal $adapterResult.toolCalls 3 "Anthropic $roleName processes normalized tool calls"
-        Assert-Equal $script:repairRequests.Count 4 "Anthropic $roleName executes main and read-only self-review tool turns"
+        Assert-Equal $script:repairRequests.Count 2 "Anthropic $roleName skips self-review for exempt text-file mutations"
         Assert-True ($adapterResult.finalText -match 'Offline adapter answer') "Anthropic $roleName retains final content"
         Assert-Equal (Test-Path -LiteralPath $adapterPath) ($roleName -eq 'engineer') "Anthropic $roleName enforces write permissions in loop dispatch"
         Assert-Equal (Get-Content -LiteralPath $fixturePath -Raw) $(if ($roleName -eq 'engineer') { 'edited fixture' } else { 'original fixture' }) "Anthropic $roleName enforces edit permissions in loop dispatch"
@@ -1784,7 +1825,7 @@ try {
         $script:repairClaudeRaw = $rawResponse
         $claudeLoop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 2 -SkipLoopStateSync -InteractionMode autonomous
         Assert-Equal $claudeLoop.exitReason 'text_response' "Claude raw=$rawResponse completes the real mocked loop"
-        Assert-Equal $script:repairClaudeCalls 2 "Claude raw=$rawResponse reaches internal self-review"
+        Assert-Equal $script:repairClaudeCalls 1 "Claude raw=$rawResponse skips internal self-review for a read-only turn"
         Assert-True ($claudeLoop.finalText -match 'Offline adapter answer') "Claude raw=$rawResponse preserves final content"
     }
 } finally {
@@ -1919,10 +1960,10 @@ try {
     $ledgerRun = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 3 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $ledgerRun.exitReason 'text_response' 'Metered run completes normally'
     Assert-True ($null -eq $Script:CurrentUsageLedger) 'A top-level run replaces a stale ledger and closes its own'
-    Assert-Equal $ledgerRun.usage.calls 2 'Metered run records the main and self-review calls'
+    Assert-Equal $ledgerRun.usage.calls 1 'Metered read-only run records only the main call'
     Assert-True $ledgerRun.usage.complete 'Metered run usage is complete when the provider reports it'
-    Assert-Equal $ledgerRun.usage.totalTokens 240 'Metered run totals are measured, not estimated'
-    Assert-Equal $ledgerRun.usage.byPurpose.'self-review'.calls 1 'Self-review spend is attributed separately'
+    Assert-Equal $ledgerRun.usage.totalTokens 120 'Metered run totals are measured, not estimated'
+    Assert-True ($null -eq (Get-MessageFieldValue $ledgerRun.usage.byPurpose 'self-review')) 'Read-only turns incur no self-review spend'
     $usageFile = Join-Path $ledgerRoot ".frontier/sessions/$($ledgerRun.sessionId).usage.json"
     Assert-True (Test-Path -LiteralPath $usageFile) 'Metered run writes a budget-compatible usage file'
     $journalLines = @(Get-Content -LiteralPath ([IO.Path]::ChangeExtension($usageFile, '.jsonl')) -Encoding utf8 | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
@@ -1945,12 +1986,12 @@ try {
     $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 200 } }
     $script:ledgerReviewUsesTool = $true
     $reviewStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
-    Assert-Equal $reviewStop.exitReason 'token_budget' 'Self-review stops before its next call once the budget is spent'
-    Assert-Equal $reviewStop.usage.byPurpose.'self-review'.calls 1 'The reviewer makes no call after the budget is spent'
-    Assert-Equal $reviewStop.usage.calls 2 'A budget stop inside self-review makes no further calls'
+    Assert-Equal $reviewStop.exitReason 'text_response' 'Read-only turns ignore configured reviewer tools'
+    Assert-True ($null -eq (Get-MessageFieldValue $reviewStop.usage.byPurpose 'self-review')) 'Read-only turns make no reviewer calls'
+    Assert-Equal $reviewStop.usage.calls 1 'Read-only turns spend only the main call budget'
     $reviewStopLast = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 1 -SkipLoopStateSync -InteractionMode autonomous
-    Assert-Equal $reviewStopLast.exitReason 'token_budget' 'A reviewer budget stop on the last iteration reports token_budget'
-    Assert-True ($reviewStopLast.finalText -match 'Ledger fixture answer' -and $reviewStopLast.finalText -match 'during self-review') 'The unreviewed response is returned when self-review runs out of budget'
+    Assert-Equal $reviewStopLast.exitReason 'text_response' 'Read-only last iteration does not run a reviewer'
+    Assert-True ($reviewStopLast.finalText -match 'Ledger fixture answer' -and $reviewStopLast.finalText -notmatch 'during self-review') 'Read-only answer is returned without a synthetic reviewer budget stop'
     $script:ledgerReviewUsesTool = $false
 
     $savedNonInteractive = $env:FRONTIER_NONINTERACTIVE_HUMAN

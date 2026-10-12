@@ -32,8 +32,8 @@ constraints:
   - "MUST track cost and latency alongside quality metrics"
   - "MUST NOT fabricate monitoring data or drift signals"
   - "MUST NOT disable alerting without documenting the reason"
-  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.frontier/runtime/frontier.ps1 loop complete -s <summary>' succeeds"
-  - "MUST verify agentic loop completion before declaring implementation complete"
+  - "MUST satisfy all done criteria; only covered mutations require the risk-based loop minimum and successful owning loop completion under AGENT-PROTOCOL.md"
+  - "MUST verify owning loop completion for covered implementation only; exempt work reports applicable nonloop checks"
 boundaries:
   can_modify:
     - ".copilot-tracking/ops-monitor/** (monitoring configuration and reports)"
@@ -201,9 +201,9 @@ Baseline lifecycle:
 | Single-signal alerting | One metric is noisy; correlate multiple signals |
 | No fallback activation monitoring | Provider outage goes undetected |
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

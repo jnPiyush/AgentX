@@ -3,6 +3,8 @@
 # Loop scope behavior: per-suite passing counts, affected-test selection and compact loop output.
 # Usage: pwsh tests/loop-scope-behavior.ps1
 
+param([switch]$StagedOnly)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -99,7 +101,155 @@ function Invoke-ApprovedReview([string]$ReportPath, [string]$Summary) {
     return Invoke-Loop @('iterate', '-s', $Summary, '-e', $ReportPath, '--verdict', 'approved', '--reviewer', 'loop-scope-reviewer', '--high', '0', '--medium', '0')
 }
 
+function Invoke-FixtureGit([string[]]$Arguments) {
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('git')
+    $startInfo.WorkingDirectory = $workspace
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    foreach ($argument in $Arguments) { $startInfo.ArgumentList.Add($argument) }
+    $process = [Diagnostics.Process]::Start($startInfo)
+    try {
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(10000)) { $process.Kill($true); throw 'Fixture Git timed out.' }
+        if ($process.ExitCode -ne 0) { throw $stderr.GetAwaiter().GetResult() }
+        return $stdout.GetAwaiter().GetResult()
+    } finally { $process.Dispose() }
+}
+
+function git { Invoke-FixtureGit @($args) }
+
+function Write-StagedApproval {
+    $start = Invoke-Loop @('start', '-p', 'Staged scope fixture', '--include-existing-changes')
+    if ($start.ExitCode -ne 0) { throw $start.Output }
+    foreach ($iterationNumber in 1..4) {
+        $progress = Invoke-Loop @('iterate', '-s', "Scope fixture progress $iterationNumber", '-e', (New-Evidence "staged-$iterationNumber.txt"))
+        if ($progress.ExitCode -ne 0) { throw $progress.Output }
+    }
+    $review = Invoke-ApprovedReview (Write-Review 'staged-review.json' 4) 'Scoped fixture review'
+    if ($review.ExitCode -ne 0) { throw $review.Output }
+    $complete = Invoke-Loop @('complete', '-s', 'Scoped fixture complete', '-e', (New-Evidence 'staged-final.txt'))
+    if ($complete.ExitCode -ne 0) { throw $complete.Output }
+    $state = Get-Content -LiteralPath (Join-Path $workspace '.frontier/state/loop-state.json') -Raw | ConvertFrom-Json -AsHashtable
+    $state.history = @($state.history | Where-Object { $_.Contains('review') } | Select-Object -Last 1)
+    $state | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $workspace '.frontier/state/loop-state.json')
+    return $state
+}
+
+function Test-StagedScope {
+    New-Item -ItemType Directory -Path (Join-Path $workspace '.frontier/state') -Force | Out-Null
+    [void](Invoke-FixtureGit @('init', '--quiet'))
+    [void](Invoke-FixtureGit @('config', 'user.email', 'scope@example.invalid'))
+    [void](Invoke-FixtureGit @('config', 'user.name', 'Scope Fixture'))
+    [void](Invoke-FixtureGit @('config', 'core.autocrlf', 'false'))
+    Write-WorkspaceFile 'tool.ps1' 'Write-Output 1'
+    [void](Invoke-FixtureGit @('add', 'tool.ps1'))
+    [void](Invoke-FixtureGit @('commit', '--quiet', '-m', 'test: staged scope baseline'))
+    Write-WorkspaceFile 'tool.ps1' 'Write-Output 2'
+    [void](Invoke-FixtureGit @('add', 'tool.ps1'))
+    $missing = Invoke-Loop @('gate', '--staged')
+    Assert-True ($missing.ExitCode -ne 0 -and $missing.Output -match 'no quality loop') 'covered staged code blocks without engineering evidence'
+    $state = Write-StagedApproval
+    $exact = Invoke-Loop @('gate', '--staged')
+    Assert-True ($exact.ExitCode -eq 0) 'approval accepts exact staged covered hashes and modes'
+    $legacy = Invoke-Loop @('gate')
+    Assert-True ($legacy.ExitCode -eq 0) 'legacy explicit gate without --staged retains structured-review behavior'
+    $review = $state.history[0]
+    $scope = $review.coveredScope
+    $review.Remove('coveredScope')
+    $state | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $workspace '.frontier/state/loop-state.json')
+    $old = Invoke-Loop @('gate', '--staged')
+    Assert-True ($old.ExitCode -ne 0 -and $old.Output -match 'legacy approvals require scoped review') 'old approval missing coveredScope cannot approve staged code'
+    $review.coveredScope = $scope
+    $state | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $workspace '.frontier/state/loop-state.json')
+    Write-WorkspaceFile 'tool.ps1' 'Write-Output 3'
+    [void](Invoke-FixtureGit @('add', 'tool.ps1'))
+    $changed = Invoke-Loop @('gate', '--staged')
+    Assert-True ($changed.ExitCode -ne 0 -and $changed.Output -match 'changed after approval|does not match approved evidence') 'changed staged bytes invalidate approval'
+    [void](Write-StagedApproval)
+    [void](Invoke-FixtureGit @('show', 'HEAD:tool.ps1'))
+    Write-WorkspaceFile 'tool.ps1' 'Write-Output 2'
+    [void](Invoke-FixtureGit @('add', 'tool.ps1'))
+    Write-WorkspaceFile 'tool.ps1' 'Write-Output 3'
+    $partial = Invoke-Loop @('gate', '--staged')
+    Assert-True ($partial.ExitCode -ne 0) 'partial staging cannot reuse approval of different worktree bytes'
+    [void](Invoke-FixtureGit @('add', 'tool.ps1'))
+    [void](Write-StagedApproval)
+    [void](Invoke-FixtureGit @('update-index', '--chmod=+x', 'tool.ps1'))
+    $mode = Invoke-Loop @('gate', '--staged')
+    Assert-True ($mode.ExitCode -ne 0) 'index mode change invalidates approval'
+    [void](Write-StagedApproval)
+    $approvedMode = Invoke-Loop @('gate', '--staged')
+    Assert-True ($approvedMode.ExitCode -eq 0) 'exact approved executable mode is accepted'
+    [void](Invoke-FixtureGit @('mv', 'tool.ps1', 'renamed.ps1'))
+    $renameMismatch = Invoke-Loop @('gate', '--staged')
+    Assert-True ($renameMismatch.ExitCode -ne 0) 'renamed path invalidates old approval'
+    $renameState = Write-StagedApproval
+    $renamePass = Invoke-Loop @('gate', '--staged')
+    Assert-True ($renamePass.ExitCode -eq 0 -and $renameState.history[0].coveredScope.Count -eq 2) 'rename approval binds both deleted and added paths'
+    [void](Invoke-FixtureGit @('rm', '--force', 'renamed.ps1'))
+    $deleteState = Write-StagedApproval
+    $deletePass = Invoke-Loop @('gate', '--staged')
+    Assert-True ($deletePass.ExitCode -eq 0 -and $deleteState.history[0].coveredScope[0].mode -eq '000000') 'delete approval binds the deleted path and zero mode'
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseFile($cliPath, [ref]$tokens, [ref]$parseErrors)
+    foreach ($name in @('Test-LoopCoveredPath', 'Invoke-LoopGit', 'Get-LoopCoveredSnapshot', 'Get-LoopCoveredScope')) {
+        $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $false)
+        Invoke-Expression $definition.Extent.Text
+    }
+    $Script:ROOT = $workspace
+    [void](Invoke-FixtureGit @('read-tree', 'HEAD'))
+    Write-WorkspaceFile 'tool.ps1' 'Write-Output 1'
+    Write-WorkspaceFile 'dirty.ps1' 'Write-Output "unknown existing code"'
+    $baselineState = [PSCustomObject]@{ coveredBaseline = @(Get-LoopCoveredSnapshot) }
+    Write-WorkspaceFile 'tests/unit.test.ts' 'export const unit = 1;'
+    $newScope = @(Get-LoopCoveredScope $baselineState)
+    Assert-True ($newScope.Count -eq 1 -and $newScope[0].path -eq 'tests/unit.test.ts') 'pre-existing dirty covered code is excluded from the new task scope'
+    $unknownBlocked = $false
+    try { [void](Get-LoopCoveredScope ([PSCustomObject]@{})) }
+    catch { $unknownBlocked = $_.Exception.Message -match 'unknown dirty changes' }
+    Assert-True $unknownBlocked 'missing covered baseline cannot silently include unknown dirty code'
+    $linkPath = Join-Path $workspace 'link.ps1'
+    $linkCreated = $false
+    try {
+        New-Item -ItemType SymbolicLink -Path $linkPath -Target 'tool.ps1' -ErrorAction Stop | Out-Null
+        $linkCreated = $true
+    } catch { Write-Host '[SKIP] Symlink snapshot fixture unavailable on this filesystem.' }
+    if ($linkCreated) {
+        [void](Invoke-FixtureGit @('config', 'core.symlinks', 'true'))
+        [void](Invoke-FixtureGit @('add', 'link.ps1'))
+        $linkIndex = (Invoke-FixtureGit @('ls-files', '--stage', '--', 'link.ps1')).Trim() -split ' '
+        $linkSnapshot = @(Get-LoopCoveredSnapshot | Where-Object { $_.path -eq 'link.ps1' })
+        Assert-True ($linkSnapshot.Count -eq 1 -and $linkSnapshot[0].mode -eq '120000' -and
+            $linkSnapshot[0].blob -eq $linkIndex[1]) 'worktree symlink snapshot matches actual Git link-target blob and mode'
+    }
+    if (-not $IsWindows) {
+        [void](Invoke-FixtureGit @('config', 'core.filemode', 'true'))
+        $executablePath = Join-Path $workspace 'executable.ps1'
+        Write-WorkspaceFile 'executable.ps1' 'Write-Output 1'
+        [IO.File]::SetUnixFileMode($executablePath, [IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite -bor [IO.UnixFileMode]::UserExecute)
+        $executableSnapshot = @(Get-LoopCoveredSnapshot | Where-Object { $_.path -eq 'executable.ps1' })
+        Assert-True ($executableSnapshot.Count -eq 1 -and $executableSnapshot[0].mode -eq '100755') 'untracked executable worktree snapshot preserves executable mode'
+    } else { Write-Host '[SKIP] Unix executable-bit fixture requires a Unix filesystem.' }
+    $acceptance = Join-Path $workspace '.frontier/state/loop-commit-acceptance.json'
+    Set-Content -LiteralPath $acceptance -Value '{"tree":"old","stateSha256":"old"}'
+    [IO.File]::WriteAllText((Join-Path $workspace '.git/index'), 'invalid index')
+    $broken = Invoke-Loop @('gate', '--accept-staged')
+    Assert-True ($broken.ExitCode -ne 0 -and $broken.Output -match 'BLOCK: cannot inspect staged scope') 'Git staged inspection failures are recorded and fail closed'
+    Assert-True (-not (Test-Path -LiteralPath $acceptance)) 'failed staged inspection clears prior acceptance'
+}
+
 Write-Host 'Frontier Loop Scope Tests'
+if ($StagedOnly) {
+    try { Test-StagedScope }
+    catch { Assert-True $false "staged fixture raised: $($_.Exception.Message) at $($_.ScriptStackTrace)" }
+    finally { Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue }
+    Write-Host "Results: $script:passed passed, $script:failed failed"
+    if ($script:failed -gt 0) { exit 1 }
+    exit 0
+}
 try {
     New-Item -ItemType Directory -Path (Join-Path $workspace '.frontier/state') -Force | Out-Null
     Write-WorkspaceFile '.gitignore' ".frontier/`n"
@@ -122,6 +272,42 @@ try {
 
     $start = Invoke-Loop @('start', '-p', 'Loop scope fixture', '-r', 'engineer')
     Assert-True ($start.ExitCode -eq 0) 'loop start succeeds in a git fixture'
+
+    $boundAdoption = Invoke-Loop @('adopt-scope', '--include-existing-changes', '-e', (New-Evidence 'bound-adoption.txt'))
+    Assert-True ($boundAdoption.ExitCode -ne 0) 'scope adoption cannot replace an existing covered baseline'
+    $legacyScope = Read-State 'loop-state.json'
+    $legacyScope.PSObject.Properties.Remove('coveredBaseline')
+    $legacyScope | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $workspace '.frontier/state/loop-state.json') -Encoding utf8
+    $legacyHistory = ConvertTo-Json -InputObject @($legacyScope.history) -Depth 20 -Compress
+    $legacyBaselineHash = (Get-FileHash -LiteralPath (Join-Path $workspace '.frontier/state/code-quality-baseline.json')).Hash
+    $unauthorizedAdoption = Invoke-Loop @('adopt-scope', '-e', (New-Evidence 'unauthorized-adoption.txt'))
+    Assert-True ($unauthorizedAdoption.ExitCode -ne 0) 'scope adoption requires explicit inclusion of existing task changes'
+    $missingAdoptionEvidence = Invoke-Loop @('adopt-scope', '--include-existing-changes')
+    Assert-True ($missingAdoptionEvidence.ExitCode -ne 0) 'scope adoption requires fresh authorization evidence'
+    $staleEvidence = New-Evidence 'stale-adoption.txt'
+    (Get-Item -LiteralPath $staleEvidence).LastWriteTimeUtc = [datetime]::UtcNow.AddDays(-30)
+    $staleAdoption = Invoke-Loop @('adopt-scope', '--include-existing-changes', '-e', $staleEvidence)
+    Assert-True ($staleAdoption.ExitCode -ne 0) 'scope adoption rejects evidence older than the loop'
+    $reviewedLegacy = Read-State 'loop-state.json'
+    $reviewedLegacy.history = @($reviewedLegacy.history) + @([PSCustomObject]@{ iteration = 1; summary = 'reviewed'; review = [PSCustomObject]@{ verdict = 'approved' } })
+    $reviewedLegacy | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $workspace '.frontier/state/loop-state.json') -Encoding utf8
+    $reviewedAdoption = Invoke-Loop @('adopt-scope', '--include-existing-changes', '-e', (New-Evidence 'reviewed-adoption.txt'))
+    Assert-True ($reviewedAdoption.ExitCode -ne 0) 'scope adoption is refused once a reviewer verdict exists'
+    $legacyScope | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $workspace '.frontier/state/loop-state.json') -Encoding utf8
+    $engineeringBaselineBefore = (Read-State 'loop-state.json').engineeringBaselineSha256
+    Write-WorkspaceFile 'src/legacy-dirty.ts' "export const legacy = 1;`n"
+    $adoption = Invoke-Loop @('adopt-scope', '--include-existing-changes', '-e', (New-Evidence 'scope-adoption.txt'))
+    $adoptedState = Read-State 'loop-state.json'
+    Remove-Item -LiteralPath (Join-Path $workspace 'src/legacy-dirty.ts')
+    Assert-True ($adoption.ExitCode -eq 0 -and $null -ne $adoptedState.PSObject.Properties['coveredBaseline']) 'legacy active loop can explicitly adopt covered scope'
+    Assert-True (@($adoptedState.scopeAdoption.snapshot | Where-Object { $_.path -eq 'src/legacy-dirty.ts' }).Count -eq 1) 'scope adoption records existing covered changes for review'
+    Assert-True ($adoptedState.engineeringBaselineSha256 -ceq $engineeringBaselineBefore) 'scope adoption preserves the engineering baseline digest'
+    Assert-True ($adoptedState.iteration -eq $legacyScope.iteration -and
+        (ConvertTo-Json -InputObject @($adoptedState.history) -Depth 20 -Compress) -ceq $legacyHistory -and
+        (Get-FileHash -LiteralPath (Join-Path $workspace '.frontier/state/code-quality-baseline.json')).Hash -ceq $legacyBaselineHash) 'scope adoption preserves iteration history and the original quality baseline'
+    Assert-True ((Get-FileHash -LiteralPath $adoptedState.scopeAdoption.evidencePath).Hash -ceq $adoptedState.scopeAdoption.evidenceSha256) 'scope adoption archives digest-bound evidence'
+    $duplicateAdoption = Invoke-Loop @('adopt-scope', '--include-existing-changes', '-e', (New-Evidence 'duplicate-adoption.txt'))
+    Assert-True ($duplicateAdoption.ExitCode -ne 0) 'scope adoption cannot be repeated to change a bound loop'
 
     Add-Content -LiteralPath (Join-Path $workspace 'scripts/tool.ps1') -Value 'function Invoke-Other { 2 }'
     Remove-Item -LiteralPath (Join-Path $workspace 'tests/stale-behavior.ps1')
@@ -274,9 +460,15 @@ function Get-Date {
         ($migratedHistory.result -join ',') -eq 'failed,declined' -and
         $migratedHistory[0].evidenceSha256 -eq $legacyState.verification.evidenceSha256 -and
         $migratedState.verification.result -eq 'failed') 'loop verify preserves a legacy singleton result when starting verification history'
+} catch {
+    Assert-True $false "scope fixture raised: $($_.Exception.Message) at $($_.ScriptStackTrace)"
 } finally {
     Remove-Item -LiteralPath $workspace, $installCopy -Recurse -Force -ErrorAction SilentlyContinue
 }
+
+try { Test-StagedScope }
+catch { Assert-True $false "staged fixture raised: $($_.Exception.Message) at $($_.ScriptStackTrace)" }
+finally { Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue }
 
 Write-Host "Results: $script:passed passed, $script:failed failed"
 if ($script:failed -gt 0) { exit 1 }

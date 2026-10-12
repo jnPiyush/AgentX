@@ -64,6 +64,8 @@ $Script:SESSION_DIR = $null
 $Script:ApiMode = $null  # 'copilot', 'models', or provider-specific transport ids
 $Script:ActiveProvider = $null
 $Script:ProviderRegistry = @{}
+$Script:SEARCH_EXCLUDED_DIRECTORIES = @('.git', 'node_modules', 'out', 'dist')
+$Script:SEARCH_MAX_FILE_BYTES = 2MB
 $Script:RunnerConfig = @{}
 $Script:CurrentUsageLedger = $null  # provider-reported usage for the active run; see Register-LlmUsage
 $Script:UsageCallSequence = 0
@@ -641,6 +643,12 @@ function Write-RunnerProviderDiagnostic($Provider, [array]$ModelCandidates = @()
     }
 }
 
+function Get-RunnerProviderProbeCandidates([string]$RequestedProviderId, [string]$ReadinessMode) {
+    if ($RequestedProviderId -eq 'auto') { return @('copilot', 'github-models') }
+    if ($ReadinessMode -eq 'advisory' -and $RequestedProviderId -ne 'github-models') { return @($RequestedProviderId, 'github-models') }
+    return @($RequestedProviderId)
+}
+
 function Initialize-ProviderRegistry([string]$GitHubToken) {
     $preference = Get-RunnerProviderPreference -Config $Script:RunnerConfig
     $requestedProviderId = $preference.providerId
@@ -654,12 +662,15 @@ function Initialize-ProviderRegistry([string]$GitHubToken) {
     $claudeCodeEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'claude-code'
     $anthropicApiEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'anthropic-api'
     $openAiApiEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'openai-api'
-    $copilotProbe = if ($copilotEnabled) { Test-CopilotProviderReady -GitHubToken $GitHubToken } else { [PSCustomObject]@{ ready = $false; reason = 'Copilot API is disabled in configuration.' } }
+    # Only the requested provider and the providers selection can fall back to are probed.
+    $candidates = Get-RunnerProviderProbeCandidates -RequestedProviderId $requestedProviderId -ReadinessMode $readinessMode
+    $notProbed = [PSCustomObject]@{ ready = $false; reason = 'Not probed: provider is not a selection candidate for this run.' }
+    $copilotProbe = if (-not $copilotEnabled) { [PSCustomObject]@{ ready = $false; reason = 'Copilot API is disabled in configuration.' } } elseif ('copilot' -in $candidates) { Test-CopilotProviderReady -GitHubToken $GitHubToken } else { $notProbed }
     $githubModelsReady = $githubModelsEnabled -and -not [string]::IsNullOrWhiteSpace($GitHubToken)
     $githubModelsReason = if ($githubModelsReady) { 'GitHub Models available via gh auth token.' } elseif ($githubModelsEnabled) { 'GitHub CLI not authenticated. Run: gh auth login' } else { 'GitHub Models is disabled in configuration.' }
-    $claudeCodeProbe = if ($claudeCodeEnabled) { Test-ClaudeCodeProviderReady } else { [PSCustomObject]@{ ready = $false; reason = 'Claude Code is disabled in configuration.' } }
-    $anthropicApiProbe = if ($anthropicApiEnabled) { Test-AnthropicApiProviderReady -Config $Script:RunnerConfig } else { [PSCustomObject]@{ ready = $false; reason = 'Anthropic API is disabled in configuration.' } }
-    $openAiApiProbe = if ($openAiApiEnabled) { Test-OpenAIApiProviderReady -Config $Script:RunnerConfig } else { [PSCustomObject]@{ ready = $false; reason = 'OpenAI API is disabled in configuration.' } }
+    $claudeCodeProbe = if (-not $claudeCodeEnabled) { [PSCustomObject]@{ ready = $false; reason = 'Claude Code is disabled in configuration.' } } elseif ('claude-code' -in $candidates) { Test-ClaudeCodeProviderReady } else { $notProbed }
+    $anthropicApiProbe = if (-not $anthropicApiEnabled) { [PSCustomObject]@{ ready = $false; reason = 'Anthropic API is disabled in configuration.' } } elseif ('anthropic-api' -in $candidates) { Test-AnthropicApiProviderReady -Config $Script:RunnerConfig } else { $notProbed }
+    $openAiApiProbe = if (-not $openAiApiEnabled) { [PSCustomObject]@{ ready = $false; reason = 'OpenAI API is disabled in configuration.' } } elseif ('openai-api' -in $candidates) { Test-OpenAIApiProviderReady -Config $Script:RunnerConfig } else { $notProbed }
 
     $Script:ProviderRegistry = @{
         'copilot' = Get-RunnerProviderRecord -ProviderId 'copilot' -Enabled $copilotEnabled -Ready ([bool]$copilotProbe.ready) -Reason ([string]$copilotProbe.reason) -AuthSource 'gh' -SelectionSource $preference.source -RequestedProviderId $requestedProviderId
@@ -1572,12 +1583,15 @@ function Get-ApproxMessageTokenCount([object]$Message) {
     if ($null -eq $Message) { return 0 }
 
     $tokens = 4
-    foreach ($field in @('role', 'content', 'name', 'tool_call_id')) {
+    foreach ($field in @('role', 'name', 'tool_call_id')) {
         $tokens += Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name $field)
     }
 
-    $tokens += Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name 'tool_calls')
-    $tokens += Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name 'response_items')
+    $plainTokens = (Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name 'content')) +
+        (Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name 'tool_calls'))
+    $replayTokens = Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name 'response_items')
+    # Matching transports send replay items instead of content/tool_calls; the larger bound covers either wire form.
+    $tokens += [Math]::Max($plainTokens, $replayTokens)
     return $tokens
 }
 
@@ -2117,6 +2131,31 @@ function Test-AgentTerminalCommandAllowed {
 
 . (Join-Path $PSScriptRoot 'workspace-sandbox.ps1')
 
+function Test-RunnerLoopCoveredPath([string]$Path, [string]$WorkspaceRoot = '') {
+    $normalized = $Path.Replace('\', '/').ToLowerInvariant()
+    if ($normalized -match '(^|/)\.\.?($|/)') { return $true }
+    if ($normalized -eq 'frontier-artifacts.json') { return $true }
+    $declarationFile = if ($WorkspaceRoot) { Join-Path $WorkspaceRoot 'frontier-artifacts.json' } else { '' }
+    if ($declarationFile -and (Test-Path -LiteralPath $declarationFile -PathType Leaf)) {
+        # Invalid declarations fail closed: the mutation is treated as covered.
+        try {
+            $declaration = Get-Content -LiteralPath $declarationFile -Raw | ConvertFrom-Json -ErrorAction Stop
+            if ($declaration.schemaVersion -ne 1 -or $declaration.coveredArtifacts -isnot [array]) { return $true }
+            foreach ($glob in @($declaration.coveredArtifacts)) {
+                $globText = ([string]$glob).Replace('\', '/').Trim() -replace '^\./', ''
+                if (-not $globText -or $globText.StartsWith('/') -or $globText -match '^[a-zA-Z]:' -or $globText -match '(^|/)\.\.(/|$)') { return $true }
+                $pattern = '^' + (([regex]::Escape($globText) -replace '\\\*\\\*/', '(?:.*/)?' -replace '\\\*\\\*', '.*' -replace '\\\*', '[^/]*' -replace '\\\?', '[^/]')) + '$'
+                if ($normalized -match $pattern.ToLowerInvariant()) { return $true }
+            }
+        } catch { return $true }
+    }
+    $exemptArtifact = $normalized -match '\.(md|mdc|txt|json|jsonc|json5|yaml|yml|toml|ini|cfg|config|xml|psd1|lock|env|properties|svg|png|jpg|jpeg|gif|webp|ico|pdf|docx|pptx|xlsx|csv|tsv|log|map|woff|woff2|ttf)$|(^|/)(\.gitignore|\.gitattributes|\.editorconfig|\.env)$'
+    if ($normalized -match '(^|/)(prd|specs|techspecs)/[^/]+$|(^|/)(prd|spec|techspec)[-_.][^/]+$') { return $true }
+    if ($normalized -match '(^|/)(\.frontier/runtime|\.github/hooks|scripts)/') { return -not $exemptArtifact }
+    if ($normalized -match '(^|/)(tests?|__tests__)/(?:[^/]+/)*(e2e|integration)/(.*(\.(test|spec)\.[^/]+|-behavior\.ps1|tests?\.(cs|java))|(?:.*/)?test_[^/]+\.py)$|(^|/)(tests?|__tests__)/.*\.(e2e|integration)\.(test|spec)\.[^/]+$') { return $false }
+    return -not $exemptArtifact
+}
+
 function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, [string]$agentName = '', [hashtable]$agentDef = $null,
     [array]$RepositoryReceipts = @(), [string]$ContextModel = '') {
     $isWrite = $name -in @('file_write', 'file_edit')
@@ -2136,6 +2175,13 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, 
                     return @{ error = $true; text = "[BOUNDARY BLOCKED] Agent '$agentName' is not allowed to modify '$($params.filePath)'." }
                 }
             }
+        }
+    }
+    if ($isWrite -and (Test-RunnerLoopCoveredPath ([IO.Path]::GetRelativePath($workspaceRoot, $writeGuard.actualPath)) $workspaceRoot)) {
+        $state = Read-LoopState -WorkspaceRoot $workspaceRoot
+        if (-not $state -or -not $state.active -or $state.status -cne 'active' -or
+            (Get-LoopStateSyncStaleReason -State $state)) {
+            return @{ error = $true; text = '[LOOP BLOCKED] Covered mutations require a healthy active engineering loop before editing.' }
         }
     }
     switch ($name) {
@@ -2227,22 +2273,36 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, 
                 # (and every file when the workspace itself sits under a short-name
                 # path such as C:\Users\PIYUSH~1).
                 $searchRootFull = [IO.Path]::GetFullPath($workspaceRoot).TrimEnd([IO.Path]::DirectorySeparatorChar)
-                $files = Get-ChildItem -LiteralPath $workspaceRoot -Recurse -File -Filter $include -ErrorAction SilentlyContinue |
-                    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|out[/\\]|dist[/\\]' } |
-                    Where-Object {
-                        (Test-SandboxContainment -Resolved $_.FullName -RootFull $searchRootFull).allowed -and
-                        (Test-SandboxLinkChain -Resolved $_.FullName -RootFull $searchRootFull).allowed
-                    }
-                foreach ($f in $files) {
-                    if ($results.Count -ge $maxResults) { break }
-                    $lineNum = 0
-                    foreach ($line in (Get-Content -LiteralPath $f.FullName -Encoding utf8 -ErrorAction SilentlyContinue)) {
-                        $lineNum++
-                        if ($line -match $params.pattern) {
-                            $rel = [System.IO.Path]::GetRelativePath($workspaceRoot, $f.FullName)
-                            $results += "${rel}:${lineNum}: $($line.Trim())"
-                            if ($results.Count -ge $maxResults) { break }
-                        }
+                try { $searchRegex = [regex]::new([string]$params.pattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase, [TimeSpan]::FromSeconds(2)) }
+                catch { return @{ error = $true; text = "Invalid search pattern: $($_.Exception.Message)" } }
+                # Excluded and linked directories are pruned before descent; traversal stops at the result limit.
+                $pendingDirs = [Collections.Generic.Stack[IO.DirectoryInfo]]::new()
+                $pendingDirs.Push([IO.DirectoryInfo]::new($searchRootFull))
+                while ($pendingDirs.Count -gt 0 -and $results.Count -lt $maxResults) {
+                    $dir = $pendingDirs.Pop()
+                    try {
+                        $dirFiles = @($dir.EnumerateFiles($include) | Sort-Object Name)
+                        $subDirs = @($dir.EnumerateDirectories() | Where-Object {
+                            $_.Name -notin $Script:SEARCH_EXCLUDED_DIRECTORIES -and -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)
+                        } | Sort-Object Name -Descending)
+                    } catch { continue }
+                    foreach ($sub in $subDirs) { $pendingDirs.Push($sub) }
+                    foreach ($f in $dirFiles) {
+                        if ($results.Count -ge $maxResults) { break }
+                        if ($f.Length -gt $Script:SEARCH_MAX_FILE_BYTES) { continue }
+                        if (-not (Test-SandboxContainment -Resolved $f.FullName -RootFull $searchRootFull).allowed -or
+                            -not (Test-SandboxLinkChain -Resolved $f.FullName -RootFull $searchRootFull).allowed) { continue }
+                        $lineNum = 0
+                        try {
+                            foreach ($line in [IO.File]::ReadLines($f.FullName)) {
+                                $lineNum++
+                                if ($searchRegex.IsMatch($line)) {
+                                    $rel = [System.IO.Path]::GetRelativePath($workspaceRoot, $f.FullName)
+                                    $results += "${rel}:${lineNum}: $($line.Trim())"
+                                    if ($results.Count -ge $maxResults) { break }
+                                }
+                            }
+                        } catch { continue }
                     }
                 }
                 if ($results.Count -eq 0) { return @{ error = $false; text = "No matches for: $($params.pattern)" } }
@@ -4862,8 +4922,10 @@ function Invoke-AgenticLoop {
     }
 
     # Detect API mode (Copilot vs GitHub Models)
+    $readinessWatch = [System.Diagnostics.Stopwatch]::StartNew()
     $githubToken = Get-GitHubToken
     Initialize-ApiMode -ghToken $githubToken
+    $readinessWatch.Stop()
     $token = Get-ProviderExecutionToken -ProviderId (Get-ActiveProviderId) -GitHubToken $githubToken
     if ((Get-ActiveProviderId) -eq 'claude-code' -and $mode -eq 'guided') {
         throw 'The Claude Code bridge is text-only and cannot call guided interaction tools. Use a supported native provider, or explicit autonomous mode for preauthorized text-only work.'
@@ -5025,10 +5087,14 @@ function Invoke-AgenticLoop {
         compactionMs = 0
         modelMs = 0
         selfReviewMs = 0
+        providerReadinessMs = $readinessWatch.Elapsed.TotalMilliseconds
+        toolMs = 0
+        retrievalMs = 0
     }
 
     # Self-review state (tracks review iterations across the main loop)
     $selfReviewIteration = 0
+    $coveredMutation = $false
     # Last self-review outcome, recorded onto loop state as evidence only. It does
     # NOT satisfy the structured-review gate: that still requires an independent
     # reviewer verdict recorded through 'frontier loop iterate --verdict'.
@@ -5291,7 +5357,7 @@ function Invoke-AgenticLoop {
             }
 
             # --- Step 2: Self-review gate ---
-            if ($selfReviewIteration -lt $selfReviewMax) {
+            if ($coveredMutation -and $selfReviewIteration -lt $selfReviewMax) {
                 $selfReviewIteration++
                 Write-RunnerConsole "`e[36m  [SELF-REVIEW] Iteration $selfReviewIteration/$selfReviewMax...`e[0m"
 
@@ -5500,8 +5566,14 @@ State your PIVOT or REFINE decision and rationale before making changes.
                 if ($toolName -eq 'repository_context') {
                     $receipts = @(Get-RetainedRepositoryItems $messages $repositoryEpoch $iterations)
                 }
+                $toolWatch = [System.Diagnostics.Stopwatch]::StartNew()
                 $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot -agentName $Agent `
                     -agentDef $agentDef -RepositoryReceipts $receipts -ContextModel $modelId
+                $toolWatch.Stop()
+                $stageTimings.toolMs += $toolWatch.Elapsed.TotalMilliseconds
+                if ($toolName -in @('file_read', 'grep_search', 'list_dir', 'repository_context')) { $stageTimings.retrievalMs += $toolWatch.Elapsed.TotalMilliseconds }
+                if (-not $result.error -and $toolName -in @('file_write', 'file_edit') -and
+                    (Test-RunnerLoopCoveredPath ([IO.Path]::GetRelativePath($WorkspaceRoot, (Test-SandboxPath -Path ([string]$toolArgs.filePath) -WorkspaceRoot $WorkspaceRoot).actualPath)) $WorkspaceRoot)) { $coveredMutation = $true }
                 if (-not $result.error -and $researchCheck.explorationDelta -gt 0) {
                     $researchExplorationCount += $researchCheck.explorationDelta
                     Add-ExecutionSummaryEvent -Type 'RESEARCH' -Message "Completed $researchExplorationCount read-only exploration step(s)." -ReplaceExisting
@@ -5592,7 +5664,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
         Add-InteractionHistory $interaction 'execution_finished' @{ independentReview = 'not_implied'; tests = 'not_implied' }
     }
     if ($exitReason -ne 'human_required') {
-        Sync-AgenticLoopState -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -Iterations 1 -ExitReason $exitReason -FinalText $finalText -SelfReview $lastSelfReview -SkipLoopStateSync:$SkipLoopStateSync
+        Sync-AgenticLoopState -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -Iterations 1 -ExitReason $exitReason -FinalText $finalText -SelfReview $lastSelfReview -SkipLoopStateSync:($SkipLoopStateSync -or -not $coveredMutation)
     }
     $meta = @{
         sessionId = $sessionId
@@ -5625,7 +5697,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
 
     Write-RunnerConsole "`e[90m  -----------------------------------------------`e[0m"
     Write-RunnerConsole "`e[36m  Loop: $iterations iterations, $totalToolCalls tool calls, exit: $exitReason ($([int]$duration)ms)`e[0m"
-    Write-RunnerConsole ("`e[90m  Timing: model={0:N1}ms self-review={1:N1}ms compaction={2:N1}ms`e[0m" -f $stageTimings.modelMs, $stageTimings.selfReviewMs, $stageTimings.compactionMs)
+    Write-RunnerConsole ("`e[90m  Timing: model={0:N1}ms self-review={1:N1}ms compaction={2:N1}ms readiness={3:N1}ms tools={4:N1}ms retrieval={5:N1}ms`e[0m" -f $stageTimings.modelMs, $stageTimings.selfReviewMs, $stageTimings.compactionMs, $stageTimings.providerReadinessMs, $stageTimings.toolMs, $stageTimings.retrievalMs)
     Write-RunnerConsole "`e[90m  Tokens: $(Format-UsageSummary $usageSummary)$(if ($usageFile) { " -> $usageFile" })`e[0m"
 
     if ($finalText) {

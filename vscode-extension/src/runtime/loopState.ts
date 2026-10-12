@@ -89,6 +89,73 @@ export interface LoopGateResult {
 export type LoopTaskClass = 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x' | 'high-risk';
 export type LoopHealthKind = 'healthy' | 'checkpoint-due' | 'stale' | 'stuck';
 
+export type LoopOperation = 'read' | 'research' | 'review' | 'commit' | 'check' | 'mutate';
+
+export interface LoopScope {
+  readonly operation: LoopOperation;
+  readonly paths: readonly string[];
+  /** Workspace-relative globs declared in frontier-artifacts.json. */
+  readonly declaredArtifacts?: readonly string[];
+}
+
+export const ARTIFACT_DECLARATION_FILE = 'frontier-artifacts.json';
+
+/** Convert a workspace-relative declaration glob to an anchored, lowercase pattern; throws when invalid. */
+export function convertArtifactGlob(glob: string): RegExp {
+  const text = glob.replace(/\\/g, '/').trim().replace(/^\.\//, '');
+  if (!text || text.startsWith('/') || /^[a-zA-Z]:/.test(text) || /(^|\/)\.\.(\/|$)/.test(text)) {
+    throw new Error(`Invalid declared artifact pattern '${glob}'; use workspace-relative globs.`);
+  }
+  let source = '^';
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (char === '*' && text[index + 1] === '*') {
+      if (text[index + 2] === '/') { source += '(?:.*/)?'; index += 2; } else { source += '.*'; index++; }
+    } else if (char === '*') {
+      source += '[^/]*';
+    } else if (char === '?') {
+      source += '[^/]';
+    } else {
+      source += char.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    }
+  }
+  return new RegExp(`${source}$`.toLowerCase());
+}
+
+export function isLoopCoveredPath(filePath: string, declaredArtifacts: readonly string[] = []): boolean {
+  const normalized = filePath.replace(/\\/g, '/').toLowerCase();
+  if (/(^|\/)\.\.?($|\/)/.test(normalized)) { return true; }
+  if (normalized === ARTIFACT_DECLARATION_FILE) { return true; }
+  if (declaredArtifacts.some(glob => convertArtifactGlob(glob).test(normalized))) { return true; }
+  const exemptArtifact = /\.(md|mdc|txt|json|jsonc|json5|yaml|yml|toml|ini|cfg|config|xml|psd1|lock|env|properties|svg|png|jpg|jpeg|gif|webp|ico|pdf|docx|pptx|xlsx|csv|tsv|log|map|woff|woff2|ttf)$/.test(normalized)
+    || /(^|\/)(\.gitignore|\.gitattributes|\.editorconfig|\.env)$/.test(normalized);
+  if (/(^|\/)(prd|specs|techspecs)\/[^/]+$/.test(normalized)
+    || /(^|\/)(prd|spec|techspec)[-_.][^/]+$/.test(normalized)) {
+    return true;
+  }
+  if (/(^|\/)(\.frontier\/runtime|\.github\/hooks|scripts)\//.test(normalized)) {
+    return !exemptArtifact;
+  }
+  if (/(^|\/)(tests?|__tests__)\/(?:[^/]+\/)*(e2e|integration)\/(.*(\.(test|spec)\.[^/]+|-behavior\.ps1|tests?\.(cs|java))|(?:.*\/)?test_[^/]+\.py)$/.test(normalized)
+    || /(^|\/)(tests?|__tests__)\/.*\.(e2e|integration)\.(test|spec)\.[^/]+$/.test(normalized)) {
+    return false;
+  }
+  return !exemptArtifact;
+}
+
+export function requiresEngineeringLoop(scope: LoopScope): boolean {
+  if (!['read', 'research', 'review', 'commit', 'check', 'mutate'].includes(scope.operation)) {
+    return true;
+  }
+  if (scope.operation !== 'mutate') { return false; }
+  try {
+    return scope.paths.length === 0
+      || scope.paths.some(filePath => !filePath.trim() || isLoopCoveredPath(filePath, scope.declaredArtifacts));
+  } catch {
+    return true;
+  }
+}
+
 export interface LoopHealth {
   readonly kind: LoopHealthKind;
   readonly reason: string | null;
@@ -373,7 +440,15 @@ export function evaluateHandoffGate(
   state: LoopState | null,
   expectedIssue?: number | null,
   nowMs: number = Date.now(),
+  scope?: LoopScope,
 ): LoopGateResult {
+  if (scope && !requiresEngineeringLoop(scope)) {
+    return {
+      allowed: true,
+      reason: 'N/A: this operation does not require an engineering loop.',
+      state: null,
+    };
+  }
   if (!state) {
     return {
       allowed: false,
@@ -549,7 +624,9 @@ export function evaluateShouldAutoStart(
   state: LoopState | null,
   expectedIssue?: number | null,
   nowMs: number = Date.now(),
+  scope?: LoopScope,
 ): boolean {
+  if (scope && !requiresEngineeringLoop(scope)) { return false; }
   if (!state) {
     return true;
   }

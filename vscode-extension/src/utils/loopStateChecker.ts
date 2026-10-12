@@ -15,10 +15,15 @@
 //   - Workflow command (auto-start loop for iterate=true steps)
 // ---------------------------------------------------------------------------
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { getHarnessStatusDisplay } from './harnessState';
 import {
   LoopState,
   LoopGateResult,
+  LoopScope,
+  ARTIFACT_DECLARATION_FILE,
+  requiresEngineeringLoop,
   evaluateHandoffGate,
   evaluateShouldAutoStart,
   buildLoopStatusDisplay,
@@ -26,7 +31,22 @@ import {
   readLoopStateFromFile,
 } from '../runtime';
 
-export { LoopState, LoopGateResult };
+export { LoopState, LoopGateResult, LoopScope };
+
+/** Attach frontier-artifacts.json declarations; an unreadable declaration fails closed. */
+export function withDeclaredArtifacts(workspaceRoot: string, scope: LoopScope): LoopScope {
+  const file = path.join(workspaceRoot, ARTIFACT_DECLARATION_FILE);
+  if (!fs.existsSync(file)) { return scope; }
+  try {
+    const declaration = JSON.parse(fs.readFileSync(file, 'utf8')) as { schemaVersion?: unknown; coveredArtifacts?: unknown };
+    if (declaration.schemaVersion === 1 && Array.isArray(declaration.coveredArtifacts)
+      && declaration.coveredArtifacts.every(entry => typeof entry === 'string')) {
+      return { ...scope, declaredArtifacts: declaration.coveredArtifacts as string[] };
+    }
+  } catch { /* fall through to fail closed */ }
+  // '/' is never a valid glob, so classification of any mutation reports covered.
+  return { ...scope, declaredArtifacts: ['/'] };
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -48,17 +68,31 @@ export function readLoopState(workspaceRoot: string): LoopState | null {
  *  - Loop never started (no state file) -> BLOCKED
  *  - Loop cancelled (status=cancelled) -> BLOCKED
  *  - Loop complete (status=complete) -> ALLOWED
+ * Explicit exempt scopes return N/A without reading persisted state.
+ * Omitted scope retains the legacy evidence gate.
  */
-export function checkHandoffGate(workspaceRoot: string, expectedIssue?: number | null): LoopGateResult {
-  return evaluateHandoffGate(readLoopStateFromFile(workspaceRoot), expectedIssue);
+export function checkHandoffGate(
+  workspaceRoot: string,
+  expectedIssue?: number | null,
+  scope?: LoopScope,
+): LoopGateResult {
+  const declaredScope = scope && withDeclaredArtifacts(workspaceRoot, scope);
+  const state = declaredScope && !requiresEngineeringLoop(declaredScope)
+    ? null : readLoopStateFromFile(workspaceRoot);
+  return evaluateHandoffGate(state, expectedIssue, undefined, declaredScope);
 }
 
 /**
  * Check whether a loop should be auto-started for a workflow step.
- * Returns true if the step has iterate=true and no loop is currently active.
+ * Explicit exempt scopes never start loops or read persisted state.
  */
-export function shouldAutoStartLoop(workspaceRoot: string, expectedIssue?: number | null): boolean {
-  return evaluateShouldAutoStart(readLoopStateFromFile(workspaceRoot), expectedIssue);
+export function shouldAutoStartLoop(
+  workspaceRoot: string,
+  expectedIssue?: number | null,
+  scope?: LoopScope,
+): boolean {
+  if (scope && !requiresEngineeringLoop(withDeclaredArtifacts(workspaceRoot, scope))) { return false; }
+  return evaluateShouldAutoStart(readLoopStateFromFile(workspaceRoot), expectedIssue, undefined, scope && withDeclaredArtifacts(workspaceRoot, scope));
 }
 
 /**

@@ -29,14 +29,14 @@ constraints:
   - "MUST perform a design-alignment checkpoint with Architect before coding when the implementation crosses architecture boundaries, introduces a new pattern outside the ADR/Spec, or requires a meaningful design deviation"
   - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
-  - "MUST run '.frontier/runtime/frontier.ps1 loop start -p <task> -i <issue>' before the first file edit (-p is required)"
-  - "MUST meet the risk-based quality-loop minimum from AGENT-PROTOCOL.md before declaring implementation done"
+  - "MUST apply AGENT-PROTOCOL.md section 1.1 first; start a loop only before the first covered mutation, or reuse the assigned parent loop without changing its lifecycle"
+  - "MUST meet the risk-based quality-loop minimum from AGENT-PROTOCOL.md for covered implementation only; research and exempt artifacts retain applicable nonloop checks"
   - "MUST attach a real evidence file (--evidence <path>) to every loop iterate and to loop complete"
   - "MUST inspect applicable high-risk failure paths and prepare property, mutation, fuzz and negative cases; suite execution is a separate post-loop task requiring explicit user consent"
-  - "MUST run an independent reviewer on the final iteration with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset the loop"
+  - "MUST run an independent reviewer on the final owning iteration for covered work with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings require fixes and fresh review, not a delegate reset"
   - "MUST evaluate every implementation change with evaluation/rubrics/code-quality.md; the final review evidence must pass scripts/score-code-quality.ps1 at 80 or higher before loop completion"
   - "MUST use acceptance-criteria mapping, independent findings and non-test checks as loop evidence; MUST NOT execute test suites inside loops or reviews; after successful loop completion MUST ask the user whether to run the suite, per .github/AGENT-PROTOCOL.md section 1.4"
-  - "MUST verify quality loop reached 'complete' status before moving to In Review"
+  - "MUST supply scoped work evidence for independent review and verify the owning loop completed before covered delivery handoff; review contributing its verdict may precede completion"
   - "MUST document a reproducible failing case and write its regression test before fixing a bug; execution waits for post-loop user consent, and an unexecuted test MUST NOT be reported as red or green"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
   - "MUST inspect changed-area lint/hygiene in read-only advisory mode; cosmetic findings are LOW and do not block local completion; MUST ask the user before cleanup, while preserving genuine defect/build blockers"
@@ -96,7 +96,7 @@ You implement through Compound Engineering: read the full artifact chain, choose
 ## Trigger & Status
 
 - **Trigger**: `type:story`, `type:bug`, or Status = `Ready` (with ADR + Spec complete)
-- **Status Flow**: Ready -> In Progress -> In Review (when loop complete)
+- **Status Flow**: Ready -> In Progress -> In Review (scoped evidence ready; owning loop completes after final independent verdict when applicable)
 - **Bugs**: Skip PM/Architect phases. Write failing regression test first, then fix.
 
 ---
@@ -269,9 +269,11 @@ Store all system prompts as separate files in `prompts/`; do not embed multi-lin
 
 ### 5.3 Start Quality Loop
 
-The loop MUST already be active from the pre-edit gate in
+For covered implementation, the owning loop MUST already be active from the pre-edit gate in
 [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). Record the focused implementation check
-as an evidenced iteration; never defer `loop start` until after an edit or commit.
+as an evidenced iteration; never defer `loop start` until after a covered edit.
+Research, planning and exempt artifact edits do not start a loop. Delegates return
+evidence to the parent rather than recording iterations themselves.
 
 **Phase 5 Gate**: Core implementation complete and focused validation recorded.
 
@@ -376,7 +378,8 @@ Reviewer prompt:
 
 > You are a code reviewer. Read SPEC-{issue}.md, `evaluation/rubrics/code-quality.md`, the staged diff, tests, and verification evidence. Do NOT read chat history or implementation rationale. Score all ten rubric dimensions and include the exact scope paths and SHA-256 values. Report HIGH, MEDIUM, and LOW findings using the rubric's required JSON shape.
 
-Write JSON evidence and record its verdict on the final iteration:
+For covered work, the owning loop owner records the independent verdict on the
+final iteration; delegates return JSON evidence to that owner:
 
 ```
 .frontier/runtime/frontier.ps1 loop iterate -s "Subagent Review: <outcome>" -e .frontier/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
@@ -388,6 +391,10 @@ All verdict flags shown above are required. HIGH/MEDIUM findings require
 
 ### 7.5 Complete the Loop and Hand Off
 
+For covered delivery only, the owning loop owner completes after the final
+independent verdict. Exempt artifact work reports its applicable nonloop checks;
+delegates return evidence and MUST NOT complete the parent loop.
+
 ```bash
 .frontier/runtime/frontier.ps1 loop complete -s "Acceptance criteria mapped; review approved" -e .frontier/state/final-gate.json
 ```
@@ -395,13 +402,16 @@ All verdict flags shown above are required. HIGH/MEDIUM findings require
 Append `--passing <suite>=<count>` only for suites you actually ran; the flag is
 optional and omitting it does not weaken the gate.
 
-Complete the loop before an authorized commit: the commit hook rejects active
-loops. Commit only when the user or delivery workflow authorizes it, and stage only
-the intended reviewed files. Do not commit first and then attempt loop completion.
+Complete the owning loop before an authorized commit of covered staged changes.
+Commit-only work starts no loop; exempt-only commits do not inherit unrelated
+active state. Commit only when the user or delivery workflow authorizes it, and
+stage only the intended reviewed files.
 
 Update GitHub Projects Status to `In Review`.
 
-**Phase 7 Gate**: Self-review complete + output score >= 70% + code-quality rubric >= 80% + subagent review zero HIGH/MEDIUM + loop status = `complete` (CLI enforces evidence on every iteration).
+**Phase 7 Gate**: Self-review complete + output score >= 70% + applicable
+code-quality rubric >= 80% + independent review zero HIGH/MEDIUM + owning loop
+status = `complete` for covered delivery only. Exempt work retains nonloop gates.
 
 ---
 
@@ -467,9 +477,9 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 ---
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

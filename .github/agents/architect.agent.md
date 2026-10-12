@@ -41,7 +41,7 @@ constraints:
   - "MUST document research findings with sources in the ADR Context section"
   - "MUST run a lightweight requirement-fit validation with Product Manager before moving architecture work back to Ready; this checkpoint verifies PRD alignment, scope, and success metrics, not implementation details"
   - "MUST iterate until ALL self-review done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md"
-  - "MUST verify agentic loop completion before declaring implementation complete"
+  - "MUST verify owning loop completion for covered implementation only; exempt work reports applicable nonloop checks"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
@@ -332,9 +332,9 @@ Canonical guidance: [WORKFLOW.md](../../docs/WORKFLOW.md#specialist-agent-mode)
 
 Use the shared guide for the artifact-first clarification flow, agent-switch wording, follow-up limits, and escalation behavior. Keep this file focused on architect-specific constraints.
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

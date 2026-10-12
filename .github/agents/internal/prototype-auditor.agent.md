@@ -134,7 +134,7 @@ Report actual outcomes per pass, including unexecuted checks; do not prefill PAS
 | Build hygiene clean | Yes / No |
 | BLOCKED findings (with owner and next action) | N |
 | Report saved at canonical path | Yes -- path |
-| Frontier quality loop | Complete (N/20 iterations) |
+| Frontier quality loop | Owning covered work evidence, or exempt artifact/action rationale; no audit-only loop |
 
 ## Skills to Load
 
@@ -145,12 +145,9 @@ Report actual outcomes per pass, including unexecuted checks; do not prefill PAS
 - `design/prototype-craft/SKILL.md` (when fixing visual issues)
 - `development/browser-automation/SKILL.md` (for axe, Lighthouse, and Playwright snapshots)
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: When delegated, verify the parent's active loop
-and return evidence to that owner; MUST NOT start, reset, iterate or complete the
-parent loop. For explicitly standalone work, run `.frontier/runtime/frontier.ps1 loop start`
-before mutation. Follow the shared protocol's ownership rule.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: Read `loop status` before reporting gate state. A delegated audit
 result is not parent loop completion; only its owner may record that transition.
