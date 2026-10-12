@@ -58,7 +58,7 @@ function Get-ManifestEntries {
     function Add-Group {
         param([string]$Pattern, [string]$Category)
         $rootPath = (Resolve-Path .).Path.TrimEnd('\', '/')
-        $files = Get-ChildItem -Path . -Recurse -File -Filter (Split-Path $Pattern -Leaf) -ErrorAction SilentlyContinue |
+        $files = Get-ChildItem -Path . -Recurse -File -Force -Filter (Split-Path $Pattern -Leaf) -ErrorAction SilentlyContinue |
                  Where-Object { $_.FullName.Substring($rootPath.Length).TrimStart('\', '/').Replace('\', '/') -like $Pattern } |
                  Where-Object { ($_.FullName -replace '\\','/') -notlike '*/node_modules/*' -and
                                 ($_.FullName -replace '\\','/') -notlike '*/.git/*' -and
