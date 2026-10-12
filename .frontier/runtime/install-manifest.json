@@ -1,6 +1,6 @@
 {
   "version": "9.8.1",
-  "createdAt": "2026-10-12T19:22:48Z",
+  "createdAt": "2026-10-12T22:43:18Z",
   "files": [
     {
       "path": ".cursor/commands/ado-ops.md",
@@ -106,7 +106,7 @@
     },
     {
       "path": ".cursor/rules/000-frontier-core.mdc",
-      "sha256": "e6b780e14cb24177bd4b06911fd74d1602263b81d01bb01f95642a4125f44fc7",
+      "sha256": "35b4331a019e48b402a66850cb07df7e243e0f7946a3e675f8b5c677cfcf37c7",
       "category": "instruction"
     },
     {
@@ -146,7 +146,7 @@
     },
     {
       "path": ".frontier/runtime/agentic-runner.ps1",
-      "sha256": "aa1bae5f768eee84a653525c63bf25bfd2177cd7f489e2803bd93754cabad18c",
+      "sha256": "e2bd52d7b3b860574d032bf1a9ef77e0e4fab8e4640c32d8229fee70abbd4b5d",
       "category": "cli"
     },
     {
@@ -166,7 +166,7 @@
     },
     {
       "path": ".frontier/runtime/frontier-cli.ps1",
-      "sha256": "5cdb71ef2bfa974f86b9822266b450aa06a1120faa72165c6d3f75ffa0020988",
+      "sha256": "c0dae289d8283b066b7c27b4f86904378a0fb2a3d56fde43f8bc3dc264316277",
       "category": "cli"
     },
     {
@@ -286,132 +286,132 @@
     },
     {
       "path": ".github/agents/agile-coach.agent.md",
-      "sha256": "bcd11ecd9f2daf2f43aec51f9d08b1035ec2443f53137f0023783e88537018aa",
+      "sha256": "cc982df2203da558e8c30a83bfd0355fe453bb89cfd607ac5367e1851fb285fe",
       "category": "agent"
     },
     {
       "path": ".github/agents/architect.agent.md",
-      "sha256": "d982cd1df531cac464fc991db97a5958f8854fec57324f8c29125ec9c49e61e6",
+      "sha256": "85326bf5859301de04257be29ed6e8e620741323f0d8ad0edd1646aa14ce529e",
       "category": "agent"
     },
     {
       "path": ".github/agents/consulting-research.agent.md",
-      "sha256": "94252928b0f9d3d742c828223ad4145adb6400569c0cf3a1b5a450d80dfa844b",
+      "sha256": "35082cd930ebdb670b756fd2a85f9f3cc78adced2409c1d9da322ca63e6bbd6c",
       "category": "agent"
     },
     {
       "path": ".github/agents/data-scientist.agent.md",
-      "sha256": "647c416a50d60a5b4e233b2c5c9b0fe208824452bc372752058bf392db8711db",
+      "sha256": "ad9e66f27a176035ce5dd4ff399325a7adc7a66ef222cd11eeb76de635ef8e44",
       "category": "agent"
     },
     {
       "path": ".github/agents/devops.agent.md",
-      "sha256": "d4991fe661a503c960d23f935491ac12be454feca9092639230f2a2280156a45",
+      "sha256": "51e56f56d40e3b1923f8e14bb1e469887edd29573fcc830c4f53bdd469e9aa17",
       "category": "agent"
     },
     {
       "path": ".github/agents/engineer.agent.md",
-      "sha256": "a22b9ea1e0ccd06a5fa5783e55eba4c8e744431a996eb229df3b4f6fb8b47f5e",
+      "sha256": "2cfd62b04adcbf1690461726fd10ec505a7d8d400c263b88ac5f17ba29c452b8",
       "category": "agent"
     },
     {
       "path": ".github/agents/fabric-engineer.agent.md",
-      "sha256": "62dea616e290acffb8313bff34c89427349d9b7304000c91f70a88abd0cd2f9b",
+      "sha256": "632ec20fc693d5a6be3f56529a66c5820c8489b4a8e26dcd1cbdf02242fd9c34",
       "category": "agent"
     },
     {
       "path": ".github/agents/frontier.agent.md",
-      "sha256": "aae49322d8a525b63cea2452041ea4d33714e713e8f362d71ecf8e29626d88a1",
+      "sha256": "2a79d421ae037313bd88c80504384352f3fe570f57aaf2a4ff18eb4a6031745d",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/ado-ops.agent.md",
-      "sha256": "1632baaa74b34a0ae6d05ddd70139bd378bdb2cf822a0181aa3d3047b6fc81a0",
+      "sha256": "7682cb6019cfe146b6e10fa433121bd9b2c5a38254d61c78999eee4f3993b800",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/ado-prd-to-wit.agent.md",
-      "sha256": "7e06278d7fe38f983d51771bb10aa4e90ecc5f8bffb2cbaa97e44b3beebf23d7",
+      "sha256": "ba5e263801e89ff6554e67b1719c0702db661db72aa7d08f466f52c6ae3e0239",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/architecture-reviewer.agent.md",
-      "sha256": "3eff1cdf86f861ac0e84360b300acb367b9c4e1127c6132a43d728b48d0297e4",
+      "sha256": "5b4a746b62f93f5a4bc312e5790d7e418f41a0ab7b64a7c95e70e167798be442",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/diagram-specialist.agent.md",
-      "sha256": "e99c12b2b5252ef60f6f421b3faec6dc519c583eec5d257a68f7f57ad6f87fc1",
+      "sha256": "5256bc6d27b389df7d24b97b6987f9df1f0b17ac3eb2b75d629d429e9f08c86e",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/eval-specialist.agent.md",
-      "sha256": "986f25b85e64ff2e37fcfdc5febc6e35a73e08ff8c9a3d721bf2f385b55c663e",
+      "sha256": "9674cc7df783e771bfbdbb7604cedd6555b57db6d5d0684cdcafee03aad66366",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/functional-reviewer.agent.md",
-      "sha256": "937d8c468f2f90ee654c3ee28207cb22906413fa3920fc66af6e4ee1e54ee84a",
+      "sha256": "a532aa6c24735e954e249285ac2f4877179f7919b540d9eb34e250507f0fc7c1",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/github-ops.agent.md",
-      "sha256": "8f28852a59d79e566aedb4e9d0ae9967cf2cc78da984352e9523bf06c659fd01",
+      "sha256": "ba310bb0f550b9f925e77fdf5febd490f235f208109fdf95e556488895488f69",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/ops-monitor.agent.md",
-      "sha256": "745c9e31c4bbdf770452dfe3d8406f560dc713e02761639f36900a3b68c826f5",
+      "sha256": "a4aaa24bee2a23d2dcea89cd21c0ce4edb08aec82749c26cd646e5116d525a6f",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/prompt-engineer.agent.md",
-      "sha256": "9a898294214d62f1ddc24fb3de7b918d9a1e216a74a4cfaab365b58765412f41",
+      "sha256": "ea5c77bf202683b669252fc19aee64326a82e98316d8b94f969992c4d27f0de2",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/prototype-auditor.agent.md",
-      "sha256": "a981add19df719346e9693f11daf9f0e661dfbab42f7b655ae6e0d3790a30d76",
+      "sha256": "0971fbf2cb3bd1f46ca676b21cf96eafb4374ec60e8ad6d3c73f21ce3036803d",
       "category": "agent"
     },
     {
       "path": ".github/agents/internal/rag-specialist.agent.md",
-      "sha256": "b3f4e4ab3a0c7de47fb16f1c75e93e75128c11adba1160cd1d62440317eab755",
+      "sha256": "9f7166052c1104a31dc19b56a119fdda08ebd39309518edb1bc1f2ed6c95c8f0",
       "category": "agent"
     },
     {
       "path": ".github/agents/power-platform-builder.agent.md",
-      "sha256": "835b503897c31989c7f6a9d1437b2a47cc65128389b398e84284ca0379ae868a",
+      "sha256": "9a1626f1bcc39671d481d975d4ffe1170468898b51fe2d6c2d7258ec31d3ef3b",
       "category": "agent"
     },
     {
       "path": ".github/agents/powerbi-analyst.agent.md",
-      "sha256": "8aab2337a4851710402346d287196e2d78caa2744a48c8769507eac9cf8adbf3",
+      "sha256": "a8f9fd57d99f68e9e8f4961dc790848026c6ff8bf02f93ebc78ade7ef3e525d8",
       "category": "agent"
     },
     {
       "path": ".github/agents/product-manager.agent.md",
-      "sha256": "f8ca1413f94ac5d0a6738851b15a89b31ed8e8a82baa45af262160fbc289bf80",
+      "sha256": "6c6aaae63e630bf63979bb137658e0ed73c929e12994627aa433ee9464ba8839",
       "category": "agent"
     },
     {
       "path": ".github/agents/reviewer-auto.agent.md",
-      "sha256": "088854b066443c56b744316798f6bb42e3f9606188549b7a6769943ee9a6ff7c",
+      "sha256": "765121e6005eb310c4fd97f92b71de6b7e7d599288481f7ba99ab78f6a03606d",
       "category": "agent"
     },
     {
       "path": ".github/agents/reviewer.agent.md",
-      "sha256": "5af2278b2429b6de34a65da2a5924a5674e8a98ff5ae76280c28a7d13a31347a",
+      "sha256": "8384a9a6163c1409fc7b4e0a0c5fe7344bd8a6a077251c38e67eb2ebb0f06d9e",
       "category": "agent"
     },
     {
       "path": ".github/agents/tester.agent.md",
-      "sha256": "3a9b7fe5f038c27f132c759ce9c710cab39ac0b67c9074e36cd1c61507616eb5",
+      "sha256": "de5a5b05bfedc75ea06a21c29078f32027ea2c031502cf37fae2f4f1980ac09e",
       "category": "agent"
     },
     {
       "path": ".github/agents/ux-designer.agent.md",
-      "sha256": "494c5da71f0998a03368802b1f8493f17c6d1f425cefdca12a40f8b759ab4b8c",
+      "sha256": "d9ccb6620e006180c7ed756238968fa36546b2b43d45933342d8a326756049f7",
       "category": "agent"
     },
     {
@@ -466,7 +466,7 @@
     },
     {
       "path": ".github/instructions/ai.instructions.md",
-      "sha256": "87441f25f3bb88b96f114e0d327ad33ad7c634b43402c21fc167d2ff9f7ce023",
+      "sha256": "4f9b646fb1c0509520f3de59ff5e83c0a1e1c48dd978264b750dcb06be93e9f4",
       "category": "instruction"
     },
     {
@@ -481,7 +481,7 @@
     },
     {
       "path": ".github/instructions/project-conventions.instructions.md",
-      "sha256": "08f3a6408151aeaf4b6b28305393d3bccacd0557e1d1e045152d61a99c2a4117",
+      "sha256": "d97fe8b84c88db16a80e82cdec1c949376b494398d06881a86337507e8104a35",
       "category": "instruction"
     },
     {
@@ -1096,7 +1096,7 @@
     },
     {
       "path": ".github/skills/development/finishing-a-development-branch/SKILL.md",
-      "sha256": "6465bcd11d3c5de8d35b232495b2c5c7e2c39466817c9b62770e3e330633f77d",
+      "sha256": "1cff0f70796a89b31781ab76df869a5c1fed47c52a88eb2dbe8f6b83f8c2710d",
       "category": "skill"
     },
     {
@@ -1106,7 +1106,7 @@
     },
     {
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "712735e18ba9672e9ae6760784e3675b3b6c34d54c822cdae0892c89fc5f0dcd",
+      "sha256": "10149ec626a6054171fec6e54a6e47b6d02572700822438b9e12d6648751ced4",
       "category": "skill"
     },
     {
@@ -1541,12 +1541,12 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "cb9f91f13c7e381dd9053981b7cb312557af6372630d69212e031a627c68012a",
+      "sha256": "26aebc715b82ad594df3006af894efe97e449926ed2c2b0ea2a6b2767be61f7d",
       "category": "doc"
     },
     {
       "path": "CLAUDE.md",
-      "sha256": "0f0d6341ce4060a894c6c0fc9af8785e6333245e673ce1c202e097664af0f1af",
+      "sha256": "13a017b9e66bf4e80b9134b2b937467a1720f338a16b20c97b734d219ea6a7e7",
       "category": "doc"
     },
     {
@@ -1661,7 +1661,7 @@
     },
     {
       "path": "scripts/install-manifest.ps1",
-      "sha256": "9bc51e9d804a33aba7d72d36fe92de5478bc2db8607fff413671c2089e8b78b3",
+      "sha256": "bc0db182e9bd100583e61de188089d2a97a969291912ede53142d772f3467cd9",
       "category": "script"
     },
     {

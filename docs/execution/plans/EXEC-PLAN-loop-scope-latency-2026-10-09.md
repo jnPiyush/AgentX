@@ -49,69 +49,21 @@ Outcomes & Retrospective current during implementation.
 - [ ] Final policy contract gaps, council approval and L-P completion resolved
 - [ ] Acceptance and performance evidence recorded
 
-### Repository Update Checkpoint (2026-10-09)
+### Checkpoint Summary
 
-- User approved preserving local work and updating from the remote 9.8 branch.
-  Checkout HEAD is `137886fa`, from
-  `origin/chore/pending-agent-names-and-docs-428`; root version is `9.8.0`.
-  Remote `master` and its latest tag remain at `9.6.0`.
-- Local changes were reapplied and 42 Git conflicts resolved. Safety copies remain
-  in `.git/frontier-update-backups/20261009-184605` and Git stash
-  `63da3ef57f8c179f6a7ead4d0e483955ff62b0c1`. No local commit or push was made.
-- The existing owning loop remains active at iteration 3/20, minimum 5. All 13
-  original state/evidence files were verified unchanged; this update does not
-  complete the older policy or latency implementation.
-- Merge verification includes extension no-emit typechecking, changed PowerShell
-  syntax checks, clean diff/conflict checks, 637 frontmatter checks, read-scope
-  CLI smoke inspection and advisory scrub. Independent merge findings prompted
-  bound fixture approvals, post-commit fixes and updated freshness diagnostics.
-- Adopt 9.8's guided interaction and separate post-loop test-consent contract.
-  Prior suite results below describe the pre-update code, not this merged state.
-  Suites were not rerun during synchronization; final owning-loop review,
-  council, post-loop execution and performance measurements remain pending.
-
-### Publication Checkpoint (2026-10-12)
-
-- GitHub authentication and ADMIN repository access were verified. The user
-  approved reconciliation and delivery through a PR, not a direct master merge.
-- `feat/scoped-loop-policy` now starts at remote master `a557d2b9`, version
-  `9.8.1`. Reapplying the saved policy delta merged three overlapping files
-  without conflicts; the 9.8.1 fixes were retained. Original master remains
-  unchanged. No delivery commit, push or PR has been created yet.
-- Current work and ignored loop evidence were copied to
-  `.git/frontier-publish-backups/20261012-120645`; stash
-  `a6ce6c2fe291e09ce201d5e9486949ab5ebdcc4d` remains available. The loop-state
-  digest was verified unchanged through reconciliation.
-- Changed PowerShell parsing, extension no-emit typechecking and diff checks
-  passed. These are non-test checks; no suites ran and prior results remain
-  historical. Preliminary delivery review requested changes, not approval.
-- Review repairs address verification-skipping commit flags, composed commits,
-  Git verification overrides, path-safe unresolved shell scope and portable
-  Node discovery. Regression cases were authored; execution remains deferred.
-- The unrelated nested `copilot/` repository is preserved and locally excluded
-  through `.git/info/exclude`, not deleted or staged for this delivery.
-- The original owning L-P loop recorded a fresh work checkpoint at 4/20.
-  After the user delegated the baseline-transition choice, additive
-  `loop adopt-scope --include-existing-changes` included 15 covered mutations.
-  Actual checks confirmed unchanged history, startedAt, iteration count,
-  original code-quality baseline hash and engineering baseline hash. This
-  grants no approval; the new migration's authority policy still needs repair.
-- The official GitHub Models catalog returned HTTP 200 with plain `OK`, not
-  model JSON. The official Copilot SDK alternate catalog was authenticated and
-  supported genuine independent calls. Analyst `gpt-5.6-sol` and Strategist
-  `claude-opus-5.5` succeeded. Initial Skeptic `grok-4.7` timed out after
-  180000 ms; bounded replacement `gpt-5.4` succeeded. All three successful
-  selections were confirmed by the host before and after their calls.
-- Council execution is complete, not approval. All successful members requested
-  changes. The failed attempt, exact provenance, shared-provider limitation and
-  findings are recorded in
-  `docs/artifacts/reviews/COUNCIL-loop-scope-2026-10-12.md`. Underlying model
-  snapshots and inference costs were not measured or claimed.
-- Publication remains BLOCKED by semantic Git token/control-plane bypasses,
-  missing declared ordinary-name PRD/TechSpec coverage, general migration
-  authorization and regression gaps, and missing final digest-bound approval.
-  Acceptance scope MUST NOT be narrowed silently. Latency packages remain
-  outside this PR delivery. No commit, push, PR or merge has been performed.
+- 2026-10-09: local work was reapplied onto the remote 9.8 branch (42 conflicts
+  resolved, backups retained); 9.8 guided interaction and post-loop test
+  consent were adopted. Prior suite results describe pre-update code.
+- 2026-10-12: `feat/scoped-loop-policy` was rebased onto master `a557d2b9`
+  (9.8.1) for PR delivery; master is unchanged and backups are retained. The
+  unrelated nested `copilot/` repository is locally excluded, not staged.
+- `loop adopt-scope --include-existing-changes` added 15 covered mutations to
+  the owning L-P loop without altering its history or baselines.
+- Council ran with three independent models (Skeptic `grok-4.7` timed out and
+  was replaced by `gpt-5.4`); all requested changes. Provenance and findings:
+  `docs/artifacts/reviews/COUNCIL-loop-scope-2026-10-12.md`. Resolution below.
+- Latency packages remain outside this PR delivery. No commit, push, PR or
+  merge has been performed.
 
 ## Surprises & Discoveries
 
@@ -369,8 +321,8 @@ does not assert that future checks have passed.
 |---|---|---|---|
 | Draft approval | Implementation authorized | User requested implementation of the entire plan on 2026-10-09 | Resolved |
 | No live model baseline | Cannot claim end-to-end speedup | Benchmark configured providers with user-authorized requests | Open for live performance evidence |
-| Required distinct-model council unavailable | Cannot approve/complete L-P or start sequential latency loops | Copilot CLI launcher reports absent installation; gh catalog request reports unauthenticated. Installation declined; credentials MUST be entered directly by the user, never through chat | Blocked |
-| Remaining L-P contract gaps | Policy acceptance is not complete | Add declared ordinary-name PRD/TechSpec support and finalize the versioned policy contract; obtain fresh independent review | Open |
+| Distinct-model council | Required for L-P approval | Executed 2026-10-12; findings resolved below | Resolved |
+| Remaining L-P contract gaps | Policy acceptance | Declared PRD/TechSpec support added (F3) | Resolved |
 | Unix filesystem validation | Executable-bit branch not proven by Windows tests | Run the added Unix-specific fixture on a Unix host; Windows symlink blob/mode test passes | Open |
 
 ## Validation and Acceptance
@@ -423,13 +375,10 @@ retain isolated-process fallback. Streaming can fall back to buffered transport.
 
 ## Artifacts and Notes
 
-- Source and policy edits are uncommitted. Existing user changes were preserved;
-  no branches, commits, pushes or remote work-item writes were performed.
-- Active owning loop is L-P; its recorded state, not this plan, determines gate
-  status. No final approved verdict or completed loop is claimed.
-- Compound Capture records the verified boundary lessons in
-  `docs/artifacts/learnings/LEARNING-loop-scope-boundaries.md`. Final delivery
-  remains blocked; capture does not substitute for approval.
+- Source and policy edits are uncommitted; no branches, commits, pushes or
+  remote work-item writes were performed.
+- L-P loop state, not this plan, determines gate status.
+- Compound Capture: `docs/artifacts/learnings/LEARNING-loop-scope-boundaries.md`.
 
 ## Outcomes & Retrospective
 
@@ -437,16 +386,9 @@ Planning outcome: a proposed four-category loop boundary, exact commit/review
 semantics, incremental latency work packages, and testable acceptance criteria.
 Implementation outcomes, benchmark gains and rollout approval remain pending.
 
-Current checkpoint: policy core and two rounds of technical-review repairs are
-implemented. Latest full CLI parity run: 193 passed; runner: 455 passed; policy
-hook: 175 passed; scope: 38 passed with one explicit Unix-only skip. Earlier full
-extension suite: 1,130 passed; regenerated customization: 341 passed; host
-compatibility: 115 passed after final regeneration. The final extension suite also
-passed 1,130 tests after the latest TypeScript edit. L-P is active at iteration
-3/5 minimum, with no final verdict. Some earlier command checks predate final
-repairs as noted in loop evidence; reverify those surfaces before final review.
-No speedup measured.
-All eight latency packages and final rollout remain Not Started.
+Historical suite results (pre-rebase, not rerun): CLI parity 193, runner 455,
+policy hook 175, scope 38 (one Unix-only skip), extension 1,130, customization
+341, host compatibility 115 passed. No speedup measured.
 
 ### Latency Implementation Checkpoint (2026-10-12)
 

@@ -195,9 +195,9 @@ function Test-StagedScope {
     $tokens = $null
     $parseErrors = $null
     $ast = [Management.Automation.Language.Parser]::ParseFile($cliPath, [ref]$tokens, [ref]$parseErrors)
-    foreach ($name in @('Test-LoopCoveredPath', 'Invoke-LoopGit', 'Get-LoopCoveredSnapshot', 'Get-LoopCoveredScope')) {
+    foreach ($name in @('ConvertTo-LoopArtifactPattern', 'Get-LoopDeclaredArtifactPatterns', 'Test-LoopCoveredPath', 'Invoke-LoopGit', 'Get-LoopCoveredSnapshot', 'Get-LoopCoveredScope')) {
         $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $false)
-        Invoke-Expression $definition.Extent.Text
+        . ([scriptblock]::Create($definition.Extent.Text))
     }
     $Script:ROOT = $workspace
     [void](Invoke-FixtureGit @('read-tree', 'HEAD'))

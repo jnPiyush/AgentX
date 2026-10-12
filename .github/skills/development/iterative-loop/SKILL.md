@@ -1,6 +1,6 @@
 ---
 name: "iterative-loop"
-description: 'Use for covered create/update/delete/rename of PRD, TechSpec, code or unit tests. Apply artifact/action applicability before risk-based loop minimums; research, review-only work and other artifacts are exempt. Covers evidenced refinement, parent ownership, verification and completion.'
+description: 'Evidence-backed refinement loop for covered create/update/delete/rename of PRD, TechSpec, code or unit tests; other work is exempt. Covers setup, completion, recovery and post-loop test consent.'
 user-invocable: false
 metadata:
   author: "Frontier"
@@ -36,12 +36,8 @@ Review approval never implies tests passed or coverage was measured.
 
 ## When to Use This Skill
 
-Apply [AGENT-PROTOCOL.md](../../../AGENT-PROTOCOL.md) section 1.1 first. A loop is
-required only for create/update/delete/rename of PRD, TechSpec, code or unit tests,
-including small covered edits and protected executable runtime/hook/policy code.
-Roles and task keywords do not decide applicability. Class minima apply only
-after applicability: standard 1, auto-fix 2, complex/orchestrated 3, high-risk 5.
-The patterns below are techniques within the owning loop, not additional loops.
+Applicability: [AGENT-PROTOCOL.md](../../../AGENT-PROTOCOL.md) section 1.1
+(artifact/action, not role/keywords), then class minima.
 
 - Tasks requiring multiple passes to reach quality (implementation, refactoring)
 - Incremental feature building with verifiable milestones
@@ -51,15 +47,8 @@ The patterns below are techniques within the owning loop, not additional loops.
 
 ## When NOT to Use
 
-- Research/read/review-only/check/commit-only operations
-- Other artifacts: plans, docs, config, instructions, agent/skill declarations
-
-Exempt work retains applicable nonloop validation, scrub, stage gates and council
-policy; it MUST NOT claim its own loop or inherit unrelated active state.
-Review of covered work inspects its scoped evidence without starting a nested
-review loop. Covered fixes trigger the gate before editing. Delegates reuse only
-the assigned parent loop and MUST NOT start/reset/iterate/complete it. Unclear
-criteria require clarification, not an exemption for a covered mutation.
+- Research/review-only/check/commit-only work and non-covered artifacts (section
+  1.1); delegates reuse the parent loop.
 
 ## Prerequisites
 
@@ -69,7 +58,7 @@ criteria require clarification, not an exemption for a covered mutation.
 
 ## Rationalization Table
 
-For covered mutations, the loop is the gate, not a suggestion. Push back against these common ways of skipping it.
+The loop is the gate, not a suggestion. Push back against these common ways of skipping it.
 
 | Rationalization | Reality |
 |-----------------|---------|
@@ -84,9 +73,7 @@ For covered mutations, the loop is the gate, not a suggestion. Push back against
 ## Decision Tree
 
 ```
-Covered artifact mutation under AGENT-PROTOCOL.md section 1.1?
-+- No -> No persisted loop; retain applicable nonloop checks
-+- Yes -> Establish the owning loop before the covered mutation, then refine:
+Covered (section 1.1)? No -> no loop; Yes -> then:
 Need iterative refinement?
 +- Has verifiable completion criteria?
 |  +- Tests exist or can be written?
@@ -98,7 +85,7 @@ Need iterative refinement?
 +- Need multiple phases?
 |  -> Phased Loop (phase 1 -> phase 2 -> ... -> done)
 - No clear criteria?
-  -> Clarify criteria before covered edits; this is not a loop exemption
+  -> Clarify criteria first; not an exemption
 ```
 
 ---
@@ -111,7 +98,7 @@ Need iterative refinement?
 | **Quality Loop** | 3-10 | Linting, formatting | Zero errors/warnings |
 | **Build Loop** | 5-15 | Compilation fixes | Clean build |
 | **Phased Loop** | 10-50 | Large features | All phases complete |
-| **Review/Fix Passes** | Within owning class minimum | Covered fixes only; review-only starts no loop | Verified fixes and findings |
+| **Review Loop** | 2-5 | Self-review | No issues found |
 | **Adversarial review** | 1 scoped pass | Inspect failure paths and design cases | Risks reviewed; suites deferred for user decision |
 | **Subagent Review Loop** | 1 (mandatory pass) | Blind-spot detection | Zero HIGH/MEDIUM findings from a clean reviewer, recorded as `loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0` on the final work iteration |
 
@@ -119,8 +106,7 @@ Need iterative refinement?
 
 ## Deterministic Gates (Engineer default)
 
-For applicable covered work, the owning quality loop is gated by the CLI, not by
-role or judgment. Only its owner records lifecycle transitions:
+The owning quality loop is gated by the CLI, not by judgment:
 
 1. `loop start` resets `.frontier/state/tests-baseline.json` and cleans the prior loop's evidence archive; `loop affected` lists tests naming code changed since then.
 2. `loop iterate -e <path>` REQUIRES existing evidence: acceptance mapping, independent findings or relevant non-test check output. Supplied earlier test results retain their original revision and timestamp; do not rerun suites or manufacture fresh results. The CLI archives evidence under `.frontier/state/loop-evidence/`.
@@ -195,15 +181,11 @@ Loop state is tracked in `.frontier/state/loop-state.json`:
 Test-aware authoring, build-check-fix, adversarial review and test planning, phased
 and review loops are described in [Loop patterns](references/loop-patterns.md).
 
-Review-only work starts no loop. Covered fixes use the owning loop; delegates
-return scoped evidence and MUST NOT change its lifecycle. Tests are authored
-and inspected in-loop; execution waits for explicit post-loop consent.
-
 ---
 
 ## CLI Commands
 
-### Start a Loop (Standalone Covered Work Only)
+### Start a Loop
 
 ```powershell
 # PowerShell
@@ -426,7 +408,7 @@ contract: output it only when the statement is TRUE.
 - **Skipping Verification**: Confusing deferred tests with no verification -> Record actual non-test checks and review evidence; ask about suites after completion
 - **Vague Criteria**: Using subjective completion criteria like "code looks good" -> Define binary, machine-verifiable criteria (test exit code, lint error count, build success)
 - **Memory Loss**: Repeating the same failed fix across iterations without tracking what was tried -> Log each iteration's approach and outcome in the progress file; read before each new attempt
-- **Loop Avoidance**: Avoiding the loop for covered mutations to save time -> Apply artifact/action applicability first, then the risk-based minimum; exempt work retains nonloop verification
+- **Loop Avoidance**: Skipping the loop for covered mutations -> Apply section 1.1 and the risk minimum
 
 ---
 

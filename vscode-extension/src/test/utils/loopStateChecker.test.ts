@@ -231,6 +231,7 @@ describe('operation-scoped loop gates', () => {
       const agentx = {
         workspaceRoot: wsRoot,
         hasCliRuntime: () => true,
+        ensureWorkspaceReady: sandbox.stub().resolves(wsRoot),
         runCliStreaming: run,
         clearPendingClarification: sandbox.stub().resolves(),
       } as unknown as FrontierContext;
@@ -242,7 +243,7 @@ describe('operation-scoped loop gates', () => {
 
       assert.ok(run.calledOnce);
       assert.equal(run.firstCall.args[0], 'run');
-      assert.deepEqual(run.firstCall.args[1], ['reviewer', 'Inspect the existing changes']);
+      assert.deepEqual(run.firstCall.args[1], ['reviewer', 'Inspect the existing changes', '--json']);
       assert.ok(markdown.calledOnce);
       assert.ok(read.notCalled);
     });

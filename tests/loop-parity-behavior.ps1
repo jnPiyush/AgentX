@@ -221,7 +221,7 @@ function Test-ApplicabilityParity {
         $runnerErrors = $null
         $runnerAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $script:repoRoot '.frontier/runtime/agentic-runner.ps1'), [ref]$runnerTokens, [ref]$runnerErrors)
         $runnerPolicy = $runnerAst.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Test-RunnerLoopCoveredPath' }, $false)
-        Invoke-Expression $runnerPolicy.Extent.Text
+        . ([scriptblock]::Create($runnerPolicy.Extent.Text))
         for ($index = 0; $index -lt $cases.Count; $index++) {
             $case = $cases[$index]
             $result = Invoke-IsolatedAgentx $workspaceRoot @('loop', 'applicability', '--operation', $case.operation, '--paths',
@@ -313,7 +313,7 @@ function Test-ReviewOnlyHandoff {
             lastIterationAt = [datetimeoffset]::UtcNow.ToString('o'); history = @()
         } | ConvertTo-Json | Set-Content -LiteralPath $statePath
         $unrelated = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', 'reviewer')
-        Assert-True ($unrelated.ExitCode -ne 0 -and $unrelated.Output -match 'matching unconsumed covered approval') 'unrelated completed loop cannot approve reviewer code fixes'
+        Assert-True ($unrelated.ExitCode -ne 0 -and $unrelated.Output -match 'matching unconsumed covered approval|Archived review evidence') 'unrelated completed loop cannot approve reviewer code fixes'
         Remove-Item -LiteralPath $statePath -Force
         Remove-Item -LiteralPath (Join-Path $workspaceRoot '.frontier/state/agent-state.json') -Force -ErrorAction SilentlyContinue
         $noStart = Invoke-IsolatedAgentx $workspaceRoot @('hook', 'finish', 'reviewer')
