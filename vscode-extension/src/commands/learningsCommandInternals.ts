@@ -30,133 +30,102 @@ export function getLearningsChannel(): vscode.OutputChannel {
  return learningsChannel;
 }
 
+function showInLearningsChannel(content: string): void {
+ const channel = getLearningsChannel();
+ channel.clear();
+ channel.appendLine(content);
+ channel.show(true);
+}
+
+function requireWorkspaceRoot(agentx: FrontierContext, actionLabel: string): string | undefined {
+ const root = agentx.workspaceRoot;
+ if (!root) {
+  vscode.window.showWarningMessage(`Frontier needs an open workspace to ${actionLabel}.`);
+  return undefined;
+ }
+ return root;
+}
+
+async function showWorkflowGuidanceReport(
+ agentx: FrontierContext,
+ actionLabel: string,
+ render: (snapshot: ReturnType<typeof evaluateWorkflowGuidance>) => string,
+): Promise<void> {
+ const root = requireWorkspaceRoot(agentx, actionLabel);
+ if (!root) {
+  return;
+ }
+
+ const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
+ const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
+ showInLearningsChannel(render(snapshot));
+}
+
 export async function showRankedLearnings(
  agentx: FrontierContext,
  intent: LearningsIntent,
  query?: string,
 ): Promise<void> {
- const root = agentx.workspaceRoot;
+ const root = requireWorkspaceRoot(agentx, 'show learnings');
  if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to show learnings.');
   return;
  }
 
  const resolvedQuery = (query ?? getDefaultLearningsQuery(root, intent)).trim();
  const results = rankLearnings(root, intent, resolvedQuery);
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderRankedLearningsText(intent, results, resolvedQuery));
- channel.show(true);
+ showInLearningsChannel(renderRankedLearningsText(intent, results, resolvedQuery));
 }
 
 export async function showCaptureGuidance(agentx: FrontierContext): Promise<void> {
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderCaptureGuidanceMarkdown(agentx.workspaceRoot));
- channel.show(true);
+ showInLearningsChannel(renderCaptureGuidanceMarkdown(agentx.workspaceRoot));
 }
 
 export async function showBrainstorm(agentx: FrontierContext, query?: string): Promise<void> {
- const root = agentx.workspaceRoot;
+ const root = requireWorkspaceRoot(agentx, 'brainstorm');
  if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to brainstorm.');
   return;
  }
 
  const resolvedQuery = (query ?? getDefaultLearningsQuery(root, 'planning')).trim();
  const results = rankLearnings(root, 'planning', resolvedQuery);
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderBrainstormGuidanceMarkdown(root, resolvedQuery, results));
- channel.show(true);
+ showInLearningsChannel(renderBrainstormGuidanceMarkdown(root, resolvedQuery, results));
 }
 
 export async function showCompoundLoop(agentx: FrontierContext): Promise<void> {
- const root = agentx.workspaceRoot;
+ const root = requireWorkspaceRoot(agentx, 'show the compound loop');
  if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to show the compound loop.');
   return;
  }
 
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderCompoundLoopMarkdown(root));
- channel.show(true);
+ showInLearningsChannel(renderCompoundLoopMarkdown(root));
 }
 
 export async function showWorkflowNextStep(agentx: FrontierContext): Promise<void> {
- const root = agentx.workspaceRoot;
- if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to resolve the next workflow step.');
-  return;
- }
-
- const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderWorkflowGuidanceMarkdown(snapshot));
- channel.show(true);
+ await showWorkflowGuidanceReport(agentx, 'resolve the next workflow step', renderWorkflowGuidanceMarkdown);
 }
 
 export async function showWorkflowRolloutScorecard(agentx: FrontierContext): Promise<void> {
- const root = agentx.workspaceRoot;
- if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to show the workflow rollout scorecard.');
-  return;
- }
-
- const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderWorkflowRolloutScorecardMarkdown(snapshot));
- channel.show(true);
+ await showWorkflowGuidanceReport(agentx, 'show the workflow rollout scorecard', renderWorkflowRolloutScorecardMarkdown);
 }
 
 export async function showOperatorEnablementChecklist(agentx: FrontierContext): Promise<void> {
- const root = agentx.workspaceRoot;
- if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to show the operator enablement checklist.');
-  return;
- }
-
- const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderOperatorEnablementChecklistMarkdown(snapshot));
- channel.show(true);
+ await showWorkflowGuidanceReport(agentx, 'show the operator enablement checklist', renderOperatorEnablementChecklistMarkdown);
 }
 
 export async function launchPlanDeepening(agentx: FrontierContext): Promise<void> {
- const root = agentx.workspaceRoot;
- if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to prepare plan deepening.');
-  return;
- }
-
- const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderWorkflowEntryPointMarkdown(snapshot, 'plan-deepening'));
- channel.show(true);
+ await showWorkflowGuidanceReport(
+  agentx,
+  'prepare plan deepening',
+  (snapshot) => renderWorkflowEntryPointMarkdown(snapshot, 'plan-deepening'),
+ );
 }
 
 export async function launchReviewKickoff(agentx: FrontierContext): Promise<void> {
- const root = agentx.workspaceRoot;
- if (!root) {
-  vscode.window.showWarningMessage('Frontier needs an open workspace to prepare review kickoff.');
-  return;
- }
-
- const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
- const channel = getLearningsChannel();
- channel.clear();
- channel.appendLine(renderWorkflowEntryPointMarkdown(snapshot, 'review-kickoff'));
- channel.show(true);
+ await showWorkflowGuidanceReport(
+  agentx,
+  'prepare review kickoff',
+  (snapshot) => renderWorkflowEntryPointMarkdown(snapshot, 'review-kickoff'),
+ );
 }
 
 function toSlug(value: string): string {

@@ -26,6 +26,61 @@ async function updatePendingSetup(agentx: FrontierContext, pending: PendingSetup
   }
 }
 
+async function completeApiKeyProviderSetup(
+  response: vscode.ChatResponseStream,
+  agentx: FrontierContext,
+  root: string,
+  providerId: 'openai-api' | 'anthropic-api',
+  options: {
+    readonly prompt: string;
+    readonly placeHolder: string;
+    readonly invalidMessage: string;
+    readonly cancelledMessage: string;
+    readonly displayLabel: string;
+    readonly defaultModel: string;
+    readonly extraSettings?: Record<string, string>;
+  },
+): Promise<vscode.ChatResult> {
+  const apiKey = await vscode.window.showInputBox({
+    prompt: options.prompt,
+    placeHolder: options.placeHolder,
+    password: true,
+    validateInput: (value) => value.trim().length < 10 ? options.invalidMessage : undefined,
+  });
+  if (!apiKey) {
+    response.markdown(options.cancelledMessage);
+    return {};
+  }
+
+  await applyLlmAdapterConfiguration(
+    agentx,
+    root,
+    providerId,
+    {
+      defaultModel: options.defaultModel,
+      apiKey: apiKey.trim(),
+      ...(options.extraSettings ?? {}),
+    },
+    { runPreCheck: false },
+  );
+  response.markdown([
+    `Configured **${options.displayLabel}** with default model \`${options.defaultModel}\`.`,
+    '',
+    'The API key was collected through a secure VS Code prompt and stored in workspace secret storage, not in chat.',
+  ].join('\n'));
+  return {};
+}
+
+async function promptPendingSetup(
+  response: vscode.ChatResponseStream,
+  agentx: FrontierContext,
+  pending: PendingSetupState,
+): Promise<vscode.ChatResult> {
+  await updatePendingSetup(agentx, pending);
+  response.markdown(renderPendingSetupMessage(pending));
+  return {};
+}
+
 async function clearPendingSetup(agentx: FrontierContext, root: string | undefined): Promise<void> {
   if (typeof agentx.clearPendingSetup === 'function') {
     await agentx.clearPendingSetup(root);
@@ -194,62 +249,25 @@ async function completeLlmProviderSetup(
       ].join('\n'));
       return {};
     }
-    case 'openai-api': {
-      const apiKey = await vscode.window.showInputBox({
+    case 'openai-api':
+      return completeApiKeyProviderSetup(response, agentx, root, 'openai-api', {
         prompt: 'OpenAI API key',
         placeHolder: 'sk-...',
-        password: true,
-        validateInput: (value) => value.trim().length < 10 ? 'Enter a valid OpenAI API key' : undefined,
+        invalidMessage: 'Enter a valid OpenAI API key',
+        cancelledMessage: 'OpenAI adapter setup cancelled.',
+        displayLabel: 'OpenAI API',
+        defaultModel: DEFAULT_OPENAI_MODEL,
       });
-      if (!apiKey) {
-        response.markdown('OpenAI adapter setup cancelled.');
-        return {};
-      }
-
-      await applyLlmAdapterConfiguration(
-        agentx,
-        root,
-        'openai-api',
-        { defaultModel: DEFAULT_OPENAI_MODEL, apiKey: apiKey.trim() },
-        { runPreCheck: false },
-      );
-      response.markdown([
-        `Configured **OpenAI API** with default model \`${DEFAULT_OPENAI_MODEL}\`.`,
-        '',
-        'The API key was collected through a secure VS Code prompt and stored in workspace secret storage, not in chat.',
-      ].join('\n'));
-      return {};
-    }
-    case 'anthropic-api': {
-      const apiKey = await vscode.window.showInputBox({
+    case 'anthropic-api':
+      return completeApiKeyProviderSetup(response, agentx, root, 'anthropic-api', {
         prompt: 'Anthropic API key',
         placeHolder: 'sk-ant-...',
-        password: true,
-        validateInput: (value) => value.trim().length < 10 ? 'Enter a valid Anthropic API key' : undefined,
+        invalidMessage: 'Enter a valid Anthropic API key',
+        cancelledMessage: 'Claude API adapter setup cancelled.',
+        displayLabel: 'Claude API',
+        defaultModel: DEFAULT_ANTHROPIC_MODEL,
+        extraSettings: { anthropicVersion: '2023-06-01' },
       });
-      if (!apiKey) {
-        response.markdown('Claude API adapter setup cancelled.');
-        return {};
-      }
-
-      await applyLlmAdapterConfiguration(
-        agentx,
-        root,
-        'anthropic-api',
-        {
-          defaultModel: DEFAULT_ANTHROPIC_MODEL,
-          apiKey: apiKey.trim(),
-          anthropicVersion: '2023-06-01',
-        },
-        { runPreCheck: false },
-      );
-      response.markdown([
-        `Configured **Claude API** with default model \`${DEFAULT_ANTHROPIC_MODEL}\`.`,
-        '',
-        'The API key was collected through a secure VS Code prompt and stored in workspace secret storage, not in chat.',
-      ].join('\n'));
-      return {};
-    }
   }
 }
 
@@ -262,15 +280,12 @@ async function beginLlmSetup(
   const root = await agentx.ensureWorkspaceReady();
 
   if (!providerId) {
-    const pending: PendingSetupState = {
+    return promptPendingSetup(response, agentx, {
       workspaceRoot: root,
       kind: 'llm-adapter',
       step: 'choose-llm-provider',
       prompt,
-    };
-    await updatePendingSetup(agentx, pending);
-    response.markdown(renderPendingSetupMessage(pending));
-    return {};
+    });
   }
 
   return completeLlmProviderSetup(response, agentx, root, providerId);
@@ -285,15 +300,12 @@ async function beginRemoteSetup(
   const root = await agentx.ensureWorkspaceReady();
 
   if (!adapterMode) {
-    const pending: PendingSetupState = {
+    return promptPendingSetup(response, agentx, {
       workspaceRoot: root,
       kind: 'remote-adapter',
       step: 'choose-remote-adapter',
       prompt,
-    };
-    await updatePendingSetup(agentx, pending);
-    response.markdown(renderPendingSetupMessage(pending));
-    return {};
+    });
   }
 
   if (adapterMode === 'local') {
@@ -305,31 +317,25 @@ async function beginRemoteSetup(
 
   if (adapterMode === 'github') {
     const detectedRepo = await detectGitHubOriginRepo(root);
-    const pending: PendingSetupState = {
+    return promptPendingSetup(response, agentx, {
       workspaceRoot: root,
       kind: 'remote-adapter',
       step: 'enter-github-repo',
       prompt,
       adapterMode: 'github',
       detectedValue: detectedRepo,
-    };
-    await updatePendingSetup(agentx, pending);
-    response.markdown(renderPendingSetupMessage(pending));
-    return {};
+    });
   }
 
   const detectedAdo = await detectAdoOrigin(root);
-  const pending: PendingSetupState = {
+  return promptPendingSetup(response, agentx, {
     workspaceRoot: root,
     kind: 'remote-adapter',
     step: 'enter-ado-project',
     prompt,
     adapterMode: 'ado',
     detectedValue: detectedAdo ? `${detectedAdo.organization}/${detectedAdo.project}` : undefined,
-  };
-  await updatePendingSetup(agentx, pending);
-  response.markdown(renderPendingSetupMessage(pending));
-  return {};
+  });
 }
 
 export async function tryHandleAdapterSetupRequest(
@@ -338,31 +344,11 @@ export async function tryHandleAdapterSetupRequest(
   agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
   if (/^(?:frontier:\s*)?(?:add llm adapter|switch llm|switch model provider|connect claude|connect claude local|connect claude api|connect openai|setup claude|setup claude local|setup claude api|setup openai|use claude|use claude local|use claude api|use openai|use copilot)$/i.test(userText)) {
-    const normalized = userText.toLowerCase();
-    const preferredProvider: LlmAdapterSetupMode | undefined = normalized.includes('openai')
-      ? 'openai-api'
-      : normalized.includes('local') || normalized.includes('litellm') || normalized.includes('ollama')
-        ? 'claude-code-local'
-      : normalized.includes('claude') && normalized.includes('api')
-        ? 'anthropic-api'
-        : normalized.includes('claude')
-          ? 'claude-code'
-          : normalized.includes('copilot')
-            ? 'copilot'
-            : undefined;
-    return beginLlmSetup(response, agentx, preferredProvider, userText);
+    return beginLlmSetup(response, agentx, parseLlmProviderReply(userText), userText);
   }
 
   if (/^(?:frontier:\s*)?(?:add remote adapter|switch adapter|switch remote adapter|connect github|connect ado|connect local|setup github|setup ado|setup local|use github|use ado|use local|use local adapter)$/i.test(userText)) {
-    const normalized = userText.toLowerCase();
-    const preferredAdapter = normalized.includes('github')
-      ? 'github'
-      : normalized.includes('ado')
-        ? 'ado'
-        : normalized.includes('local')
-          ? 'local'
-          : undefined;
-    return beginRemoteSetup(response, agentx, preferredAdapter, userText);
+    return beginRemoteSetup(response, agentx, parseRemoteAdapterReply(userText), userText);
   }
 
   return undefined;

@@ -17,52 +17,43 @@ const githubDir = path.resolve(repoRoot, '.github');
 // copies .github/ content there for VSIX bundling.
 const PREFIX = './.github/frontier';
 
-// --- Discover chatAgents (workspace source preference plus agent visibility) ---
-function discoverAgents() {
-    const agentsDir = path.join(githubDir, 'agents');
-    if (!fs.existsSync(agentsDir)) { return []; }
-    const results = [];
-    function walk(dir) {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-            const fullPath = path.join(dir, entry.name);
+function collectRelativeFiles(baseDir, predicate) {
+    if (!fs.existsSync(baseDir)) { return []; }
+    const found = [];
+    function walk(current) {
+        for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+            const fullPath = path.join(current, entry.name);
             if (entry.isDirectory()) {
                 walk(fullPath);
-            } else if (entry.name.endsWith('.agent.md')) {
-                const rel = path.relative(agentsDir, fullPath).replace(/\\/g, '/');
-                results.push({
-                    path: PREFIX + '/agents/' + rel,
-                    when: 'config.frontier.useBundledAgents',
-                });
+            } else if (predicate(entry.name)) {
+                found.push(path.relative(baseDir, fullPath).replace(/\\/g, '/'));
             }
         }
     }
-    walk(agentsDir);
-    return results.sort((a, b) => a.path.localeCompare(b.path));
+    walk(baseDir);
+    return found.sort();
+}
+
+// --- Discover chatAgents (workspace source preference plus agent visibility) ---
+function discoverAgents() {
+    return collectRelativeFiles(
+        path.join(githubDir, 'agents'),
+        (name) => name.endsWith('.agent.md'),
+    ).map((rel) => ({
+        path: PREFIX + '/agents/' + rel,
+        when: 'config.frontier.useBundledAgents',
+    }));
 }
 
 // --- Discover chatInstructions (recursive: nested domain instructions such as
 // instructions/ado/*.instructions.md must be contributed too, otherwise they
 // ship inside the VSIX but are never registered with the host) ---
 function discoverInstructions() {
-    const dir = path.join(githubDir, 'instructions');
-    const results = [];
-    if (fs.existsSync(dir)) {
-        const found = [];
-        function walk(current) {
-            for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-                const fullPath = path.join(current, entry.name);
-                if (entry.isDirectory()) {
-                    walk(fullPath);
-                } else if (entry.name.endsWith('.instructions.md')) {
-                    found.push(path.relative(dir, fullPath).replace(/\\/g, '/'));
-                }
-            }
-        }
-        walk(dir);
-        for (const rel of found.sort()) {
-            results.push({ path: PREFIX + '/instructions/' + rel });
-        }
-    }
+    const results = collectRelativeFiles(
+        path.join(githubDir, 'instructions'),
+        (name) => name.endsWith('.instructions.md'),
+    ).map((rel) => ({ path: PREFIX + '/instructions/' + rel }));
+
     // Global instruction files outside instructions/ directory
     const extraInstructions = [
         { src: path.join(githubDir, 'copilot-instructions.md'), dest: PREFIX + '/copilot-instructions.md' },
@@ -88,22 +79,10 @@ function discoverPrompts() {
 
 // --- Discover chatSkills (recursive) ---
 function discoverSkills() {
-    const skillsDir = path.join(githubDir, 'skills');
-    if (!fs.existsSync(skillsDir)) { return []; }
-    const results = [];
-    function walk(dir) {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-            if (entry.isDirectory()) {
-                walk(path.join(dir, entry.name));
-            } else if (entry.name === 'SKILL.md') {
-                const rel = path.relative(githubDir, path.join(dir, entry.name)).replace(/\\/g, '/');
-                results.push({ path: PREFIX + '/' + rel });
-            }
-        }
-    }
-    walk(skillsDir);
-    results.sort((a, b) => a.path.localeCompare(b.path));
-    return results;
+    return collectRelativeFiles(
+        path.join(githubDir, 'skills'),
+        (name) => name === 'SKILL.md',
+    ).map((rel) => ({ path: PREFIX + '/skills/' + rel }));
 }
 
 // --- Main ---

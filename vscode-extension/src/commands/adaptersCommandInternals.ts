@@ -78,37 +78,20 @@ export async function detectAdoOrigin(root: string): Promise<AdoAdapterSettings 
   }
 
   const normalized = remoteUrl.replace(/\.git$/, '');
-
-  const httpsMatch = normalized.match(/dev\.azure\.com\/(?<org>[^/]+)\/(?<project>[^/]+)\/_git\/(?<repo>[^/]+)/i);
-  if (httpsMatch?.groups?.org && httpsMatch.groups.project) {
-    return {
-      organization: httpsMatch.groups.org,
-      project: httpsMatch.groups.project,
-    };
-  }
-
-  const legacyHttpsMatch = normalized.match(/https:\/\/(?<org>[^/.]+)\.visualstudio\.com\/(?<project>[^/]+)\/_git\/(?<repo>[^/]+)/i);
-  if (legacyHttpsMatch?.groups?.org && legacyHttpsMatch.groups.project) {
-    return {
-      organization: legacyHttpsMatch.groups.org,
-      project: legacyHttpsMatch.groups.project,
-    };
-  }
-
-  const sshMatch = normalized.match(/ssh\.dev\.azure\.com:v3\/(?<org>[^/]+)\/(?<project>[^/]+)\/(?<repo>[^/]+)/i);
-  if (sshMatch?.groups?.org && sshMatch.groups.project) {
-    return {
-      organization: sshMatch.groups.org,
-      project: sshMatch.groups.project,
-    };
-  }
-
-  const legacySshMatch = normalized.match(/vs-ssh\.visualstudio\.com:v3\/(?<org>[^/]+)\/(?<project>[^/]+)\/(?<repo>[^/]+)/i);
-  if (legacySshMatch?.groups?.org && legacySshMatch.groups.project) {
-    return {
-      organization: legacySshMatch.groups.org,
-      project: legacySshMatch.groups.project,
-    };
+  const patterns = [
+    /dev\.azure\.com\/(?<org>[^/]+)\/(?<project>[^/]+)\/_git\/(?<repo>[^/]+)/i,
+    /https:\/\/(?<org>[^/.]+)\.visualstudio\.com\/(?<project>[^/]+)\/_git\/(?<repo>[^/]+)/i,
+    /ssh\.dev\.azure\.com:v3\/(?<org>[^/]+)\/(?<project>[^/]+)\/(?<repo>[^/]+)/i,
+    /vs-ssh\.visualstudio\.com:v3\/(?<org>[^/]+)\/(?<project>[^/]+)\/(?<repo>[^/]+)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (match?.groups?.org && match.groups.project) {
+      return {
+        organization: match.groups.org,
+        project: match.groups.project,
+      };
+    }
   }
 
   return undefined;
@@ -151,72 +134,68 @@ function upsertMcpServer(root: string, mode: AdapterMode): boolean {
   return writeJsonIfChanged(mcpPath, { ...mcpConfig, servers });
 }
 
-function upsertGitHubAdapterConfig(root: string, settings: GitHubAdapterSettings): boolean {
+function writeAdapterConfig(
+  root: string,
+  mode: AdapterMode,
+  mutate?: (existingConfig: FrontierConfig, existingAdapters: Record<string, unknown>) => Record<string, unknown>,
+): boolean {
   const configFile = resolveFrontierStatePath(root, 'config.json');
   const existingConfig = readJsonWithComments<FrontierConfig>(configFile) ?? {};
   const existingAdapters = { ...(existingConfig.adapters as Record<string, unknown> | undefined) };
-  const currentGithubAdapter = (existingAdapters.github ?? {}) as Record<string, unknown>;
-  const projectNum = settings.projectNum ?? normalizeProjectNumber(currentGithubAdapter.project ?? existingConfig.project);
-
-  existingAdapters.github = {
-    repo: settings.repoSlug,
-    project: projectNum,
-  };
+  const extraFields = mutate ? mutate(existingConfig, existingAdapters) : {};
 
   const nextConfig: Record<string, unknown> = {
     ...existingConfig,
-    provider: 'github',
-    integration: 'github',
-    mode: 'github',
-    repo: settings.repoSlug,
-    project: projectNum,
-    adapters: existingAdapters,
+    provider: mode,
+    integration: mode,
+    mode,
+    ...extraFields,
     created: existingConfig.created ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
   return writeJsonIfChanged(configFile, nextConfig);
+}
+
+function upsertGitHubAdapterConfig(root: string, settings: GitHubAdapterSettings): boolean {
+  return writeAdapterConfig(root, 'github', (existingConfig, existingAdapters) => {
+    const currentGithubAdapter = (existingAdapters.github ?? {}) as Record<string, unknown>;
+    const projectNum = settings.projectNum ?? normalizeProjectNumber(currentGithubAdapter.project ?? existingConfig.project);
+    existingAdapters.github = {
+      repo: settings.repoSlug,
+      project: projectNum,
+    };
+    return {
+      repo: settings.repoSlug,
+      project: projectNum,
+      adapters: existingAdapters,
+    };
+  });
 }
 
 function upsertAdoAdapterConfig(root: string, settings: AdoAdapterSettings): boolean {
-  const configFile = resolveFrontierStatePath(root, 'config.json');
-  const existingConfig = readJsonWithComments<FrontierConfig>(configFile) ?? {};
-  const existingAdapters = { ...(existingConfig.adapters as Record<string, unknown> | undefined) };
-
-  existingAdapters.ado = {
-    organization: settings.organization,
-    project: settings.project,
-  };
-
-  const nextConfig: Record<string, unknown> = {
-    ...existingConfig,
-    provider: 'ado',
-    integration: 'ado',
-    mode: 'ado',
-    organization: settings.organization,
-    project: settings.project,
-    adapters: existingAdapters,
-    created: existingConfig.created ?? new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  return writeJsonIfChanged(configFile, nextConfig);
+  return writeAdapterConfig(root, 'ado', (_existingConfig, existingAdapters) => {
+    existingAdapters.ado = {
+      organization: settings.organization,
+      project: settings.project,
+    };
+    return {
+      organization: settings.organization,
+      project: settings.project,
+      adapters: existingAdapters,
+    };
+  });
 }
 
 function switchToLocalAdapterConfig(root: string): boolean {
-  const configFile = resolveFrontierStatePath(root, 'config.json');
-  const existingConfig = readJsonWithComments<FrontierConfig>(configFile) ?? {};
+  return writeAdapterConfig(root, 'local');
+}
 
-  const nextConfig: Record<string, unknown> = {
-    ...existingConfig,
-    provider: 'local',
-    integration: 'local',
-    mode: 'local',
-    created: existingConfig.created ?? new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  return writeJsonIfChanged(configFile, nextConfig);
+async function refreshAdapterContexts(agentx: FrontierContext): Promise<void> {
+  agentx.invalidateCache();
+  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
+  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 }
 
 export async function applyRemoteAdapterConfiguration(
@@ -231,10 +210,7 @@ export async function applyRemoteAdapterConfiguration(
     ? switchToLocalAdapterConfig(root)
     : await upsertRemoteAdapter(root, mode, settings as GitHubAdapterSettings | AdoAdapterSettings));
 
-  agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
+  await refreshAdapterContexts(agentx);
 
   let preCheckPassed = true;
   if ((options?.runPreCheck ?? true) && mode !== 'local') {
@@ -263,8 +239,11 @@ async function upsertRemoteAdapter(
   return mcpChanged || configChanged;
 }
 
-export async function syncDetectedGitHubAdapter(
+async function syncDetectedRemoteAdapter<TSettings extends GitHubAdapterSettings | AdoAdapterSettings>(
   agentx: FrontierContext,
+  mode: 'github' | 'ado',
+  detect: (root: string) => Promise<TSettings | undefined>,
+  formatNotification: (settings: TSettings) => string,
   options?: { readonly notify?: boolean; readonly root?: string },
 ): Promise<boolean> {
   const root = options?.root ?? agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
@@ -277,64 +256,71 @@ export async function syncDetectedGitHubAdapter(
     return false;
   }
 
-  const repoSlug = await detectGitHubOriginRepo(root);
-  if (!repoSlug) {
+  const detectedSettings = await detect(root);
+  if (!detectedSettings) {
     return false;
   }
 
-  const changed = await upsertRemoteAdapter(root, 'github', { repoSlug });
+  const changed = await upsertRemoteAdapter(root, mode, detectedSettings);
   if (!changed) {
     return false;
   }
 
-  agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
+  await refreshAdapterContexts(agentx);
 
   if (options?.notify) {
-    vscode.window.showInformationMessage(`Frontier: GitHub remote detected. Active mode switched to GitHub (${repoSlug}).`);
+    vscode.window.showInformationMessage(formatNotification(detectedSettings));
   }
 
   return true;
+}
+
+export async function syncDetectedGitHubAdapter(
+  agentx: FrontierContext,
+  options?: { readonly notify?: boolean; readonly root?: string },
+): Promise<boolean> {
+  return syncDetectedRemoteAdapter(
+    agentx,
+    'github',
+    async (root) => {
+      const repoSlug = await detectGitHubOriginRepo(root);
+      return repoSlug ? { repoSlug } : undefined;
+    },
+    (settings) => `Frontier: GitHub remote detected. Active mode switched to GitHub (${settings.repoSlug}).`,
+    options,
+  );
 }
 
 export async function syncDetectedAdoAdapter(
   agentx: FrontierContext,
   options?: { readonly notify?: boolean; readonly root?: string },
 ): Promise<boolean> {
-  const root = options?.root ?? agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
-  if (!root || !vscode.workspace.isTrusted || isPrivateFrontierState(root)) {
-    return false;
+  return syncDetectedRemoteAdapter(
+    agentx,
+    'ado',
+    detectAdoOrigin,
+    (settings) => `Frontier: Azure DevOps remote detected. Active mode switched to Azure DevOps (${settings.organization}/${settings.project}).`,
+    options,
+  );
+}
+
+async function promptUseDetectedRemote(
+  detectedLabel: string,
+  manualDescription: string,
+  placeHolder: string,
+  title: string,
+): Promise<'detected' | 'manual' | undefined> {
+  const picked = await vscode.window.showQuickPick(
+    [
+      { label: detectedLabel, description: 'Detected from git remote' },
+      { label: 'Enter manually...', description: manualDescription },
+    ],
+    { placeHolder, title },
+  );
+  if (!picked) {
+    return undefined;
   }
-
-  const configFile = resolveFrontierStatePath(root, 'config.json');
-  if (!fs.existsSync(configFile)) {
-    return false;
-  }
-
-  const adoSettings = await detectAdoOrigin(root);
-  if (!adoSettings) {
-    return false;
-  }
-
-  const changed = await upsertRemoteAdapter(root, 'ado', adoSettings);
-  if (!changed) {
-    return false;
-  }
-
-  agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
-
-  if (options?.notify) {
-    vscode.window.showInformationMessage(
-      `Frontier: Azure DevOps remote detected. Active mode switched to Azure DevOps (${adoSettings.organization}/${adoSettings.project}).`,
-    );
-  }
-
-  return true;
+  return picked.label === 'Enter manually...' ? 'manual' : 'detected';
 }
 
 async function promptGitHubSettings(root: string): Promise<{ repoSlug?: string; projectNum?: number } | undefined> {
@@ -342,25 +328,20 @@ async function promptGitHubSettings(root: string): Promise<{ repoSlug?: string; 
 
   let repoSlug: string | undefined;
   if (detectedRepo) {
-    const useDetected = await vscode.window.showQuickPick(
-      [
-        { label: detectedRepo, description: 'Detected from git remote' },
-        { label: 'Enter manually...', description: 'Type a different owner/repo' },
-      ],
-      { placeHolder: 'GitHub repository (owner/repo)', title: 'Frontier - GitHub Adapter' },
+    const choice = await promptUseDetectedRemote(
+      detectedRepo,
+      'Type a different owner/repo',
+      'GitHub repository (owner/repo)',
+      'Frontier - GitHub Adapter',
     );
-    if (!useDetected) {
+    if (!choice) {
       return undefined;
     }
-    if (useDetected.label === 'Enter manually...') {
-      repoSlug = await vscode.window.showInputBox({
-        prompt: 'GitHub repository (owner/repo)',
-        placeHolder: 'myorg/myproject',
-      });
-    } else {
-      repoSlug = useDetected.label;
+    if (choice === 'detected') {
+      repoSlug = detectedRepo;
     }
-  } else {
+  }
+  if (!repoSlug) {
     repoSlug = await vscode.window.showInputBox({
       prompt: 'GitHub repository (owner/repo)',
       placeHolder: 'myorg/myproject',
@@ -395,21 +376,17 @@ async function promptAdoSettings(root: string): Promise<{ organization?: string;
   let project: string | undefined;
 
   if (detectedAdo) {
-    const useDetected = await vscode.window.showQuickPick(
-      [
-        {
-          label: `${detectedAdo.organization}/${detectedAdo.project}`,
-          description: 'Detected from git remote',
-        },
-        { label: 'Enter manually...', description: 'Type a different organization/project' },
-      ],
-      { placeHolder: 'Azure DevOps organization/project', title: 'Frontier - Azure DevOps Adapter' },
+    const choice = await promptUseDetectedRemote(
+      `${detectedAdo.organization}/${detectedAdo.project}`,
+      'Type a different organization/project',
+      'Azure DevOps organization/project',
+      'Frontier - Azure DevOps Adapter',
     );
-    if (!useDetected) {
+    if (!choice) {
       return undefined;
     }
 
-    if (useDetected.label !== 'Enter manually...') {
+    if (choice === 'detected') {
       organization = detectedAdo.organization;
       project = detectedAdo.project;
     }

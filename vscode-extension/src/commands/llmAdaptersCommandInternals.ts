@@ -299,67 +299,73 @@ async function promptClaudeLocalGatewaySettings(): Promise<ProviderPromptResult 
   };
 }
 
-async function promptAnthropicSettings(): Promise<ProviderPromptResult | undefined> {
-  const model = await vscode.window.showQuickPick(CLAUDE_MODEL_ITEMS, {
-    placeHolder: 'Default Claude model for API mode',
-    title: 'Frontier - Claude API',
+async function promptApiKeyProviderSettings(options: {
+  readonly modelItems: readonly LlmModelPick[];
+  readonly modelPlaceHolder: string;
+  readonly modelTitle: string;
+  readonly apiKeyPrompt: string;
+  readonly apiKeyPlaceHolder: string;
+  readonly invalidKeyMessage: string;
+  readonly baseUrlPrompt: string;
+  readonly baseUrlPlaceHolder: string;
+  readonly extraFields?: Partial<ProviderPromptResult>;
+}): Promise<ProviderPromptResult | undefined> {
+  const model = await vscode.window.showQuickPick(options.modelItems, {
+    placeHolder: options.modelPlaceHolder,
+    title: options.modelTitle,
   });
   if (!model) {
     return undefined;
   }
 
   const apiKey = await vscode.window.showInputBox({
-    prompt: 'Anthropic API key',
-    placeHolder: 'sk-ant-...',
+    prompt: options.apiKeyPrompt,
+    placeHolder: options.apiKeyPlaceHolder,
     password: true,
-    validateInput: (value) => value.trim().length < 10 ? 'Enter a valid Anthropic API key' : undefined,
+    validateInput: (value) => value.trim().length < 10 ? options.invalidKeyMessage : undefined,
   });
   if (!apiKey) {
     return undefined;
   }
 
   const baseUrl = await vscode.window.showInputBox({
-    prompt: 'Anthropic base URL (leave empty for default)',
-    placeHolder: 'https://api.anthropic.com',
+    prompt: options.baseUrlPrompt,
+    placeHolder: options.baseUrlPlaceHolder,
   });
 
   return {
     defaultModel: model.value,
     apiKey: apiKey.trim(),
     baseUrl: baseUrl?.trim(),
-    anthropicVersion: '2023-06-01',
+    ...(options.extraFields ?? {}),
   };
 }
 
+async function promptAnthropicSettings(): Promise<ProviderPromptResult | undefined> {
+  return promptApiKeyProviderSettings({
+    modelItems: CLAUDE_MODEL_ITEMS,
+    modelPlaceHolder: 'Default Claude model for API mode',
+    modelTitle: 'Frontier - Claude API',
+    apiKeyPrompt: 'Anthropic API key',
+    apiKeyPlaceHolder: 'sk-ant-...',
+    invalidKeyMessage: 'Enter a valid Anthropic API key',
+    baseUrlPrompt: 'Anthropic base URL (leave empty for default)',
+    baseUrlPlaceHolder: 'https://api.anthropic.com',
+    extraFields: { anthropicVersion: '2023-06-01' },
+  });
+}
+
 async function promptOpenAiSettings(): Promise<ProviderPromptResult | undefined> {
-  const model = await vscode.window.showQuickPick(OPENAI_MODEL_ITEMS, {
-    placeHolder: 'Default OpenAI model for API mode',
-    title: 'Frontier - OpenAI API',
+  return promptApiKeyProviderSettings({
+    modelItems: OPENAI_MODEL_ITEMS,
+    modelPlaceHolder: 'Default OpenAI model for API mode',
+    modelTitle: 'Frontier - OpenAI API',
+    apiKeyPrompt: 'OpenAI API key',
+    apiKeyPlaceHolder: 'sk-...',
+    invalidKeyMessage: 'Enter a valid OpenAI API key',
+    baseUrlPrompt: 'OpenAI base URL (leave empty for default)',
+    baseUrlPlaceHolder: 'https://api.openai.com/v1',
   });
-  if (!model) {
-    return undefined;
-  }
-
-  const apiKey = await vscode.window.showInputBox({
-    prompt: 'OpenAI API key',
-    placeHolder: 'sk-...',
-    password: true,
-    validateInput: (value) => value.trim().length < 10 ? 'Enter a valid OpenAI API key' : undefined,
-  });
-  if (!apiKey) {
-    return undefined;
-  }
-
-  const baseUrl = await vscode.window.showInputBox({
-    prompt: 'OpenAI base URL (leave empty for default)',
-    placeHolder: 'https://api.openai.com/v1',
-  });
-
-  return {
-    defaultModel: model.value,
-    apiKey: apiKey.trim(),
-    baseUrl: baseUrl?.trim(),
-  };
 }
 
 async function promptProviderSettings(setupMode: LlmAdapterSetupMode): Promise<ProviderPromptResult | undefined> {
@@ -405,36 +411,16 @@ export async function applyLlmAdapterConfiguration(
   const changed = await agentx.workspaceState.withMutation(root, async () => {
   const updated = upsertLlmAdapterConfig(root, providerId, settings);
 
-  if (providerId === 'openai-api') {
-    if (settings.apiKey) {
-      await agentx.storeWorkspaceLlmSecret('openai-api', settings.apiKey, root);
-    }
-    await agentx.deleteWorkspaceLlmSecret('anthropic-api', root);
-    await agentx.deleteWorkspaceLlmSecret('claude-code', root);
-  }
-
-  if (providerId === 'anthropic-api') {
-    if (settings.apiKey) {
-      await agentx.storeWorkspaceLlmSecret('anthropic-api', settings.apiKey, root);
-    }
-    await agentx.deleteWorkspaceLlmSecret('openai-api', root);
-    await agentx.deleteWorkspaceLlmSecret('claude-code', root);
-  }
-
-  if (providerId === 'claude-code') {
-    if (settings.apiKey) {
-      await agentx.storeWorkspaceLlmSecret('claude-code', settings.apiKey, root);
+  for (const secretProvider of ['openai-api', 'anthropic-api', 'claude-code'] as const) {
+    if (secretProvider === providerId) {
+      if (settings.apiKey) {
+        await agentx.storeWorkspaceLlmSecret(secretProvider, settings.apiKey, root);
+      } else if (secretProvider === 'claude-code') {
+        await agentx.deleteWorkspaceLlmSecret(secretProvider, root);
+      }
     } else {
-      await agentx.deleteWorkspaceLlmSecret('claude-code', root);
+      await agentx.deleteWorkspaceLlmSecret(secretProvider, root);
     }
-    await agentx.deleteWorkspaceLlmSecret('openai-api', root);
-    await agentx.deleteWorkspaceLlmSecret('anthropic-api', root);
-  }
-
-  if (providerId === 'copilot') {
-    await agentx.deleteWorkspaceLlmSecret('openai-api', root);
-    await agentx.deleteWorkspaceLlmSecret('anthropic-api', root);
-    await agentx.deleteWorkspaceLlmSecret('claude-code', root);
   }
   return updated;
   });
