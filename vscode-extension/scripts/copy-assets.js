@@ -55,6 +55,10 @@ const runtimeScriptFiles = [
     'score-skill.ps1',
     'validate-skill.ps1',
     'validate-changed-skills.ps1',
+    'provenance.ps1',
+    'templates.ps1',
+    'plugins.ps1',
+    'recommend-skills.ps1',
     'parse-yaml.js',
 ];
 
@@ -63,9 +67,6 @@ const standaloneFiles = ['AGENT-PROTOCOL.md', 'agent-delegation.md', 'frontier-s
 
 // Root-level reference documents to bundle alongside .github/ assets
 const rootDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE', 'NOTICE'];
-
-// Root-level compatibility docs referenced by bundled markdown via relative paths
-const compatibilityDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE', 'NOTICE'];
 
 // Runtime entry points that extension-installed workspaces rely on
 const rootRuntimeFiles = [
@@ -283,7 +284,7 @@ if (fs.existsSync(transientDestRoot)) {
     fs.rmSync(transientDestRoot, { recursive: true });
 }
 
-for (const file of compatibilityDocs) {
+for (const file of rootDocs) {
     const compatibilityPath = path.join(compatibilityRoot, file);
     if (fs.existsSync(compatibilityPath)) {
         fs.rmSync(compatibilityPath, { force: true });
@@ -380,19 +381,6 @@ if (rootDocCount > 0) {
     console.log('  Copied ' + rootDocCount + ' root docs');
 }
 
-// Copy compatibility docs one level above the bundle root so existing relative links remain valid.
-let compatibilityDocCount = 0;
-for (const file of compatibilityDocs) {
-    const src = path.join(repoRoot, file);
-    if (fs.existsSync(src)) {
-        fs.copyFileSync(src, path.join(compatibilityRoot, file));
-        compatibilityDocCount++;
-    }
-}
-if (compatibilityDocCount > 0) {
-    console.log('  Copied ' + compatibilityDocCount + ' compatibility docs');
-}
-
 // Copy root runtime files
 let runtimeFileCount = 0;
 for (const file of rootRuntimeFiles) {
@@ -428,16 +416,11 @@ const docsDestDir = path.join(destRoot, 'docs');
 if (!fs.existsSync(docsDestDir)) {
     fs.mkdirSync(docsDestDir, { recursive: true });
 }
-const compatibilityDocsDir = path.join(compatibilityRoot, 'docs');
-if (!fs.existsSync(compatibilityDocsDir)) {
-    fs.mkdirSync(compatibilityDocsDir, { recursive: true });
-}
 let docFileCount = 0;
 for (const file of docFiles) {
     const src = path.join(repoRoot, 'docs', file);
     if (fs.existsSync(src)) {
         fs.copyFileSync(src, path.join(docsDestDir, file));
-        fs.copyFileSync(src, path.join(compatibilityDocsDir, file));
         totalFiles++;
         docFileCount++;
     }
@@ -448,9 +431,7 @@ if (docFileCount > 0) {
 
 if (fs.existsSync(docGuideDir)) {
     const bundledGuideDir = path.join(docsDestDir, 'guides');
-    const compatibilityGuideDir = path.join(compatibilityDocsDir, 'guides');
     fs.cpSync(docGuideDir, bundledGuideDir, { recursive: true });
-    fs.cpSync(docGuideDir, compatibilityGuideDir, { recursive: true });
     const guideCount = countFiles(bundledGuideDir);
     totalFiles += guideCount;
     console.log('  Copied docs/guides/ (' + guideCount + ' files)');
@@ -473,8 +454,7 @@ if (artifactDocFileCount > 0) {
 buildCopilotCliSeedTree();
 
 applyBundledMarkdownRewrites();
-syncCompatibilityRootDocs();
-rewriteCompatibilityDocs();
+syncCompatibilityDocuments();
 
 console.log('Done: ' + totalFiles + ' files copied to .github/frontier/');
 
@@ -544,7 +524,7 @@ function buildCopilotCliSeedTree() {
     }
 
     // Gate scripts the agents invoke by repository-relative path.
-    for (const file of [...runtimeScriptFiles, 'validate-handoff.ps1', 'score-output.ps1']) {
+    for (const file of runtimeScriptFiles) {
         copyFile(path.join(repoRoot, 'scripts', file), path.join('scripts', file));
     }
     copyFile(path.join(repoRoot, '.frontier', 'runtime', 'workspace-state.ps1'),
@@ -567,7 +547,7 @@ function buildCopilotCliSeedTree() {
  * link would dangle; the canonical document lives on GitHub.
  */
 function applySeedRewrites(seedRoot) {
-    const rewrites = [
+    rewriteMarkdownEntries(seedRoot, [
         {
             relativePath: path.join('docs', 'GUIDE.md'),
             replacements: [
@@ -575,28 +555,21 @@ function applySeedRewrites(seedRoot) {
                 [guideExtensionReadmeLink, guideExtensionReadmeUrl],
             ],
         },
-    ];
-
-    for (const entry of rewrites) {
-        const targetPath = path.join(seedRoot, entry.relativePath);
-        if (!fs.existsSync(targetPath)) { continue; }
-
-        const original = fs.readFileSync(targetPath, 'utf8');
-        let updated = original;
-        for (const [from, to] of entry.replacements) {
-            updated = updated.split(from).join(to);
-        }
-        if (updated !== original) {
-            fs.writeFileSync(targetPath, updated, 'utf8');
-        }
-    }
+    ]);
 }
 
 function applyBundledMarkdownRewrites() {
+    const rewrittenFileCount = rewriteMarkdownEntries(destRoot, bundledMarkdownRewrites);
+    if (rewrittenFileCount > 0) {
+        console.log('  Rewrote bundled markdown links in ' + rewrittenFileCount + ' files');
+    }
+}
+
+function rewriteMarkdownEntries(rootDir, entries) {
     let rewrittenFileCount = 0;
 
-    for (const entry of bundledMarkdownRewrites) {
-        const targetPath = path.join(destRoot, entry.relativePath);
+    for (const entry of entries) {
+        const targetPath = path.join(rootDir, entry.relativePath);
         if (!fs.existsSync(targetPath)) {
             continue;
         }
@@ -614,26 +587,15 @@ function applyBundledMarkdownRewrites() {
         }
     }
 
-    if (rewrittenFileCount > 0) {
-        console.log('  Rewrote bundled markdown links in ' + rewrittenFileCount + ' files');
-    }
+    return rewrittenFileCount;
 }
 
-function syncCompatibilityRootDocs() {
-    for (const file of rootDocs) {
-        const source = path.join(repoRoot, file);
-        if (fs.existsSync(source)) {
-            fs.writeFileSync(path.join(compatibilityRoot, file),
-                compatibilityDocumentText(file, fs.readFileSync(source, 'utf8')), 'utf8');
-        }
-    }
-}
-
-function rewriteCompatibilityDocs() {
-    for (const relative of compatibilityDocumentPaths().filter(file => !rootDocs.includes(file))) {
+function syncCompatibilityDocuments() {
+    for (const relative of compatibilityDocumentPaths()) {
         const original = fs.readFileSync(path.join(repoRoot, relative), 'utf8');
-        const updated = compatibilityDocumentText(relative, original);
-        if (updated !== original) fs.writeFileSync(path.join(compatibilityRoot, relative), updated, 'utf8');
+        const destination = path.join(compatibilityRoot, relative);
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.writeFileSync(destination, compatibilityDocumentText(relative, original), 'utf8');
     }
 }
 

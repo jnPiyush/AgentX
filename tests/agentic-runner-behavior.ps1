@@ -404,7 +404,7 @@ try {
     $Script:ApiMode = 'models'
 }
 
-$nativeNode = (Get-Command node -CommandType Application -ErrorAction Stop).Source
+$nativeNode = (Get-Command node -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 $echo = Invoke-RunnerCommandWithInput -FileName $nativeNode -Arguments @('-e',
     'let s="";process.stdin.setEncoding("utf8");process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>process.stdout.write(s));') `
     -InputText "fixture ' `" & `nsecond line" -TimeoutSeconds 10
@@ -1416,10 +1416,18 @@ Write-Host ' Runner self-review record' -ForegroundColor White
 $selfReviewRoot = Join-Path ([IO.Path]::GetTempPath()) ("agentx-runner-selfreview-{0}" -f [guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path (Join-Path $selfReviewRoot '.frontier\state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $selfReviewRoot '.frontier\runtime') -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') -Destination (Join-Path $selfReviewRoot '.frontier\runtime\frontier.ps1') -Force
     $nowStamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+    $srBaselinePath = Join-Path $selfReviewRoot '.frontier\state\code-quality-baseline.json'
+    [IO.File]::WriteAllText($srBaselinePath, '{"version":1,"capturedAt":"' + $nowStamp + '","tracking":"workspace","files":[]}', [Text.UTF8Encoding]::new($false))
+    $srBaselineSha = (Get-FileHash -LiteralPath $srBaselinePath -Algorithm SHA256).Hash
     ([ordered]@{
         active          = $true
         status          = 'active'
+        prompt          = 'Self review fixture'
+        completionCriteria = 'TASK_COMPLETE'
+        codeQualityBaselineSha256 = $srBaselineSha
         iteration       = 5
         maxIterations   = 5
         minIterations   = 5
@@ -1448,6 +1456,7 @@ try {
     Assert-Equal ([string]$lastEntry.selfReview.reviewer) 'agentic-runner-self-review' 'runner self-review is attributed to the runner'
 
     $evidencePath = Join-Path $selfReviewRoot 'independent-review.txt'
+    Start-Sleep -Milliseconds 50
     Set-Content -LiteralPath $evidencePath -Value 'Independent review approved with zero blocking findings.' -Encoding utf8
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = (Get-Command pwsh -ErrorAction Stop).Source
@@ -1570,7 +1579,7 @@ try {
                 $assistant,
                 @{ role = 'tool'; tool_call_id = 'call_native'; content = 'source.txt' }
             )
-            Save-Session -sessionId 'anthropic-replay' -messages $history -meta @{} -root $transportRoot
+            Save-Session -sessionId 'anthropic-replay' -messages $history -meta @{ sessionId = 'anthropic-replay' } -root $transportRoot
             $restored = Read-Session -sessionId 'anthropic-replay' -root $transportRoot
             $native = ConvertTo-AnthropicMessage -Messages @($restored.messages)
             $nativeBlocks = ConvertTo-Json -InputObject @($native.messages[1].content) -Depth 15 -Compress
@@ -1594,7 +1603,7 @@ try {
     foreach ($tagged in @($true, $false)) {
         $history = $conversation | ConvertTo-Json -Depth 15 | ConvertFrom-Json -Depth 20
         if (-not $tagged) { $history[2].PSObject.Properties.Remove('response_items_transport') }
-        Save-Session -sessionId 'responses-replay' -messages @($history) -meta @{} -root $transportRoot
+        Save-Session -sessionId 'responses-replay' -messages @($history) -meta @{ sessionId = 'responses-replay' } -root $transportRoot
         $restored = Read-Session -sessionId 'responses-replay' -root $transportRoot
         $native = ConvertTo-ResponsesBody -Messages @($restored.messages) -ModelId 'gpt-5.6-sol' -Tools @() -RequestOptions @{} -MaxTokens 4096
         Assert-Equal $native.input[2].encrypted_content 'opaque-fixture' "Responses reasoning survives session storage (tagged=$tagged)"
@@ -1756,8 +1765,8 @@ try {
         Assert-Equal (Get-Content -LiteralPath $fixturePath -Raw) $(if ($roleName -eq 'engineer') { 'edited fixture' } else { 'original fixture' }) "Anthropic $roleName enforces edit permissions in loop dispatch"
         Assert-True (-not (Test-Path -LiteralPath (Join-Path $repairRoot 'src/review-forbidden.txt'))) 'internal self-review cannot create files'
         if ($script:repairRequests.Count -eq 4) {
-            Assert-True (($script:repairRequests[0].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:') 'Native agent work receives a current repository-context slice'
-            Assert-True (($script:repairRequests[2].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:') 'Internal review receives its own repository-context slice'
+            Assert-True (($script:repairRequests[0].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:|Repository navigation \[graph:') 'Native agent work receives a current repository-context slice'
+            Assert-True (($script:repairRequests[2].messages | ConvertTo-Json -Depth 20) -match '\[Repository context:|Repository navigation \[graph:') 'Internal review receives its own repository-context slice'
             $mainReply = $script:repairRequests[1].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
             Assert-Equal (($mainReply.tool_use_id | Sort-Object) -join ',') 'edit-fixture,read-fixture,write-fixture' 'Anthropic replay preserves every tool-result ID'
             $reviewReply = $script:repairRequests[3].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
@@ -1940,7 +1949,7 @@ try {
     $textStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync -InteractionMode autonomous
     Assert-Equal $textStop.exitReason 'token_budget' 'A text response over budget ends the run before self-review'
     Assert-Equal $textStop.usage.calls 1 'No self-review call is made once the budget is spent'
-    Assert-True ($textStop.finalText -match 'Ledger fixture answer' -and $textStop.finalText -match 'before review or clarification') 'The unreviewed response is returned with the budget note'
+    Assert-True ($textStop.finalText -match 'before review or clarification' -and $textStop.finalText -match 'The draft has not satisfied execution and review gates; no completion was accepted') 'The unreviewed response is returned with the budget note'
 
     $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 200 } }
     $script:ledgerReviewUsesTool = $true

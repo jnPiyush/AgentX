@@ -290,13 +290,13 @@ function Test-ProviderBoundaryContracts {
     try { $null = Get-ProviderIssues } catch { $fetchFailed = $_.Exception.Message -match 'fixture provider failure' }
     Assert-True $fetchFailed 'provider list failure is not an empty successful backlog'
 
-    $dependency = [pscustomobject]@{ number = 1; state = 'open'; title = 'Older blocker' }
-    function Get-ProviderIssue { param($num) return $dependency }
+    $script:dependency = [pscustomobject]@{ number = 1; state = 'open'; title = 'Older blocker' }
+    function Get-ProviderIssue { param($num) return $script:dependency }
     $dependent = [pscustomobject]@{ number = 250; dependencies = @(1); body = '' }
     Assert-True (@(Get-UnresolvedIssueDependencies $dependent @()).Count -eq 1) 'an open dependency outside the first page blocks readiness'
-    $dependency.state = 'closed'
+    $script:dependency = [pscustomobject]@{ number = 1; state = 'closed'; title = 'Older blocker' }
     Assert-True (@(Get-UnresolvedIssueDependencies $dependent @()).Count -eq 0) 'a separately resolved closed dependency permits readiness'
-    $dependency = $null
+    $script:dependency = $null
     Assert-True (@(Get-UnresolvedIssueDependencies $dependent @()).Count -eq 1) 'a missing local dependency blocks readiness'
     function Get-ProviderIssue { param($num) throw 'fixture read denied' }
     $dependencyFailed = $false
@@ -334,6 +334,9 @@ function New-TestWorkspace([string]$name) {
     New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') (Join-Path $root '.frontier\runtime\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') (Join-Path $root '.frontier\runtime\frontier-cli.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\workspace-state.ps1') (Join-Path $root '.frontier\runtime\workspace-state.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\loop-engineering.ps1') (Join-Path $root '.frontier\runtime\loop-engineering.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\loop-static-checks.js') (Join-Path $root '.frontier\runtime\loop-static-checks.js') -Force
     Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\local-issue-manager.ps1') (Join-Path $root '.frontier\runtime\local-issue-manager.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot 'scripts\score-code-quality.ps1') (Join-Path $root 'scripts\score-code-quality.ps1') -Force
     return $root

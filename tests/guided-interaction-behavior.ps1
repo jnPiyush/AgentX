@@ -118,10 +118,10 @@ try {
     }
 
     $meta = @{ sessionId = 'stored-fixture'; agentName = 'engineer'; interaction = $null }
-    Save-Session 'stored-fixture' @(@{ role = 'user'; content = 'Fixture' }) $meta $root
+    Save-Session 'stored-fixture' @([pscustomobject]@{ role = 'user'; content = 'Fixture' }, [pscustomobject]@{ role = 'assistant'; content = 'Ack' }) $meta $root
     Assert-That ((Read-Session 'stored-fixture' $root).meta.sessionId -eq 'stored-fixture') 'session JSON is readable after an atomic save'
     $oversized = 'x' * (32MB + 1)
-    Assert-Rejected { Save-Session 'stored-fixture' @(@{ role = 'user'; content = $oversized }) $meta $root } 'oversized checkpoints are rejected on save'
+    Assert-Rejected { Save-Session 'stored-fixture' @([pscustomobject]@{ role = 'user'; content = $oversized }) $meta $root } 'oversized checkpoints are rejected on save'
     Assert-That ((Read-Session 'stored-fixture' $root).messages[0].content -eq 'Fixture') 'an oversized save preserves the previous checkpoint'
     $oversized = $null
     Assert-Rejected { Read-Session '..\outside' $root } 'session path traversal is rejected'

@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {
+      "prompt": "Design an Oracle Exadata schema and PL/SQL migration runbook with GoldenGate",
+      "routes": true
+    },
+    {
+      "prompt": "Use the oracle-offering plugin to assess our database",
+      "routes": true
+    },
+    {
+      "prompt": "Fix the CSS padding on the React navigation bar",
+      "routes": false
+    }
+  ]
+}

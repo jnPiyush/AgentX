@@ -36,7 +36,13 @@ try {
 
     $install = Join-Path $temp 'installed'
     New-Item -ItemType Directory -Path $install | Out-Null
-    & pwsh -NoProfile -File (Join-Path $root 'packs/frontier-copilot-cli/install.ps1') -Target $install -Source $root -IncludeCli *> $null
+    $prevGraphEnabled = $env:FRONTIER_GRAPH_ENABLED
+    try {
+        $env:FRONTIER_GRAPH_ENABLED = '0'
+        & pwsh -NoProfile -File (Join-Path $root 'packs/frontier-copilot-cli/install.ps1') -Target $install -Source $root -IncludeCli *> $null
+    } finally {
+        $env:FRONTIER_GRAPH_ENABLED = $prevGraphEnabled
+    }
     Assert-True ($LASTEXITCODE -eq 0) 'Standalone pack installs successfully'
     Test-BudgetCommand (Join-Path $install '.frontier/runtime/frontier.ps1') $install
     Assert-True (Test-Path (Join-Path $install '.github/skills/development/token-optimizer/references/tokenomics.md')) 'Standalone pack ships tokenomics contract'

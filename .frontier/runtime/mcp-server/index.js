@@ -740,6 +740,104 @@ const TOOLS = [
       return args;
     },
   },
+  {
+    name: 'frontier_provenance',
+    description: 'Inspect and verify session provenance across Frontier harness components (loop, hooks, context, skills, templates, stage-gates). Fails closed when required components were not exercised.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agent: { type: 'string', pattern: '^[a-zA-Z0-9._/-]{1,80}$' },
+        session: { type: 'string', pattern: '^[a-zA-Z0-9._-]{1,128}$', default: 'latest' },
+        require: { type: 'array', items: { type: 'string', enum: ['loop', 'hooks', 'context', 'skills', 'templates', 'stage-gates'] } },
+      },
+      additionalProperties: false,
+    },
+    build: (a) => {
+      const args = ['provenance'];
+      if (a.agent) args.push('-Agent', a.agent);
+      if (a.session) args.push('-Session', a.session);
+      if (Array.isArray(a.require) && a.require.length > 0) args.push('-Require', a.require.join(','));
+      args.push('-Json');
+      return args;
+    },
+  },
+  {
+    name: 'frontier_templates',
+    description: 'Manage configured deliverable templates (prd, adr, technicalDesign, testStrategy) and verify SHA-256 template provenance without overwriting existing files.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['configure', 'list', 'resolve', 'init', 'validate', 'check'], default: 'list' },
+        type: { type: 'string', enum: ['prd', 'adr', 'technicalDesign', 'testStrategy'] },
+        slug: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$' },
+      },
+      additionalProperties: false,
+    },
+    build: (a) => {
+      const action = a.action || 'list';
+      const args = ['templates', '-Action', action];
+      if (a.type) args.push('-Type', a.type);
+      if (a.slug) args.push('-Slug', a.slug);
+      args.push('-Json');
+      return args;
+    },
+  },
+  {
+    name: 'frontier_recommend_skills',
+    description: 'Rank skills for a task within a bounded loadout budget (default 10 skills / 2,000 tokens) or inspect pre-prompt context load (mode=context-load).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mode: { type: 'string', enum: ['recommend', 'context-load'], default: 'recommend' },
+        prompt: { type: 'string', maxLength: 4096 },
+        maxSkills: { type: 'integer', minimum: 1, maximum: 50 },
+        maxTokens: { type: 'integer', minimum: 200, maximum: 32000 },
+      },
+      additionalProperties: false,
+    },
+    build: (a) => {
+      const args = ['recommend-skills', '-Mode', a.mode || 'recommend'];
+      if (a.prompt) args.push('-Prompt', a.prompt);
+      if (a.maxSkills != null) args.push('-MaxSkills', String(a.maxSkills));
+      if (a.maxTokens != null) args.push('-MaxTokens', String(a.maxTokens));
+      args.push('-Json');
+      return args;
+    },
+  },
+  {
+    name: 'frontier_plugin',
+    description: 'Manage Frontier offering plugins in the global store: validate, inspect, install, list, enable, disable, uninstall, reconcile, pack, init, test, resolve, or requirements.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['validate', 'inspect', 'install', 'list', 'enable', 'disable', 'uninstall', 'reconcile', 'pack', 'init', 'test', 'resolve', 'requirements'],
+          default: 'list',
+        },
+        target: { type: 'string', maxLength: 4096 },
+        index: { type: 'string', maxLength: 2048 },
+        confirm: { type: 'string', pattern: '^[a-fA-F0-9]{64}$' },
+        out: { type: 'string', maxLength: 2048 },
+        name: { type: 'string', pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' },
+        publisher: { type: 'string', pattern: '^[a-z0-9]+(-[a-z0-9]+)*$' },
+        displayName: { type: 'string', maxLength: 120 },
+      },
+      additionalProperties: false,
+    },
+    build: (a) => {
+      const args = ['plugin', '-Action', a.action || 'list'];
+      if (a.target) args.push('-Target', a.target);
+      if (a.index) args.push('-Index', a.index);
+      if (a.confirm) args.push('-ConfirmHash', a.confirm);
+      if (a.out) args.push('-Out', a.out);
+      if (a.name) args.push('-Name', a.name);
+      if (a.publisher) args.push('-Publisher', a.publisher);
+      if (a.displayName) args.push('-DisplayName', a.displayName);
+      args.push('-Json');
+      return args;
+    },
+  },
 ];
 
 const TOOL_BY_NAME = Object.fromEntries(TOOLS.map((t) => [t.name, t]));

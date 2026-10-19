@@ -7,5 +7,13 @@ coverage/
 test-output.txt
 test-results.txt
 coverage-output.txt
+tsc-out.txt
 # Build artifact: copied from repo root by scripts/copy-assets.js
 .github/frontier/
+# Generated compatibility documents used by bundled relative links
+.github/AGENTS.md
+.github/Skills.md
+.github/CONTRIBUTING.md
+.github/LICENSE
+.github/NOTICE
+.github/docs/

@@ -79,6 +79,12 @@ try {
 }
 
 $bash = Get-Command bash -ErrorAction SilentlyContinue
+if ($IsWindows) {
+    $gitBash = 'C:\Program Files\Git\bin\bash.exe'
+    if ((-not $bash -or $bash.Source -match 'system32|WindowsApps') -and (Test-Path -LiteralPath $gitBash)) {
+        $bash = Get-Command $gitBash -ErrorAction SilentlyContinue
+    }
+}
 Assert-True ($null -ne $bash) 'Bash is available for cross-platform installer validation'
 if ($bash) {
     $bashInstallTarget = Join-Path ([IO.Path]::GetTempPath()) ('agentx-no-ai-slop-bash-' + [guid]::NewGuid().ToString('N'))

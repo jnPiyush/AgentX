@@ -1,0 +1,57 @@
+{
+  "$schema": "https://github.com/jnPiyush/AgentX/.github/schemas/frontier-plugin.schema.json",
+  "name": "oracle-offering",
+  "displayName": "Oracle Offering",
+  "version": "1.0.0",
+  "publisher": "contoso-oracle-practice",
+  "harness": {
+    "apiVersion": 1,
+    "frontier": ">=9.8.0 <10.0.0"
+  },
+  "description": "Oracle database architecture, engineering and migration assets for Frontier.",
+  "routing": {
+    "domains": ["oracle", "database"],
+    "keywords": ["oracle", "pl/sql", "plsql", "exadata", "goldengate", "data guard"],
+    "task_pattern": "\\b(oracle|pl/?sql|exadata|goldengate)\\b",
+    "workspace_signals": ["**/*.pks", "**/*.pkb", "**/tnsnames.ora", "pom.xml:ojdbc"]
+  },
+  "agents": [
+    {
+      "name": "oracle-db-architect",
+      "file": "agents/oracle-db-architect.agent.md",
+      "capabilities": ["assessment", "architecture", "data-model"]
+    },
+    {
+      "name": "oracle-engineer",
+      "file": "agents/oracle-engineer.agent.md",
+      "capabilities": ["implementation", "performance", "validation"]
+    }
+  ],
+  "skills": "registry.json",
+  "templates": {
+    "assessment": {
+      "file": "templates/oracle-assessment-v1.md",
+      "version": 1,
+      "output": "docs/oracle/ASSESSMENT-{slug}.md"
+    },
+    "technicalDesign": {
+      "file": "templates/oracle-solution-design-v1.md",
+      "version": 1
+    },
+    "migrationRunbook": {
+      "file": "templates/oracle-migration-runbook-v1.md",
+      "version": 1,
+      "output": "docs/oracle/RUNBOOK-{slug}.md"
+    }
+  },
+  "tools": [
+    "read/readFile",
+    "search/fileSearch",
+    "search/textSearch",
+    "search/listDirectory",
+    "edit/editFiles",
+    "edit/createFile",
+    "execute/runInTerminal",
+    "execute/getTerminalOutput"
+  ]
+}

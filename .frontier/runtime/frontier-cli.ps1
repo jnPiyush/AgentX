@@ -3765,7 +3765,7 @@ function Get-UnresolvedIssueDependencies($Issue, [array]$AllIssues) {
     foreach ($id in (Get-IssueDeps $Issue).blocked_by) {
         $dependency = $AllIssues | Where-Object { $_.number -eq $id } | Select-Object -First 1
         if (-not $dependency) { $dependency = Get-ProviderIssue $id }
-        if (-not $dependency -or $dependency.state -ne 'closed') { $id }
+        if (-not $dependency -or ([string]$dependency.state).ToLowerInvariant() -ne 'closed') { $id }
     }
 }
 
@@ -5313,6 +5313,72 @@ function Get-LoopReviewFlagRecord {
     }
 }
 
+function Get-LoopRecoveryAdvice {
+    param($State, [string]$Summary, $Preflight)
+
+    $failedEntries = @($State.history | Where-Object {
+        $null -ne $_ -and $_.PSObject.Properties['outcome'] -and [string]$_.outcome -eq 'fail' -and
+        (-not $_.PSObject.Properties['status'] -or [string]$_.status -ne 'rollback')
+    })
+    $priorRules = @($failedEntries | Where-Object { $_.PSObject.Properties['recoveryRule'] } | ForEach-Object { [string]$_.recoveryRule })
+    $normSummary = $Summary.Trim().ToLowerInvariant()
+    $currentFp = if ($Preflight -and $Preflight.snapshot) { [string]$Preflight.snapshot.fingerprint } else { '' }
+
+    $rule = 'R0'
+    $label = 'New error'
+    $action = 'Fix what the check reports and rerun verification.'
+
+    if ($normSummary -match '\b(enoent|econnreset|etimedout|path not found|not recognized|missing.*dependency|environment|permission denied|registry)\b') {
+        $rule = 'R6'
+        $label = 'Environment error'
+        $action = 'Apply the environment/dependency remedy from AGENTS.md or ask the human.'
+    } elseif ($normSummary -match '\b(retrieval miss|file not found|symbol not found|not found in workspace)\b' -and $failedEntries.Count -ge 1) {
+        $rule = 'R4'
+        $label = 'Two or more retrieval misses'
+        $action = 'Query the repository code graph (frontier context) and pass exact paths to a fresh sub-agent.'
+    } elseif ($failedEntries.Count -ge 2 -and $normSummary -match '\b(tool fail|command fail|exit code)\b') {
+        $rule = 'R3'
+        $label = 'Tool or command repeated failure (3+ times)'
+        $action = 'Switch tool approach or inspect command flags before retrying.'
+    } else {
+        $sameSummaryAndFp = @($failedEntries | Where-Object {
+            ([string]$_.summary).Trim().ToLowerInvariant() -eq $normSummary -and
+            $_.PSObject.Properties['preflight'] -and $_.preflight -and
+            [string]$_.preflight.fingerprint -eq $currentFp
+        })
+        $sameSummary = @($failedEntries | Where-Object {
+            ([string]$_.summary).Trim().ToLowerInvariant() -eq $normSummary
+        })
+        if ($sameSummaryAndFp.Count -ge 1) {
+            $rule = 'R1'
+            $label = 'Same error with the same files as an earlier attempt'
+            $action = 'Stop circular retries and ask the human for clarification.'
+        } elseif ($sameSummary.Count -ge 1) {
+            $rule = 'R2'
+            $label = 'Same error twice'
+            $action = 'Delegate to a fresh sub-agent with a different approach or evaluate parallel options.'
+        } elseif ($Preflight -and $Preflight.snapshot -and @($Preflight.snapshot.changedPaths).Count -eq 0) {
+            $rule = 'R5'
+            $label = 'Failure identical to pre-work baseline'
+            $action = 'Ask the human (the check or baseline may be suspect).'
+        }
+    }
+
+    if ($priorRules -contains $rule -and $rule -ne 'R0') {
+        $rule = 'R7'
+        $label = 'A recovery rule fired a second time'
+        $action = 'Escalate and ask the human before further retries.'
+    }
+
+    return [PSCustomObject]@{
+        rule      = $rule
+        label     = $label
+        action    = $action
+        attempt   = ($failedEntries.Count + 1)
+        escalate  = (($failedEntries.Count + 1) -ge 5 -or $rule -in @('R1', 'R5', 'R7'))
+    }
+}
+
 function Invoke-LoopIterate {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state) { Write-CliOutput 'No loop state found.'; exit 1 }
@@ -5436,6 +5502,12 @@ function Invoke-LoopIterate {
         fingerprint = $preflight.snapshot.fingerprint; passed = $preflight.passed
         deliveryFingerprint = $preflight.snapshot.deliveryFingerprint
     }
+    $recoveryAdvice = $null
+    if ($outcome -eq 'fail') {
+        $recoveryAdvice = Get-LoopRecoveryAdvice -State $state -Summary $summary -Preflight $preflight
+        $entry | Add-Member -NotePropertyName recoveryRule -NotePropertyValue $recoveryAdvice.rule
+        $entry | Add-Member -NotePropertyName recoveryAction -NotePropertyValue $recoveryAdvice.action
+    }
     if ($reviewRecord) { $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord }
     if ($archivedPath) {
         $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
@@ -5472,8 +5544,14 @@ function Invoke-LoopIterate {
     if ($archivedPath) { Write-CliOutput "$($C.d)  Evidence archived to: $archivedPath$($C.n)" }
     Write-CliOutput "  Preflight: $($preflight.executedCount) executed, $($preflight.reusedCount) reused; suites not run. $($preflight.artifactPath)"
 
-    # Rollback suggestion when outcome=fail at or past the final guidance iteration
+    # Rollback suggestion and deterministic R0-R7 recovery advice when outcome=fail
     if ($outcome -eq 'fail') {
+        if ($recoveryAdvice) {
+            Write-CliOutput "$($C.y)  [RECOVERY $($recoveryAdvice.rule)] $($recoveryAdvice.label) (failed attempt #$($recoveryAdvice.attempt)): $($recoveryAdvice.action)$($C.n)"
+            if ($recoveryAdvice.escalate) {
+                Write-CliOutput "$($C.r)  [ESCALATE] Escalation threshold reached ($($recoveryAdvice.rule) / attempt $($recoveryAdvice.attempt)). Pause and ask the user before further retries.$($C.n)"
+            }
+        }
         $guidance = @(Get-LoopIterationGuidance (Get-LoopTaskClass $state))
         if ($guidance.Count -gt 0 -and $next -ge ($guidance | Select-Object -Last 1).n) {
             $lastGate = ($guidance | Select-Object -Last 1).gate
@@ -9006,8 +9084,10 @@ function Invoke-DiscoverRun {
                 }
             }
         }
+        $global:LASTEXITCODE = 0
     } catch {
         Write-CliOutput "$($C.d)  Git history not available.$($C.n)"
+        $global:LASTEXITCODE = 0
     }
 
     # --- Evidence Source 3: Existing lessons ---
@@ -9897,6 +9977,11 @@ function Invoke-StocktakeCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/
 function Invoke-RouteCmd         { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-route.ps1'      -Label 'route' }
 function Invoke-CouncilCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-council.ps1'    -Label 'council' }
 function Invoke-BudgetCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/budget.ps1'          -Label 'budget' }
+function Invoke-ProvenanceCmd    { Invoke-ScriptWrapper -ScriptRelPath 'scripts/provenance.ps1'      -Label 'provenance' }
+function Invoke-TemplatesCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/templates.ps1'       -Label 'templates' }
+function Invoke-PluginCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/plugins.ps1'         -Label 'plugin' }
+function Invoke-RecommendSkillsCmd { Invoke-ScriptWrapper -ScriptRelPath 'scripts/recommend-skills.ps1' -Label 'recommend-skills' }
+function Invoke-ContextLoadCmd   { $Script:SubArgs = @('-Mode', 'context-load') + @($Script:SubArgs); Invoke-ScriptWrapper -ScriptRelPath 'scripts/recommend-skills.ps1' -Label 'context-load' }
 
 # ---------------------------------------------------------------------------
 # Main router
@@ -9950,6 +10035,13 @@ switch ($Script:Command) {
     'tokens'   { Invoke-TokensCmd }
     'stage-gate' { Invoke-StageGateCmd }
     'budget'   { Invoke-BudgetCmd }
+    'provenance' { Invoke-ProvenanceCmd }
+    'templates'  { Invoke-TemplatesCmd }
+    'plugin'     { Invoke-PluginCmd }
+    'plugins'    { Invoke-PluginCmd }
+    'recommend-skills' { Invoke-RecommendSkillsCmd }
+    'context-load'     { Invoke-ContextLoadCmd }
+    'check-context-load' { Invoke-ContextLoadCmd }
     'score'    { Invoke-ScoreCmd }
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }

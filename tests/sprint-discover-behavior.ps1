@@ -22,6 +22,7 @@ function New-TestWorkspace([string]$name) {
     New-Item -ItemType Directory -Path (Join-Path $root '.frontier\issues') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') (Join-Path $root '.frontier\runtime\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') (Join-Path $root '.frontier\runtime\frontier-cli.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\workspace-state.ps1') (Join-Path $root '.frontier\runtime\workspace-state.ps1') -Force
     '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.frontier\config.json') -Encoding utf8
     return $root
 }

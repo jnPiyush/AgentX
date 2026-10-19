@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jnPiyush/AgentX/.github/schemas/frontier-plugin.schema.json",
+  "title": "Frontier Offering Plugin Manifest (frontier-plugin.json / hve-plugin.json), apiVersion 1",
+  "description": "Schema for independently released Frontier offering plugins (agents, skills, deliverable templates, optional flows and rubrics). Markdown and JSON only; no hooks or scripts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "displayName",
+    "version",
+    "publisher",
+    "harness",
+    "description",
+    "routing",
+    "agents",
+    "skills",
+    "templates",
+    "tools"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "$ref": "#/$defs/kebab",
+      "not": {
+        "enum": ["frontier", "frontier-hve", "hve", "core", "agentx"]
+      }
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "publisher": {
+      "$ref": "#/$defs/kebab",
+      "not": {
+        "enum": ["frontier", "frontier-hve", "hve", "core", "agentx"]
+      }
+    },
+    "harness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion"],
+      "properties": {
+        "apiVersion": {
+          "const": 1
+        },
+        "frontier": {
+          "type": "string",
+          "pattern": "^((>=|<=|>|<|=)\\d+\\.\\d+\\.\\d+)( (>=|<=|>|<|=)\\d+\\.\\d+\\.\\d+)*$"
+        },
+        "frontierHve": {
+          "type": "string",
+          "pattern": "^((>=|<=|>|<|=)\\d+\\.\\d+\\.\\d+)( (>=|<=|>|<|=)\\d+\\.\\d+\\.\\d+)*$"
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domains", "keywords", "task_pattern", "workspace_signals"],
+      "properties": {
+        "domains": {
+          "$ref": "#/$defs/strings"
+        },
+        "keywords": {
+          "$ref": "#/$defs/strings"
+        },
+        "task_pattern": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_signals": {
+          "$ref": "#/$defs/strings"
+        }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "file", "capabilities"],
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/kebab"
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^agents/[a-z0-9-]+\\.agent\\.md$"
+          },
+          "capabilities": {
+            "$ref": "#/$defs/strings"
+          },
+          "handoffFrom": {
+            "$ref": "#/$defs/strings"
+          }
+        }
+      }
+    },
+    "skills": {
+      "const": "registry.json"
+    },
+    "templates": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "version"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "output": {
+            "type": "string",
+            "pattern": "^[^{}]*\\{slug\\}[^{}]*\\.md$"
+          }
+        }
+      }
+    },
+    "flows": {
+      "$ref": "#/$defs/strings"
+    },
+    "evaluation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tools": {
+      "$ref": "#/$defs/strings"
+    }
+  },
+  "$defs": {
+    "kebab": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

@@ -229,6 +229,8 @@ try {
     New-Item -ItemType Directory -Path (Join-Path $handoffFixture 'fabric/notebooks') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $handoffFixture 'solutions/agx_example/src/Other') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $handoffFixture '.frontier/state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $handoffFixture '.frontier/runtime') -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repoRoot '.frontier/runtime/workspace-state.ps1') -Destination (Join-Path $handoffFixture '.frontier/runtime/workspace-state.ps1')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/validate-handoff.ps1') -Destination (Join-Path $handoffFixture 'scripts/validate-handoff.ps1')
     'notebook' | Set-Content -LiteralPath (Join-Path $handoffFixture 'fabric/notebooks/load.py') -Encoding ascii
     '<solution />' | Set-Content -LiteralPath (Join-Path $handoffFixture 'solutions/agx_example/src/Other/Solution.xml') -Encoding ascii

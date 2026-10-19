@@ -286,6 +286,8 @@ test('standalone setup reads private templates, not user-owned shared Cursor con
     fs.cpSync(path.join(root, '.cursor'), templates, { recursive: true });
     fs.copyFileSync(path.join(root, '.frontier', 'runtime', 'cursor-mcp.js'),
       path.join(workspace, '.frontier', 'runtime', 'cursor-mcp.js'));
+    fs.copyFileSync(path.join(root, '.frontier', 'runtime', 'cursor-hook.js'),
+      path.join(workspace, '.frontier', 'runtime', 'cursor-hook.js'));
     fs.writeFileSync(path.join(workspace, '.frontier', 'config.json'), '{}');
     fs.mkdirSync(path.join(workspace, '.cursor'));
     fs.writeFileSync(path.join(workspace, '.cursor', 'mcp.json'), '{"mcpServers":{"user":{"command":"user-server"}}}');

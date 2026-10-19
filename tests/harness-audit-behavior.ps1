@@ -23,10 +23,17 @@ function New-TestWorkspace([string]$name) {
     New-Item -ItemType Directory -Path (Join-Path $root '.frontier' 'runtime') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root '.frontier' 'state') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root 'evaluation' 'rubrics') -Force | Out-Null
 
     Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') (Join-Path $root '.frontier\runtime\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') (Join-Path $root '.frontier\runtime\frontier-cli.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\workspace-state.ps1') (Join-Path $root '.frontier\runtime\workspace-state.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\loop-engineering.ps1') (Join-Path $root '.frontier\runtime\loop-engineering.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.frontier\runtime\loop-static-checks.js') (Join-Path $root '.frontier\runtime\loop-static-checks.js') -Force
     Copy-Item (Join-Path $script:repoRoot 'scripts\check-harness-compliance.ps1') (Join-Path $root 'scripts\check-harness-compliance.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot 'scripts\score-code-quality.ps1') (Join-Path $root 'scripts\score-code-quality.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot 'scripts\scrub.ps1') (Join-Path $root 'scripts\scrub.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot 'evaluation\rubrics\code-quality.md') (Join-Path $root 'evaluation\rubrics\code-quality.md') -Force
 
     @{ provider = 'local'; mode = 'local'; enforceIssues = $false } | ConvertTo-Json | Set-Content (Join-Path $root '.frontier\config.json') -Encoding utf8
 
@@ -88,8 +95,42 @@ function Invoke-HarnessCompliance([string]$root, [string]$CallerDirectory = '') 
     return ($stdout + $stderr)
 }
 
-function Set-WorkspaceHarnessState([string]$root) {
+function Set-WorkspaceHarnessState([string]$root, [string]$InstallRootOverride = '') {
     $timestamp = (Get-Date).ToUniversalTime().ToString('o')
+    $baselinePath = Join-Path $root '.frontier\state\code-quality-baseline.json'
+    $installRoot = if ($InstallRootOverride) { $InstallRootOverride } elseif (Test-Path -LiteralPath (Join-Path $root '.frontier\runtime\loop-engineering.ps1')) { $root } else { $script:repoRoot }
+    $scoreScript = Join-Path $installRoot 'scripts\score-code-quality.ps1'
+    $snapRaw = & (Get-Process -Id $PID).Path -NoProfile -File $scoreScript -Mode Snapshot -WorkspaceRoot $root -BaselinePath $baselinePath -Json
+    $snapObj = ($snapRaw -join "`n") | ConvertFrom-Json
+    $baselineSha = [string]$snapObj.baselineSha256
+    $evidencePath = Join-Path $root '.frontier\state\review-evidence.json'
+    [IO.File]::WriteAllText($evidencePath, '{"rubricVersion":"2.0.0","reviewer":"harness-audit-suite","reviewedAt":"' + $timestamp + '","files":[],"dimensions":[]}', [Text.UTF8Encoding]::new($false))
+    $evidenceSha = (Get-FileHash -LiteralPath $evidencePath -Algorithm SHA256).Hash
+
+    . (Join-Path $script:repoRoot '.frontier\runtime\workspace-state.ps1')
+    . (Join-Path $script:repoRoot '.frontier\runtime\loop-engineering.ps1')
+    $stubLoop = [PSCustomObject]@{
+        active = $true; status = 'active'; prompt = 'Audit harness state'; completionCriteria = 'TASK_COMPLETE'
+        startedAt = $timestamp; lastIterationAt = $timestamp; codeQualityBaselineSha256 = $baselineSha
+        codeQualityScopeMode = 'new-changes-only'
+    }
+    $engCtx = New-LoopEngineeringContext $root $installRoot (Join-Path $root '.frontier') $stubLoop {
+        param($file, $arguments, $directory, $timeout)
+        $start = [Diagnostics.ProcessStartInfo]::new($file)
+        $start.WorkingDirectory = $directory
+        $start.UseShellExecute = $false
+        $start.RedirectStandardOutput = $true
+        $start.RedirectStandardError = $true
+        foreach ($arg in $arguments) { $start.ArgumentList.Add([string]$arg) }
+        $p = [Diagnostics.Process]::Start($start)
+        $so = $p.StandardOutput.ReadToEnd()
+        $se = $p.StandardError.ReadToEnd()
+        $p.WaitForExit()
+        [PSCustomObject]@{ exitCode = $p.ExitCode; stdout = $so; stderr = $se; output = ($so + $se).Trim() }
+    }
+    Initialize-LoopEngineering $engCtx
+    $snap = Get-LoopEngineeringSnapshot $engCtx
+
     @{
         active = $false
         status = 'complete'
@@ -101,6 +142,8 @@ function Set-WorkspaceHarnessState([string]$root) {
         completionCriteria = 'TASK_COMPLETE'
         startedAt = $timestamp
         lastIterationAt = $timestamp
+        codeQualityBaselineSha256 = $baselineSha
+        engineeringBaselineSha256 = $stubLoop.engineeringBaselineSha256
         history = @(
             @{
                 iteration = 5
@@ -108,6 +151,13 @@ function Set-WorkspaceHarnessState([string]$root) {
                 summary = 'Subagent Review: harness audit passed'
                 status = 'in-progress'
                 outcome = 'pass'
+                evidence = $evidencePath
+                evidenceSha256 = $evidenceSha
+                preflight = @{
+                    passed = $true
+                    fingerprint = $snap.fingerprint
+                    deliveryFingerprint = $snap.deliveryFingerprint
+                }
                 review = @{
                     verdict = 'approved'
                     reviewer = 'harness-audit-suite'
@@ -281,6 +331,7 @@ try {
     Assert-True ($strictJson.failedRequiredChecks -contains 'progress-log-present') 'Strict harness audit requires progress log check'
 
     @{ provider = 'local'; mode = 'local'; harnessEnforcementProfile = 'strict'; harnessDisabledChecks = 'execution-plan-present,progress-log-present' } | ConvertTo-Json | Set-Content (Join-Path $workspace '.frontier\config.json') -Encoding utf8
+    Set-WorkspaceHarnessState $workspace
     $disabled = Invoke-Frontier $workspace @('audit', 'harness', '--json')
     $disabledJson = $disabled.Output | ConvertFrom-Json -Depth 20
     Assert-True ($disabled.ExitCode -eq 0) 'Strict harness audit passes when the missing planning checks are disabled'
@@ -320,10 +371,16 @@ $bundleFixture = Join-Path ([System.IO.Path]::GetTempPath()) ("frontier-hook-bun
 try {
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture '.frontier\runtime') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture '.github\hooks') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $bundleFixture 'evaluation\rubrics') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1') -Destination (Join-Path $bundleFixture '.frontier\runtime\frontier.ps1') -Force
     Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1') -Destination (Join-Path $bundleFixture '.frontier\runtime\frontier-cli.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\workspace-state.ps1') -Destination (Join-Path $bundleFixture '.frontier\runtime\workspace-state.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\loop-engineering.ps1') -Destination (Join-Path $bundleFixture '.frontier\runtime\loop-engineering.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.frontier\runtime\loop-static-checks.js') -Destination (Join-Path $bundleFixture '.frontier\runtime\loop-static-checks.js') -Force
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture 'scripts') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $script:repoRoot 'scripts\scrub.ps1') -Destination (Join-Path $bundleFixture 'scripts\scrub.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot 'scripts\score-code-quality.ps1') -Destination (Join-Path $bundleFixture 'scripts\score-code-quality.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot 'evaluation\rubrics\code-quality.md') -Destination (Join-Path $bundleFixture 'evaluation\rubrics\code-quality.md') -Force
     foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
         Copy-Item -LiteralPath (Join-Path $script:repoRoot ".github\hooks\$hook") -Destination (Join-Path $bundleFixture ".github\hooks\$hook") -Force
     }
@@ -333,6 +390,7 @@ try {
         git config user.email 'zero-copy-hooks@example.com'
         git config user.name 'Zero Copy Hooks'
         git config core.hooksPath .custom-hooks
+        git commit --allow-empty --quiet -m 'chore: initial fixture commit'
     } finally {
         Pop-Location
     }
@@ -357,8 +415,8 @@ try {
     ) -join "`n" | Set-Content -LiteralPath $workspaceLauncher -Encoding utf8
     Remove-Item -LiteralPath (Join-Path $zeroCopyWorkspace '.frontier\runtime\frontier-cli.ps1') -Force
     Remove-Item -LiteralPath (Join-Path $zeroCopyWorkspace 'scripts') -Recurse -Force
-    Set-WorkspaceHarnessState $zeroCopyWorkspace
     Set-Content -LiteralPath (Join-Path $zeroCopyWorkspace 'change.ps1') -Value 'Write-Output "zero-copy hook execution"' -Encoding utf8
+    Set-WorkspaceHarnessState $zeroCopyWorkspace $bundleFixture
     Push-Location $zeroCopyWorkspace
     try {
         git add change.ps1

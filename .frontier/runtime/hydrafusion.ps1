@@ -282,9 +282,9 @@ function Invoke-HydraFusionTask {
         $run.patterns = @($protocol.routes.Values | ForEach-Object { $_.pattern } | Select-Object -Unique)
         $run.modelsUsed = @($protocol.models | Sort-Object)
         $auditPath = Join-Path $plugin.directory 'policy-audit.jsonl'
-        $audit = if ([IO.File]::Exists($auditPath)) {
-            @([IO.File]::ReadAllLines($auditPath) | ForEach-Object { ConvertFrom-Json -InputObject $_ -AsHashtable })
-        } else { @() }
+        $audit = @(if ([IO.File]::Exists($auditPath)) {
+            [IO.File]::ReadAllLines($auditPath) | ForEach-Object { ConvertFrom-Json -InputObject $_ -AsHashtable }
+        })
         if (@($audit | Where-Object { $_['decision'] -ne 'allow' }).Count -or $audit.Count -lt $protocol.toolCalls) {
             Stop-HydraFusionOperation 'policy_error' 'Native tool-policy evidence is missing or includes a denial.'
         }

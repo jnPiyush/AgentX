@@ -84,6 +84,10 @@
       "evaluation/rubrics/stage-gates.md",
       "scripts/validate-handoff.ps1",
       "scripts/validate-frontmatter.ps1",
+      "scripts/provenance.ps1",
+      "scripts/templates.ps1",
+      "scripts/plugins.ps1",
+      "scripts/recommend-skills.ps1",
       "scripts/modules/CIHelpers.psm1",
       "scripts/modules/SecurityHelpers.psm1"
     ]

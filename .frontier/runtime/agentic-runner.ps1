@@ -214,6 +214,7 @@ function Invoke-RunnerCommandWithInput {
         $payload = ConvertTo-Json -InputObject (@($executable) + $Arguments) -Compress
         $encodedArguments = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
         $scriptText = '$ErrorActionPreference = ''Stop''; $OutputEncoding = [Text.UTF8Encoding]::new($false); ' +
+            '[Console]::InputEncoding = [Text.UTF8Encoding]::new($false); [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); ' +
             '$reader = [IO.StreamReader]::new([Console]::OpenStandardInput(), [Text.UTF8Encoding]::new($false, $true)); ' +
             'try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }; ' +
             '$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(''' + $encodedArguments + ''')); ' +

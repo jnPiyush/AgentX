@@ -127,7 +127,7 @@ function Invoke-HydraFusionProcess {
             }
             if (-not $inputClosed -and $inputTask.IsCompleted) {
                 try {
-                    $inputTask.GetAwaiter().GetResult()
+                    $null = $inputTask.GetAwaiter().GetResult()
                     $process.StandardInput.Close()
                 } catch { $inputFailure = $_.Exception.Message }
                 $inputClosed = $true

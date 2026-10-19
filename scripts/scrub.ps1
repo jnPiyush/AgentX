@@ -81,6 +81,8 @@ param(
     [switch]$Json,
     [switch]$Production,
     [switch]$Advisory,
+    [switch]$ModuleGuard,
+    [switch]$PrototypeGuard,
     [switch]$Quiet
 )
 
@@ -694,6 +696,32 @@ function Invoke-FileScan {
             $upTo = $joined.Substring(0, $m.Index)
             $line = ($upTo.Split("`n").Length)
             Add-Finding -File $File.FullName -Line $line -Category 'empty-catch' -Severity 'LOW' -Snippet $m.Value -SafeFix $false
+        }
+
+        if ($ModuleGuard -and $content.Length -gt 500) {
+            Add-Finding -File $File.FullName -Line 501 -Category 'module-size' -Severity 'MEDIUM' `
+                -Snippet "File has $($content.Length) lines (> 500 line module guard); propose splitting into focused modules." -SafeFix $false
+        }
+
+        if ($PrototypeGuard) {
+            if ($File.Length -gt 20MB) {
+                Add-Finding -File $File.FullName -Line 1 -Category 'prototype-guardrail' -Severity 'MEDIUM' `
+                    -Snippet "File size ($([Math]::Round($File.Length / 1MB, 1)) MB) exceeds 20 MB prototype guardrail; move large assets to Azure Blob Storage." -SafeFix $false
+            }
+            $prototypeRules = @(
+                @{ pattern = '\b(sqlite3|better-sqlite3)\b'; remedy = 'Non-enterprise local SQLite detected; involve Architect/DBA for Azure SQL or Azure Database for PostgreSQL.' },
+                @{ pattern = '\bfalkordb\b';                 remedy = 'Non-enterprise FalkorDB detected; involve Architect for Azure Cosmos DB or managed graph storage.' },
+                @{ pattern = '\bpytesseract|tesseract\.js\b'; remedy = 'Local Tesseract OCR detected; involve Data Scientist for Azure AI Document Intelligence.' },
+                @{ pattern = '\bchromadb\b';                 remedy = 'Local ChromaDB vector store detected; involve Data Scientist/Architect for Azure AI Search.' }
+            )
+            for ($idx = 0; $idx -lt $content.Length; $idx++) {
+                foreach ($rule in $prototypeRules) {
+                    if ($content[$idx] -match $rule.pattern) {
+                        Add-Finding -File $File.FullName -Line ($idx + 1) -Category 'prototype-guardrail' -Severity 'MEDIUM' `
+                            -Snippet $rule.remedy -SafeFix $false
+                    }
+                }
+            }
         }
     }
 }

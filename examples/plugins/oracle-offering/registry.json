@@ -1,0 +1,14 @@
+{
+  "skills": [
+    {
+      "name": "oracle-schema-design",
+      "description": "Oracle tablespace, partitioning, indexing, and PL/SQL package schema design patterns.",
+      "task_categories": ["architecture"]
+    },
+    {
+      "name": "oracle-performance-tuning",
+      "description": "Oracle AWR analysis, execution plan tuning, bind variables, and bulk collect optimization.",
+      "task_categories": ["architecture"]
+    }
+  ]
+}

@@ -140,8 +140,8 @@ try {
     '{"provider":"github"}' | Set-Content -LiteralPath (Join-Path $frontierWorkspace '.agentx/config.json') -Encoding utf8
     $frontierOutput = Invoke-ConfigShow -FrontierRoot $frontierWorkspace -TransitionalRoot $legacyOnlyWorkspace -AgentXRoot $legacyOnlyWorkspace
     Assert-True ($frontierOutput -match 'provider\s*=\s*ado') '.frontier/config.json is the only configuration source'
-    $withoutAliases = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot '' -AgentXRoot ''
-    $withAliases = Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot $frontierWorkspace -AgentXRoot $legacyOnlyWorkspace
+    $withoutAliases = (Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot '' -AgentXRoot '') -replace 'updatedAt\s*=\s*\S+', 'updatedAt = <normalized>'
+    $withAliases = (Invoke-ConfigShow -FrontierRoot '' -TransitionalRoot $frontierWorkspace -AgentXRoot $legacyOnlyWorkspace) -replace 'updatedAt\s*=\s*\S+', 'updatedAt = <normalized>'
     Assert-True ($withAliases -ceq $withoutAliases) 'Obsolete workspace environment variables do not change default runtime selection'
 
     $scanWorkspace = Join-Path $tempRoot 'scan-workspace'
