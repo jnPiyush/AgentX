@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code and chat mocks. */
 import { strict as assert } from 'assert';
 import * as vscode from 'vscode';
 import * as fs from 'fs';

@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code and Sinon mocks. */
 import { strict as assert } from 'assert';
+import fs from 'fs';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
@@ -105,7 +107,6 @@ describe('addAgent command - execution', () => {
     sandbox.stub(vscode.window, 'showTextDocument').resolves({} as any);
     sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined as any);
 
-    const fs = require('fs');
     sandbox.stub(fs, 'existsSync').returns(false);
     const mkdirStub = sandbox.stub(fs, 'mkdirSync');
     const writeStub = sandbox.stub(fs, 'writeFileSync');

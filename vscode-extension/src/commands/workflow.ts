@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
-import { shouldAutoStartLoop, getLoopStatusDisplay } from '../utils/loopStateChecker';
+import { checkHandoffGate } from '../utils/loopStateChecker';
 
 export interface WorkflowOption {
  readonly label: string;
@@ -21,7 +21,7 @@ export const WORKFLOW_OPTIONS: ReadonlyArray<WorkflowOption> = [
 /**
  * Register the Frontier workflow-steps command.
  * Lets the user inspect workflow steps for a selected type.
- * Auto-starts an iterative loop when the rendered workflow includes iterate=true.
+ * Workflow inspection is read-only, even when a displayed step requires a loop.
  */
 export function registerWorkflowCommand(
  context: vscode.ExtensionContext,
@@ -50,23 +50,10 @@ export function registerWorkflowCommand(
  channel.appendLine(output);
  channel.show();
 
- // ---------------------------------------------------------------
- // Auto-start iterative loop for workflows with iterate=true steps
- // ---------------------------------------------------------------
- const hasIterateStep = /\[LOOP\]/i.test(output);
  const root = selectedRoot ?? agentx.workspaceRoot;
- if (hasIterateStep && root && shouldAutoStartLoop(root)) {
-   const autoStart = await vscode.window.showInformationMessage(
-     'This workflow has an iterative loop step. Start a quality loop now?',
-     'Start Loop', 'Skip'
-   );
-   if (autoStart === 'Start Loop') {
-     await vscode.commands.executeCommand('frontier.loopStart', root);
-   }
- } else if (hasIterateStep && root) {
-   vscode.window.showInformationMessage(
-     `Quality loop already active: ${getLoopStatusDisplay(root)}`
-   );
+ if (root) {
+   const gate = checkHandoffGate(root, undefined, { operation: 'read', paths: [] });
+   channel.appendLine(gate.reason);
  }
  } catch (err: unknown) {
  const message = err instanceof Error ? err.message : String(err);

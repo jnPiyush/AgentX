@@ -5,6 +5,8 @@
 # coverage rather than inheriting confidence from the CLI and runtime suites.
 # Usage: pwsh tests/pre-commit-gate-behavior.ps1
 
+param([switch]$StagedOnly)
+
 $ErrorActionPreference = 'Stop'
 $script:pass = 0
 $script:fail = 0
@@ -15,6 +17,23 @@ $script:commitMsgHookPath = Join-Path $script:repoRoot '.github\hooks\commit-msg
 $script:frontierLauncherPath = Join-Path $script:repoRoot '.frontier\runtime\frontier.ps1'
 $script:frontierCliPath = Join-Path $script:repoRoot '.frontier\runtime\frontier-cli.ps1'
 $script:scrubPath = Join-Path $script:repoRoot 'scripts\scrub.ps1'
+
+function git {
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('git')
+    $startInfo.WorkingDirectory = (Get-Location).Path
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    foreach ($argument in $args) { $startInfo.ArgumentList.Add([string]$argument) }
+    $process = [Diagnostics.Process]::Start($startInfo)
+    try {
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(10000)) { $process.Kill($true); throw 'Hook fixture Git timed out.' }
+        if ($process.ExitCode -ne 0) { throw $stderr.GetAwaiter().GetResult() }
+        return $stdout.GetAwaiter().GetResult()
+    } finally { $process.Dispose() }
+}
 
 <#
 .SYNOPSIS
@@ -50,11 +69,14 @@ function New-CliProducedLoopState([string]$WorkspaceRoot = '') {
             $psi.ArgumentList.Add($script:frontierCliPath)
             foreach ($argument in $Arguments) { $psi.ArgumentList.Add($argument) }
             $process = [System.Diagnostics.Process]::Start($psi)
-            $output = $process.StandardOutput.ReadToEndAsync()
-            $errors = $process.StandardError.ReadToEndAsync()
-            $process.WaitForExit()
-            if ($process.ExitCode -ne 0) { throw "$($output.Result)`n$($errors.Result)" }
-            $process.Dispose()
+            try {
+                $stdout = $process.StandardOutput.ReadToEndAsync()
+                $stderr = $process.StandardError.ReadToEndAsync()
+                if (-not $process.WaitForExit(60000)) { $process.Kill($true); throw 'CLI hook fixture timed out.' }
+                $stdoutText = $stdout.GetAwaiter().GetResult()
+                $stderrText = $stderr.GetAwaiter().GetResult()
+                if ($process.ExitCode -ne 0) { throw "CLI hook fixture failed: $($Arguments -join ' ')`n$stdoutText`n$stderrText" }
+            } finally { $process.Dispose() }
         }
         $newEvidence = {
             param([string]$Name)
@@ -135,6 +157,9 @@ function Invoke-HookGate {
         [switch]$StageGateHookDelete,
         [switch]$StageUnstagedValidatorDrift,
         [string]$ValidatorPath = '.frontier/runtime/frontier-cli.ps1',
+        [string]$StagedPath = 'change.ps1',
+        [switch]$LegacyApproval,
+        [switch]$ChangeStagedBytes,
         [switch]$RunPostCommit
     )
 
@@ -169,8 +194,9 @@ function Invoke-HookGate {
                 git commit --quiet -m 'test: add tracked source'
             }
             if (-not $SkipDefaultCode) {
-                Set-Content -LiteralPath (Join-Path $repo 'change.ps1') -Value 'Write-Output "staged code"' -Encoding utf8
-                git add change.ps1 2>&1 | Out-Null
+                New-Item -ItemType Directory -Path (Split-Path (Join-Path $repo $StagedPath) -Parent) -Force | Out-Null
+                Set-Content -LiteralPath (Join-Path $repo $StagedPath) -Value 'Write-Output "staged code"' -Encoding utf8
+                git add -- $StagedPath 2>&1 | Out-Null
             }
             if ($StageTrackedDelete) {
                 Remove-Item -LiteralPath (Join-Path $repo 'tracked.ps1') -Force
@@ -207,10 +233,45 @@ function Invoke-HookGate {
                 Remove-Item -LiteralPath (Join-Path $repo 'deleted.ps1') -Force
             }
             $stateJson = if ($RawState) { $RawState } else { $LoopState | ConvertTo-Json -Depth 10 }
-            $stateJson | Set-Content -LiteralPath (Join-Path $repo '.frontier\state\loop-state.json') -Encoding utf8
-            Copy-Item -LiteralPath $script:hookPath -Destination (Join-Path $repo 'pre-commit') -Force
-            Copy-Item -LiteralPath $script:postCommitHookPath -Destination (Join-Path $repo 'post-commit') -Force
-            if ($ReviewCurrent) { $null = New-CliProducedLoopState $repo }
+            if ($LoopState -and -not $LegacyApproval -and -not $RawState) {
+                $scopedState = $stateJson | ConvertFrom-Json
+                $scope = @()
+                $raw = ((git diff --cached --raw --no-abbrev --no-renames -z --) -join "`n") -split "`0"
+                for ($index = 0; $index + 1 -lt $raw.Count; $index += 2) {
+                    $header = $raw[$index] -split ' '
+                    $path = $raw[$index + 1]
+                    if ($path -match '\.(ps1|ts|md)$' -and $path -notmatch '^docs/artifacts/reviews/') {
+                        $scope += [ordered]@{ path = $path; blob = $header[3]; mode = $header[1] }
+                    }
+                }
+                $evidencePath = Join-Path $repo '.frontier/state/hook-review.txt'
+                Set-Content -LiteralPath $evidencePath -Value 'Independent scoped fixture review' -Encoding utf8
+                foreach ($entry in @($scopedState.history | Where-Object { $_.PSObject.Properties.Name -contains 'review' })) {
+                    $entry | Add-Member -NotePropertyName coveredScope -NotePropertyValue @($scope) -Force
+                    $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $evidencePath -Force
+                    $entry | Add-Member -NotePropertyName evidenceSha256 -NotePropertyValue (Get-FileHash -LiteralPath $evidencePath).Hash -Force
+                }
+                $stateJson = $scopedState | ConvertTo-Json -Depth 10
+            }
+            $statePath = Join-Path $repo '.frontier/state/loop-state.json'
+            if ($LoopState -or $RawState) { $stateJson | Set-Content -LiteralPath $statePath -Encoding utf8 }
+            Copy-Item -LiteralPath $script:hookPath -Destination (Join-Path $repo '.git/pre-commit') -Force
+            Copy-Item -LiteralPath $script:postCommitHookPath -Destination (Join-Path $repo '.git/post-commit') -Force
+            if ($ReviewCurrent) {
+                git add -- .frontier/runtime/frontier.ps1 .frontier/runtime/frontier-cli.ps1 scripts/scrub.ps1
+                $null = New-CliProducedLoopState $repo
+                if ($LegacyApproval) {
+                    $currentState = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
+                    foreach ($entry in @($currentState.history | Where-Object { $_.PSObject.Properties.Name -contains 'review' })) {
+                        $entry.PSObject.Properties.Remove('coveredScope')
+                    }
+                    $currentState | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $statePath -Encoding utf8
+                }
+            }
+            if ($ChangeStagedBytes) {
+                Add-Content -LiteralPath (Join-Path $repo $StagedPath) -Value 'Write-Output "changed after approval"'
+                git add -- $StagedPath 2>&1 | Out-Null
+            }
             if ($StageDeletionAfterReview) { git add -A -- tracked.ps1 }
             if ($EditAfterReview) {
                 Add-Content -LiteralPath (Join-Path $repo 'change.ps1') -Value 'Write-Output "unreviewed"'
@@ -228,9 +289,11 @@ function Invoke-HookGate {
                 if ($ReviewCurrent) {
                     $hooksDirectory = Join-Path $repo '.git/hooks'
                     Copy-Item -LiteralPath $script:hookPath -Destination (Join-Path $hooksDirectory 'pre-commit') -Force
-                    & git -c "core.hooksPath=$hooksDirectory" -c commit.gpgsign=false commit -m 'test: exercise the reviewed hook' *> $outFile
+                    # Call the native binary: the git wrapper above throws on a
+                    # non-zero exit, which would discard the expected BLOCK output.
+                    & (Get-Command git -CommandType Application | Select-Object -First 1).Source -c "core.hooksPath=$hooksDirectory" -c commit.gpgsign=false commit -m 'test: exercise the reviewed hook' *> $outFile
                 } else {
-                    & $BashPath './pre-commit' *> $outFile
+                    & $BashPath './.git/pre-commit' *> $outFile
                 }
                 $exitCode = $LASTEXITCODE
             } catch {
@@ -240,16 +303,20 @@ function Invoke-HookGate {
             }
             $postCommitExit = $null
             if ($RunPostCommit -and $exitCode -eq 0) {
-                & $BashPath './post-commit' *>> $outFile
+                if (-not $ReviewCurrent) {
+                    git -c core.hooksPath=.git/no-hooks commit --quiet -m 'test: accepted fixture commit'
+                }
+                & $BashPath './.git/post-commit' *>> $outFile
                 $postCommitExit = $LASTEXITCODE
             }
             $output = if (Test-Path -LiteralPath $outFile) { (Get-Content -LiteralPath $outFile -Raw) } else { '' }
-            $writtenState = Get-Content -LiteralPath (Join-Path $repo '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json
+            $writtenState = if (Test-Path -LiteralPath $statePath) { Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json } else { $null }
             return [PSCustomObject]@{
                 Output = [string]$output
                 ExitCode = $exitCode
                 PostCommitExitCode = $postCommitExit
                 LoopConsumed = [bool]$writtenState.loopConsumed
+                AcceptanceExists = Test-Path -LiteralPath (Join-Path $repo '.frontier/state/loop-commit-acceptance.json')
             }
         } finally {
             Pop-Location
@@ -365,6 +432,30 @@ if (-not $bashPath) {
     $completionEntry['status'] = 'complete'
     $completionEntry['kind'] = 'completion'
 
+    & {
+        foreach ($kind in @('none', 'active', 'stale', 'consumed', 'complete')) {
+            $exemptState = if ($kind -ne 'none') { New-HookLoopState -History @(
+                (New-HookHistoryEntry -Iteration 5 -Summary 'Independent approval' -Review $approved), $completionEntry
+            ) } else { $null }
+            if ($kind -eq 'active') { $exemptState.active = $true; $exemptState.status = 'active' }
+            if ($kind -eq 'stale') { $exemptState.lastIterationAt = [datetimeoffset]::UtcNow.AddDays(-2).ToString('o') }
+            if ($kind -eq 'consumed') { $exemptState.loopConsumed = $true }
+            $exempt = Invoke-HookGate -BashPath $bashPath -LoopState $exemptState -SkipDefaultCode -StageReviewDoc -RunPostCommit
+            Assert-True ($exempt.ExitCode -eq 0 -and $exempt.PostCommitExitCode -eq 0) "exempt staged commit passes with $kind loop"
+            Assert-True ($exempt.LoopConsumed -eq ($kind -eq 'consumed') -and -not $exempt.AcceptanceExists) "exempt $kind commit does not consume or create acceptance"
+        }
+        foreach ($path in @('change.ps1', 'docs/artifacts/specs/SPEC-1.md', 'tests/unit.test.ts')) {
+            $covered = Invoke-HookGate -BashPath $bashPath -StagedPath $path
+            Assert-True ($covered.ExitCode -ne 0 -and $covered.Output -match 'BLOCK: no quality loop found') "covered $path blocks without evidence"
+        }
+        $old = Invoke-HookGate -BashPath $bashPath -ReviewCurrent -LegacyApproval
+        Assert-True ($old.ExitCode -ne 0 -and $old.Output -match 'legacy approvals require scoped review') 'legacy approval without scope blocks staged code'
+        $changed = Invoke-HookGate -BashPath $bashPath -ReviewCurrent -ChangeStagedBytes
+        Assert-True ($changed.ExitCode -ne 0 -and $changed.Output -match 'changed after approval|does not match approved evidence') 'changed staged bytes block without a matching approval'
+        $accepted = Invoke-HookGate -BashPath $bashPath -ReviewCurrent -RunPostCommit
+        Assert-True ($accepted.ExitCode -eq 0 -and $accepted.PostCommitExitCode -eq 0 -and $accepted.LoopConsumed) 'exact staged approval is consumed only after real fixture commit'
+    }
+    if (-not $StagedOnly) {
     # The authoritative case: state written by the real CLI, not by this suite.
     $cliState = New-CliProducedLoopState
     if ($cliState) {
@@ -568,6 +659,7 @@ if (-not $bashPath) {
 
     $withIssue = Invoke-CommitMsgHook -BashPath $bashPath -Message 'feat: add login (#42)' -FrontierConfig '{"provider":"github"}'
     Assert-True ($withIssue.ExitCode -eq 0) 'a GitHub-mode commit that references an issue passes'
+    }
 }
 
 Write-Host ''

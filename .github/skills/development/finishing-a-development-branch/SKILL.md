@@ -46,7 +46,7 @@ Why agents leave branches half-finished.
 Run these checks on the branch HEAD. Any FAIL blocks disposition.
 
 ```pwsh
-# 1. Quality loop must be complete (NOT active, NOT cancelled)
+# 1. Covered (PRD/TechSpec/code/tests) loop complete
 .\.frontier\runtime\frontier.ps1 loop status
 
 # 2. Tests must pass on the current commit, not a cached run
@@ -84,7 +84,7 @@ Allowed only when:
 
 - Local Mode is active (`provider = local` in `.frontier/config.json`)
 - Change is trivial: docs, comment, config tweak, or a one-line bug fix with a test
-- Quality loop is complete and tests pass
+- Covered work loop complete; checks pass
 - No external collaborators need to see the change
 
 ```pwsh

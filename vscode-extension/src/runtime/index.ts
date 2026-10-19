@@ -10,6 +10,12 @@
 export {
   LoopState,
   LoopGateResult,
+  LoopOperation,
+  LoopScope,
+  ARTIFACT_DECLARATION_FILE,
+  convertArtifactGlob,
+  isLoopCoveredPath,
+  requiresEngineeringLoop,
   LoopTaskClass,
   LoopHealthKind,
   LoopHealth,

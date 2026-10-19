@@ -148,6 +148,13 @@ function updatePackageLock(version) {
   writeText('vscode-extension/package-lock.json', content);
 }
 
+function updateReadmeContent(content, version) {
+  content = replaceStrict(content, 'README.md', /badge\/Version-[0-9.]+-/,
+    `badge/Version-${version}-`, 'README source version badge');
+  return replaceStrict(content, 'README.md', /alt="Source version \d+\.\d+\.\d+"/,
+    `alt="Source version ${version}"`, 'README source version alt text');
+}
+
 function updateTextFile(relativePath, edits) {
   let content = readText(relativePath);
   for (const edit of edits) {
@@ -351,18 +358,6 @@ function main() {
   }
 
   validateVersion(targetVersion);
-  const guideInstallerUrlEdits = [
-    {
-      search: `raw.githubusercontent.com/jnPiyush/AgentX/v${currentVersion}/install.ps1`,
-      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.ps1`,
-      label: 'guide PowerShell installer URLs',
-    },
-    {
-      search: `raw.githubusercontent.com/jnPiyush/AgentX/v${currentVersion}/install.sh`,
-      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.sh`,
-      label: 'guide bash installer URLs',
-    },
-  ];
   const powershellInstallerUrlEdits = [
     {
       search: `raw.githubusercontent.com/jnPiyush/AgentX/v${currentVersion}/install.ps1`,
@@ -379,7 +374,6 @@ function main() {
   ];
 
   // Fail before changing any file if the trusted installer URL shapes have drifted.
-  preflightLiteralFile('docs/GUIDE.md', guideInstallerUrlEdits);
   preflightLiteralFile('install.ps1', powershellInstallerUrlEdits);
   preflightLiteralFile('install.sh', bashInstallerUrlEdits);
   updateJsonVersionFile(targetVersion);
@@ -418,28 +412,7 @@ function main() {
     },
   ]);
 
-  updateTextFile('README.md', [
-    {
-      pattern: /releases\/tag\/v\d+\.\d+\.\d+/,
-      replacement: `releases/tag/v${targetVersion}`,
-      label: 'README release link',
-    },
-    {
-      pattern: /badge\/Version-[0-9.]+-/,
-      replacement: `badge/Version-${targetVersion}-`,
-      label: 'README version badge',
-    },
-    {
-      pattern: /alt="Version \d+\.\d+\.\d+"/,
-      replacement: `alt="Version ${targetVersion}"`,
-      label: 'README badge alt text',
-    },
-    {
-      pattern: /## New In \d+\.\d+\.\d+/,
-      replacement: `## New In ${targetVersion}`,
-      label: 'README current release heading',
-    },
-  ]);
+  writeText('README.md', updateReadmeContent(readText('README.md'), targetVersion));
 
   updateTextFile('docs/ux/prototypes/landing/index.html', [
     {
@@ -448,8 +421,6 @@ function main() {
       label: 'landing page release version',
     },
   ]);
-
-  updateLiteralFile('docs/GUIDE.md', guideInstallerUrlEdits);
 
   updateTextFile('docs/QUALITY_SCORE.md', [
     {
@@ -665,4 +636,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { updatePackageLockContent };
+module.exports = { updatePackageLockContent, updateReadmeContent };

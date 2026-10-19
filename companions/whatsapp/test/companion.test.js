@@ -65,6 +65,24 @@ test('routeCommand routes common WhatsApp commands to the Frontier CLI', async (
   ]);
 });
 
+test('status answers from a fresh-labelled local snapshot without entering the command queue', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-status-'));
+  try {
+    fs.mkdirSync(path.join(root, '.frontier', 'state'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.frontier', 'state', 'loop-state.json'), JSON.stringify(loopState('active', true, 2)));
+    const { routeCommand } = freshRequire(path.resolve(__dirname, '..', 'src', 'commandRouter.js'));
+    const config = { repoPath: root, runner: { run: async () => { throw new Error('status must not wait for the writer queue'); } } };
+    const result = await routeCommand('status', config);
+    assert.equal(result.ok, true);
+    assert.match(result.text, /status=active/);
+    assert.match(result.text, /raw state snapshot from \d{4}-.*not health-checked/);
+    fs.rmSync(path.join(root, '.frontier', 'state', 'loop-state.json'));
+    const calls = [];
+    await routeCommand('status', { repoPath: root, runner: { run: async (args) => { calls.push(args); return { ok: true, text: 'cli' }; } } });
+    assert.deepEqual(calls, [['loop', 'status']], 'missing snapshot falls back to the CLI');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('routeCommand returns usage guidance for unsupported or incomplete commands', async () => {
   const runnerPath = path.resolve(__dirname, '..', 'src', 'frontierRunner.js');
   const routerPath = path.resolve(__dirname, '..', 'src', 'commandRouter.js');

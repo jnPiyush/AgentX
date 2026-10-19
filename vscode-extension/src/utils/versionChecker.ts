@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { resolveFrontierStateDirectory, resolveFrontierStatePath } from './frontierPaths';
 
@@ -120,7 +119,7 @@ export function checkVersionMismatch(
 export async function silentVersionSync(
   workspaceRoot: string,
   extensionVersion: string,
-  extensionPath: string,
+  _extensionPath: string,
 ): Promise<void> {
   if (!workspaceRoot) { return; }
 

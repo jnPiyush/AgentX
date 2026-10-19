@@ -28,6 +28,7 @@ function stripCodeFences(value: string): string {
 }
 
 function isAscii(value: string): boolean {
+  // eslint-disable-next-line no-control-regex -- The ASCII range intentionally includes control characters.
   return !/[^\x00-\x7F]/.test(value);
 }
 
@@ -45,10 +46,10 @@ function normalizeGeneratedMarkdown(value: string): string | undefined {
 async function tryGenerateWithCopilot(prompt: string, token?: vscode.CancellationToken): Promise<string | undefined> {
   const api = (vscode as unknown as {
     lm?: {
-      selectChatModels?: (selector?: Record<string, unknown>) => Promise<any[]>;
+      selectChatModels?: typeof vscode.lm.selectChatModels;
     };
     LanguageModelChatMessage?: {
-      User?: (content: string) => unknown;
+      User?: typeof vscode.LanguageModelChatMessage.User;
     };
   });
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code mocks. */
 import { strict as assert } from 'assert';
 import {
  markStartupDependencyCheck,

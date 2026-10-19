@@ -11,7 +11,14 @@ applyTo: '**/*agent*, **/*llm*, **/*model*, **/*workflow*, **/agents/**, **/*ai*
 
 ## Pre-edit gate
 
-Start `.frontier/runtime/frontier.ps1 loop start -p "<task>"` before mutation. Follow
+Apply artifact/action applicability first: only create/update/delete/rename of
+PRD, TechSpec, code or unit tests requires a loop before the first covered
+mutation. Agent/skill declarations, instructions, docs, config, plans and
+research/read/review-only/check/commit-only work are exempt; executable protected
+runtime/hook/policy code is covered. Roles and AI/workflow keywords do not decide
+applicability. Review fixes trigger the gate before a covered edit; review-only
+work inspects scoped evidence without its own loop or unrelated active state.
+Delegates MUST NOT start/reset/iterate/complete the assigned parent loop. Follow
 [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) for the loop, council, plan, capture
 and final independent-review gates; inspect real state before claiming completion.
 

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 9.8.1 - 2026-10-09
+
+### Fixed
+
+- Version stamping updates the README source badge without requiring removed
+  guide download URLs or changing historical publication facts.
+- Restore required execution-plan sections and fix the new hook lint findings
+  without changing CI thresholds or the lint baseline.
+- Update the MCP SDK to 1.32.0 and affected proxy-addr resolutions to 2.0.8,
+  addressing the runtime audit findings in the extension, MCP and collaboration.
+- Update the WhatsApp companion's existing brace-expansion 2.x override to 2.1.7
+  to cover denial-of-service advisories in its optional runtime dependencies.
+
 ### Changed
 
 - Agent hooks resolve the loaded Frontier runtime and skip PowerShell for known

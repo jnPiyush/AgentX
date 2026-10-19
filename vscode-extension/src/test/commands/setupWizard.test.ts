@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Partial VS Code and Sinon mocks. */
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 
@@ -10,7 +11,6 @@ import {
   runCriticalPreCheck,
   runStartupCheck,
   runSilentInstall,
-  PreCheckResult,
 } from '../../commands/setupWizard';
 
 // We need to stub checkAllDependencies at the module level
@@ -86,16 +86,14 @@ describe('setupWizard - runCriticalPreCheck', () => {
   let checkAllStub: sinon.SinonStub;
   let showWarningStub: sinon.SinonStub;
   let showInfoStub: sinon.SinonStub;
-  let showErrorStub: sinon.SinonStub;
-  let execCommandStub: sinon.SinonStub;
   let createTerminalStub: sinon.SinonStub;
 
   beforeEach(() => {
     checkAllStub = sinon.stub(depChecker, 'checkAllDependencies');
     showWarningStub = sinon.stub(vscode.window, 'showWarningMessage');
     showInfoStub = sinon.stub(vscode.window, 'showInformationMessage');
-    showErrorStub = sinon.stub(vscode.window, 'showErrorMessage');
-    execCommandStub = sinon.stub(vscode.commands, 'executeCommand');
+    sinon.stub(vscode.window, 'showErrorMessage');
+    sinon.stub(vscode.commands, 'executeCommand');
     createTerminalStub = sinon.stub(vscode.window, 'createTerminal');
   });
 
@@ -402,7 +400,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
       let showWarnCallCount = 0;
       const origShowWarning = showWarningStub;
-      origShowWarning.callsFake((...args: unknown[]) => {
+      origShowWarning.callsFake(() => {
         showWarnCallCount++;
         // First call is the "Install All" prompt
         if (showWarnCallCount === 1) { return Promise.resolve('Install All'); }

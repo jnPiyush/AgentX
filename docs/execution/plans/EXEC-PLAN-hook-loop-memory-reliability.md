@@ -4,7 +4,7 @@ description: Bounded fixes for the observed DogFacebook workflow delays without 
 status: in-progress
 ---
 
-## Scope and Authorization
+## Purpose / Big Picture
 
 The user requested fixes for hook overhead, false stuck-loop behavior and lesson
 saving. The user authorized autonomous execution of the presented scoped plan.
@@ -13,7 +13,7 @@ extension, user-global Azure telemetry hooks or unrelated assessment documents.
 The subsequent user request authorizes commit and push on the current branch.
 No publication, model change or external service change is included.
 
-## Evidence and Hypotheses
+## Decision Log
 
 * Installed Local-agent hooks probe a missing repository-local launcher, so
   zero-copy use pays for PowerShell without reaching policy enforcement.
@@ -41,7 +41,7 @@ health state, and idempotent local lesson writes.
 | M2 | Memory lookup/save attempts stay bounded and optional; failure defers capture without claiming success | Instruction review and context budget check |
 | D1 | Canonical and packaged runtime paths, hooks and inventories remain consistent | Build, manifest, frontmatter and asset checks |
 
-## Sequence
+## Plan of Work
 
 1. Implement checkpoint-due health and recovery messaging in CLI/TypeScript.
 2. Add a small Node hook bridge and bind its runtime through the loaded extension;
@@ -51,12 +51,20 @@ health state, and idempotent local lesson writes.
 5. Run non-test checks, review exact final scope independently, complete the loop,
    then offer focused test execution with explicit consent.
 
-## Verification Boundary
+## Validation and Acceptance
 
 During the loop: syntax, typechecking, source/asset validation, instruction checks
 and independent review. Test suites run only after loop completion and explicit
 consent. Host hook environment propagation needs extension-host qualification;
 source/unit checks alone do not prove every supported host works.
+
+## Artifacts and Notes
+
+Evidence: commit `137886fa` contains the reviewed reliability implementation;
+the local quality loop completed at 91/100 with no HIGH/MEDIUM review findings.
+Tests were not run locally. PR #439 CI subsequently found missing plan sections,
+six curly-rule findings and separate release/dependency blockers. Release 9.8.1
+tracks those repairs without treating the earlier local review as CI approval.
 
 ## Progress
 

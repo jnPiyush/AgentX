@@ -108,6 +108,38 @@ try {
     Write-LoopState $workspace $true 'active'
     $activeEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = 'src/app.ts' } } | ConvertTo-Json -Compress)
     Assert-True ($activeEdit.ExitCode -eq 0) 'Active quality loop permits file edits'
+    foreach ($buildCommand in @('npm run build', 'npm ci', 'tsc --noEmit')) {
+        $activeBuild = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = $buildCommand } } | ConvertTo-Json -Compress)
+        Assert-True ($activeBuild.ExitCode -eq 0) "Active loop permits unresolved build scope: $buildCommand"
+    }
+    foreach ($bypassCommit in @('git commit --no-verify -m notes', 'git commit -n -m notes', 'git commit -anm notes',
+        'git -c core.hooksPath=disabled commit -m notes', 'git commit -m notes --no-verify; git status',
+        '& git commit -n -m notes', 'git commit --% -m notes -n', 'git config core.hooksPath disabled',
+        '$env:GIT_CONFIG_COUNT=1', 'Set-Item Env:GIT_WORK_TREE alternate',
+        'git commit -m --% x -n', 'git com`mit -n -m x', 'git config core.hooks`Path NUL',
+        'git config alias.ci "commit -n"', 'git config include.path evil.cfg', 'git -c alias.x=commit status',
+        'git config user.email someone@example.invalid',
+        "& 'git' config alias.ci 'commit --no-verify'", '& "C:\Program Files\Git\cmd\git.exe" config include.path x',
+        "git ('con'+'fig') ('ali'+'as.ci') ('com'+'mit -n')", "git ('con'+'fig') core.editor x")) {
+        $activeBypass = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = $bypassCommit } } | ConvertTo-Json -Compress)
+        Assert-True ($activeBypass.ExitCode -eq 2) "Active loop cannot authorize disabling commit verification: $bypassCommit"
+    }
+    $configRead = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'git config --get user.email' } } | ConvertTo-Json -Compress)
+    Assert-True ($configRead.ExitCode -eq 0) 'Git configuration reads remain available'
+    foreach ($controlPlaneInput in @(
+        @{ tool_name = 'apply_patch'; tool_input = @{ filePath = '.git/config' } },
+        @{ tool_name = 'apply_patch'; tool_input = @{ filePath = '.git/hooks/pre-commit' } },
+        @{ tool_name = 'runCommands'; tool_input = @{ command = "Set-Content -LiteralPath '.git/hooks/pre-commit' -Value 'exit 0'" } },
+        @{ tool_name = 'runCommands'; tool_input = @{ command = 'pwsh -NoProfile -File .frontier/runtime/frontier.ps1 loop adopt-scope --include-existing-changes -e notes.md' } }
+    )) {
+        $controlPlaneInput.hook_event_name = 'PreToolUse'
+        $controlPlane = Invoke-PolicyHook $workspace ($controlPlaneInput | ConvertTo-Json -Compress)
+        Assert-True ($controlPlane.ExitCode -eq 2) "Active loop cannot authorize Git control-plane or user-only changes: $($controlPlaneInput.tool_input | ConvertTo-Json -Compress)"
+    }
+    foreach ($opaqueCommand in @("Invoke-Expression ('Set-Content .fron' + 'tier/state/loop-state.json x')", 'Start-Process pwsh', 'npx arbitrary-tool')) {
+        $opaqueExecution = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = $opaqueCommand } } | ConvertTo-Json -Compress)
+        Assert-True ($opaqueExecution.ExitCode -eq 2) "Active loop does not authorize opaque runtime evaluation: $opaqueCommand"
+    }
     $privateRoot = "$workspace-private"
     try {
         New-Item -ItemType Directory -Path (Join-Path $privateRoot 'state') -Force | Out-Null
@@ -266,6 +298,44 @@ try {
     }
     Write-LoopState $workspace $false 'complete'
     $completedEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = 'src/app.ts' } } | ConvertTo-Json -Compress)
+    foreach ($coveredPath in @('src/widget.vue', 'scripts/custom-tool', 'src/integration/client.test.ts', 'tests/integration/helper.ts', '.frontier/state/tool.ps1')) {
+        $coveredEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = $coveredPath } } | ConvertTo-Json -Compress)
+        Assert-True ($coveredEdit.ExitCode -eq 2) "Completed loop blocks executable or unresolved artifact: $coveredPath"
+    }
+    $codeAlias = Join-Path $workspace 'code-alias.md'
+    try {
+        $codeTarget = Join-Path $workspace 'src/hardlink-target.ps1'
+        New-Item -ItemType Directory -Path (Split-Path $codeTarget -Parent) -Force | Out-Null
+        Set-Content -LiteralPath $codeTarget -Value 'Write-Output 1'
+        New-Item -ItemType HardLink -Path $codeAlias -Target $codeTarget -ErrorAction Stop | Out-Null
+        $codeAliasEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = 'code-alias.md' } } | ConvertTo-Json -Compress)
+        Assert-True ($codeAliasEdit.ExitCode -eq 2) 'Completed loop blocks exempt-looking hardlink alias to production code'
+        $codeAliasShell = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = "Set-Content -LiteralPath 'code-alias.md' -Value 'changed'" } } | ConvertTo-Json -Compress)
+        Assert-True ($codeAliasShell.ExitCode -eq 2) 'Completed loop blocks shell writes through production hardlink alias'
+    } catch {
+        Write-Skip 'Production-code hardlink alias fixture unavailable'
+    }
+    foreach ($exemptPath in @('README.md', '.github/instructions/example.instructions.md', 'config.json', 'tests/e2e/browser.spec.ts', 'tests/integration/server.test.ps1')) {
+        $exemptEdit = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'apply_patch'; tool_input = @{ filePath = $exemptPath } } | ConvertTo-Json -Compress)
+        Assert-True ($exemptEdit.ExitCode -eq 0) "Completed unrelated loop does not block exempt mutation: $exemptPath"
+    }
+    foreach ($coveredInput in @(
+        @{ tool_name = 'delete_file'; tool_input = @{ path = 'src/app.ts' } },
+        @{ tool_name = 'rename_file'; tool_input = @{ source = 'src/app.ts'; destination = 'notes.txt' } },
+        @{ tool_name = 'rename_file'; tool_input = @{ source = 'notes.txt'; destination = 'src/app.ts' } },
+        @{ tool_name = 'apply_patch'; tool_input = @{ input = "*** Begin Patch`n*** Delete File: src/app.ts`n*** End Patch" } },
+        @{ tool_name = 'apply_patch'; tool_input = @{ input = 'unresolved mutation' } }
+    )) {
+        $coveredInput.hook_event_name = 'PreToolUse'
+        $blockedScope = Invoke-PolicyHook $workspace ($coveredInput | ConvertTo-Json -Compress)
+        Assert-True ($blockedScope.ExitCode -eq 2) "Covered or unresolved mutation requires active loop: $($coveredInput.tool_name)"
+    }
+    $exemptShell = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = "Set-Content -LiteralPath 'notes.md' -Value 'updated'" } } | ConvertTo-Json -Compress)
+    Assert-True ($exemptShell.ExitCode -eq 0) 'Resolved ordinary document shell mutation is exempt'
+    $commitOnly = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'git commit -m "docs: notes"' } } | ConvertTo-Json -Compress)
+    Assert-True ($commitOnly.ExitCode -eq 0) 'Commit-only shell request does not require an active engineering loop'
+    $inactiveBuild = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = 'npm run build' } } | ConvertTo-Json -Compress)
+    Assert-True ($inactiveBuild.ExitCode -eq 2) 'Unresolved build scope requires an active loop'
     Assert-True ($completedEdit.ExitCode -eq 2) 'Completed loop blocks follow-up edits'
     Assert-True ($completedEdit.Output -match 'loop start') 'Blocked edit explains fresh loop start'
     $trustedLoopStart = Invoke-PolicyHook $workspace (@{ hook_event_name = 'PreToolUse'; tool_name = 'runCommands'; tool_input = @{ command = './.frontier/runtime/frontier.ps1 loop start -p "Next task"' } } | ConvertTo-Json -Compress)

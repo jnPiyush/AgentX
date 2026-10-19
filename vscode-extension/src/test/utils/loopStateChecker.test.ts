@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as sinon from 'sinon';
 import {
   readLoopState,
   checkHandoffGate,
@@ -9,8 +10,85 @@ import {
   getLoopStatusDisplay,
   isBudgetExceeded,
   LoopState,
+  withDeclaredArtifacts,
 } from '../../utils/loopStateChecker';
-import { getLoopHealth, hasSubagentReviewIteration } from '../../runtime';
+import {
+  evaluateHandoffGate,
+  evaluateShouldAutoStart,
+  getLoopHealth,
+  hasSubagentReviewIteration,
+  LoopScope,
+} from '../../runtime';
+import * as loopStateStore from '../../runtime/loopStateStore';
+import { isLoopCoveredPath, requiresEngineeringLoop } from '../../runtime/loopState';
+import { runAgentCommand } from '../../chat/requestRouterInternals';
+import type { FrontierContext } from '../../frontierContext';
+import type { ChatResponseStream } from 'vscode';
+
+describe('engineering loop applicability', () => {
+  it('covers PRDs, technical specs, code and unit tests across workspace layouts', () => {
+    for (const file of ['docs/artifacts/prd/PRD-1.md', 'design/TechSpec-api.md',
+      'docs/artifacts/specs/SPEC-1.md', 'src/api.ts', 'scripts/build.ps1',
+      'tests/api.test.ts', 'infra/main.bicep', 'old\\src\\api.py',
+      '.github/hooks/pre-commit', '.github/hooks/post-commit',
+      'src/integration/client.ts', 'tests/integration/helper.ts',
+      'src/integration/client.test.ts', 'src/client.integration.test.ts',
+      'src/widget.vue', 'scripts/custom-tool', '.frontier/state/tool.ps1',
+      'design/TechSpec-api.docx', 'tests/integration/../../src/client.test.ts',
+      '.frontier/runtime/tests/integration/guard.test.ps1']) {
+      assert.equal(isLoopCoveredPath(file), true, file);
+      assert.equal(requiresEngineeringLoop({ operation: 'mutate', paths: [file] }), true);
+    }
+  });
+
+  it('does not create loops for inspection, research, review, commits or checks', () => {
+    for (const operation of ['read', 'research', 'review', 'commit', 'check'] as const) {
+      assert.equal(requiresEngineeringLoop({ operation, paths: ['src/security.ts'] }), false);
+    }
+  });
+
+  it('exempts ordinary artifacts, declarative configuration and dedicated non-unit cases', () => {
+    for (const file of ['README.md', 'docs/adr/ADR-1.md', '.github/agents/engineer.agent.md',
+      'docs/execution/plans/EXEC-PLAN-1.md', '.github/workflows/ci.yml',
+      'tests/e2e/browser.test.ts', 'tests/integration/client.test.ts',
+      'tests/integration/test_api.py', 'tests/integration/nested/test_api.py',
+      '.frontier/state/review.json']) {
+      assert.equal(isLoopCoveredPath(file), false, file);
+    }
+  });
+
+  it('checks both rename paths and covered subsets of mixed mutations', () => {
+    assert.equal(requiresEngineeringLoop({ operation: 'mutate',
+      paths: ['src/old.ts', 'docs/archived.md'] }), true);
+    assert.equal(requiresEngineeringLoop({ operation: 'mutate', paths: [] }), true);
+    assert.equal(requiresEngineeringLoop({ operation: 'mutate', paths: [' '] }), true);
+    assert.equal(requiresEngineeringLoop({ operation: 'rename' as 'mutate', paths: ['README.md'] }), true);
+    assert.equal(requiresEngineeringLoop({ operation: 'mutate',
+      paths: ['README.md', 'tests/helper.ts'] }), true);
+  });
+
+  it('covers declared ordinary-name PRDs and TechSpecs and the declaration file itself', () => {
+    const declared = ['docs/requirements.md', 'design/**/*.md'];
+    assert.equal(isLoopCoveredPath('docs/requirements.md', declared), true);
+    assert.equal(isLoopCoveredPath('design/api/contract.md', declared), true);
+    assert.equal(isLoopCoveredPath('docs/other.md', declared), false);
+    assert.equal(isLoopCoveredPath('frontier-artifacts.json'), true);
+    assert.equal(requiresEngineeringLoop({ operation: 'mutate', paths: ['docs/other.md'], declaredArtifacts: ['../escape'] }), true);
+    assert.equal(requiresEngineeringLoop({ operation: 'review', paths: ['docs/requirements.md'], declaredArtifacts: declared }), false);
+  });
+
+  it('loads declarations from the workspace and fails closed on invalid files', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-declared-'));
+    try {
+      const scope = { operation: 'mutate' as const, paths: ['docs/requirements.md'] };
+      assert.equal(requiresEngineeringLoop(withDeclaredArtifacts(root, scope)), false);
+      fs.writeFileSync(path.join(root, 'frontier-artifacts.json'), JSON.stringify({ schemaVersion: 1, coveredArtifacts: ['docs/requirements.md'] }));
+      assert.equal(requiresEngineeringLoop(withDeclaredArtifacts(root, scope)), true);
+      fs.writeFileSync(path.join(root, 'frontier-artifacts.json'), '{ invalid');
+      assert.equal(requiresEngineeringLoop(withDeclaredArtifacts(root, { operation: 'mutate', paths: ['README.md'] })), true);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -88,6 +166,131 @@ function makeCancelledState(): Record<string, unknown> {
     history: [],
   };
 }
+
+// ---------------------------------------------------------------------------
+// Operation-scoped gates
+// ---------------------------------------------------------------------------
+
+describe('operation-scoped loop gates', () => {
+  let wsRoot: string;
+  const sandbox = sinon.createSandbox();
+
+  beforeEach(() => { wsRoot = makeTmpWorkspace(); });
+  afterEach(() => {
+    sandbox.restore();
+    fs.rmSync(wsRoot, { recursive: true, force: true });
+  });
+
+  for (const operation of ['read', 'research', 'review', 'check', 'commit'] as const) {
+    for (const stateKind of ['missing', 'active', 'stale', 'consumed'] as const) {
+      it(`${operation} is N/A with ${stateKind} unrelated state and never reads it`, () => {
+        if (stateKind !== 'missing') {
+          const state = stateKind === 'consumed'
+            ? makeCompleteState({ loopConsumed: true })
+            : makeActiveState(stateKind === 'stale'
+              ? { lastIterationAt: isoMinutesAgo(600) } : undefined);
+          writeLoopState(wsRoot, state);
+        }
+        const statePath = path.join(wsRoot, '.frontier', 'state', 'loop-state.json');
+        const before = fs.existsSync(statePath) ? fs.readFileSync(statePath, 'utf8') : null;
+        const read = sandbox.spy(loopStateStore, 'readLoopStateFromFile');
+        const scope: LoopScope = { operation, paths: ['src/security.ts'] };
+        const gate = checkHandoffGate(wsRoot, 99, scope);
+        assert.equal(gate.allowed, true);
+        assert.ok(gate.reason.startsWith('N/A:'));
+        assert.equal(gate.state, null);
+        assert.equal(shouldAutoStartLoop(wsRoot, 99, scope), false);
+        assert.equal(read.callCount, 0);
+        assert.equal(fs.existsSync(statePath) ? fs.readFileSync(statePath, 'utf8') : null, before);
+      });
+    }
+  }
+
+  it('pure evaluators return N/A without inspecting unrelated state', () => {
+    const state = new Proxy({} as LoopState, {
+      get() { throw new Error('Exempt gate inspected unrelated state'); },
+    });
+    for (const operation of ['read', 'research', 'review', 'check', 'commit'] as const) {
+      const scope: LoopScope = { operation, paths: ['src/api.ts'] };
+      assert.equal(evaluateHandoffGate(state, 99, 0, scope).state, null);
+      assert.equal(evaluateShouldAutoStart(state, 99, 0, scope), false);
+    }
+  });
+
+  for (const stateKind of ['missing', 'active', 'stale', 'consumed'] as const) {
+    it(`routes a reviewer without gating on ${stateKind} unrelated state`, async () => {
+      if (stateKind !== 'missing') {
+        writeLoopState(wsRoot, stateKind === 'consumed'
+          ? makeCompleteState({ loopConsumed: true })
+          : makeActiveState(stateKind === 'stale'
+            ? { lastIterationAt: isoMinutesAgo(600) } : undefined));
+      }
+      const read = sandbox.spy(loopStateStore, 'readLoopStateFromFile');
+      const run = sandbox.stub().resolves('Review findings');
+      const markdown = sandbox.stub();
+      const agentx = {
+        workspaceRoot: wsRoot,
+        hasCliRuntime: () => true,
+        ensureWorkspaceReady: sandbox.stub().resolves(wsRoot),
+        runCliStreaming: run,
+        clearPendingClarification: sandbox.stub().resolves(),
+      } as unknown as FrontierContext;
+      const response = {
+        progress: sandbox.stub(), markdown,
+      } as unknown as ChatResponseStream;
+
+      await runAgentCommand(response, agentx, 'reviewer', 'Inspect the existing changes');
+
+      assert.ok(run.calledOnce);
+      assert.equal(run.firstCall.args[0], 'run');
+      assert.deepEqual(run.firstCall.args[1], ['reviewer', 'Inspect the existing changes', '--json']);
+      assert.ok(markdown.calledOnce);
+      assert.ok(read.notCalled);
+    });
+  }
+
+  it('exempts dedicated non-unit tests, docs and config mutations without reading state', () => {
+    const read = sandbox.spy(loopStateStore, 'readLoopStateFromFile');
+    const scope: LoopScope = { operation: 'mutate', paths: [
+      'tests/e2e/browser.test.ts', 'tests/integration/client.test.ts',
+      'docs/guide.md', '.github/workflows/ci.yml', 'tsconfig.json',
+    ] };
+    assert.ok(checkHandoffGate(wsRoot, undefined, scope).reason.startsWith('N/A:'));
+    assert.equal(shouldAutoStartLoop(wsRoot, undefined, scope), false);
+    assert.equal(read.callCount, 0);
+  });
+
+  it('keeps covered handoffs and unknown scopes fail closed with missing evidence', () => {
+    const covered: LoopScope = { operation: 'mutate', paths: ['src/api.ts'] };
+    assert.equal(checkHandoffGate(wsRoot, undefined, covered).allowed, false);
+    assert.equal(checkHandoffGate(wsRoot).allowed, false);
+    assert.equal(shouldAutoStartLoop(wsRoot, undefined, covered), true);
+    assert.equal(shouldAutoStartLoop(wsRoot), true);
+  });
+
+  it('retains active, stale and consumed evidence gates for covered mutations', () => {
+    const scope: LoopScope = { operation: 'mutate', paths: ['tests/api.test.ts'] };
+    for (const state of [makeActiveState(),
+      makeActiveState({ lastIterationAt: isoMinutesAgo(600) }),
+      makeCompleteState({ loopConsumed: true })]) {
+      writeLoopState(wsRoot, state);
+      assert.equal(checkHandoffGate(wsRoot, 42, scope).allowed, false);
+    }
+    writeLoopState(wsRoot, makeCompleteState());
+    assert.equal(checkHandoffGate(wsRoot, 42, scope).allowed, true);
+  });
+
+  it('gates rename paths in either direction and deleted covered artifacts', () => {
+    for (const paths of [
+      ['src/old.ts', 'docs/archived.md'], ['docs/old.md', 'src/new.ts'],
+      ['docs/artifacts/prd/PRD-1.md'], ['design/TechSpec-api.md'], ['src/deleted.ts'],
+    ]) {
+      const scope: LoopScope = { operation: 'mutate', paths };
+      assert.equal(checkHandoffGate(wsRoot, undefined, scope).allowed, false);
+      assert.equal(shouldAutoStartLoop(wsRoot, undefined, scope), true);
+    }
+  });
+});
 
 // ---------------------------------------------------------------------------
 // readLoopState

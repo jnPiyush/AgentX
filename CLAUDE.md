@@ -8,8 +8,8 @@ and is imported below instead of being copied, so both stay in sync.
 @.github/instructions/project-conventions.instructions.md
 @.github/instructions/memory.instructions.md
 
-Honesty rule: report loop and gate state from `.frontier/runtime/frontier.ps1 loop status`
-and the staged artifacts; never claim a check or review happened without evidence.
+Loop rules live in AGENTS.md (imported above); report gate state from
+`.frontier/runtime/frontier.ps1 loop status`.
 
 ---
 

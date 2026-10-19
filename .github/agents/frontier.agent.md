@@ -33,8 +33,8 @@ constraints:
   - "MUST NOT skip any required role constraints, templates, skills, entry gates, or exit gates for the phase it is acting as"
   - "MUST read relevant SKILL.md files and existing artifacts before each phase begins"
   - "MUST validate prerequisites before every major phase transition"
-  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.frontier/runtime/frontier.ps1 loop complete -s <summary>' succeeds"
-  - "MUST verify agentic loop completion before declaring implementation complete"
+  - "MUST satisfy all done criteria; only covered mutations require the risk-based loop minimum and successful owning loop completion under AGENT-PROTOCOL.md"
+  - "MUST verify owning loop completion for covered implementation only; exempt work reports applicable nonloop checks"
   - "MUST escalate from simple execution to the full internal workflow when complexity is detected mid-stream"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
   - "SHOULD run '.frontier/runtime/frontier.ps1 learn' at Compound Capture to fold session observations into the patterns store, and periodically run '.frontier/runtime/frontier.ps1 promote' to stage stable patterns as skills for human review"
@@ -219,8 +219,8 @@ risk-based: standard `1`, auto-fix `2`, complex/Frontier `3`, and high-risk `5`.
 | Before execution | `.frontier/runtime/frontier.ps1 ready` | Find highest-priority unblocked work |
 | Before execution | `.frontier/runtime/frontier.ps1 deps <issue>` | Verify no open blockers |
 | On phase transition | `.frontier/runtime/frontier.ps1 state -a <agent> -s working -i <issue>` | Record the active workflow phase |
-| On workflow start | `.frontier/runtime/frontier.ps1 workflow <type> -IssueNumber <n>` | Load workflow steps, init loop state |
-| Before completion | `.frontier/runtime/frontier.ps1 loop status` | Verify loop completed |
+| On workflow start | `.frontier/runtime/frontier.ps1 workflow <type> -IssueNumber <n>` | Load workflow steps; start loop state only before covered mutations |
+| Before covered delivery completion | `.frontier/runtime/frontier.ps1 loop status` | Verify owning loop completed; exempt work reports nonloop checks |
 
 ## Plugins (Optional Capabilities)
 
@@ -327,9 +327,9 @@ Canonical guidance: [WORKFLOW.md](../../docs/WORKFLOW.md#frontier-orchestration-
 
 Use the shared guide for the artifact-first clarification flow, internal specialist-lens fallback, follow-up limits, and escalation behavior. Keep this file focused on Frontier Orchestration FDE routing and orchestration rules.
 
-## Iterative Quality Loop (MANDATORY)
+## Iterative Quality Loop (WHEN APPLICABLE)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before your first file edit, creation or deletion; reading the task and required artifacts may come first. Mutating files before `loop start` succeeds is a contract violation because the loop baseline would miss the change.
+**Pre-edit gate (NON-SKIPPABLE)**: When applicable, follow AGENT-PROTOCOL.md section 1.1 by artifact/action before risk classification, never by role or keywords. Gate covered mutations before editing; exempt work retains nonloop checks and council policy and MUST NOT claim its own loop. Review-only work inspects scoped evidence without a nested loop or unrelated active state. Covered delegates reuse the assigned parent loop and MUST NOT start/reset/iterate/complete it.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.frontier/runtime/frontier.ps1 loop complete` succeeded in this session.
 

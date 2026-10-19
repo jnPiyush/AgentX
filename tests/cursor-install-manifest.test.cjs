@@ -12,7 +12,13 @@ const manifestScript = path.resolve(__dirname, '..', 'scripts', 'install-manifes
 test('source inventory patterns do not accidentally include optional companion scripts', () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-manifest-scope-'));
   try {
-    for (const file of ['scripts/owned.ps1', '.github/skills/example/scripts/helper.ps1', 'companions/example/scripts/optional.js']) {
+    for (const file of [
+      'scripts/owned.ps1',
+      '.github/skills/example/scripts/helper.ps1',
+      '.cursor/commands/frontier.md',
+      '.frontier/runtime/cursor-assets/commands/frontier.md',
+      'companions/example/scripts/optional.js',
+    ]) {
       fs.mkdirSync(path.dirname(path.join(workspace, file)), { recursive: true });
       fs.writeFileSync(path.join(workspace, file), '// fixture');
     }
@@ -23,6 +29,8 @@ test('source inventory patterns do not accidentally include optional companion s
     const manifest = JSON.parse(fs.readFileSync(path.join(workspace, '.frontier', 'runtime', 'install-manifest.json'), 'utf8').replace(/^\uFEFF/, ''));
     assert.ok(manifest.files.some(file => file.path === 'scripts/owned.ps1'));
     assert.ok(manifest.files.some(file => file.path === '.github/skills/example/scripts/helper.ps1'));
+    assert.ok(manifest.files.some(file => file.path === '.cursor/commands/frontier.md'));
+    assert.ok(manifest.files.some(file => file.path === '.frontier/runtime/cursor-assets/commands/frontier.md'));
     assert.ok(!manifest.files.some(file => file.path.startsWith('companions/')));
   } finally { fs.rmSync(workspace, { recursive: true, force: true }); }
 });

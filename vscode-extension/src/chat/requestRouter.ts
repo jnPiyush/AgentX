@@ -9,7 +9,7 @@ import {
   resetIntentRouterStateForTests,
   tryHandleNaturalLanguageIntent,
 } from './intentRouter';
-import { fetchProviderAwareIssues } from '../utils/workflowGuidance';
+import { fetchProviderAwareIssues, LocalIssue } from '../utils/workflowGuidance';
 import {
   getPendingClarification,
   renderUsageGuidance,
@@ -115,9 +115,10 @@ export async function routeFrontierChatRequest(
   }
 
   const root = agentx.workspaceRoot;
-  const workflowIssues = root
-    ? await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args, root), root)
-    : [];
+  let issuesPromise: Promise<LocalIssue[]> | undefined;
+  const workflowIssues = (): Promise<LocalIssue[]> => issuesPromise ??= root
+    ? fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args, root), root)
+    : Promise.resolve([]);
 
   const workflowNextStepResult = await tryHandleWorkflowNextStepRequest(userText, response, root, pending, workflowIssues);
   if (workflowNextStepResult) {

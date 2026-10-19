@@ -49,3 +49,5 @@ expected.version = '99.0.0';
 expected.packages[''].version = '99.0.0';
 assert.deepStrictEqual(JSON.parse(updatePackageLockContent(current, '99.0.0')), expected);
 console.log('[PASS] Fixed brand-like checksum fixtures and current dependency entries remain unchanged');
+
+require('./stamp-version.test');

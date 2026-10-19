@@ -415,7 +415,7 @@ In Review + needs:testing -> Tester (pre-release certification)
 
 **Autonomous Mode**: For simple tasks (bugs, docs, stories <=3 files), Frontier can automatically route to Engineer, skipping manual coordination. When Frontier acts as Engineer internally, it is still required to follow the Engineer agent's own contract and gates. See [Frontier](../.github/agents/frontier.agent.md) (mode: adaptive).
 
-**Universal Iterative Refinement**: ALL workflows include `iterate = true` on the Engineer's implementation step by default. The Reviewer ALWAYS verifies loop completion before approval. The `needs:iteration` label is reserved for **extended** iteration (max 20 iterations). See [Iterative Loop Skill](../.github/skills/development/iterative-loop/SKILL.md).
+**Scoped Iterative Refinement**: Loops apply only to create/update/delete/rename of PRD, TechSpec, code or unit tests ([AGENT-PROTOCOL.md](../.github/AGENT-PROTOCOL.md) section 1.1). The `needs:iteration` label is reserved for **extended** iteration (max 20 iterations). See [Iterative Loop Skill](../.github/skills/development/iterative-loop/SKILL.md).
 
 ### Validation
 
@@ -543,7 +543,7 @@ Multiple files (e.g. a docx narrative plus several diagram images) are reviewed 
 
 For issue-driven architecture reviews (Architect or Reviewer auto-spawning the Architecture Reviewer for an ADR/Spec under an `In Review` issue), use the standard `agentx` mode -- nothing changes there.
 
-For Frontier autonomous execution, each phase above inherits the same non-skippable contract as the corresponding specialist agent. PM phase still requires PRD rules and PM boundaries, Architect phase still requires ADR/Spec and zero-code policy, UX phase still requires prototypes and accessibility rules, Engineer phase still requires the quality loop, and Reviewer phase still requires review artifacts and approval gates.
+For Frontier autonomous execution, each phase above inherits the same non-skippable contract as the corresponding specialist agent. PM phase still requires PRD rules and PM boundaries, Architect phase still requires ADR/Spec and zero-code policy, UX phase still requires prototypes and accessibility rules, covered mutations still require the quality loop, and Reviewer phase still requires review artifacts and approval gates.
 
 > **Note**: Consulting Research, Power BI Analyst, and Agile Coach operate **standalone** (not part of the core SDLC pipeline). GitHub Ops, ADO Ops, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, and RAG Specialist are invisible sub-agents spawned by their parent agents.
 

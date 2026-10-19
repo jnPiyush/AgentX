@@ -16,7 +16,7 @@ applyTo: '**'
 >
 > 1. **Mechanical enforcement** -- the loop CLI, the agentic runner, the VS Code
 >    extension runtime, and the pre-commit hook enforce the minimum-iteration and
->    subagent-review gates for every task class.
+>    subagent-review gates for applicable covered work, after task classification.
 > 2. **This protocol doc** -- referenced from `copilot-instructions.md`,
 >    `AGENTS.md`, `CLAUDE.md`, and `project-conventions.instructions.md`, all of
 >    which load on `applyTo: '**'`.
@@ -64,7 +64,7 @@ planning, independent review, or action-specific consent.
 The native tool contract is in `prompts/guided-interaction.prompt.md` relative
 to this protocol. It does not authorize tools outside the role's permissions.
 
-## 1. Iterative Quality Loop (MANDATORY, NO SKIP)
+## 1. Iterative Quality Loop (MANDATORY WHEN APPLICABLE)
 
 ### Runtime location
 
@@ -83,31 +83,53 @@ enforcement or create scaffolding without the user's request.
 
 ### 1.1 Pre-Edit Gate (NON-SKIPPABLE)
 
-Run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>` before the first
-edit, creation or deletion of any file. Reading the task and the artifacts the
-active role must read may happen first. Mutating the workspace before
-`loop start` succeeds is a contract violation because the loop baseline and
-evidence chain would miss that change.
+Determine applicability from the action and artifact BEFORE classifying risk.
+A loop is required only for create/update/delete/rename of PRD, TechSpec,
+implementation code, or unit tests. Research, read-only work, review-only work,
+checks, commit-only work, and other artifacts (including plans, docs, config,
+instructions, and agent/skill declarations) are exempt. Roles, task keywords,
+and an unrelated active loop MUST NOT override this boundary. Core protected
+executable code (including runtime, hooks, policy, and validation scripts) remains
+covered; declaration guidance is not executable code merely because it describes
+those systems. Documentation exemption does not waive applicable nonloop checks,
+stage gates, scrub, or Model Council policy.
+
+PRD and TechSpec recognition covers `prd/`, `specs/` and `techspecs/` folders
+and `prd-`, `spec-` and `techspec-` name prefixes. Workspaces whose requirements
+or specifications use ordinary names MUST declare them in a root
+`frontier-artifacts.json` (`{"schemaVersion": 1, "coveredArtifacts": ["<glob>"]}`).
+That declaration file is itself covered, and an invalid declaration fails closed.
+`loop adopt-scope` (legacy loop migration) and Git hook/configuration changes are
+user-only operations; agent terminals MUST NOT run them.
+
+For covered work, run `.frontier/runtime/frontier.ps1 loop start -p "<task>" -i <issue>`
+before the first covered mutation, not before reading or exempt artifact edits.
+Review-only work MUST NOT start a nested review loop or inherit unrelated active
+state. Review of covered work inspects that work's scoped evidence; if review
+introduces a covered fix, the gate applies before that edit.
 
 For a delegated task under an existing parent loop, reuse that loop instead of
 starting another. Only the parent records iterations and completes or resets it.
 Delegates return findings and fresh scoped evidence; they MUST NOT overwrite the
-parent's baseline or approval history. Standalone work starts its own loop.
+parent's baseline or approval history. Standalone covered work starts its own loop;
+exempt work does not acquire a loop merely by delegation.
 
 ### 1.2 Honesty Rule
 
 If asked whether the loop ran, run `.frontier/runtime/frontier.ps1 loop status` and report the
 actual state verbatim. Never claim completion unless
 `.frontier/runtime/frontier.ps1 loop complete` succeeded in the current session.
+Identify whether that state belongs to the current covered work. Exempt work
+MUST NOT claim its own loop; unrelated state is not evidence for its handoff.
 
 ### 1.3 Risk-Based Minimum Iterations
 
-The loop scales its minimum to the task's blast radius. This is enforced
+AFTER applicability is established, the loop scales its minimum to the task's blast radius. This is enforced
 mechanically, not by per-agent prose:
 
 | Task class | Min iterations | Enforced in |
 |------------|----------------|-------------|
-| standard (simple bug/docs/review/research/coaching) | 1 | `frontier-cli.ps1`, `loopState.ts`, pre-commit hook |
+| standard (covered work) | 1 | `frontier-cli.ps1`, `loopState.ts`, pre-commit hook |
 | auto-fix-review | 2 | same |
 | complex-delivery | 3 | same |
 | agent-x | 3 | same |
@@ -223,7 +245,10 @@ shown by `loop status`. The canonical tiers are:
 | complex / Frontier | Implement, validate changed surfaces, then independent review with final evidence |
 | high-risk | Implement, inspect risks/failure paths, run non-test checks, then independently review |
 
-### 1.5 Per-Iteration Reporting + Final Summary (MANDATORY)
+### 1.5 Per-Iteration Reporting + Final Summary (APPLICABLE LOOPS ONLY)
+
+Only the owning parent or standalone covered-work owner records these lifecycle
+calls. Delegates return findings and scoped evidence, not iterations or completion.
 
 **Preparation and reuse.** `loop iterate` and `loop complete` run built-in
 non-test preflight; `loop preflight --json` runs it explicitly. It batches scrub,
@@ -271,7 +296,7 @@ Use comparable tasks before claiming a percentage speedup.
 
 ### 1.6 Hard Gate
 
-The pre-commit hook blocks commits unless: status = complete, loopConsumed = false,
+For covered staged changes, the pre-commit hook blocks commits unless: status = complete, loopConsumed = false,
 iteration >= the effective class minimum, and the latest recorded reviewer verdict is
 `approved` with zero HIGH and zero MEDIUM findings, attributed to a reviewer id,
 and recorded on the final work iteration. There is no skip token for the
@@ -283,7 +308,8 @@ blocked unless the final review report scores at least 80, meets every blocking
 floor, has no HIGH/MEDIUM findings, and matches the final file SHA-256 values.
 The baseline and every archived iteration artifact are digest-bound. After a
 stale-session reset, use `--include-existing-changes` only when the dirty code
-belongs to the resumed task. Docs-only and test-only loops skip this gate.
+belongs to the resumed task. PRD/TechSpec-only and unit-test-only loops skip this
+code-quality gate; exempt docs do not require a loop.
 
 ---
 
@@ -516,7 +542,8 @@ stall or over-extend them:
 
 Each `.github/agents/*.agent.md` keeps ONLY:
 
-1. A front-loaded **Pre-edit gate (NON-SKIPPABLE)** clause (Section 1.1 above).
+1. A front-loaded **Pre-edit gate (NON-SKIPPABLE)** clause that says "when
+  applicable" and applies the artifact/action boundary (Section 1.1 above).
 2. A front-loaded **Honesty rule** clause (Section 1.2 above).
 3. The role-specific Done Criteria, focus rows, and Delivery Report table that are
    unique to that role.

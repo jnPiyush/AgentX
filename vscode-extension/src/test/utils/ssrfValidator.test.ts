@@ -231,7 +231,7 @@ describe('SsrfValidator', () => {
       addAllowedHost('proxy.corp.internal');
       const removed = removeAllowedHost('proxy.corp.internal');
       assert.equal(removed, true);
-      const result = validateUrl('http://proxy.corp.internal/');
+      validateUrl('http://proxy.corp.internal/');
       // The URL would normally be allowed since proxy.corp.internal
       // is a public-looking hostname, but let's verify the list is clean
       assert.equal(getAllowedHosts().size, 0);

@@ -1,11 +1,3 @@
-import type {
-  LearningCaptureTarget,
-  LearningEvidenceStrength,
-  LearningRecord,
-  LearningValidationState,
-  LearningsIntent,
-  RankedLearning,
-} from './learningsTypes';
 import {
  getDefaultLearningsQuery,
  getLearningCaptureTarget,

@@ -1,6 +1,6 @@
 ---
 name: "iterative-loop"
-description: 'Run evidence-backed refinement with independent review and non-test verification. Covers loop setup, completion criteria, progress, bounded recovery, and explicit user consent for separate post-loop test execution.'
+description: 'Evidence-backed refinement loop for covered create/update/delete/rename of PRD, TechSpec, code or unit tests; other work is exempt. Covers setup, completion, recovery and post-loop test consent.'
 user-invocable: false
 metadata:
   author: "Frontier"
@@ -36,6 +36,9 @@ Review approval never implies tests passed or coverage was measured.
 
 ## When to Use This Skill
 
+Applicability: [AGENT-PROTOCOL.md](../../../AGENT-PROTOCOL.md) section 1.1
+(artifact/action, not role/keywords), then class minima.
+
 - Tasks requiring multiple passes to reach quality (implementation, refactoring)
 - Incremental feature building with verifiable milestones
 - Self-correcting code generation (write -> inspect/check -> fix -> review)
@@ -44,10 +47,8 @@ Review approval never implies tests passed or coverage was measured.
 
 ## When NOT to Use
 
-- One-shot operations (simple file edits, config changes)
-- Tasks requiring human judgment or design decisions mid-loop
-- Tasks with unclear or subjective success criteria
-- Production debugging (use targeted debugging instead)
+- Research/review-only/check/commit-only work and non-covered artifacts (section
+  1.1); delegates reuse the parent loop.
 
 ## Prerequisites
 
@@ -72,6 +73,7 @@ The loop is the gate, not a suggestion. Push back against these common ways of s
 ## Decision Tree
 
 ```
+Covered (section 1.1)? No -> no loop; Yes -> then:
 Need iterative refinement?
 +- Has verifiable completion criteria?
 |  +- Tests exist or can be written?
@@ -83,7 +85,7 @@ Need iterative refinement?
 +- Need multiple phases?
 |  -> Phased Loop (phase 1 -> phase 2 -> ... -> done)
 - No clear criteria?
-   -> Do NOT use iterative loop (use standard workflow)
+  -> Clarify criteria first; not an exemption
 ```
 
 ---
@@ -104,7 +106,7 @@ Need iterative refinement?
 
 ## Deterministic Gates (Engineer default)
 
-The Engineer's quality loop is gated by the CLI, not by judgment:
+The owning quality loop is gated by the CLI, not by judgment:
 
 1. `loop start` resets `.frontier/state/tests-baseline.json` and cleans the prior loop's evidence archive; `loop affected` lists tests naming code changed since then.
 2. `loop iterate -e <path>` REQUIRES existing evidence: acceptance mapping, independent findings or relevant non-test check output. Supplied earlier test results retain their original revision and timestamp; do not rerun suites or manufacture fresh results. The CLI archives evidence under `.frontier/state/loop-evidence/`.
@@ -406,7 +408,7 @@ contract: output it only when the statement is TRUE.
 - **Skipping Verification**: Confusing deferred tests with no verification -> Record actual non-test checks and review evidence; ask about suites after completion
 - **Vague Criteria**: Using subjective completion criteria like "code looks good" -> Define binary, machine-verifiable criteria (test exit code, lint error count, build success)
 - **Memory Loss**: Repeating the same failed fix across iterations without tracking what was tried -> Log each iteration's approach and outcome in the progress file; read before each new attempt
-- **Loop Avoidance**: Avoiding the loop for complex tasks to save time -> Use the loop for any task with verifiable criteria; iteration beats one-shot for quality
+- **Loop Avoidance**: Skipping the loop for covered mutations -> Apply section 1.1 and the risk minimum
 
 ---
 

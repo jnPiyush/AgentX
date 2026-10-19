@@ -38,7 +38,9 @@ file (in extension-only workspaces, inside the installed Frontier extension).
   current source and required artifacts, preserve curated map notes, and report
   unavailable or stale discovery. Token figures are estimates unless the host
   supplies a qualified counter.
-- Quality loop: before the first file mutation, run
+- Quality loop: only create/update/delete/rename of PRD, TechSpec, code or unit
+  tests needs a loop; research, review-only, check, commit-only work and other
+  artifacts are exempt (nonloop checks still apply). Before the first covered mutation, run
   `.frontier/runtime/frontier.ps1 loop start -p "<task>"`. Record each fix/verify
   cycle with `loop iterate -s "<summary>" -e <evidence>`. The final iteration carries an
   independent reviewer verdict (`--verdict approved --reviewer <id> --high 0

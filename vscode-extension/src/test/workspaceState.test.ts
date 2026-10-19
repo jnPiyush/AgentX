@@ -411,7 +411,7 @@ describe('Automatic Frontier workspace state', () => {
       stateRoot: privateWorkspacePath(context.globalStorageUri.fsPath, root, '') }]);
     assert.equal(fs.existsSync(context.globalStorageUri.fsPath), false);
     assert.deepEqual(fs.readdirSync(root), ['source.txt']);
-    for (const disposable of context.subscriptions.splice(0)) disposable.dispose();
+    for (const disposable of context.subscriptions.splice(0)) { disposable.dispose(); }
     assert.equal(process.env.FRONTIER_HOOK_RUNTIME, previousRuntime);
     assert.equal(process.env.FRONTIER_HOOK_PROFILES, previousProfiles);
   });

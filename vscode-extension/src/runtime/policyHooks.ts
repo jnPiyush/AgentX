@@ -36,16 +36,16 @@ export function registerPolicyHookEnvironment(
     vscode.workspace.onDidChangeWorkspaceFolders(update),
     vscode.workspace.onDidGrantWorkspaceTrust(update),
     vscode.workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('frontier.repositoryContext.enabled')) update();
+      if (event.affectsConfiguration('frontier.repositoryContext.enabled')) { update(); }
     }),
     new vscode.Disposable(() => {
       if (process.env.FRONTIER_HOOK_RUNTIME === runtime) {
-        if (previousRuntime === undefined) delete process.env.FRONTIER_HOOK_RUNTIME;
-        else process.env.FRONTIER_HOOK_RUNTIME = previousRuntime;
+        if (previousRuntime === undefined) { delete process.env.FRONTIER_HOOK_RUNTIME; }
+        else { process.env.FRONTIER_HOOK_RUNTIME = previousRuntime; }
       }
       if (process.env.FRONTIER_HOOK_PROFILES === profiles) {
-        if (previousProfiles === undefined) delete process.env.FRONTIER_HOOK_PROFILES;
-        else process.env.FRONTIER_HOOK_PROFILES = previousProfiles;
+        if (previousProfiles === undefined) { delete process.env.FRONTIER_HOOK_PROFILES; }
+        else { process.env.FRONTIER_HOOK_PROFILES = previousProfiles; }
       }
     }),
   );
