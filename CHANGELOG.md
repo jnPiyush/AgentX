@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## [9.9.0](https://github.com/jnPiyush/AgentX/compare/v9.8.1...v9.9.0) (2026-10-19)
+
+
+### Features
+
+* artifact-scoped quality loops and latency improvements ([#453](https://github.com/jnPiyush/AgentX/issues/453)) ([38fb931](https://github.com/jnPiyush/AgentX/commit/38fb931fe581405c75f66bcf79df8837f3b9ff87))
+* consolidate extension assets, adopt Frontier-HVE capabilities, and add offering plugin architecture ([#455](https://github.com/jnPiyush/AgentX/issues/455)) ([6daae50](https://github.com/jnPiyush/AgentX/commit/6daae50ba9e2c01e9b2b615b376e8c9a35a6a6a6))
+
+
+### Bug Fixes
+
+* resolve CI failures for scoped loop policy ([#453](https://github.com/jnPiyush/AgentX/issues/453)) ([#454](https://github.com/jnPiyush/AgentX/issues/454)) ([85d093d](https://github.com/jnPiyush/AgentX/commit/85d093dae58be05cec42295b373b5ed55661001f))
+
 ## 9.8.1 - 2026-10-09
 
 ### Fixed
